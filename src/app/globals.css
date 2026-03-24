@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+ --background: 20 30% 97%;
+  --foreground: 24 10% 16%;
+--card: 25 60% 97%;
+  --card-foreground: 24 10% 16%;
+  --border: 28 18% 88%;
+  --input: 28 18% 88%;
+--primary: 12 80% 60%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 34 35% 93%;
+  --muted-foreground: 25 8% 38%;
+  --accent: 12 70% 92%;
+  --accent-foreground: 24 10% 16%;
+  --destructive: 0 77% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --radius: 1rem;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  color: hsl(var(--foreground));
+  background:
+    radial-gradient(circle at top left, rgba(253, 230, 208, 0.7), transparent 45%),
+    radial-gradient(circle at top right, rgba(255, 198, 203, 0.6), transparent 50%),
+    hsl(var(--background));
+  min-height: 100vh;
+}
+
+.bg-grid {
+  background-size: 20px 20px;
+  background-image: theme(backgroundImage.shopfia-grid);
+}
