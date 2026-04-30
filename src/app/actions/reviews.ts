@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/guards";
-import { db } from "@/lib/db";
 import { createVerifiedReview, respondToReview } from "@/lib/services/reviews";
 import { createReviewSchema, reviewResponseSchema } from "@/lib/validators/review";
 
 export async function createReviewAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.BUYER, UserRole.ADMIN]);
   const parsed = createReviewSchema.parse({
     orderId: formData.get("orderId"),
@@ -34,6 +34,7 @@ export async function createReviewAction(formData: FormData) {
 }
 
 export async function respondToReviewAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.VENDOR, UserRole.ADMIN]);
   const parsed = reviewResponseSchema.parse({
     reviewId: formData.get("reviewId"),

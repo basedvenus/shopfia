@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/guards";
-import { db } from "@/lib/db";
 
 export async function toggleFavoriteAction(vendorId: string) {
+  const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.BUYER, UserRole.ADMIN]);
   const vendor = await db.vendorProfile.findUnique({
     where: { id: vendorId },

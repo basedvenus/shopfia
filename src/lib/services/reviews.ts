@@ -1,19 +1,20 @@
 import {
   OrderStatus,
+  PrismaClient,
   Prisma,
   ReviewReminderType
 } from "@prisma/client";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
-import { db } from "@/lib/db";
 
-type DbClient = Prisma.TransactionClient | typeof db;
+type DbClient = Prisma.TransactionClient | PrismaClient;
 
 export async function assertReviewEligibility(
   orderId: string,
   buyerId: string,
-  client: DbClient = db
+  client?: DbClient
 ) {
-  const order = await client.order.findUnique({
+  const resolvedClient = client ?? (await import("@/lib/db")).db;
+  const order = await resolvedClient.order.findUnique({
     where: { id: orderId },
     include: {
       vendorProfile: true,
@@ -43,6 +44,7 @@ export async function createVerifiedReview(input: {
   rating: number;
   body?: string;
 }) {
+  const { db } = await import("@/lib/db");
   const rate = checkRateLimit(`review:${input.buyerId}`, 4, 60 * 60 * 1000);
   if (!rate.ok) throw new Error("Too many review attempts. Try again later.");
 
@@ -116,6 +118,7 @@ export async function respondToReview(input: {
   sellerId: string;
   body: string;
 }) {
+  const { db } = await import("@/lib/db");
   return db.$transaction(async (tx) => {
     const review = await tx.review.findUnique({
       where: { id: input.reviewId },
@@ -146,15 +149,16 @@ export async function respondToReview(input: {
 
 export async function refreshSellerReviewMetrics(
   vendorProfileId: string,
-  client: DbClient = db
+  client?: DbClient
 ) {
-  const config = await client.marketplaceFeeConfig.upsert({
+  const resolvedClient = client ?? (await import("@/lib/db")).db;
+  const config = await resolvedClient.marketplaceFeeConfig.upsert({
     where: { singletonKey: "default" },
     update: {},
     create: {}
   });
 
-  const reviews = await client.review.findMany({
+  const reviews = await resolvedClient.review.findMany({
     where: { vendorId: vendorProfileId },
     include: {
       response: true,
@@ -191,11 +195,11 @@ export async function refreshSellerReviewMetrics(
   const respondedCount = reviews.filter((review) => Boolean(review.response)).length;
   const responseRate = totalReviews > 0 ? respondedCount / totalReviews : 0;
 
-  const completionStats = await client.order.aggregate({
+  const completionStats = await resolvedClient.order.aggregate({
     where: { vendorProfileId },
     _count: { _all: true }
   });
-  const completedCount = await client.order.count({
+  const completedCount = await resolvedClient.order.count({
     where: { vendorProfileId, status: OrderStatus.completed, paymentSucceededAt: { not: null } }
   });
   const completionRate =
@@ -221,7 +225,7 @@ export async function refreshSellerReviewMetrics(
     }
   );
 
-  await client.sellerRatingAggregate.upsert({
+  await resolvedClient.sellerRatingAggregate.upsert({
     where: { vendorProfileId },
     update: {
       averageRating,
@@ -248,7 +252,7 @@ export async function refreshSellerReviewMetrics(
     }
   });
 
-  await client.rankingScore.upsert({
+  await resolvedClient.rankingScore.upsert({
     where: { vendorProfileId },
     update: {
       score: ranking.score,
@@ -275,7 +279,7 @@ export async function refreshSellerReviewMetrics(
     }
   });
 
-  await client.vendorProfile.update({
+  await resolvedClient.vendorProfile.update({
     where: { id: vendorProfileId },
     data: {
       averageRating,
@@ -336,9 +340,10 @@ export function calculateRankingScore(
 
 export async function scheduleReviewRemindersForCompletedOrder(
   orderId: string,
-  client: DbClient = db
+  client?: DbClient
 ) {
-  await client.reviewReminder.upsert({
+  const resolvedClient = client ?? (await import("@/lib/db")).db;
+  await resolvedClient.reviewReminder.upsert({
     where: {
       orderId_reminderType: {
         orderId,
@@ -352,7 +357,7 @@ export async function scheduleReviewRemindersForCompletedOrder(
     }
   });
 
-  await client.reviewReminder.upsert({
+  await resolvedClient.reviewReminder.upsert({
     where: {
       orderId_reminderType: {
         orderId,

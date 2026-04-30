@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { requireSession } from "@/lib/auth/guards";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
-import { db } from "@/lib/db";
 import { sendMessageSchema } from "@/lib/validators/message";
 
 export async function sendMessageAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   const session = await requireSession();
   const parsed = sendMessageSchema.parse({
     conversationId: formData.get("conversationId") || undefined,

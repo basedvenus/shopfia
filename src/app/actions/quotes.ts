@@ -4,13 +4,13 @@ import { revalidatePath } from "next/cache";
 import { QuoteRequestStatus, QuoteStatus, UserRole } from "@prisma/client";
 import { requireRole, requireVerifiedVendorProfile } from "@/lib/auth/guards";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
-import { db } from "@/lib/db";
 import { canAcceptQuote, quotePayableAmount } from "@/lib/payments";
 import { ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
 import { getStripeServer } from "@/lib/stripe";
 import { acceptQuoteSchema, quoteRequestSchema, quoteResponseSchema } from "@/lib/validators/quote";
 
 export async function createQuoteRequestAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.BUYER, UserRole.ADMIN]);
   const rate = checkRateLimit(`quote-request:${session.user.id}`, 10, 60_000);
   if (!rate.ok) throw new Error("Rate limit exceeded");
@@ -83,6 +83,7 @@ export async function createQuoteRequestAction(formData: FormData) {
 }
 
 export async function sendQuoteResponseAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.VENDOR, UserRole.ADMIN]);
   if (session.user.role === UserRole.VENDOR) {
     await requireVerifiedVendorProfile(session.user.id);
@@ -148,6 +149,7 @@ export async function sendQuoteResponseAction(formData: FormData) {
 }
 
 export async function acceptQuoteAndCreatePaymentIntentAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.BUYER, UserRole.ADMIN]);
   const parsed = acceptQuoteSchema.parse({
     quoteId: formData.get("quoteId"),

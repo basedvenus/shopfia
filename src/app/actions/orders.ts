@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { OrderStatus, UserRole } from "@prisma/client";
 import { requireRole, requireVerifiedVendorProfile } from "@/lib/auth/guards";
-import { db } from "@/lib/db";
 import { finalizeOrder, issueRefund } from "@/lib/services/marketplace-fees";
 
 export async function updateOrderStatusAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.VENDOR, UserRole.ADMIN]);
   if (session.user.role === UserRole.VENDOR) {
     await requireVerifiedVendorProfile(session.user.id);

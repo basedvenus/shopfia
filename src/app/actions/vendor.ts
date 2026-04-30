@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { CategoryAudience, OffsiteAdsTier, UserRole } from "@prisma/client";
 import { requireRole, requireSession, requireVerifiedVendorProfile } from "@/lib/auth/guards";
-import { db } from "@/lib/db";
 import { createListing, ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
 import { vendorOnboardingSchema, offeringSchema } from "@/lib/validators/vendor";
 
@@ -15,6 +14,7 @@ function formDataToArray(formData: FormData, key: string) {
 }
 
 export async function upsertVendorProfileAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   const session = await requireSession();
   const parsed = vendorOnboardingSchema.parse({
     name: formData.get("name"),
@@ -91,6 +91,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
 }
 
 export async function upsertOfferingAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.VENDOR, UserRole.ADMIN]);
   if (session.user.role === UserRole.VENDOR) {
     await requireVerifiedVendorProfile(session.user.id);
@@ -182,6 +183,7 @@ export async function upsertOfferingAction(formData: FormData) {
 }
 
 export async function updateSellerMarketplaceSettingsAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.VENDOR, UserRole.ADMIN]);
   if (session.user.role === UserRole.VENDOR) {
     await requireVerifiedVendorProfile(session.user.id);

@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/guards";
-import { db } from "@/lib/db";
 import { getMarketplaceFeeConfig } from "@/lib/services/marketplace-fees";
 import { marketplaceFeeConfigSchema, rankingConfigSchema } from "@/lib/validators/vendor";
 
 export async function setVendorModerationAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   await requireRole([UserRole.ADMIN]);
   const vendorId = String(formData.get("vendorId"));
   const mode = String(formData.get("mode"));
@@ -25,6 +25,7 @@ export async function setVendorModerationAction(formData: FormData) {
 }
 
 export async function removeOfferingAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   await requireRole([UserRole.ADMIN]);
   const offeringId = String(formData.get("offeringId"));
   await db.offering.update({ where: { id: offeringId }, data: { active: false } });
@@ -33,6 +34,7 @@ export async function removeOfferingAction(formData: FormData) {
 }
 
 export async function updateMarketplaceFeeConfigAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   await requireRole([UserRole.ADMIN]);
   const parsed = marketplaceFeeConfigSchema.parse({
     listingFeeFlat: formData.get("listingFeeFlat"),

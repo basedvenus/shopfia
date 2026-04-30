@@ -4,14 +4,14 @@ import {
   OffsiteAdsTier,
   OrderStatus,
   PayoutStatus,
+  PrismaClient,
   Prisma,
   RefundStatus
 } from "@prisma/client";
 import { addDays } from "date-fns";
-import { db } from "@/lib/db";
 import { scheduleReviewRemindersForCompletedOrder } from "@/lib/services/reviews";
 
-type DbClient = Prisma.TransactionClient | typeof db;
+type DbClient = Prisma.TransactionClient | PrismaClient;
 
 type OrderFeeInput = {
   itemSubtotalCents: number;
@@ -44,8 +44,9 @@ export type CalculatedOrderFees = {
   };
 };
 
-export async function getMarketplaceFeeConfig(client: DbClient = db) {
-  return client.marketplaceFeeConfig.upsert({
+export async function getMarketplaceFeeConfig(client?: DbClient) {
+  const resolvedClient = client ?? (await import("@/lib/db")).db;
+  return resolvedClient.marketplaceFeeConfig.upsert({
     where: { singletonKey: "default" },
     update: {},
     create: {}
@@ -54,9 +55,10 @@ export async function getMarketplaceFeeConfig(client: DbClient = db) {
 
 export async function ensureSellerAccountForVendorProfile(
   vendorProfileId: string,
-  client: DbClient = db
+  client?: DbClient
 ) {
-  const vendorProfile = await client.vendorProfile.findUnique({
+  const resolvedClient = client ?? (await import("@/lib/db")).db;
+  const vendorProfile = await resolvedClient.vendorProfile.findUnique({
     where: { id: vendorProfileId }
   });
 
@@ -64,7 +66,7 @@ export async function ensureSellerAccountForVendorProfile(
     throw new Error("Vendor profile not found");
   }
 
-  const seller = await client.seller.upsert({
+  const seller = await resolvedClient.seller.upsert({
     where: { userId: vendorProfile.userId },
     update: {},
     create: {
@@ -72,7 +74,7 @@ export async function ensureSellerAccountForVendorProfile(
     }
   });
 
-  const shop = await client.shop.upsert({
+  const shop = await resolvedClient.shop.upsert({
     where: { vendorProfileId: vendorProfile.id },
     update: {
       name: vendorProfile.name,
@@ -89,7 +91,7 @@ export async function ensureSellerAccountForVendorProfile(
   const patchedSeller =
     seller.defaultShopId === shop.id
       ? seller
-      : await client.seller.update({
+      : await resolvedClient.seller.update({
           where: { id: seller.id },
           data: { defaultShopId: shop.id }
         });
@@ -111,6 +113,7 @@ export async function createListing(
     publish?: boolean;
   }
 ) {
+  const { db } = await import("@/lib/db");
   return db.$transaction(async (tx) => {
     const config = await getMarketplaceFeeConfig(tx);
     const { seller, shop } = await ensureSellerAccountForVendorProfile(input.vendorProfileId, tx);
@@ -193,6 +196,7 @@ export async function renewListing(
     replenishQuantity?: number;
   }
 ) {
+  const { db } = await import("@/lib/db");
   return db.$transaction(async (tx) => {
     return renewListingInTx(tx, input);
   });
@@ -202,7 +206,7 @@ export async function calculateOrderFees(
   order: OrderFeeInput,
   seller: { offsiteAdsTier: OffsiteAdsTier; offsiteAdsEnabled: boolean },
   attribution: { attributed: boolean; tier?: OffsiteAdsTier } = { attributed: false },
-  client: DbClient = db
+  client?: DbClient
 ): Promise<CalculatedOrderFees> {
   const config = await getMarketplaceFeeConfig(client);
   return calculateOrderFeesFromConfig(order, seller, attribution, config);
@@ -279,6 +283,7 @@ export async function finalizeOrder(
     paymentSucceeded?: boolean;
   }
 ) {
+  const { db } = await import("@/lib/db");
   return db.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
@@ -435,6 +440,7 @@ export async function issueRefund(
     reason?: string;
   }
 ) {
+  const { db } = await import("@/lib/db");
   return db.$transaction(async (tx) => {
     const config = await getMarketplaceFeeConfig(tx);
     const order = await tx.order.findUnique({
@@ -534,8 +540,9 @@ export async function issueRefund(
   });
 }
 
-export async function generateSellerPayout(orderId: string, client: DbClient = db) {
-  const order = await client.order.findUnique({
+export async function generateSellerPayout(orderId: string, client?: DbClient) {
+  const resolvedClient = client ?? (await import("@/lib/db")).db;
+  const order = await resolvedClient.order.findUnique({
     where: { id: orderId },
     include: {
       seller: true,
@@ -547,7 +554,7 @@ export async function generateSellerPayout(orderId: string, client: DbClient = d
     throw new Error("Order fee breakdown not ready");
   }
 
-  return client.payout.upsert({
+  return resolvedClient.payout.upsert({
     where: { orderId: order.id },
     update: {
       sellerId: order.seller.id,

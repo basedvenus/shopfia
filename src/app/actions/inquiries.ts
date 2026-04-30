@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { db } from "@/lib/db";
 import { publicInquirySchema } from "@/lib/validators/inquiry";
 
 export async function createPublicInquiryAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
   const parsed = publicInquirySchema.parse({
     vendorProfileId: formData.get("vendorProfileId"),
     listingId: formData.get("listingId") || undefined,
