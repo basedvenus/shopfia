@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { signOut, auth } from "@/auth";
 import { acceptQuoteAndCreatePaymentIntentAction } from "@/app/actions/quotes";
 import { createReviewAction } from "@/app/actions/reviews";
 import { Button } from "@/components/ui/button";
@@ -8,12 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SignInPanel } from "@/components/account/sign-in-panel";
-import { db } from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
+  const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
   const session = await auth();
   const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
   const emailEnabled = Boolean(
@@ -69,6 +68,7 @@ export default async function AccountPage() {
         <form
           action={async () => {
             "use server";
+            const { signOut } = await import("@/auth");
             await signOut({ redirectTo: "/explore" });
           }}
         >

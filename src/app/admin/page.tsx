@@ -1,5 +1,4 @@
 import { UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/guards";
 import {
   removeOfferingAction,
   setVendorModerationAction,
@@ -8,13 +7,16 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { db } from "@/lib/db";
-import { getMarketplaceFeeConfig } from "@/lib/services/marketplace-fees";
 import { basisPointsToPercent, centsToDollars } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
+  const [{ requireRole }, { db }, { getMarketplaceFeeConfig }] = await Promise.all([
+    import("@/lib/auth/guards"),
+    import("@/lib/db"),
+    import("@/lib/services/marketplace-fees")
+  ]);
   await requireRole([UserRole.ADMIN]);
   const [users, vendors, listings, categories, inquiries, reports, feeConfig] = await Promise.all([
     db.user.findMany({ orderBy: { createdAt: "desc" }, take: 20 }),

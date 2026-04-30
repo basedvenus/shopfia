@@ -1,18 +1,20 @@
 import { CategoryAudience, UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/guards";
 import { upsertVendorProfileAction, upsertOfferingAction } from "@/app/actions/vendor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FeePreviewCard } from "@/components/vendor/fee-preview-card";
-import { db } from "@/lib/db";
-import { getMarketplaceFeeConfig } from "@/lib/services/marketplace-fees";
 import { basisPointsToPercent, formatCurrency, formatPercent } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function VendorOnboardingPage() {
+  const [{ requireRole }, { db }, { getMarketplaceFeeConfig }] = await Promise.all([
+    import("@/lib/auth/guards"),
+    import("@/lib/db"),
+    import("@/lib/services/marketplace-fees")
+  ]);
   const session = await requireRole([UserRole.BUYER, UserRole.VENDOR, UserRole.ADMIN]);
   const [categories, existingVendor, feeConfig] = await Promise.all([
     db.category.findMany({ where: { audience: CategoryAudience.VENDOR }, orderBy: { name: "asc" } }),

@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { auth } from "@/auth";
 import { toggleFavoriteAction } from "@/app/actions/favorites";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function FavoritesPage() {
+  const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
   const session = await auth();
   if (!session?.user?.id) {
     return <p className="text-sm text-muted-foreground">Sign in to save favorite vendors.</p>;

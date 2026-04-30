@@ -1,5 +1,4 @@
 import { CategoryAudience, Prisma } from "@prisma/client";
-import { db } from "@/lib/db";
 import { exploreSearchSchema } from "@/lib/validators/search";
 
 function normalizeLocation(value: string | null | undefined) {
@@ -35,6 +34,7 @@ function getDistanceSortScore(vendor: {
 }
 
 export async function getExploreData(input: Record<string, string | string[] | undefined>) {
+  const { db } = await import("@/lib/db");
 
   const clean = (v: unknown) =>
     typeof v === "string" && v.trim() !== "" ? v.trim() : undefined;

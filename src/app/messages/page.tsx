@@ -1,15 +1,14 @@
-import { auth } from "@/auth";
 import { sendMessageAction } from "@/app/actions/messaging";
 import { sendQuoteResponseAction } from "@/app/actions/quotes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function MessagesPage() {
+  const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
   const session = await auth();
   if (!session?.user?.id) {
     return <p className="text-sm text-muted-foreground">Sign in to access messages.</p>;

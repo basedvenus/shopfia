@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/guards";
 import { updateOrderStatusAction } from "@/app/actions/orders";
 import { updateSellerMarketplaceSettingsAction } from "@/app/actions/vendor";
 import { respondToReviewAction } from "@/app/actions/reviews";
@@ -8,13 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConnectStripeButton } from "@/components/vendor/connect-stripe-button";
 import { Textarea } from "@/components/ui/textarea";
-import { db } from "@/lib/db";
-import { getMarketplaceFeeConfig } from "@/lib/services/marketplace-fees";
 import { basisPointsToPercent, formatCurrency, formatPercent } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function VendorDashboardPage() {
+  const [{ requireRole }, { db }, { getMarketplaceFeeConfig }] = await Promise.all([
+    import("@/lib/auth/guards"),
+    import("@/lib/db"),
+    import("@/lib/services/marketplace-fees")
+  ]);
   const session = await requireRole([UserRole.VENDOR, UserRole.ADMIN]);
   const [vendor, feeConfig] = await Promise.all([
     db.vendorProfile.findUnique({

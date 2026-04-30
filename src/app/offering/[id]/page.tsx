@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { db } from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +16,7 @@ const fallbackImage =
   "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1200&q=80";
 
 export default async function OfferingPage({ params }: { params: { id: string } }) {
+  const { db } = await import("@/lib/db");
   const offering = await db.offering.findUnique({
     where: { id: params.id },
     include: {

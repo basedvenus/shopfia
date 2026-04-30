@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { CategoryAudience } from "@prisma/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function CategoriesPage() {
+  const { db } = await import("@/lib/db");
   const categories = await db.category.findMany({
     include: { _count: { select: { offerings: true, vendors: true } } },
     orderBy: [{ audience: "asc" }, { name: "asc" }]

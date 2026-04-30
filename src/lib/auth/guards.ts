@@ -1,6 +1,5 @@
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 
 export async function requireSession() {
   const { auth } = await import("@/auth");
@@ -32,6 +31,7 @@ export function canViewVendorScopedResource({
 }
 
 export async function requireVerifiedVendorProfile(userId: string) {
+  const { db } = await import("@/lib/db");
   const vendorProfile = await db.vendorProfile.findUnique({
     where: { userId },
     select: { id: true, verified: true, slug: true }

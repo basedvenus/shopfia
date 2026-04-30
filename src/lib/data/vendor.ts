@@ -1,6 +1,5 @@
-import { db } from "@/lib/db";
-
 export async function getVendorProfileBySlug(slug: string) {
+  const { db } = await import("@/lib/db");
   return db.vendorProfile.findFirst({
     where: { slug, verified: true },
     include: {

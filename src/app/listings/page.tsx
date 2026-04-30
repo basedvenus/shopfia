@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { db } from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function ListingsPage() {
+  const { db } = await import("@/lib/db");
   const listings = await db.listing.findMany({
     where: {
       status: "ACTIVE",
