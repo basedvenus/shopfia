@@ -1,11 +1,15 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { db } from "@/lib/db";
-import { finalizeOrder } from "@/lib/services/marketplace-fees";
 import { getStripeServer } from "@/lib/stripe";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
+  const [{ db }, { finalizeOrder }] = await Promise.all([
+    import("@/lib/db"),
+    import("@/lib/services/marketplace-fees")
+  ]);
   const signature = headers().get("stripe-signature");
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!signature || !secret) {
