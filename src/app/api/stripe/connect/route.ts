@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
-import { auth } from "@/auth";
-import { db } from "@/lib/db";
 import { createConnectAccount, createConnectAccountLink } from "@/lib/stripe";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
+  const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
   const session = await auth();
   if (
     !session?.user?.id ||
-    (session.user.role !== UserRole.VENDOR && session.user.role !== UserRole.ADMIN)
+    (session.user.role !== "VENDOR" && session.user.role !== "ADMIN")
   ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
   const vendor = await db.vendorProfile.findUnique({ where: { userId: session.user.id } });
   if (!vendor) return NextResponse.json({ error: "Vendor profile not found" }, { status: 404 });
-  if (!vendor.verified && session.user.role !== UserRole.ADMIN) {
+  if (!vendor.verified && session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Vendor account is suspended" }, { status: 403 });
   }
 
