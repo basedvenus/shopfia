@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { MapPinned, Heart, MessagesSquare, User, LayoutGrid, Shield } from "lucide-react";
-import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
@@ -11,10 +10,7 @@ const navItems = [
   { href: "/messages", label: "Messages", icon: MessagesSquare }
 ];
 
-export async function SiteNav() {
-  const session = await auth();
-  const role = session?.user?.role;
-
+export function SiteNav() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
     <div className="container flex h-20 items-center justify-between gap-4">
@@ -39,17 +35,13 @@ export async function SiteNav() {
               </Link>
             );
           })}
-          {role === "VENDOR" && (
-            <Link href="/vendor/dashboard" className="rounded-full px-4 py-2 text-sm hover:bg-muted">
-              Vendor Dashboard
-            </Link>
-          )}
-          {role === "ADMIN" && (
-            <Link href="/admin" className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm hover:bg-muted">
-              <Shield className="h-4 w-4" />
-              Admin
-            </Link>
-          )}
+          <Link href="/vendor/dashboard" className="rounded-full px-4 py-2 text-sm hover:bg-muted">
+            Vendor Dashboard
+          </Link>
+          <Link href="/admin" className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm hover:bg-muted">
+            <Shield className="h-4 w-4" />
+            Admin
+          </Link>
         </nav>
         <div className="flex items-center gap-2">
           <Link href="/account" className="hidden md:inline-flex">
@@ -58,11 +50,9 @@ export async function SiteNav() {
               Account
             </Button>
           </Link>
-          {!session && (
-            <Link href="/account">
-              <Button size="sm">Sign in</Button>
-            </Link>
-          )}
+          <Link href="/account">
+            <Button size="sm">Sign in</Button>
+          </Link>
         </div>
       </div>
     </header>
