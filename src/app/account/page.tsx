@@ -14,7 +14,10 @@ export const dynamic = "force-dynamic";
 export default async function AccountPage() {
   const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
   const session = await auth();
-  const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+  const googleEnabled = Boolean(
+    (process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID) &&
+      (process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET)
+  );
   const emailEnabled = Boolean(
     process.env.EMAIL_SERVER_HOST &&
       process.env.EMAIL_SERVER_PORT &&

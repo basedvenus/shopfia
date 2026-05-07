@@ -6,34 +6,44 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 
+const googleClientId = process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET;
+const emailServerHost = process.env.EMAIL_SERVER_HOST;
+const emailServerPort = process.env.EMAIL_SERVER_PORT;
+const emailServerUser = process.env.EMAIL_SERVER_USER;
+const emailServerPassword = process.env.EMAIL_SERVER_PASSWORD;
+const emailFrom = process.env.EMAIL_FROM;
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(db) as Adapter,
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   session: { strategy: "database" },
+  trustHost: true,
   providers: [
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ...(googleClientId && googleClientSecret
       ? [
           Google({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET
+            clientId: googleClientId,
+            clientSecret: googleClientSecret
           })
         ]
       : []),
-    ...(process.env.EMAIL_SERVER_HOST &&
-    process.env.EMAIL_SERVER_PORT &&
-    process.env.EMAIL_SERVER_USER &&
-    process.env.EMAIL_SERVER_PASSWORD &&
-    process.env.EMAIL_FROM
+    ...(emailServerHost &&
+    emailServerPort &&
+    emailServerUser &&
+    emailServerPassword &&
+    emailFrom
       ? [
           Nodemailer({
             server: {
-              host: process.env.EMAIL_SERVER_HOST,
-              port: Number(process.env.EMAIL_SERVER_PORT),
+              host: emailServerHost,
+              port: Number(emailServerPort),
               auth: {
-                user: process.env.EMAIL_SERVER_USER,
-                pass: process.env.EMAIL_SERVER_PASSWORD
+                user: emailServerUser,
+                pass: emailServerPassword
               }
             },
-            from: process.env.EMAIL_FROM
+            from: emailFrom
           })
         ]
       : [])
