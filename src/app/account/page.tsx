@@ -33,7 +33,7 @@ export default async function AccountPage() {
           <CardHeader><CardTitle>Sign in to ShopFia</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Use a magic link or Google to favorite vendors, message, request quotes, and book.
+              Sign in to favorite vendors, message, request quotes, and book.
             </p>
             <SignInPanel googleEnabled={googleEnabled} emailEnabled={emailEnabled} />
           </CardContent>

@@ -17,41 +17,38 @@ export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
 
   return (
     <div className="space-y-3">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!emailEnabled) {
-            setMessage("Magic link sign-in is not configured yet.");
-            return;
-          }
-          startTransition(async () => {
-            setMessage(null);
-            const result = await signIn("nodemailer", {
-              email,
-              callbackUrl: "/explore",
-              redirect: false
+      {emailEnabled ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            startTransition(async () => {
+              setMessage(null);
+              const result = await signIn("nodemailer", {
+                email,
+                callbackUrl: "/explore",
+                redirect: false
+              });
+              if (result?.error) {
+                setMessage("Magic link sign-in failed. Check email provider settings.");
+              } else {
+                setMessage("Check your email for the magic link.");
+              }
             });
-            if (result?.error) {
-              setMessage("Magic link sign-in failed. Check email provider settings.");
-            } else {
-              setMessage("Check your email for the magic link.");
-            }
-          });
-        }}
-        className="space-y-2"
-      >
-        <Input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email for magic link"
-          required
-          disabled={!emailEnabled}
-        />
-        <Button type="submit" className="w-full" disabled={pending}>
-          {pending ? "Sending..." : "Send magic link"}
-        </Button>
-      </form>
+          }}
+          className="space-y-2"
+        >
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email for magic link"
+            required
+          />
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending ? "Sending..." : "Send magic link"}
+          </Button>
+        </form>
+      ) : null}
       <Button
         type="button"
         variant="secondary"
