@@ -14,9 +14,16 @@ export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const hasAnyProvider = googleEnabled || emailEnabled;
 
   return (
     <div className="space-y-3">
+      {!hasAnyProvider ? (
+        <p className="rounded-2xl border border-dashed p-3 text-sm text-muted-foreground">
+          Sign-in is almost ready. Google needs the production auth variables in
+          Vercel before accounts can be created.
+        </p>
+      ) : null}
       {emailEnabled ? (
         <form
           onSubmit={(e) => {
@@ -48,7 +55,11 @@ export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
             {pending ? "Sending..." : "Send magic link"}
           </Button>
         </form>
-      ) : null}
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Magic-link email is not configured yet, so use Google sign-in for now.
+        </p>
+      )}
       <Button
         type="button"
         variant="secondary"
