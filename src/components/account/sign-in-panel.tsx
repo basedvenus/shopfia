@@ -113,7 +113,11 @@ export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
           minLength={8}
           required
         />
-        <Button type="submit" className="w-full" disabled={pending}>
+        <Button
+          type="submit"
+          className="w-full bg-[#ee8e95] text-white hover:bg-[#e97f88]"
+          disabled={pending}
+        >
           {pending
             ? mode === "sign-up"
               ? "Creating..."
