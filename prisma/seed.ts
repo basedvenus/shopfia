@@ -56,6 +56,8 @@ async function upsertVendorUser(input: {
   email: string;
   name: string;
   slug: string;
+  username: string;
+  website?: string;
   bio: string;
   city: string;
   state: string;
@@ -65,6 +67,7 @@ async function upsertVendorUser(input: {
   availabilityNotes: string;
   photos: string[];
   coverPhoto: string;
+  logoUrl?: string;
   startingPriceCents: number;
 }) {
   return prisma.user.upsert({
@@ -76,6 +79,8 @@ async function upsertVendorUser(input: {
         upsert: {
           update: {
             slug: input.slug,
+            username: input.username,
+            website: input.website ?? null,
             name: input.name,
             bio: input.bio,
             city: input.city,
@@ -86,11 +91,14 @@ async function upsertVendorUser(input: {
             availabilityNotes: input.availabilityNotes,
             photos: input.photos,
             coverPhoto: input.coverPhoto,
+            logoUrl: input.logoUrl ?? input.coverPhoto,
             startingPriceCents: input.startingPriceCents,
             verified: true
           },
           create: {
             slug: input.slug,
+            username: input.username,
+            website: input.website ?? null,
             name: input.name,
             bio: input.bio,
             city: input.city,
@@ -101,6 +109,7 @@ async function upsertVendorUser(input: {
             availabilityNotes: input.availabilityNotes,
             photos: input.photos,
             coverPhoto: input.coverPhoto,
+            logoUrl: input.logoUrl ?? input.coverPhoto,
             startingPriceCents: input.startingPriceCents,
             verified: true
           }
@@ -114,6 +123,8 @@ async function upsertVendorUser(input: {
       vendorProfile: {
         create: {
           slug: input.slug,
+          username: input.username,
+          website: input.website ?? null,
           name: input.name,
           bio: input.bio,
           city: input.city,
@@ -124,6 +135,7 @@ async function upsertVendorUser(input: {
           availabilityNotes: input.availabilityNotes,
           photos: input.photos,
           coverPhoto: input.coverPhoto,
+          logoUrl: input.logoUrl ?? input.coverPhoto,
           startingPriceCents: input.startingPriceCents,
           verified: true
         }
@@ -294,6 +306,8 @@ async function main() {
     email: "baker@shopfia.demo",
     name: "Blush Batch Cookie Atelier",
     slug: "blush-batch-cookie-atelier",
+    username: "blushbatch",
+    website: "https://www.shopfia.app/vendor/profile/blush-batch-cookie-atelier",
     bio: "A luxury custom cookie studio in Vacaville specializing in hand-piped floral sets, branded favors, and editorial dessert moments for showers, birthdays, weddings, and intimate celebrations.",
     city: "Vacaville",
     state: "CA",
@@ -303,6 +317,7 @@ async function main() {
     availabilityNotes: "Books 2-5 weeks ahead for custom sets. Limited rush availability for small favor boxes.",
     photos: cookiePhotos,
     coverPhoto: cookiePhotos[0],
+    logoUrl: cookiePhotos[0],
     startingPriceCents: 7200
   });
 
@@ -310,6 +325,8 @@ async function main() {
     email: "florals@shopfia.demo",
     name: "Solano Flora & Table",
     slug: "solano-flora-and-table",
+    username: "solanoflora",
+    website: "https://www.shopfia.app/vendor/profile/solano-flora-and-table",
     bio: "Modern florals and elevated table styling for intimate Solano County events. Think soft garden arrangements, layered place settings, candlelight, and fresh seasonal details that photograph beautifully.",
     city: "Fairfield",
     state: "CA",
@@ -319,6 +336,7 @@ async function main() {
     availabilityNotes: "Ideal booking window is 3-6 weeks before your event. Limited weekday micro-event availability.",
     photos: floristPhotos,
     coverPhoto: floristPhotos[0],
+    logoUrl: floristPhotos[0],
     startingPriceCents: 18500
   });
 

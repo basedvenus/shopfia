@@ -3,14 +3,23 @@ import { z } from "zod";
 export const vendorOnboardingSchema = z.object({
   name: z.string().min(2).max(80),
   slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/),
+  username: z
+    .string()
+    .min(3)
+    .max(40)
+    .regex(/^[a-z0-9._-]+$/)
+    .optional()
+    .or(z.literal("")),
+  website: z.string().url().optional().or(z.literal("")),
   bio: z.string().max(600).optional().or(z.literal("")),
   city: z.string().min(2).max(80),
   state: z.string().max(40).optional().or(z.literal("")),
   zipCode: z.string().max(12).optional().or(z.literal("")),
-  serviceRadiusMiles: z.coerce.number().int().min(1).max(200),
+  serviceRadiusMiles: z.coerce.number().int().min(1).max(200).optional().default(25),
   weekendAvailable: z.coerce.boolean().optional().default(true),
-  serviceAreaNotes: z.string().max(300).optional().or(z.literal("")),
+  serviceAreaNotes: z.string().max(500).optional().or(z.literal("")),
   availabilityNotes: z.string().max(300).optional().or(z.literal("")),
+  logoUrl: z.string().max(1_500_000).optional().or(z.literal("")),
   categoryIds: z.array(z.string().cuid()).min(1),
   photoUrls: z.array(z.string().url()).max(8).default([])
 });

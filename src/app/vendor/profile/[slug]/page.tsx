@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   Calendar,
   Clock,
+  ExternalLink,
   MapPin,
   Sparkles,
   Star
@@ -53,9 +54,28 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                     </Badge>
                   ))}
                 </div>
-                <h1 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">
-                  {vendor.name}
-                </h1>
+                <div className="flex flex-wrap items-end gap-3">
+                  {vendor.logoUrl ? (
+                    <div
+                      className="h-16 w-16 rounded-full border-2 border-white bg-white bg-cover bg-center shadow-soft"
+                      style={{ backgroundImage: `url(${vendor.logoUrl})` }}
+                    />
+                  ) : null}
+                  <div>
+                    <h1 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">
+                      {vendor.name}
+                    </h1>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/80">
+                      {vendor.username ? <span>@{vendor.username}</span> : null}
+                      {vendor.website ? (
+                        <Link href={vendor.website} target="_blank" className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
+                          Website
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">{vendor.bio}</p>
               </div>
             </div>

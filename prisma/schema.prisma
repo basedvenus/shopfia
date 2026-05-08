@@ -132,6 +132,7 @@ model User {
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
   vendorProfile          VendorProfile?
+  partyEvents            PartyEvent[]
   seller                 Seller?
   buyerFavorites         Favorite[]        @relation("BuyerFavorites")
   buyerQuotes            QuoteRequest[]    @relation("BuyerQuoteRequests")
@@ -190,7 +191,9 @@ model VendorProfile {
   id                        String                @id @default(cuid())
   userId                    String                @unique
   slug                      String                @unique
+  username                  String?               @unique
   name                      String
+  website                   String?
   bio                       String?
   city                      String
   state                     String?
@@ -200,6 +203,7 @@ model VendorProfile {
   serviceRadiusMiles        Int                   @default(15)
   photos                    String[]
   coverPhoto                String?
+  logoUrl                   String?
   verified                  Boolean               @default(false)
   stripeAccountId           String?
   stripeOnboardingComplete  Boolean               @default(false)
@@ -226,6 +230,20 @@ model VendorProfile {
   rankingScore              RankingScore?
   favorites                 Favorite[]            @relation("VendorFavorites")
   inquiries                 Inquiry[]
+}
+
+model PartyEvent {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String
+  theme         String?
+  description   String?
+  coverImageUrl String?
+  imageUrls     String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Category {

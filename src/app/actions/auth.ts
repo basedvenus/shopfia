@@ -66,7 +66,7 @@ const profileSchema = z.object({
     .optional()
     .or(z.literal("")),
   bio: z.string().trim().max(280).optional(),
-  image: z.string().trim().url().optional().or(z.literal("")),
+  image: z.string().trim().max(1_500_000).optional().or(z.literal("")),
   instagramUrl: z.string().trim().url().optional().or(z.literal("")),
   tiktokUrl: z.string().trim().url().optional().or(z.literal("")),
   partyfulUrl: z.string().trim().url().optional().or(z.literal(""))
@@ -117,7 +117,7 @@ export async function updateAccountProfileAction(formData: FormData) {
 }
 
 const partyPhotoSchema = z.object({
-  imageUrl: z.string().trim().url("Add a valid image URL.")
+  imageUrl: z.string().trim().min(1, "Upload or paste an image.")
 });
 
 export async function addPartyPhotoAction(formData: FormData) {
@@ -148,4 +148,50 @@ export async function addPartyPhotoAction(formData: FormData) {
 
   revalidatePath("/account");
   return { ok: true };
+}
+
+const partyEventSchema = z.object({
+  title: z.string().trim().min(2, "Add an event title.").max(100),
+  theme: z.string().trim().max(100).optional().or(z.literal("")),
+  description: z.string().trim().max(500).optional().or(z.literal("")),
+  coverImageUrl: z.string().trim().min(1, "Upload or paste a cover image.").max(1_500_000),
+  imageUrls: z.array(z.string().trim().min(1).max(1_500_000)).max(12).default([])
+});
+
+export async function createPartyEventAction(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, error: "Sign in to create a party gallery." };
+  }
+
+  const imageUrls = formData
+    .getAll("imageUrls")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  const parsed = partyEventSchema.safeParse({
+    title: formData.get("title"),
+    theme: formData.get("theme") || undefined,
+    description: formData.get("description") || undefined,
+    coverImageUrl: formData.get("coverImageUrl"),
+    imageUrls
+  });
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check your event details." };
+  }
+
+  const event = await db.partyEvent.create({
+    data: {
+      userId: session.user.id,
+      title: parsed.data.title,
+      theme: parsed.data.theme || null,
+      description: parsed.data.description || null,
+      coverImageUrl: parsed.data.coverImageUrl,
+      imageUrls: [parsed.data.coverImageUrl, ...parsed.data.imageUrls].slice(0, 12)
+    }
+  });
+
+  revalidatePath("/parties");
+  return { ok: true, eventId: event.id };
 }

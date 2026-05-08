@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FeePreviewCard } from "@/components/vendor/fee-preview-card";
-import { basisPointsToPercent, formatCurrency, formatPercent } from "@/lib/utils";
+import { ImageUploadField } from "@/components/ui/image-upload-field";
+import { ServiceAreaPicker } from "@/components/vendor/service-area-picker";
+import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -34,78 +35,31 @@ export default async function VendorOnboardingPage() {
         </p>
       </div>
 
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card>
-          <CardHeader><CardTitle>Seller fee model</CardTitle></CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <div className="rounded-2xl bg-muted/70 p-4">
-              <div className="font-medium text-foreground">Listing fee</div>
-              <div>{formatCurrency(feeConfig.listingFeeFlatCents)} per published listing for {feeConfig.listingDurationDays} days.</div>
-            </div>
-            <div className="rounded-2xl bg-muted/70 p-4">
-              <div className="font-medium text-foreground">Transaction fee</div>
-              <div>{formatPercent(basisPointsToPercent(feeConfig.transactionFeeBasisPoints))}% on item subtotal, shipping, and gift wrap/add-ons.</div>
-            </div>
-            <div className="rounded-2xl bg-muted/70 p-4">
-              <div className="font-medium text-foreground">Payment processing fee</div>
-              <div>
-                {formatPercent(basisPointsToPercent(feeConfig.paymentProcessingBasisPoints))}% + {formatCurrency(feeConfig.paymentProcessingFlatCents)} per paid order.
-              </div>
-            </div>
-            <div className="rounded-2xl bg-muted/70 p-4">
-              <div className="font-medium text-foreground">Offsite Ads fee</div>
-              <div>
-                {feeConfig.offsiteAdsEnabled
-                  ? `Only when applicable: ${formatPercent(basisPointsToPercent(feeConfig.offsiteAdsStandardBasisPoints))}% standard or ${formatPercent(basisPointsToPercent(feeConfig.offsiteAdsHighVolumeBasisPoints))}% high-volume.`
-                  : "Currently disabled by admin."}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <FeePreviewCard
-          listingFeeCents={feeConfig.listingFeeFlatCents}
-          transactionFeePercent={basisPointsToPercent(feeConfig.transactionFeeBasisPoints)}
-          paymentProcessingPercent={basisPointsToPercent(feeConfig.paymentProcessingBasisPoints)}
-          paymentProcessingFlatCents={feeConfig.paymentProcessingFlatCents}
-          offsiteAdsStandardPercent={basisPointsToPercent(feeConfig.offsiteAdsStandardBasisPoints)}
-          offsiteAdsHighVolumePercent={basisPointsToPercent(feeConfig.offsiteAdsHighVolumeBasisPoints)}
-          offsiteAdsEnabled={feeConfig.offsiteAdsEnabled}
-        />
-      </section>
-
       <Card>
         <CardHeader><CardTitle>1. Vendor Profile</CardTitle></CardHeader>
         <CardContent>
           <form action={upsertVendorProfileAction} className="grid gap-3 md:grid-cols-2">
             <Input name="name" placeholder="Business name" defaultValue={existingVendor?.name} required />
-            <Input name="slug" placeholder="public-slug" defaultValue={existingVendor?.slug} required />
+            <Input name="slug" placeholder="public-profile-slug" defaultValue={existingVendor?.slug} required />
+            <Input name="username" placeholder="Vendor username, e.g. blushbatch" defaultValue={existingVendor?.username ?? ""} />
+            <Input name="website" placeholder="Business website" defaultValue={existingVendor?.website ?? ""} />
             <Input name="city" placeholder="City" defaultValue={existingVendor?.city} required />
             <Input name="state" placeholder="State" defaultValue={existingVendor?.state ?? ""} />
             <Input name="zipCode" placeholder="Zip code" defaultValue={existingVendor?.zipCode ?? ""} />
-            <Input
-              name="serviceRadiusMiles"
-              type="number"
-              min={1}
-              defaultValue={existingVendor?.serviceRadiusMiles ?? 15}
-              required
-            />
-            <label className="flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-sm">
-              <input
-                type="checkbox"
-                name="weekendAvailable"
-                defaultChecked={existingVendor?.weekendAvailable ?? true}
-              />
-              Available this weekend
-            </label>
             <div className="md:col-span-2">
               <Textarea name="bio" placeholder="Business bio" defaultValue={existingVendor?.bio ?? ""} className="min-h-[100px]" />
             </div>
             <div className="md:col-span-2">
-              <Textarea name="serviceAreaNotes" placeholder="Pickup/delivery/service-area notes" defaultValue={existingVendor?.serviceAreaNotes ?? ""} className="min-h-[80px]" />
+              <ServiceAreaPicker defaultValue={existingVendor?.serviceAreaNotes} />
             </div>
             <div className="md:col-span-2">
-              <Textarea name="availabilityNotes" placeholder="Availability notes" defaultValue={existingVendor?.availabilityNotes ?? ""} className="min-h-[80px]" />
+              <ImageUploadField
+                name="logoUrl"
+                label="Vendor logo"
+                defaultValue={existingVendor?.logoUrl}
+                rounded="full"
+                helperText="Click to upload a business logo or vendor image."
+              />
             </div>
             <div className="md:col-span-2 rounded-2xl border p-3">
               <label className="mb-2 block text-sm font-medium">Categories</label>
@@ -121,14 +75,7 @@ export default async function VendorOnboardingPage() {
                 })}
               </div>
             </div>
-            <div className="md:col-span-2 rounded-2xl border p-3">
-              <label className="mb-2 block text-sm font-medium">Photo URLs (paste one per field)</label>
-              <div className="grid gap-2">
-                {[0, 1, 2].map((i) => (
-                  <Input key={i} name="photoUrls" placeholder={`https://... photo ${i + 1}`} defaultValue={existingVendor?.photos[i] ?? ""} />
-                ))}
-              </div>
-            </div>
+            <input type="hidden" name="serviceRadiusMiles" value={existingVendor?.serviceRadiusMiles ?? 25} />
             <div className="md:col-span-2">
               <Button type="submit">Save vendor profile</Button>
             </div>

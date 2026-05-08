@@ -19,50 +19,64 @@ export async function upsertVendorProfileAction(formData: FormData) {
   const parsed = vendorOnboardingSchema.parse({
     name: formData.get("name"),
     slug: formData.get("slug"),
+    username: formData.get("username") || undefined,
+    website: formData.get("website") || undefined,
     bio: formData.get("bio"),
     city: formData.get("city"),
     state: formData.get("state"),
     zipCode: formData.get("zipCode"),
-    serviceRadiusMiles: formData.get("serviceRadiusMiles"),
-    weekendAvailable: formData.get("weekendAvailable") === "on",
+    serviceRadiusMiles: formData.get("serviceRadiusMiles") || undefined,
+    weekendAvailable: true,
     serviceAreaNotes: formData.get("serviceAreaNotes"),
-    availabilityNotes: formData.get("availabilityNotes"),
+    availabilityNotes: undefined,
+    logoUrl: formData.get("logoUrl") || undefined,
     categoryIds: formDataToArray(formData, "categoryIds"),
     photoUrls: formDataToArray(formData, "photoUrls")
   });
 
-  const vendor = await db.vendorProfile.upsert({
-    where: { userId: session.user.id },
-    update: {
-      name: parsed.name,
-      slug: parsed.slug,
-      bio: parsed.bio || null,
-      city: parsed.city,
-      state: parsed.state || null,
-      zipCode: parsed.zipCode || null,
-      serviceRadiusMiles: parsed.serviceRadiusMiles,
-      weekendAvailable: parsed.weekendAvailable,
-      serviceAreaNotes: parsed.serviceAreaNotes || null,
-      availabilityNotes: parsed.availabilityNotes || null,
-      photos: parsed.photoUrls,
-      coverPhoto: parsed.photoUrls[0] ?? null
-    },
-    create: {
-      userId: session.user.id,
-      name: parsed.name,
-      slug: parsed.slug,
-      bio: parsed.bio || null,
-      city: parsed.city,
-      state: parsed.state || null,
-      zipCode: parsed.zipCode || null,
-      serviceRadiusMiles: parsed.serviceRadiusMiles,
-      weekendAvailable: parsed.weekendAvailable,
-      serviceAreaNotes: parsed.serviceAreaNotes || null,
-      availabilityNotes: parsed.availabilityNotes || null,
-      photos: parsed.photoUrls,
-      coverPhoto: parsed.photoUrls[0] ?? null
-    }
-  });
+  let vendor;
+  try {
+    vendor = await db.vendorProfile.upsert({
+      where: { userId: session.user.id },
+      update: {
+        name: parsed.name,
+        slug: parsed.slug,
+        username: parsed.username || null,
+        website: parsed.website || null,
+        bio: parsed.bio || null,
+        city: parsed.city,
+        state: parsed.state || null,
+        zipCode: parsed.zipCode || null,
+        serviceRadiusMiles: parsed.serviceRadiusMiles,
+        weekendAvailable: parsed.weekendAvailable,
+        serviceAreaNotes: parsed.serviceAreaNotes || null,
+        availabilityNotes: null,
+        logoUrl: parsed.logoUrl || null,
+        photos: parsed.photoUrls,
+        coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null
+      },
+      create: {
+        userId: session.user.id,
+        name: parsed.name,
+        slug: parsed.slug,
+        username: parsed.username || null,
+        website: parsed.website || null,
+        bio: parsed.bio || null,
+        city: parsed.city,
+        state: parsed.state || null,
+        zipCode: parsed.zipCode || null,
+        serviceRadiusMiles: parsed.serviceRadiusMiles,
+        weekendAvailable: parsed.weekendAvailable,
+        serviceAreaNotes: parsed.serviceAreaNotes || null,
+        availabilityNotes: null,
+        logoUrl: parsed.logoUrl || null,
+        photos: parsed.photoUrls,
+        coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null
+      }
+    });
+  } catch {
+    throw new Error("That vendor username or public slug is already taken.");
+  }
 
   const validVendorCategoryCount = await db.category.count({
     where: { id: { in: parsed.categoryIds }, audience: CategoryAudience.VENDOR }

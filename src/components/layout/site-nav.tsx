@@ -1,17 +1,13 @@
 import Link from "next/link";
 import {
-  CalendarHeart,
   Heart,
   LayoutGrid,
-  LogOut,
   MapPinned,
   MessagesSquare,
-  Settings,
-  Shield,
-  Store,
   User
 } from "lucide-react";
 import { signOut, auth } from "@/auth";
+import { AccountMenu } from "@/components/layout/account-menu";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
@@ -64,78 +60,19 @@ export async function SiteNav() {
           <Link href="/vendor/dashboard" className="rounded-full px-4 py-2 text-sm hover:bg-muted">
             Vendor Dashboard
           </Link>
-          <Link href="/admin" className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm hover:bg-muted">
-            <Shield className="h-4 w-4" />
-            Admin
-          </Link>
         </nav>
         <div className="flex items-center gap-2">
           {signedIn ? (
-            <details className="group relative">
-              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-border bg-white px-2 py-1.5 text-sm shadow-sm transition hover:bg-muted">
-                <span
-                  className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-accent text-sm font-semibold text-foreground"
-                  style={
-                    session?.user?.image
-                      ? {
-                          backgroundImage: `url(${session.user.image})`,
-                          backgroundPosition: "center",
-                          backgroundSize: "cover"
-                        }
-                      : undefined
-                  }
-                >
-                  {session?.user?.image ? <span className="sr-only">{initials}</span> : initials}
-                </span>
-                <span className="hidden max-w-[120px] truncate pr-2 text-muted-foreground md:block">
-                  {session?.user?.name || "Profile"}
-                </span>
-              </summary>
-              <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-3xl border border-border bg-white p-2 shadow-soft">
-                <div className="border-b border-border/70 px-3 py-3">
-                  <div className="font-medium">{session?.user?.name || "ShopFia profile"}</div>
-                  <div className="truncate text-xs text-muted-foreground">{session?.user?.email}</div>
-                </div>
-                <nav className="grid py-2 text-sm">
-                  <Link href="/account" className="flex items-center gap-2 rounded-2xl px-3 py-2 hover:bg-muted">
-                    <User className="h-4 w-4" />
-                    My Profile
-                  </Link>
-                  <Link href="/account#my-parties" className="flex items-center gap-2 rounded-2xl px-3 py-2 hover:bg-muted">
-                    <CalendarHeart className="h-4 w-4" />
-                    My Parties
-                  </Link>
-                  <Link href="/favorites" className="flex items-center gap-2 rounded-2xl px-3 py-2 hover:bg-muted">
-                    <Heart className="h-4 w-4" />
-                    Favorites
-                  </Link>
-                  <Link href="/messages" className="flex items-center gap-2 rounded-2xl px-3 py-2 hover:bg-muted">
-                    <MessagesSquare className="h-4 w-4" />
-                    Messages
-                  </Link>
-                  <Link href="/vendor/dashboard" className="flex items-center gap-2 rounded-2xl px-3 py-2 hover:bg-muted">
-                    <Store className="h-4 w-4" />
-                    Vendor Dashboard
-                  </Link>
-                  <Link href="/account#settings" className="flex items-center gap-2 rounded-2xl px-3 py-2 hover:bg-muted">
-                    <Settings className="h-4 w-4" />
-                    Settings
-                  </Link>
-                </nav>
-                <form
-                  action={async () => {
-                    "use server";
-                    await signOut({ redirectTo: "/explore" });
-                  }}
-                  className="border-t border-border/70 pt-2"
-                >
-                  <button className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted">
-                    <LogOut className="h-4 w-4" />
-                    Logout
-                  </button>
-                </form>
-              </div>
-            </details>
+            <AccountMenu
+              name={session?.user?.name}
+              email={session?.user?.email}
+              image={session?.user?.image}
+              initials={initials}
+              signOutAction={async () => {
+                "use server";
+                await signOut({ redirectTo: "/explore" });
+              }}
+            />
           ) : (
             <>
               <Link href="/account" className="hidden md:inline-flex">

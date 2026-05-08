@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarHeart, Heart, Instagram, MessageCircle, Music2, PackageCheck, PenLine, Settings, Sparkles, Store, UserRound } from "lucide-react";
-import { addPartyPhotoAction, updateAccountProfileAction } from "@/app/actions/auth";
+import { updateAccountProfileAction } from "@/app/actions/auth";
 import { acceptQuoteAndCreatePaymentIntentAction } from "@/app/actions/quotes";
 import { createReviewAction } from "@/app/actions/reviews";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SignInPanel } from "@/components/account/sign-in-panel";
+import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { authProviderConfig } from "@/lib/auth/provider-config";
 import { formatCurrency } from "@/lib/utils";
 
@@ -91,15 +92,6 @@ export default async function AccountPage() {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
-  const partyPhotos =
-    accountUser?.partyPhotoUrls && accountUser.partyPhotoUrls.length > 0
-      ? accountUser.partyPhotoUrls
-      : [
-          "/demo/fairfield-lemon-tablescape.png",
-          "/demo/vacaville-cookie-tulips.png",
-          "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?auto=format&fit=crop&w=900&q=80",
-          "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=900&q=80"
-        ];
   const dashboardItems = [
     {
       label: "Quotes",
@@ -135,6 +127,13 @@ export default async function AccountPage() {
       href: "/messages",
       icon: MessageCircle,
       detail: "Conversations and quotes"
+    },
+    {
+      label: "My Parties",
+      value: "Gallery",
+      href: "/parties",
+      icon: CalendarHeart,
+      detail: "Events, moodboards, and inspiration"
     }
   ];
 
@@ -211,7 +210,13 @@ export default async function AccountPage() {
               <Input name="username" defaultValue={accountUser?.username ?? ""} placeholder="username" />
             </div>
             <Textarea name="bio" defaultValue={accountUser?.bio ?? ""} placeholder="About your party style, favorite themes, or what you are planning..." className="min-h-[90px]" />
-            <Input name="image" defaultValue={accountUser?.image ?? ""} placeholder="Avatar image URL" />
+            <ImageUploadField
+              name="image"
+              label="Profile picture"
+              defaultValue={accountUser?.image}
+              rounded="full"
+              helperText="Click to upload, preview, then save your avatar."
+            />
             <div className="grid gap-3 sm:grid-cols-3">
               <Input name="instagramUrl" defaultValue={accountUser?.instagramUrl ?? ""} placeholder="Instagram URL" />
               <Input name="tiktokUrl" defaultValue={accountUser?.tiktokUrl ?? ""} placeholder="TikTok URL" />
@@ -226,12 +231,12 @@ export default async function AccountPage() {
               Profile goals
             </div>
             <p>Make your account feel social, trusted, and creator-led. Use a clear handle, a warm bio, and visual links that show your event style.</p>
-            <p className="text-xs">Full file uploads can connect to Cloudinary later; this MVP stores image URLs so the visual profile and moodboard flow works now.</p>
+            <p className="text-xs">Uploads preview immediately and save with your profile for this MVP; cloud media storage can be layered in later.</p>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-5">
+      <section className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
         {dashboardItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -335,43 +340,17 @@ export default async function AccountPage() {
         </div>
       </section>
 
-      <section id="my-parties" className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <section className="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">My Parties</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              A visual gallery for celebrations, inspiration, and vendor-credit moments.
+              Event galleries and visual inspiration now live on their own dedicated page.
             </p>
           </div>
-          <form
-            action={async (formData) => {
-              "use server";
-              await addPartyPhotoAction(formData);
-            }}
-            className="flex w-full gap-2 sm:w-auto"
-          >
-            <Input name="imageUrl" placeholder="Paste image URL" className="min-w-0 sm:w-72" />
-            <Button type="submit">Add photo</Button>
-          </form>
-        </div>
-
-        <div className="grid auto-rows-[180px] grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
-          {partyPhotos.map((photo, index) => (
-            <div
-              key={`${photo}-${index}`}
-              className={`relative overflow-hidden rounded-[1.4rem] border border-white/80 bg-muted shadow-sm ${
-                index === 0 ? "col-span-2 row-span-2" : ""
-              }`}
-            >
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(${photo})` }}
-              />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/45 to-transparent p-3 text-xs text-white">
-                {index === 0 ? "Featured party moodboard" : "Saved inspiration"}
-              </div>
-            </div>
-          ))}
+          <Link href="/parties">
+            <Button>Open My Parties</Button>
+          </Link>
         </div>
       </section>
     </div>
