@@ -9,27 +9,18 @@ import { Input } from "@/components/ui/input";
 type SignInPanelProps = {
   googleEnabled: boolean;
   emailEnabled: boolean;
-  missingGoogleConfig: string[];
 };
 
-export function SignInPanel({ googleEnabled, emailEnabled, missingGoogleConfig }: SignInPanelProps) {
+export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const hasAnyProvider = googleEnabled || emailEnabled;
-  const missingGoogleMessage = missingGoogleConfig.join(", ");
 
   return (
     <div className="space-y-3">
-      {!hasAnyProvider ? (
-        <p className="rounded-2xl border border-dashed p-3 text-sm text-muted-foreground">
-          Google sign-in is not configured yet. Email and password accounts are
-          ready to use.
-        </p>
-      ) : null}
       <div className="grid grid-cols-2 gap-2 rounded-full bg-muted p-1">
         <button
           type="button"
@@ -105,14 +96,14 @@ export function SignInPanel({ googleEnabled, emailEnabled, missingGoogleConfig }
             autoComplete="name"
           />
         ) : null}
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
           autoComplete="email"
-            required
-          />
+          required
+        />
         <Input
           type="password"
           value={password}
@@ -162,25 +153,18 @@ export function SignInPanel({ googleEnabled, emailEnabled, missingGoogleConfig }
           Send magic link
         </Button>
       ) : null}
-      <Button
-        type="button"
-        variant="secondary"
-        className="w-full"
-        disabled={!googleEnabled || pending}
-        onClick={() => {
-          if (!googleEnabled) {
-            setMessage("Google sign-in is not configured yet.");
-            return;
-          }
-          signIn("google", { callbackUrl: "/explore" });
-        }}
-      >
-        Continue with Google
-      </Button>
-      {!googleEnabled && missingGoogleMessage ? (
-        <p className="text-xs text-muted-foreground">
-          Google needs {missingGoogleMessage} in Vercel.
-        </p>
+      {googleEnabled ? (
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full"
+          disabled={pending}
+          onClick={() => {
+            signIn("google", { callbackUrl: "/explore" });
+          }}
+        >
+          Continue with Google
+        </Button>
       ) : null}
       {message && <p className="text-sm text-muted-foreground">{message}</p>}
     </div>

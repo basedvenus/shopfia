@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SignInPanel } from "@/components/account/sign-in-panel";
-import { authProviderConfig, getMissingAuthProviderVariables } from "@/lib/auth/provider-config";
+import { authProviderConfig } from "@/lib/auth/provider-config";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,6 @@ export default async function AccountPage() {
             <SignInPanel
               emailEnabled={authProviderConfig.emailEnabled}
               googleEnabled={authProviderConfig.googleEnabled}
-              missingGoogleConfig={getMissingAuthProviderVariables()}
             />
           </CardContent>
         </Card>
