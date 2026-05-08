@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SignInPanel } from "@/components/account/sign-in-panel";
+import { authProviderConfig, getMissingAuthProviderVariables } from "@/lib/auth/provider-config";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -14,19 +15,6 @@ export const dynamic = "force-dynamic";
 export default async function AccountPage() {
   const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
   const session = await auth();
-  const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
-  const googleEnabled = Boolean(
-    authSecret &&
-      (process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID) &&
-      (process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET)
-  );
-  const emailEnabled = Boolean(
-    process.env.EMAIL_SERVER_HOST &&
-      process.env.EMAIL_SERVER_PORT &&
-      process.env.EMAIL_SERVER_USER &&
-      process.env.EMAIL_SERVER_PASSWORD &&
-      process.env.EMAIL_FROM
-  );
 
   if (!session?.user?.id) {
     return (
@@ -37,7 +25,11 @@ export default async function AccountPage() {
             <p className="text-sm text-muted-foreground">
               Sign in to favorite vendors, message, request quotes, and book.
             </p>
-            <SignInPanel googleEnabled={googleEnabled} emailEnabled={emailEnabled} />
+            <SignInPanel
+              emailEnabled={authProviderConfig.emailEnabled}
+              googleEnabled={authProviderConfig.googleEnabled}
+              missingGoogleConfig={getMissingAuthProviderVariables()}
+            />
           </CardContent>
         </Card>
       </div>

@@ -56,7 +56,10 @@ Open [http://localhost:3000/explore](http://localhost:3000/explore).
 See `.env.example` for the full list:
 
 - `DATABASE_URL`
+- `AUTH_SECRET`
 - `NEXTAUTH_SECRET`
+- `AUTH_GOOGLE_ID`
+- `AUTH_GOOGLE_SECRET`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `EMAIL_SERVER_HOST`
@@ -96,7 +99,11 @@ Notes:
 1. Create a Google OAuth client.
 2. Add redirect URI:
    - `http://localhost:3000/api/auth/callback/google`
-3. Set `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
+   - `https://www.shopfia.app/api/auth/callback/google`
+3. In Vercel, set `AUTH_SECRET`, `AUTH_URL=https://www.shopfia.app`,
+   `AUTH_GOOGLE_ID`, and `AUTH_GOOGLE_SECRET`.
+   `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET` are still
+   accepted for local compatibility.
 
 ### Email magic link (SMTP)
 

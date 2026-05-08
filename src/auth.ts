@@ -5,45 +5,34 @@ import type { Adapter } from "@auth/core/adapters";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
-
-const googleClientId = process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID;
-const googleClientSecret = process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET;
-const emailServerHost = process.env.EMAIL_SERVER_HOST;
-const emailServerPort = process.env.EMAIL_SERVER_PORT;
-const emailServerUser = process.env.EMAIL_SERVER_USER;
-const emailServerPassword = process.env.EMAIL_SERVER_PASSWORD;
-const emailFrom = process.env.EMAIL_FROM;
+import { authProviderConfig } from "@/lib/auth/provider-config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(db) as Adapter,
-  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  secret: authProviderConfig.authSecret,
   session: { strategy: "database" },
   trustHost: true,
   providers: [
-    ...(googleClientId && googleClientSecret
+    ...(authProviderConfig.googleEnabled
       ? [
           Google({
-            clientId: googleClientId,
-            clientSecret: googleClientSecret
+            clientId: authProviderConfig.googleClientId!,
+            clientSecret: authProviderConfig.googleClientSecret!
           })
         ]
       : []),
-    ...(emailServerHost &&
-    emailServerPort &&
-    emailServerUser &&
-    emailServerPassword &&
-    emailFrom
+    ...(authProviderConfig.emailEnabled
       ? [
           Nodemailer({
             server: {
-              host: emailServerHost,
-              port: Number(emailServerPort),
+              host: authProviderConfig.email.host,
+              port: Number(authProviderConfig.email.port),
               auth: {
-                user: emailServerUser,
-                pass: emailServerPassword
+                user: authProviderConfig.email.user,
+                pass: authProviderConfig.email.password
               }
             },
-            from: emailFrom
+            from: authProviderConfig.email.from
           })
         ]
       : [])

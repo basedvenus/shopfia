@@ -8,20 +8,22 @@ import { Input } from "@/components/ui/input";
 type SignInPanelProps = {
   googleEnabled: boolean;
   emailEnabled: boolean;
+  missingGoogleConfig: string[];
 };
 
-export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
+export function SignInPanel({ googleEnabled, emailEnabled, missingGoogleConfig }: SignInPanelProps) {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const hasAnyProvider = googleEnabled || emailEnabled;
+  const missingGoogleMessage = missingGoogleConfig.join(", ");
 
   return (
     <div className="space-y-3">
       {!hasAnyProvider ? (
         <p className="rounded-2xl border border-dashed p-3 text-sm text-muted-foreground">
-          Sign-in is almost ready. Google needs the production auth variables in
-          Vercel before accounts can be created.
+          Sign-in is almost ready. Add {missingGoogleMessage} in Vercel to
+          enable Google accounts.
         </p>
       ) : null}
       {emailEnabled ? (
@@ -57,7 +59,7 @@ export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
         </form>
       ) : (
         <p className="text-xs text-muted-foreground">
-          Magic-link email is not configured yet, so use Google sign-in for now.
+          Magic-link email is not configured yet.
         </p>
       )}
       <Button
