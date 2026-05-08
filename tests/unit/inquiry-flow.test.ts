@@ -53,8 +53,8 @@ describe("public inquiry flow", () => {
         userId: user.id,
         slug: `codex-test-vendor-${uniqueKey}`,
         name: "Codex Test Vendor",
-        city: "Austin",
-        state: "TX",
+        city: "Fairfield",
+        state: "CA",
         photos: [],
         verified: true
       }
@@ -97,7 +97,7 @@ describe("public inquiry flow", () => {
     form.set("email", uniqueEmail);
     form.set("phone", "555-0100");
     form.set("eventDate", "2026-04-15");
-    form.set("eventLocation", "Austin, TX");
+    form.set("eventLocation", "Fairfield, CA");
     form.set("budgetDollars", "125.50");
     form.set("message", "Testing the public inquiry flow.");
 

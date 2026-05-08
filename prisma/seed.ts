@@ -26,15 +26,17 @@ const categories = [
   { name: "Holiday Party", iconName: "sparkles", audience: CategoryAudience.BUYER }
 ] as const;
 
-const mayaPhotos = [
-  "https://images.unsplash.com/photo-1464306076886-da185f6a9d05?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1481391032119-d89fee407e44?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1559622214-0f0d2f1c4d12?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1621303837174-89787a7d4729?auto=format&fit=crop&w=1200&q=80"
+const cookiePhotos = [
+  "/demo/vacaville-cookie-tulips.png",
+  "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1486427944299-d1955d23e34d?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=1200&q=80"
 ];
 
 const floristPhotos = [
+  "/demo/fairfield-lemon-tablescape.png",
   "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1504196606672-aef5c9cefc92?auto=format&fit=crop&w=1200&q=80",
   "https://images.unsplash.com/photo-1463320726281-696a485928c7?auto=format&fit=crop&w=1200&q=80"
 ];
 
@@ -273,51 +275,75 @@ async function refreshVendorReviewStats(vendorId: string) {
   await refreshSellerReviewMetrics(vendorId, prisma);
 }
 
+async function cleanupLegacyDemoContent() {
+  await prisma.user.deleteMany({
+    where: {
+      OR: [
+        { email: { in: ["cookies@shopfia.demo"] } },
+        { email: { startsWith: "codex-vendor-" } }
+      ]
+    }
+  });
+}
+
 async function main() {
+  await cleanupLegacyDemoContent();
   const categoryMap = await seedCategories();
 
   const baker = await upsertVendorUser({
     email: "baker@shopfia.demo",
-    name: "Maya Sweet Studio",
-    slug: "maya-sweet-studio",
-    bio: "Playful, pastel-forward cakes and dessert styling for birthdays, showers, and romantic dinner parties. Each setup is designed to feel editorial enough for your camera roll and practical enough for a real celebration.",
-    city: "Austin",
-    state: "TX",
-    serviceRadiusMiles: 20,
+    name: "Blush Batch Cookie Atelier",
+    slug: "blush-batch-cookie-atelier",
+    bio: "A luxury custom cookie studio in Vacaville specializing in hand-piped floral sets, branded favors, and editorial dessert moments for showers, birthdays, weddings, and intimate celebrations.",
+    city: "Vacaville",
+    state: "CA",
+    serviceRadiusMiles: 28,
     weekendAvailable: true,
-    serviceAreaNotes: "Austin, Round Rock, Cedar Park, and nearby event venues. Delivery, setup, and breakdown are available for larger installs.",
-    availabilityNotes: "Books most weekends 2-4 weeks ahead. Rush dates open up when production slots allow.",
-    photos: mayaPhotos,
-    coverPhoto: mayaPhotos[0],
-    startingPriceCents: 8500
+    serviceAreaNotes: "Vacaville, Fairfield, Dixon, Suisun City, Vallejo, Benicia, and nearby Napa venues. Pickup is available in Vacaville with local delivery for event orders.",
+    availabilityNotes: "Books 2-5 weeks ahead for custom sets. Limited rush availability for small favor boxes.",
+    photos: cookiePhotos,
+    coverPhoto: cookiePhotos[0],
+    startingPriceCents: 7200
   });
 
   const florist = await upsertVendorUser({
     email: "florals@shopfia.demo",
-    name: "Petal & Thread",
-    slug: "petal-and-thread",
-    bio: "Whimsical florals for intimate events and styled gifting.",
-    city: "Austin",
-    state: "TX",
-    serviceRadiusMiles: 30,
-    weekendAvailable: false,
-    serviceAreaNotes: "Studio pickup or local delivery with install windows available for event work.",
-    availabilityNotes: "Ideal booking window is 10-14 days before your event.",
+    name: "Solano Flora & Table",
+    slug: "solano-flora-and-table",
+    bio: "Modern florals and elevated table styling for intimate Solano County events. Think soft garden arrangements, layered place settings, candlelight, and fresh seasonal details that photograph beautifully.",
+    city: "Fairfield",
+    state: "CA",
+    serviceRadiusMiles: 35,
+    weekendAvailable: true,
+    serviceAreaNotes: "Fairfield, Suisun City, Vacaville, Vallejo, Benicia, Dixon, and Napa. Delivery and on-site styling are available for intimate events.",
+    availabilityNotes: "Ideal booking window is 3-6 weeks before your event. Limited weekday micro-event availability.",
     photos: floristPhotos,
     coverPhoto: floristPhotos[0],
-    startingPriceCents: 12000
+    startingPriceCents: 18500
   });
 
   const buyerJordan = await prisma.user.upsert({
     where: { email: "buyer@shopfia.demo" },
     update: {
       name: "Jordan Buyer",
-      role: UserRole.BUYER
+      role: UserRole.BUYER,
+      username: "jordan.parties",
+      bio: "Solano County mom planning sweet birthdays, baby showers, and cozy backyard celebrations.",
+      instagramUrl: "https://instagram.com/shopfia",
+      tiktokUrl: "https://www.tiktok.com/@shopfia",
+      partyfulUrl: "https://www.partyful.com",
+      partyPhotoUrls: [floristPhotos[0], cookiePhotos[0], floristPhotos[1]]
     },
     create: {
       email: "buyer@shopfia.demo",
       name: "Jordan Buyer",
-      role: UserRole.BUYER
+      role: UserRole.BUYER,
+      username: "jordan.parties",
+      bio: "Solano County mom planning sweet birthdays, baby showers, and cozy backyard celebrations.",
+      instagramUrl: "https://instagram.com/shopfia",
+      tiktokUrl: "https://www.tiktok.com/@shopfia",
+      partyfulUrl: "https://www.partyful.com",
+      partyPhotoUrls: [floristPhotos[0], cookiePhotos[0], floristPhotos[1]]
     }
   });
 
@@ -350,46 +376,47 @@ async function main() {
   if (baker.vendorProfile) {
     await ensureSellerAccountForVendorProfile(baker.vendorProfile.id, prisma);
     await ensureVendorCategory(baker.vendorProfile.id, categoryMap["Cakes & Desserts"]);
+    await ensureVendorCategory(baker.vendorProfile.id, categoryMap["Party Favors and Gifts"]);
     await ensureVendorCategory(baker.vendorProfile.id, categoryMap["Styled Setups"]);
 
     const signatureCake = await ensureOffering({
       vendorId: baker.vendorProfile.id,
       slug: "signature-cake",
-      title: "Signature Celebration Cake",
+      title: "Luxury Custom Cookie Set",
       description:
-        "Custom sketch, color story, floral or bow accents, and delivery within Maya's local service zone.",
-      basePriceCents: 15000,
+        "One dozen hand-decorated sugar cookies with a custom color story, florals, lettering, and premium gift-box presentation.",
+      basePriceCents: 7200,
       categoryId: categoryMap["Cakes & Desserts"],
-      photos: [mayaPhotos[0], mayaPhotos[2]],
-      tags: ["buttercream", "custom design", "delivery included"],
-      durationMinutes: 60,
-      turnaroundDays: 7
+      photos: [cookiePhotos[0], cookiePhotos[1]],
+      tags: ["custom cookies", "hand-piped", "party favors"],
+      durationMinutes: 30,
+      turnaroundDays: 10
     });
 
     const dessertBar = await ensureOffering({
       vendorId: baker.vendorProfile.id,
       slug: "storybook-dessert-bar",
-      title: "Storybook Dessert Bar",
+      title: "Event Favor Cookie Bar",
       description:
-        "A full sweets table with layered cake, mini desserts, signage, stands, and on-site styling for showers or birthdays.",
-      basePriceCents: 32500,
+        "A styled favor display with 3-5 dozen custom cookies, signage, trays, ribbon details, and setup for showers, birthdays, or brand events.",
+      basePriceCents: 28500,
       categoryId: categoryMap["Styled Setups"],
-      photos: [mayaPhotos[1], mayaPhotos[0], mayaPhotos[3]],
-      tags: ["dessert table", "onsite styling", "signage"],
-      durationMinutes: 180,
+      photos: [cookiePhotos[0], cookiePhotos[2], cookiePhotos[3]],
+      tags: ["favor display", "onsite styling", "custom signage"],
+      durationMinutes: 90,
       turnaroundDays: 14
     });
 
     const minis = await ensureOffering({
       vendorId: baker.vendorProfile.id,
       slug: "mini-cake-drop",
-      title: "Mini Cake Drop",
+      title: "Petite Gift Box",
       description:
-        "Petite heart cakes and bento sets for gifting, rehearsal dinners, and content-friendly celebrations.",
-      basePriceCents: 8500,
-      categoryId: categoryMap["Cakes & Desserts"],
-      photos: [mayaPhotos[2], mayaPhotos[3]],
-      tags: ["mini cakes", "giftable", "pickup option"],
+        "Six coordinated cookies in a keepsake box for bridesmaids, birthdays, teacher gifts, or thoughtful hostess moments.",
+      basePriceCents: 4200,
+      categoryId: categoryMap["Party Favors and Gifts"],
+      photos: [cookiePhotos[1], cookiePhotos[0]],
+      tags: ["gift box", "custom favors", "pickup option"],
       turnaroundDays: 5
     });
 
@@ -398,8 +425,8 @@ async function main() {
       vendorId: baker.id,
       vendorProfileId: baker.vendorProfile.id,
       offeringId: signatureCake.id,
-      amountCents: 18800,
-      notes: "Baby shower cloud cake"
+      amountCents: 9600,
+      notes: "Vacaville baby shower floral cookie set"
     });
 
     const niaOrder = await ensureCompletedOrder({
@@ -407,8 +434,8 @@ async function main() {
       vendorId: baker.id,
       vendorProfileId: baker.vendorProfile.id,
       offeringId: dessertBar.id,
-      amountCents: 41200,
-      notes: "First birthday dessert bar"
+      amountCents: 34000,
+      notes: "Fairfield first birthday cookie favor bar"
     });
 
     const jordanMiniOrder = await ensureCompletedOrder({
@@ -416,8 +443,8 @@ async function main() {
       vendorId: baker.id,
       vendorProfileId: baker.vendorProfile.id,
       offeringId: minis.id,
-      amountCents: 9600,
-      notes: "Anniversary mini cake set"
+      amountCents: 5200,
+      notes: "Benicia bridesmaid cookie boxes"
     });
 
     await ensureReview({
@@ -425,7 +452,7 @@ async function main() {
       buyerId: buyerJordan.id,
       vendorId: baker.vendorProfile.id,
       rating: 5,
-      body: "The cake looked exactly like the mood board and still tasted amazing the next day. Maya made the whole process feel easy and premium."
+      body: "The cookies looked exactly like our inspiration board. Every detail felt custom, delicate, and gift-worthy."
     });
 
     await ensureReview({
@@ -433,7 +460,7 @@ async function main() {
       buyerId: buyerNia.id,
       vendorId: baker.vendorProfile.id,
       rating: 5,
-      body: "Our dessert table was the first thing guests photographed. Every piece felt intentional, polished, and very us."
+      body: "Our favor table was the first thing guests photographed. Every cookie felt intentional, polished, and very us."
     });
 
     await ensureReview({
@@ -441,7 +468,7 @@ async function main() {
       buyerId: buyerJordan.id,
       vendorId: baker.vendorProfile.id,
       rating: 4,
-      body: "Perfect for a smaller celebration. I would absolutely book again for gifting or a dinner party."
+      body: "Perfect for a smaller celebration. I would absolutely book again for gifts or party favors."
     });
 
     await refreshVendorReviewStats(baker.vendorProfile.id);
@@ -450,18 +477,34 @@ async function main() {
   if (florist.vendorProfile) {
     await ensureSellerAccountForVendorProfile(florist.vendorProfile.id, prisma);
     await ensureVendorCategory(florist.vendorProfile.id, categoryMap["Florals"]);
+    await ensureVendorCategory(florist.vendorProfile.id, categoryMap["Styled Setups"]);
+    await ensureVendorCategory(florist.vendorProfile.id, categoryMap["Event Planning"]);
 
     await ensureOffering({
       vendorId: florist.vendorProfile.id,
       slug: "mini-event-floral-package",
-      title: "Mini Event Floral Package",
+      title: "Modern Floral Moment",
       description:
-        "Entry floral package with bouquet, bud vases, and low centerpieces for showers and dinners.",
-      basePriceCents: 22000,
+        "A refined floral package with a petite statement arrangement, bud vases, and candle styling for showers, dinners, and micro-events.",
+      basePriceCents: 18500,
       categoryId: categoryMap["Florals"],
-      photos: floristPhotos,
-      tags: ["florals", "event styling", "bouquets"],
+      photos: [floristPhotos[1], floristPhotos[0], floristPhotos[3]],
+      tags: ["florals", "micro events", "candle styling"],
       turnaroundDays: 10
+    });
+
+    await ensureOffering({
+      vendorId: florist.vendorProfile.id,
+      slug: "intimate-tablescape-styling",
+      title: "Intimate Tablescape Styling",
+      description:
+        "Layered linens, place settings, florals, candles, and seasonal details for dinner parties, bridal brunches, and backyard celebrations.",
+      basePriceCents: 42000,
+      categoryId: categoryMap["Styled Setups"],
+      photos: [floristPhotos[0], floristPhotos[2], floristPhotos[1]],
+      tags: ["tablescape", "place settings", "intimate events"],
+      durationMinutes: 180,
+      turnaroundDays: 21
     });
   }
 }

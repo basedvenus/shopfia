@@ -9,7 +9,7 @@ describe("prisma create flow", () => {
     await createQuoteRequestRecord(prismaLike, {
       buyerId: "buyer_1",
       vendorId: "vendor_1",
-      eventLocation: "Austin, TX",
+      eventLocation: "Fairfield, CA",
       notes: "Birthday setup"
     });
 
@@ -19,7 +19,7 @@ describe("prisma create flow", () => {
       data: {
         buyerId: "buyer_1",
         vendorId: "vendor_1",
-        eventLocation: "Austin, TX",
+        eventLocation: "Fairfield, CA",
         status: "SUBMITTED",
         attachments: []
       }

@@ -122,6 +122,12 @@ model User {
   emailVerified          DateTime?
   passwordHash           String?
   image                  String?
+  username               String?           @unique
+  bio                    String?
+  instagramUrl           String?
+  tiktokUrl              String?
+  partyfulUrl            String?
+  partyPhotoUrls         String[]
   role                   UserRole          @default(BUYER)
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
