@@ -8,6 +8,7 @@ import { UserRole } from "@prisma/client";
 import { compare } from "bcryptjs";
 import { db } from "@/lib/db";
 import { authProviderConfig } from "@/lib/auth/provider-config";
+import { getSafeProfileImage } from "@/lib/profile-image";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(db) as Adapter,
@@ -37,6 +38,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: true,
             name: true,
             image: true,
+            username: true,
             role: true,
             passwordHash: true
           }
@@ -51,7 +53,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
-          image: user.image,
+          image: getSafeProfileImage(user.image),
+          username: user.username,
           role: user.role
         };
       }
@@ -84,13 +87,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role ?? UserRole.BUYER;
+        token.username = user.username ?? null;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
+        const freshUser = token.sub
+          ? await db.user.findUnique({
+              where: { id: token.sub },
+              select: {
+                email: true,
+                image: true,
+                name: true,
+                role: true,
+                username: true
+              }
+            })
+          : null;
+
         session.user.id = token.sub ?? "";
-        session.user.role = (token.role as UserRole) ?? UserRole.BUYER;
+        session.user.role = freshUser?.role ?? ((token.role as UserRole) ?? UserRole.BUYER);
+        session.user.name = freshUser?.name ?? session.user.name ?? null;
+        session.user.email = freshUser?.email ?? session.user.email ?? null;
+        session.user.image = getSafeProfileImage(freshUser?.image ?? session.user.image);
+        session.user.username = freshUser?.username ?? token.username ?? null;
       }
       return session;
     }

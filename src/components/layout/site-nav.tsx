@@ -1,93 +1,13 @@
-import Link from "next/link";
-import {
-  Heart,
-  LayoutGrid,
-  MapPinned,
-  MessagesSquare,
-  User
-} from "lucide-react";
-import { signOut, auth } from "@/auth";
-import { AccountMenu } from "@/components/layout/account-menu";
-import { Button } from "@/components/ui/button";
+import { signOut } from "@/auth";
+import { SiteNavClient } from "@/components/layout/site-nav-client";
 
-const navItems = [
-  { href: "/listings", label: "Listings", icon: LayoutGrid },
-  { href: "/explore", label: "Explore", icon: MapPinned },
-  { href: "/categories", label: "Categories", icon: LayoutGrid },
-  { href: "/favorites", label: "Favorites", icon: Heart },
-  { href: "/messages", label: "Messages", icon: MessagesSquare }
-];
-
-function getInitials(name?: string | null, email?: string | null) {
-  const label = name || email || "ShopFia";
-  return label
-    .split(/[ @._-]/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
-
-export async function SiteNav() {
-  const session = await auth();
-  const signedIn = Boolean(session?.user?.id);
-  const initials = getInitials(session?.user?.name, session?.user?.email);
-
+export function SiteNav() {
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
-    <div className="container flex h-20 items-center justify-between gap-4">
-        <Link href="/explore" className="text-lg font-semibold tracking-tight">
-         <img
-  src="/logo.png"
-  alt="ShopFia"
-  className="h-[95px] w-auto max-w-[180px] object-contain block"
-/>
-        </Link>
-        <nav className="hidden items-center gap-1 md:flex">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm hover:bg-muted"
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-          <Link href="/vendor/dashboard" className="rounded-full px-4 py-2 text-sm hover:bg-muted">
-            Vendor Dashboard
-          </Link>
-        </nav>
-        <div className="flex items-center gap-2">
-          {signedIn ? (
-            <AccountMenu
-              name={session?.user?.name}
-              email={session?.user?.email}
-              image={session?.user?.image}
-              initials={initials}
-              signOutAction={async () => {
-                "use server";
-                await signOut({ redirectTo: "/explore" });
-              }}
-            />
-          ) : (
-            <>
-              <Link href="/account" className="hidden md:inline-flex">
-                <Button variant="secondary" size="sm">
-                  <User className="h-4 w-4" />
-                  Account
-                </Button>
-              </Link>
-              <Link href="/account">
-                <Button size="sm">Sign in</Button>
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
+    <SiteNavClient
+      signOutAction={async () => {
+        "use server";
+        await signOut({ redirectTo: "/" });
+      }}
+    />
   );
 }

@@ -6,24 +6,22 @@ import {
   CalendarHeart,
   Heart,
   LogOut,
-  MessageCircle,
   MessagesSquare,
   Settings,
   Store,
   User
 } from "lucide-react";
+import { useProfile } from "@/components/account/profile-provider";
 
 type AccountMenuProps = {
-  name?: string | null;
-  email?: string | null;
-  image?: string | null;
   initials: string;
   signOutAction: () => Promise<void>;
 };
 
-export function AccountMenu({ name, email, image, initials, signOutAction }: AccountMenuProps) {
+export function AccountMenu({ initials, signOutAction }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { profile } = useProfile();
 
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
@@ -46,13 +44,13 @@ export function AccountMenu({ name, email, image, initials, signOutAction }: Acc
     };
   }, []);
 
-  const avatarStyle = image
-    ? {
-        backgroundImage: `url(${image})`,
-        backgroundPosition: "center",
-        backgroundSize: "cover"
-      }
-    : undefined;
+  const handle =
+    profile?.username ??
+    (profile?.email?.includes("@")
+      ? profile.email.split("@")[0]?.replace(/[^a-zA-Z0-9._-]/g, "").toLowerCase()
+      : null);
+
+  console.log("[profile] account menu render", profile);
 
   const links = [
     { href: "/parties", label: "My Parties", icon: CalendarHeart },
@@ -73,13 +71,16 @@ export function AccountMenu({ name, email, image, initials, signOutAction }: Acc
         onClick={() => setOpen((current) => !current)}
       >
         <span
-          className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-accent text-sm font-semibold text-foreground"
-          style={avatarStyle}
+          className="grid aspect-square h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-accent text-sm font-semibold text-foreground"
         >
-          {image ? <span className="sr-only">{initials}</span> : initials}
+          {profile?.image ? (
+            <img src={profile.image} alt="" className="h-full w-full object-cover object-center" />
+          ) : (
+            initials
+          )}
         </span>
         <span className="hidden max-w-[120px] truncate pr-2 text-muted-foreground md:block">
-          {name || "Profile"}
+          {profile?.name || "Profile"}
         </span>
       </button>
 
@@ -89,8 +90,10 @@ export function AccountMenu({ name, email, image, initials, signOutAction }: Acc
           role="menu"
         >
           <div className="border-b border-border/70 px-3 py-3">
-            <div className="font-medium">{name || "ShopFia profile"}</div>
-            <div className="truncate text-xs text-muted-foreground">{email}</div>
+            <div className="font-medium">{profile?.name || "ShopFia profile"}</div>
+            <div className="truncate text-xs text-muted-foreground">
+              {handle ? `@${handle}` : "@choose-your-handle"}
+            </div>
           </div>
           <nav className="grid py-2 text-sm">
             {links.map((item) => {

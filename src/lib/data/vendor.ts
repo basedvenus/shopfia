@@ -3,6 +3,11 @@ export async function getVendorProfileBySlug(slug: string) {
   return db.vendorProfile.findFirst({
     where: { slug, verified: true },
     include: {
+      user: {
+        select: {
+          id: true
+        }
+      },
       sellerRatingAggregate: true,
       rankingScore: true,
       categories: { include: { category: true } },
@@ -20,6 +25,19 @@ export async function getVendorProfileBySlug(slug: string) {
         },
         orderBy: { createdAt: "desc" },
         take: 20
+      },
+      taggedPartyEvents: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              username: true,
+              image: true
+            }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 6
       }
     }
   });

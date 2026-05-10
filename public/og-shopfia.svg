@@ -1,0 +1,19 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#FBF5F1"/>
+  <rect x="52" y="48" width="1096" height="534" rx="46" fill="#FFFFFF" fill-opacity="0.72" stroke="#F3DDD3" stroke-width="2"/>
+  <circle cx="1002" cy="114" r="150" fill="#F5B7B1" fill-opacity="0.34"/>
+  <circle cx="138" cy="518" r="190" fill="#F7DDC7" fill-opacity="0.48"/>
+  <rect x="704" y="102" width="172" height="210" rx="28" fill="#F6C8B6"/>
+  <rect x="898" y="162" width="190" height="250" rx="30" fill="#E9D8C9"/>
+  <rect x="738" y="340" width="290" height="172" rx="30" fill="#EFB2AD"/>
+  <path d="M766 270C803 230 828 172 796 146C770 124 724 163 749 198C768 225 810 208 829 184" stroke="white" stroke-width="14" stroke-linecap="round"/>
+  <path d="M996 364C1036 322 1054 262 1020 240C990 221 950 267 979 298C1000 322 1040 299 1055 272" stroke="white" stroke-width="14" stroke-linecap="round"/>
+  <path d="M794 424C820 400 858 398 884 424C910 450 948 448 974 424" stroke="white" stroke-width="14" stroke-linecap="round"/>
+  <image href="/logo.png" x="94" y="64" width="214" height="132" preserveAspectRatio="xMidYMid meet"/>
+  <text x="100" y="252" fill="#2D2622" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="700">Discover event creatives</text>
+  <text x="100" y="326" fill="#2D2622" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="700">and real party inspiration.</text>
+  <text x="104" y="388" fill="#6B5C55" font-family="Arial, Helvetica, sans-serif" font-size="30">Browse real celebrations, discover trusted vendors,</text>
+  <text x="104" y="430" fill="#6B5C55" font-family="Arial, Helvetica, sans-serif" font-size="30">and plan beautiful events.</text>
+  <rect x="100" y="484" width="186" height="52" rx="26" fill="#F0A9A4"/>
+  <text x="130" y="519" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700">ShopFia.app</text>
+</svg>

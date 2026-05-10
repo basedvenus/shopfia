@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarHeart, Heart, Instagram, MessageCircle, Music2, PackageCheck, PenLine, Settings, Sparkles, Store, UserRound } from "lucide-react";
-import { updateAccountProfileAction } from "@/app/actions/auth";
+import { CalendarHeart, Heart, MessageCircle, PackageCheck, PenLine, Store } from "lucide-react";
 import { acceptQuoteAndCreatePaymentIntentAction } from "@/app/actions/quotes";
 import { createReviewAction } from "@/app/actions/reviews";
+import { AccountProfileEditor } from "@/components/account/account-profile-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SignInPanel } from "@/components/account/sign-in-panel";
-import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { authProviderConfig } from "@/lib/auth/provider-config";
+import { isUnsafeProfileImage } from "@/lib/profile-image";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -77,15 +77,16 @@ export default async function AccountPage() {
     })
   ]);
 
+  if (isUnsafeProfileImage(accountUser?.image)) {
+    await db.user.update({
+      where: { id: session.user.id },
+      data: { image: null }
+    });
+    accountUser!.image = null;
+  }
+
   const displayName = accountUser?.name || session.user.name || "ShopFia Member";
   const handle = accountUser?.username ? `@${accountUser.username}` : "@choose-your-handle";
-  const avatarStyle = accountUser?.image
-    ? {
-        backgroundImage: `url(${accountUser.image})`,
-        backgroundPosition: "center",
-        backgroundSize: "cover"
-      }
-    : undefined;
   const initials = displayName
     .split(" ")
     .filter(Boolean)
@@ -140,100 +141,16 @@ export default async function AccountPage() {
   return (
     <div className="space-y-8">
       <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
-        <div className="bg-[linear-gradient(135deg,rgba(234,184,179,0.34),rgba(255,255,255,0.8),rgba(253,230,208,0.45))] p-5 md:p-7">
-          <div className="flex flex-wrap items-start justify-between gap-5">
-            <div className="flex flex-wrap items-center gap-4">
-              <div
-                className="grid h-24 w-24 place-items-center rounded-full border-4 border-white bg-accent text-2xl font-semibold shadow-soft"
-                style={avatarStyle}
-              >
-                {accountUser?.image ? <span className="sr-only">{displayName}</span> : initials}
-              </div>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Creator profile</p>
-                  <h1 className="text-3xl font-semibold tracking-tight">{displayName}</h1>
-                  <p className="text-sm font-medium text-muted-foreground">{handle}</p>
-                </div>
-                <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                  {accountUser?.bio ||
-                    "Add a short bio so vendors and party guests can understand your style, event aesthetic, and what you love creating."}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {accountUser?.instagramUrl ? (
-                    <Link href={accountUser.instagramUrl} className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs" target="_blank">
-                      <Instagram className="h-3.5 w-3.5" />
-                      Instagram
-                    </Link>
-                  ) : null}
-                  {accountUser?.tiktokUrl ? (
-                    <Link href={accountUser.tiktokUrl} className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs" target="_blank">
-                      <Music2 className="h-3.5 w-3.5" />
-                      TikTok
-                    </Link>
-                  ) : null}
-                  {accountUser?.partyfulUrl ? (
-                    <Link href={accountUser.partyfulUrl} className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs" target="_blank">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Partyful
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-            <form
-              action={async () => {
-                "use server";
-                const { signOut } = await import("@/auth");
-                await signOut({ redirectTo: "/explore" });
-              }}
-            >
-              <Button variant="secondary">Sign out</Button>
-            </form>
-          </div>
-        </div>
-
-        <div id="settings" className="grid gap-4 border-t border-border/60 p-5 md:grid-cols-[1.2fr_0.8fr]">
-          <form
-            action={async (formData) => {
-              "use server";
-              await updateAccountProfileAction(formData);
-            }}
-            className="grid gap-3"
-          >
-            <div className="flex items-center gap-2 font-semibold">
-              <UserRound className="h-4 w-4 text-primary" />
-              Edit profile
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Input name="name" defaultValue={accountUser?.name ?? ""} placeholder="Display name" />
-              <Input name="username" defaultValue={accountUser?.username ?? ""} placeholder="username" />
-            </div>
-            <Textarea name="bio" defaultValue={accountUser?.bio ?? ""} placeholder="About your party style, favorite themes, or what you are planning..." className="min-h-[90px]" />
-            <ImageUploadField
-              name="image"
-              label="Profile picture"
-              defaultValue={accountUser?.image}
-              rounded="full"
-              helperText="Click to upload, preview, then save your avatar."
-            />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Input name="instagramUrl" defaultValue={accountUser?.instagramUrl ?? ""} placeholder="Instagram URL" />
-              <Input name="tiktokUrl" defaultValue={accountUser?.tiktokUrl ?? ""} placeholder="TikTok URL" />
-              <Input name="partyfulUrl" defaultValue={accountUser?.partyfulUrl ?? ""} placeholder="Partyful URL" />
-            </div>
-            <Button type="submit" className="w-full sm:w-fit">Save profile</Button>
-          </form>
-
-          <div className="grid gap-3 rounded-[1.5rem] bg-muted/60 p-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2 font-semibold text-foreground">
-              <Sparkles className="h-4 w-4 text-primary" />
-              Profile goals
-            </div>
-            <p>Make your account feel social, trusted, and creator-led. Use a clear handle, a warm bio, and visual links that show your event style.</p>
-            <p className="text-xs">Uploads preview immediately and save with your profile for this MVP; cloud media storage can be layered in later.</p>
-          </div>
-        </div>
+        <AccountProfileEditor
+          displayName={displayName}
+          handle={handle}
+          initials={initials}
+          signOutAction={async () => {
+            "use server";
+            const { signOut } = await import("@/auth");
+            await signOut({ redirectTo: "/explore" });
+          }}
+        />
       </section>
 
       <section className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
@@ -345,7 +262,7 @@ export default async function AccountPage() {
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">My Parties</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Event galleries and visual inspiration now live on their own dedicated page.
+              Party stories, tagged vendors, and visual inspiration now live on their own dedicated page.
             </p>
           </div>
           <Link href="/parties">

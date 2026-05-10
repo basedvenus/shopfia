@@ -132,7 +132,10 @@ model User {
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
   vendorProfile          VendorProfile?
+  avatar                 UserAvatar?
   partyEvents            PartyEvent[]
+  following              Follow[]          @relation("Follower")
+  followers              Follow[]          @relation("Following")
   seller                 Seller?
   buyerFavorites         Favorite[]        @relation("BuyerFavorites")
   buyerQuotes            QuoteRequest[]    @relation("BuyerQuoteRequests")
@@ -145,6 +148,18 @@ model User {
   reports                Report[]          @relation("ReporterReports")
   accounts               Account[]
   sessions               Session[]
+}
+
+model UserAvatar {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  contentType String
+  data        Bytes
+  size        Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Seller {
@@ -230,13 +245,16 @@ model VendorProfile {
   rankingScore              RankingScore?
   favorites                 Favorite[]            @relation("VendorFavorites")
   inquiries                 Inquiry[]
+  taggedPartyEvents         PartyEvent[]            @relation("PartyEventTaggedVendors")
 }
 
 model PartyEvent {
   id            String   @id @default(cuid())
   userId        String
+  slug          String   @unique
   title         String
   theme         String?
+  tags          String[]
   description   String?
   coverImageUrl String?
   imageUrls     String[]
@@ -244,6 +262,19 @@ model PartyEvent {
   updatedAt     DateTime @updatedAt
 
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taggedVendors VendorProfile[] @relation("PartyEventTaggedVendors")
+}
+
+model Follow {
+  id           String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt    DateTime @default(now())
+
+  follower     User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following    User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
 }
 
 model Category {

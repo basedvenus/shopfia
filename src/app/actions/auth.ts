@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 
 const signUpSchema = z.object({
   name: z.string().trim().max(80).optional(),
@@ -66,7 +67,6 @@ const profileSchema = z.object({
     .optional()
     .or(z.literal("")),
   bio: z.string().trim().max(280).optional(),
-  image: z.string().trim().max(1_500_000).optional().or(z.literal("")),
   instagramUrl: z.string().trim().url().optional().or(z.literal("")),
   tiktokUrl: z.string().trim().url().optional().or(z.literal("")),
   partyfulUrl: z.string().trim().url().optional().or(z.literal(""))
@@ -82,7 +82,6 @@ export async function updateAccountProfileAction(formData: FormData) {
     name: formData.get("name") || undefined,
     username: formData.get("username") || undefined,
     bio: formData.get("bio") || undefined,
-    image: formData.get("image") || undefined,
     instagramUrl: formData.get("instagramUrl") || undefined,
     tiktokUrl: formData.get("tiktokUrl") || undefined,
     partyfulUrl: formData.get("partyfulUrl") || undefined
@@ -96,24 +95,32 @@ export async function updateAccountProfileAction(formData: FormData) {
   }
 
   try {
-    await db.user.update({
+    const updatedUser = await db.user.update({
       where: { id: session.user.id },
       data: {
         name: parsed.data.name || null,
         username: parsed.data.username || null,
         bio: parsed.data.bio || null,
-        image: parsed.data.image || null,
         instagramUrl: parsed.data.instagramUrl || null,
         tiktokUrl: parsed.data.tiktokUrl || null,
         partyfulUrl: parsed.data.partyfulUrl || null
-      }
+      },
+      select: userProfileSelect
     });
+
+    const profile = serializeUserProfile(updatedUser);
+
+    console.log("[profile] saved profile fields to database", {
+      profile
+    });
+
+    revalidatePath("/account");
+    revalidatePath("/parties");
+    revalidatePath("/");
+    return { ok: true, profile };
   } catch {
     return { ok: false, error: "That handle is already taken." };
   }
-
-  revalidatePath("/account");
-  return { ok: true };
 }
 
 const partyPhotoSchema = z.object({
@@ -153,10 +160,21 @@ export async function addPartyPhotoAction(formData: FormData) {
 const partyEventSchema = z.object({
   title: z.string().trim().min(2, "Add an event title.").max(100),
   theme: z.string().trim().max(100).optional().or(z.literal("")),
+  tags: z.array(z.string().trim().min(1).max(30)).max(12).default([]),
   description: z.string().trim().max(500).optional().or(z.literal("")),
   coverImageUrl: z.string().trim().min(1, "Upload or paste a cover image.").max(1_500_000),
-  imageUrls: z.array(z.string().trim().min(1).max(1_500_000)).max(12).default([])
+  imageUrls: z.array(z.string().trim().min(1).max(1_500_000)).max(12).default([]),
+  taggedVendorIds: z.array(z.string().cuid()).max(12).default([])
 });
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
 
 export async function createPartyEventAction(formData: FormData) {
   const session = await auth();
@@ -168,13 +186,24 @@ export async function createPartyEventAction(formData: FormData) {
     .getAll("imageUrls")
     .map((value) => String(value).trim())
     .filter(Boolean);
+  const tags = formData
+    .getAll("tags")
+    .flatMap((value) => String(value).split(","))
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  const taggedVendorIds = formData
+    .getAll("taggedVendorIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
 
   const parsed = partyEventSchema.safeParse({
     title: formData.get("title"),
     theme: formData.get("theme") || undefined,
+    tags,
     description: formData.get("description") || undefined,
     coverImageUrl: formData.get("coverImageUrl"),
-    imageUrls
+    imageUrls,
+    taggedVendorIds
   });
 
   if (!parsed.success) {
@@ -184,14 +213,58 @@ export async function createPartyEventAction(formData: FormData) {
   const event = await db.partyEvent.create({
     data: {
       userId: session.user.id,
+      slug: `${slugify(parsed.data.title) || "party"}-${Date.now().toString(36)}`,
       title: parsed.data.title,
       theme: parsed.data.theme || null,
+      tags: parsed.data.tags,
       description: parsed.data.description || null,
       coverImageUrl: parsed.data.coverImageUrl,
-      imageUrls: [parsed.data.coverImageUrl, ...parsed.data.imageUrls].slice(0, 12)
+      imageUrls: [parsed.data.coverImageUrl, ...parsed.data.imageUrls].slice(0, 12),
+      taggedVendors: {
+        connect: parsed.data.taggedVendorIds.map((id) => ({ id }))
+      }
     }
   });
 
   revalidatePath("/parties");
-  return { ok: true, eventId: event.id };
+  revalidatePath("/");
+  return { ok: true, eventSlug: event.slug };
+}
+
+export async function toggleFollowAction(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, error: "Sign in to follow creators." };
+  }
+
+  const followingId = String(formData.get("followingId") ?? "");
+  if (!followingId || followingId === session.user.id) {
+    return { ok: false, error: "Choose a valid creator to follow." };
+  }
+
+  const existing = await db.follow.findUnique({
+    where: {
+      followerId_followingId: {
+        followerId: session.user.id,
+        followingId
+      }
+    }
+  });
+
+  if (existing) {
+    await db.follow.delete({ where: { id: existing.id } });
+  } else {
+    await db.follow.create({
+      data: {
+        followerId: session.user.id,
+        followingId
+      }
+    });
+  }
+
+  revalidatePath("/account");
+  revalidatePath("/parties");
+  revalidatePath("/explore");
+  revalidatePath("/");
+  return { ok: true };
 }

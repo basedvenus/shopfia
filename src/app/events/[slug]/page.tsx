@@ -1,0 +1,242 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Heart, UserPlus } from "lucide-react";
+import { auth } from "@/auth";
+import { toggleFollowAction } from "@/app/actions/auth";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+export const dynamic = "force-dynamic";
+
+const fallbackEvents = {
+  "citrus-garden-brunch": {
+    title: "Citrus Garden Brunch",
+    theme: "Lemon garden party",
+    tags: ["brunch", "lemons", "floral", "garden party"],
+    description:
+      "A soft citrus tablescape with blush linens, lemon accents, candlelight, and modern florals.",
+    coverImageUrl: "/demo/fairfield-lemon-tablescape.png",
+    imageUrls: ["/demo/fairfield-lemon-tablescape.png"],
+    vendorSlugs: ["solano-flora-and-table"]
+  },
+  "tulip-cookie-shower": {
+    title: "Tulip Cookie Shower",
+    theme: "Pastel floral baby shower",
+    tags: ["baby shower", "pastel", "cookies", "floral"],
+    description:
+      "A sweet pastel favor moment built around hand-piped tulip and floral cookies.",
+    coverImageUrl: "/demo/vacaville-cookie-tulips.png",
+    imageUrls: ["/demo/vacaville-cookie-tulips.png"],
+    vendorSlugs: ["blush-batch-cookie-atelier"]
+  }
+};
+
+export default async function EventPage({ params }: { params: { slug: string } }) {
+  const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
+  const fallback = fallbackEvents[params.slug as keyof typeof fallbackEvents];
+  const event = await db.partyEvent
+    .findUnique({
+      where: { slug: params.slug },
+      include: {
+        user: { select: { id: true, name: true, username: true, image: true } },
+        taggedVendors: true
+      }
+    })
+    .catch(() => null);
+
+  const fallbackVendors = fallback
+    ? await db.vendorProfile.findMany({
+        where: { slug: { in: fallback.vendorSlugs } },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          city: true,
+          state: true,
+          coverPhoto: true,
+          logoUrl: true
+        }
+      })
+    : [];
+
+  if (!event && !fallback) return notFound();
+
+  const title = event?.title ?? fallback!.title;
+  const theme = event?.theme ?? fallback!.theme;
+  const tags = event?.tags ?? fallback!.tags;
+  const description = event?.description ?? fallback!.description;
+  const images = event?.imageUrls?.length ? event.imageUrls : fallback!.imageUrls;
+  const hero = event?.coverImageUrl ?? images[0] ?? fallback!.coverImageUrl;
+  const vendors = event?.taggedVendors ?? fallbackVendors;
+  const host = event?.user ?? null;
+  const hostHandle = host?.username ? `@${host.username}` : host?.name ?? "ShopFia host";
+  const isFollowingHost =
+    session?.user?.id && host?.id
+      ? Boolean(
+          await db.follow.findUnique({
+            where: {
+              followerId_followingId: {
+                followerId: session.user.id,
+                followingId: host.id
+              }
+            }
+          })
+        )
+      : false;
+
+  async function toggleFollow(formData: FormData) {
+    "use server";
+
+    await toggleFollowAction(formData);
+  }
+
+  return (
+    <div className="space-y-8">
+      <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
+        <div className="relative min-h-[480px]">
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${hero})` }} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="relative flex min-h-[480px] flex-col justify-end p-6 text-white md:p-8">
+            <div className="mb-3 flex flex-wrap gap-2">
+              <Badge className="bg-white/15 text-white backdrop-blur" variant="default">Party Story</Badge>
+              {theme ? <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{theme}</Badge> : null}
+            </div>
+            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">{title}</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">{description}</p>
+            {host ? (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <div className="text-sm text-white/85">
+                  Posted by{" "}
+                  {host.username ? (
+                    <Link href={`/profiles/${host.username}`} className="font-semibold text-white underline-offset-4 hover:underline">
+                      {host.name ?? "ShopFia host"}
+                    </Link>
+                  ) : (
+                    <span className="font-semibold text-white">{host.name ?? "ShopFia host"}</span>
+                  )}{" "}
+                  <span className="text-white/70">{hostHandle}</span>
+                </div>
+                {session?.user?.id && session.user.id !== host.id ? (
+                  <form action={toggleFollow}>
+                    <input type="hidden" name="followingId" value={host.id} />
+                    <Button type="submit" size="sm" variant="secondary">
+                      {isFollowingHost ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}
+                      {isFollowingHost ? "Following" : "Follow"}
+                    </Button>
+                  </form>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <span key={tag} className="rounded-full bg-white/15 px-3 py-1 text-xs backdrop-blur">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid auto-rows-[190px] grid-cols-2 gap-3 md:grid-cols-4">
+          {images.map((image, index) => (
+            <div
+              key={`${image}-${index}`}
+              className={`relative overflow-hidden rounded-[1.4rem] border border-white/80 bg-muted shadow-sm ${
+                index === 0 ? "col-span-2 row-span-2" : ""
+              }`}
+            >
+              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${image})` }} />
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft">
+          <h2 className="text-2xl font-semibold tracking-tight">Vendor Contributions</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            ShopFia event pages connect beautiful celebrations back to the creatives who made them happen.
+          </p>
+          <div className="mt-5 grid gap-3">
+            {vendors.length > 0 ? (
+              vendors.map((vendor) => (
+                <Link
+                  key={vendor.id}
+                  href={`/vendor/profile/${vendor.slug}`}
+                  className="grid gap-3 rounded-[1.4rem] border bg-white p-3 transition hover:shadow-soft sm:grid-cols-[88px_1fr]"
+                >
+                  <div
+                    className="min-h-[88px] rounded-[1rem] bg-muted bg-cover bg-center"
+                    style={{ backgroundImage: `url(${vendor.logoUrl ?? vendor.coverPhoto ?? "/demo/fairfield-lemon-tablescape.png"})` }}
+                  />
+                  <div>
+                    <p className="text-sm font-semibold">
+                      {vendor.name.toLowerCase().includes("cookie")
+                        ? "Cookies"
+                        : vendor.name.toLowerCase().includes("flora")
+                          ? "Florals & Tablescape"
+                          : "Creative Contribution"}{" "}
+                      by {vendor.name}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {vendor.city}{vendor.state ? `, ${vendor.state}` : ""}
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Contributed to this event. View their profile, portfolio, and booking options.
+                    </p>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="rounded-[1.4rem] bg-muted/60 p-4 text-sm text-muted-foreground">
+                Vendor tags will appear here as this party story gets credited.
+              </div>
+            )}
+          </div>
+          <div className="mt-5 rounded-[1.4rem] bg-muted/60 p-4 text-sm text-muted-foreground">
+            Next layer: customer-tagged party photos can feed back into vendor profiles as authentic event proof.
+          </div>
+        </div>
+      </section>
+
+      {vendors.length > 0 ? (
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">Tagged Vendor Moments</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Each credit can become a mini portfolio section with photos, context, and a direct vendor link.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {vendors.map((vendor, vendorIndex) => (
+              <article key={vendor.id} className="overflow-hidden rounded-[1.6rem] border border-white/80 bg-white/90 shadow-sm">
+                <div className="grid grid-cols-3 gap-1 p-2">
+                  {images.slice(0, 3).map((image, imageIndex) => (
+                    <div key={`${vendor.id}-${image}-${imageIndex}`} className="relative aspect-square overflow-hidden rounded-[1rem] bg-muted">
+                      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${image})` }} />
+                    </div>
+                  ))}
+                </div>
+                <div className="p-4">
+                  <h3 className="font-semibold">
+                    {vendorIndex === 0 ? "Featured styling" : "Event detail"} by {vendor.name}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    Tagged photos give this vendor public validation from a real celebration, not just a static portfolio upload.
+                  </p>
+                  <Link href={`/vendor/profile/${vendor.slug}`} className="mt-3 inline-flex">
+                    <Button size="sm" variant="secondary">View vendor profile</Button>
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <Link href="/parties" className="inline-flex">
+        <Button variant="secondary">Back to My Parties</Button>
+      </Link>
+    </div>
+  );
+}

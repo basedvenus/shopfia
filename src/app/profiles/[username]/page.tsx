@@ -1,0 +1,152 @@
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Heart, UserPlus } from "lucide-react";
+import { auth } from "@/auth";
+import { toggleFollowAction } from "@/app/actions/auth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { db } from "@/lib/db";
+import { getSafeProfileImage } from "@/lib/profile-image";
+
+export const dynamic = "force-dynamic";
+
+export default async function PublicProfilePage({ params }: { params: { username: string } }) {
+  const username = params.username.replace(/^@/, "").toLowerCase();
+  const [profile, session] = await Promise.all([
+    db.user.findUnique({
+      where: { username },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        bio: true,
+        image: true,
+        partyEvents: {
+          include: { taggedVendors: true },
+          orderBy: { createdAt: "desc" }
+        },
+        _count: {
+          select: { followers: true, following: true }
+        }
+      }
+    }),
+    auth()
+  ]);
+
+  if (!profile) return notFound();
+
+  const currentUserId = session?.user?.id;
+  const isFollowing =
+    currentUserId && currentUserId !== profile.id
+      ? Boolean(
+          await db.follow.findUnique({
+            where: {
+              followerId_followingId: {
+                followerId: currentUserId,
+                followingId: profile.id
+              }
+            }
+          })
+        )
+      : false;
+  const initials = getInitials(profile.name ?? profile.username);
+  const profileImage = getSafeProfileImage(profile.image);
+
+  async function toggleFollow(formData: FormData) {
+    "use server";
+
+    await toggleFollowAction(formData);
+  }
+
+  return (
+    <div className="space-y-8">
+      <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
+        <div className="bg-[linear-gradient(135deg,rgba(234,184,179,0.34),rgba(255,255,255,0.86),rgba(253,230,208,0.45))] p-5 md:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-5">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="relative grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white bg-accent text-2xl font-semibold shadow-soft">
+                {profileImage ? (
+                  <Image src={profileImage} alt={profile.name ?? profile.username ?? "Profile"} fill className="object-cover" />
+                ) : (
+                  initials
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Party host profile</p>
+                <h1 className="text-3xl font-semibold tracking-tight">{profile.name ?? "ShopFia host"}</h1>
+                <p className="text-sm font-medium text-muted-foreground">@{profile.username}</p>
+                {profile.bio ? (
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">{profile.bio}</p>
+                ) : null}
+                <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted-foreground">
+                  <span>{profile._count.followers} followers</span>
+                  <span>{profile._count.following} following</span>
+                  <span>{profile.partyEvents.length} party stories</span>
+                </div>
+              </div>
+            </div>
+            {currentUserId && currentUserId !== profile.id ? (
+              <form action={toggleFollow}>
+                <input type="hidden" name="followingId" value={profile.id} />
+                <Button type="submit" variant="secondary">
+                  {isFollowing ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}
+                  {isFollowing ? "Following" : "Follow"}
+                </Button>
+              </form>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Party Stories</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Real celebrations, tags, and vendor credits from this host.
+          </p>
+        </div>
+
+        {profile.partyEvents.length > 0 ? (
+          <div className="grid auto-rows-[230px] gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {profile.partyEvents.map((event, index) => {
+              const image = event.coverImageUrl ?? event.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png";
+              return (
+                <Link key={event.id} href={`/events/${event.slug}`} className={index === 0 ? "md:row-span-2" : ""}>
+                  <article className="group relative h-full overflow-hidden rounded-[1.75rem] border border-white/80 bg-muted shadow-sm">
+                    <Image src={image} alt={event.title} fill className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                      <h3 className="text-xl font-semibold">{event.title}</h3>
+                      {event.theme ? <p className="mt-1 text-sm text-white/80">{event.theme}</p> : null}
+                      <p className="mt-2 text-xs text-white/75">
+                        {event.taggedVendors.length} tagged vendor{event.taggedVendors.length === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                  </article>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <Card className="border-white/70 bg-white/90">
+            <CardContent className="p-4 text-sm text-muted-foreground">
+              Party stories will appear here when this host publishes events.
+            </CardContent>
+          </Card>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function getInitials(value?: string | null) {
+  if (!value) return "SF";
+
+  return value
+    .split(/[ @._-]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}

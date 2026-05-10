@@ -4,17 +4,22 @@ import {
   Calendar,
   Clock,
   ExternalLink,
+  Heart,
   MapPin,
   Sparkles,
-  Star
+  Star,
+  UserPlus
 } from "lucide-react";
 import { notFound } from "next/navigation";
+import { auth } from "@/auth";
+import { toggleFollowAction } from "@/app/actions/auth";
 import { createPublicInquiryAction } from "@/app/actions/inquiries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { db } from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorProfileBySlug } from "@/lib/data/vendor";
 
@@ -22,19 +27,72 @@ export const dynamic = "force-dynamic";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1200&q=80";
+const demoTaggedEvents = {
+  "solano-flora-and-table": [
+    {
+      title: "Citrus Garden Brunch",
+      slug: "citrus-garden-brunch",
+      theme: "Lemon garden party",
+      tags: ["brunch", "lemons", "floral", "garden party"],
+      coverImageUrl: "/demo/fairfield-lemon-tablescape.png",
+      credit: "@jordan.parties"
+    }
+  ],
+  "blush-batch-cookie-atelier": [
+    {
+      title: "Tulip Cookie Shower",
+      slug: "tulip-cookie-shower",
+      theme: "Pastel floral baby shower",
+      tags: ["baby shower", "pastel", "cookies", "floral"],
+      coverImageUrl: "/demo/vacaville-cookie-tulips.png",
+      credit: "@jordan.parties"
+    }
+  ]
+} as const;
 
 export default async function VendorProfilePage({ params }: { params: { slug: string } }) {
-  const vendor = await getVendorProfileBySlug(params.slug);
+  const [vendor, session] = await Promise.all([getVendorProfileBySlug(params.slug), auth()]);
   if (!vendor) return notFound();
 
   const gallery = vendor.photos.length > 0 ? vendor.photos : [fallbackImage];
   const hero = vendor.coverPhoto ?? gallery[0] ?? fallbackImage;
   const portfolio = vendor.offerings.filter((offering) => offering.photos.length > 0);
+  const taggedEvents =
+    vendor.taggedPartyEvents.length > 0
+      ? vendor.taggedPartyEvents.map((event) => ({
+          title: event.title,
+          slug: event.slug,
+          theme: event.theme,
+          tags: event.tags,
+          coverImageUrl: event.coverImageUrl ?? event.imageUrls[0] ?? hero,
+          credit: event.user.username ? `@${event.user.username}` : event.user.name ?? "a ShopFia host"
+        }))
+      : [...(demoTaggedEvents[vendor.slug as keyof typeof demoTaggedEvents] ?? [])];
+  const currentUserId = session?.user?.id;
+  const isFollowingVendor =
+    currentUserId && currentUserId !== vendor.user.id
+      ? Boolean(
+          await db.follow.findUnique({
+            where: {
+              followerId_followingId: {
+                followerId: currentUserId,
+                followingId: vendor.user.id
+              }
+            }
+          })
+        )
+      : false;
 
   async function submitInquiry(formData: FormData) {
     "use server";
 
     await createPublicInquiryAction(formData);
+  }
+
+  async function toggleFollow(formData: FormData) {
+    "use server";
+
+    await toggleFollowAction(formData);
   }
 
   return (
@@ -76,9 +134,18 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                     </div>
                   </div>
                 </div>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">{vendor.bio}</p>
-              </div>
-            </div>
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">{vendor.bio}</p>
+                    {session?.user?.id && session.user.id !== vendor.user.id ? (
+                      <form action={toggleFollow} className="mt-4">
+                        <input type="hidden" name="followingId" value={vendor.user.id} />
+                        <Button type="submit" size="sm" variant="secondary">
+                          {isFollowingVendor ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}
+                          {isFollowingVendor ? "Following" : "Follow vendor"}
+                        </Button>
+                      </form>
+                    ) : null}
+                  </div>
+                </div>
 
             <div className="grid gap-3 md:grid-rows-3">
               {gallery.slice(1, 4).map((photo, index) => (
@@ -199,6 +266,57 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
             </CardContent>
           </Card>
         </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">Tagged In Real Events</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Customer-tagged party stories create authentic proof of how this vendor shows up in celebrations.
+            </p>
+          </div>
+          <Badge variant="outline">{taggedEvents.length} party credits</Badge>
+        </div>
+
+        {taggedEvents.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {taggedEvents.map((event) => {
+              const photo = event.coverImageUrl;
+              return (
+                <Link key={event.slug} href={`/events/${event.slug}`}>
+                  <article className="group overflow-hidden rounded-[1.6rem] border border-white/80 bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft">
+                    <div className="relative aspect-[4/3] bg-muted">
+                      <Image src={photo} alt={event.title} fill className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold">{event.title}</h3>
+                      {event.theme ? <p className="mt-1 text-sm text-muted-foreground">{event.theme}</p> : null}
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Credited by {event.credit}
+                      </p>
+                      {event.tags.length > 0 ? (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {event.tags.slice(0, 4).map((tag) => (
+                            <span key={tag} className="rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <Card className="border-white/70 bg-white/90">
+            <CardContent className="p-4 text-sm text-muted-foreground">
+              Real event credits will appear here when hosts tag this vendor in party stories.
+            </CardContent>
+          </Card>
+        )}
       </section>
 
       <section className="space-y-4">
