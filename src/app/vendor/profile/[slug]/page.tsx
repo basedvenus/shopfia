@@ -57,17 +57,53 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
   const gallery = vendor.photos.length > 0 ? vendor.photos : [fallbackImage];
   const hero = vendor.coverPhoto ?? gallery[0] ?? fallbackImage;
   const portfolio = vendor.offerings.filter((offering) => offering.photos.length > 0);
+  const photoTaggedEventMap = new Map<
+    string,
+    {
+      title: string;
+      slug: string;
+      theme: string | null;
+      tags: string[];
+      coverImageUrl: string;
+      credit: string;
+      photoCount: number;
+    }
+  >();
+  vendor.taggedPartyPhotos.forEach((photo) => {
+    if (!photo.event) return;
+    const existing = photoTaggedEventMap.get(photo.event.id);
+    if (existing) {
+      existing.photoCount += 1;
+      return;
+    }
+    photoTaggedEventMap.set(photo.event.id, {
+      title: photo.event.title,
+      slug: photo.event.slug,
+      theme: photo.event.theme,
+      tags: photo.event.tags,
+      coverImageUrl: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
+      credit: photo.event.user.username ? `@${photo.event.user.username}` : photo.event.user.name ?? "a ShopFia host",
+      photoCount: 1
+    });
+  });
+  const photoTaggedEvents = Array.from(photoTaggedEventMap.values());
   const taggedEvents =
-    vendor.taggedPartyEvents.length > 0
+    photoTaggedEvents.length > 0
+      ? photoTaggedEvents
+      : vendor.taggedPartyEvents.length > 0
       ? vendor.taggedPartyEvents.map((event) => ({
           title: event.title,
           slug: event.slug,
           theme: event.theme,
           tags: event.tags,
           coverImageUrl: event.coverImageUrl ?? event.imageUrls[0] ?? hero,
-          credit: event.user.username ? `@${event.user.username}` : event.user.name ?? "a ShopFia host"
+          credit: event.user.username ? `@${event.user.username}` : event.user.name ?? "a ShopFia host",
+          photoCount: 0
         }))
-      : [...(demoTaggedEvents[vendor.slug as keyof typeof demoTaggedEvents] ?? [])];
+      : [...(demoTaggedEvents[vendor.slug as keyof typeof demoTaggedEvents] ?? [])].map((event) => ({
+          ...event,
+          photoCount: 0
+        }));
   const currentUserId = session?.user?.id;
   const isFollowingVendor =
     currentUserId && currentUserId !== vendor.user.id
@@ -294,6 +330,7 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                       {event.theme ? <p className="mt-1 text-sm text-muted-foreground">{event.theme}</p> : null}
                       <p className="mt-2 text-xs text-muted-foreground">
                         Credited by {event.credit}
+                        {event.photoCount ? ` in ${event.photoCount} tagged photo${event.photoCount === 1 ? "" : "s"}` : ""}
                       </p>
                       {event.tags.length > 0 ? (
                         <div className="mt-3 flex flex-wrap gap-1.5">

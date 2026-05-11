@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PartyEventForm } from "@/components/parties/party-event-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +28,12 @@ export default async function PartiesPage() {
   const [events, vendors] = await Promise.all([
     db.partyEvent.findMany({
       where: { userId: session.user.id },
-      include: { taggedVendors: true },
+      include: {
+        photos: {
+          orderBy: { sortOrder: "asc" },
+          include: { taggedVendors: true }
+        }
+      },
       orderBy: { createdAt: "desc" }
     }),
     db.vendorProfile.findMany({
@@ -51,12 +55,15 @@ export default async function PartiesPage() {
               that make each celebration feel discoverable.
             </p>
           </div>
-          <Card className="border-white/70 bg-white/80">
-            <CardHeader><CardTitle>Add Party</CardTitle></CardHeader>
-            <CardContent>
-              <PartyEventForm vendors={vendors} />
-            </CardContent>
-          </Card>
+          <div className="rounded-[1.7rem] border border-white/70 bg-white/80 p-4">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold tracking-tight">Add Party</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Start with photos, then add tags and vendor credits.
+              </p>
+            </div>
+            <PartyEventForm vendors={vendors} />
+          </div>
         </div>
       </section>
 
@@ -73,28 +80,43 @@ export default async function PartiesPage() {
 
         {events.length > 0 ? (
           <div className="grid auto-rows-[220px] grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
-            {events.map((event, index) => (
-              <Link
-                key={event.id}
-                href={`/events/${event.slug}`}
-                className={`group relative overflow-hidden rounded-[1.5rem] border border-white/80 bg-muted shadow-sm ${
-                  index === 0 ? "col-span-2 row-span-2" : "col-span-2"
-                }`}
-              >
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.03]"
-                  style={{ backgroundImage: `url(${event.coverImageUrl ?? event.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png"})` }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-                  <h3 className="font-semibold">{event.title}</h3>
-                  {event.theme ? <p className="text-xs text-white/80">{event.theme}</p> : null}
-                  {event.tags.length > 0 ? (
-                    <p className="mt-1 text-xs text-white/75">{event.tags.slice(0, 3).join(" · ")}</p>
-                  ) : null}
-                </div>
-              </Link>
-            ))}
+            {events.map((event, index) => {
+              const image =
+                event.photos[0]
+                  ? `/api/party-photos/${event.photos[0].id}?v=${event.photos[0].updatedAt.getTime()}`
+                  : event.coverImageUrl ?? event.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png";
+              const vendorCount = new Set(event.photos.flatMap((photo) => photo.taggedVendors.map((vendor) => vendor.id))).size;
+              return (
+                <Link
+                  key={event.id}
+                  href={`/events/${event.slug}`}
+                  className={`group relative overflow-hidden rounded-[1.5rem] border border-white/80 bg-muted shadow-sm ${
+                    index === 0 ? "col-span-2 row-span-2" : "col-span-2"
+                  }`}
+                >
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.03]"
+                    style={{ backgroundImage: `url(${image})` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {event.tags.slice(0, 3).map((tag) => (
+                        <span key={tag} className="rounded-full bg-white/20 px-2.5 py-1 text-[11px] backdrop-blur">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                    <h3 className="font-semibold">{event.title}</h3>
+                    {event.theme ? <p className="text-xs text-white/80">{event.theme}</p> : null}
+                    <p className="mt-1 text-xs text-white/75">
+                      {event.photos.length || event.imageUrls.length || 1} photo{(event.photos.length || event.imageUrls.length || 1) === 1 ? "" : "s"}
+                      {vendorCount ? ` · ${vendorCount} tagged vendor${vendorCount === 1 ? "" : "s"}` : ""}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <div className="grid auto-rows-[220px] grid-cols-2 gap-3 md:grid-cols-4">

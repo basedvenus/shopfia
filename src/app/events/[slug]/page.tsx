@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Heart, UserPlus } from "lucide-react";
+import { Heart, MapPin, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +39,11 @@ export default async function EventPage({ params }: { params: { slug: string } }
       where: { slug: params.slug },
       include: {
         user: { select: { id: true, name: true, username: true, image: true } },
-        taggedVendors: true
+        taggedVendors: true,
+        photos: {
+          orderBy: { sortOrder: "asc" },
+          include: { taggedVendors: true }
+        }
       }
     })
     .catch(() => null);
@@ -61,13 +65,41 @@ export default async function EventPage({ params }: { params: { slug: string } }
 
   if (!event && !fallback) return notFound();
 
-  const title = event?.title ?? fallback!.title;
-  const theme = event?.theme ?? fallback!.theme;
-  const tags = event?.tags ?? fallback!.tags;
-  const description = event?.description ?? fallback!.description;
-  const images = event?.imageUrls?.length ? event.imageUrls : fallback!.imageUrls;
-  const hero = event?.coverImageUrl ?? images[0] ?? fallback!.coverImageUrl;
-  const vendors = event?.taggedVendors ?? fallbackVendors;
+  const title = event?.title ?? fallback?.title ?? "Party Story";
+  const theme = event?.theme ?? fallback?.theme ?? null;
+  const tags = event?.tags?.length ? event.tags : fallback?.tags ?? [];
+  const description = event?.description ?? fallback?.description ?? "This party story is still being filled in.";
+  const legacyImages = event?.imageUrls?.length ? event.imageUrls : fallback?.imageUrls ?? [];
+  const photos = event?.photos?.length
+    ? event.photos.map((photo) => ({
+        id: photo.id,
+        url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
+        taggedVendors: photo.taggedVendors
+      }))
+    : legacyImages.map((image, index) => ({
+        id: `${image}-${index}`,
+        url: image,
+        taggedVendors: event?.taggedVendors ?? fallbackVendors
+      }));
+  const safePhotos = photos.length
+    ? photos
+    : [
+        {
+          id: "placeholder",
+          url: fallback?.coverImageUrl ?? "/demo/fairfield-lemon-tablescape.png",
+          taggedVendors: []
+        }
+      ];
+  const hero = event?.coverImageUrl ?? safePhotos[0]?.url ?? fallback?.coverImageUrl ?? "/demo/fairfield-lemon-tablescape.png";
+  const vendors = Array.from(
+    new Map(
+      [
+        ...(event?.taggedVendors ?? []),
+        ...safePhotos.flatMap((photo) => photo.taggedVendors),
+        ...fallbackVendors
+      ].map((vendor) => [vendor.id, vendor])
+    ).values()
+  );
   const host = event?.user ?? null;
   const hostHandle = host?.username ? `@${host.username}` : host?.name ?? "ShopFia host";
   const isFollowingHost =
@@ -103,6 +135,12 @@ export default async function EventPage({ params }: { params: { slug: string } }
             </div>
             <h1 className="max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">{title}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">{description}</p>
+            {event?.location ? (
+              <div className="mt-3 inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs text-white/85 backdrop-blur">
+                <MapPin className="h-3.5 w-3.5" />
+                {event.location}
+              </div>
+            ) : null}
             {host ? (
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <div className="text-sm text-white/85">
@@ -140,14 +178,27 @@ export default async function EventPage({ params }: { params: { slug: string } }
 
       <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="grid auto-rows-[190px] grid-cols-2 gap-3 md:grid-cols-4">
-          {images.map((image, index) => (
+          {safePhotos.map((photo, index) => (
             <div
-              key={`${image}-${index}`}
+              key={photo.id}
               className={`relative overflow-hidden rounded-[1.4rem] border border-white/80 bg-muted shadow-sm ${
                 index === 0 ? "col-span-2 row-span-2" : ""
               }`}
             >
-              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${image})` }} />
+              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${photo.url})` }} />
+              {photo.taggedVendors.length > 0 ? (
+                <div className="absolute inset-x-2 bottom-2 flex flex-wrap gap-1.5">
+                  {photo.taggedVendors.slice(0, 3).map((vendor) => (
+                    <Link
+                      key={vendor.id}
+                      href={`/vendor/profile/${vendor.slug}`}
+                      className="rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-medium text-foreground shadow-sm"
+                    >
+                      {vendor.name}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -159,34 +210,34 @@ export default async function EventPage({ params }: { params: { slug: string } }
           </p>
           <div className="mt-5 grid gap-3">
             {vendors.length > 0 ? (
-              vendors.map((vendor) => (
-                <Link
-                  key={vendor.id}
-                  href={`/vendor/profile/${vendor.slug}`}
-                  className="grid gap-3 rounded-[1.4rem] border bg-white p-3 transition hover:shadow-soft sm:grid-cols-[88px_1fr]"
-                >
-                  <div
-                    className="min-h-[88px] rounded-[1rem] bg-muted bg-cover bg-center"
-                    style={{ backgroundImage: `url(${vendor.logoUrl ?? vendor.coverPhoto ?? "/demo/fairfield-lemon-tablescape.png"})` }}
-                  />
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {vendor.name.toLowerCase().includes("cookie")
-                        ? "Cookies"
-                        : vendor.name.toLowerCase().includes("flora")
-                          ? "Florals & Tablescape"
-                          : "Creative Contribution"}{" "}
-                      by {vendor.name}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {vendor.city}{vendor.state ? `, ${vendor.state}` : ""}
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Contributed to this event. View their profile, portfolio, and booking options.
-                    </p>
-                  </div>
-                </Link>
-              ))
+              vendors.map((vendor) => {
+                const taggedPhotoCount = safePhotos.filter((photo) =>
+                  photo.taggedVendors.some((taggedVendor) => taggedVendor.id === vendor.id)
+                ).length;
+                return (
+                  <Link
+                    key={vendor.id}
+                    href={`/vendor/profile/${vendor.slug}`}
+                    className="grid gap-3 rounded-[1.4rem] border bg-white p-3 transition hover:shadow-soft sm:grid-cols-[88px_1fr]"
+                  >
+                    <div
+                      className="min-h-[88px] rounded-[1rem] bg-muted bg-cover bg-center"
+                      style={{ backgroundImage: `url(${vendor.logoUrl ?? vendor.coverPhoto ?? "/demo/fairfield-lemon-tablescape.png"})` }}
+                    />
+                    <div>
+                      <p className="text-sm font-semibold">Creative contribution by {vendor.name}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {vendor.city}{vendor.state ? `, ${vendor.state}` : ""}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {taggedPhotoCount > 0
+                          ? `Tagged in ${taggedPhotoCount} photo${taggedPhotoCount === 1 ? "" : "s"} from this party story.`
+                          : "Credited on this party story."}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })
             ) : (
               <div className="rounded-[1.4rem] bg-muted/60 p-4 text-sm text-muted-foreground">
                 Vendor tags will appear here as this party story gets credited.
@@ -208,28 +259,34 @@ export default async function EventPage({ params }: { params: { slug: string } }
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {vendors.map((vendor, vendorIndex) => (
-              <article key={vendor.id} className="overflow-hidden rounded-[1.6rem] border border-white/80 bg-white/90 shadow-sm">
-                <div className="grid grid-cols-3 gap-1 p-2">
-                  {images.slice(0, 3).map((image, imageIndex) => (
-                    <div key={`${vendor.id}-${image}-${imageIndex}`} className="relative aspect-square overflow-hidden rounded-[1rem] bg-muted">
-                      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${image})` }} />
-                    </div>
-                  ))}
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold">
-                    {vendorIndex === 0 ? "Featured styling" : "Event detail"} by {vendor.name}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Tagged photos give this vendor public validation from a real celebration, not just a static portfolio upload.
-                  </p>
-                  <Link href={`/vendor/profile/${vendor.slug}`} className="mt-3 inline-flex">
-                    <Button size="sm" variant="secondary">View vendor profile</Button>
-                  </Link>
-                </div>
-              </article>
-            ))}
+            {vendors.map((vendor, vendorIndex) => {
+              const vendorPhotos = safePhotos.filter((photo) =>
+                photo.taggedVendors.some((taggedVendor) => taggedVendor.id === vendor.id)
+              );
+              const displayPhotos = vendorPhotos.length ? vendorPhotos : safePhotos;
+              return (
+                <article key={vendor.id} className="overflow-hidden rounded-[1.6rem] border border-white/80 bg-white/90 shadow-sm">
+                  <div className="grid grid-cols-3 gap-1 p-2">
+                    {displayPhotos.slice(0, 3).map((photo) => (
+                      <div key={`${vendor.id}-${photo.id}`} className="relative aspect-square overflow-hidden rounded-[1rem] bg-muted">
+                        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${photo.url})` }} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold">
+                      {vendorIndex === 0 ? "Featured styling" : "Event detail"} by {vendor.name}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      Tagged photos give this vendor public validation from a real celebration, not just a static portfolio upload.
+                    </p>
+                    <Link href={`/vendor/profile/${vendor.slug}`} className="mt-3 inline-flex">
+                      <Button size="sm" variant="secondary">View vendor profile</Button>
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
       ) : null}

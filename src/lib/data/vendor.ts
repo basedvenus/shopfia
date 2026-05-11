@@ -38,6 +38,28 @@ export async function getVendorProfileBySlug(slug: string) {
         },
         orderBy: { createdAt: "desc" },
         take: 6
+      },
+      taggedPartyPhotos: {
+        where: {
+          eventId: {
+            not: null
+          }
+        },
+        include: {
+          event: {
+            include: {
+              user: {
+                select: {
+                  name: true,
+                  username: true,
+                  image: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 18
       }
     }
   });

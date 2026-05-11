@@ -133,6 +133,7 @@ model User {
   updatedAt              DateTime          @updatedAt
   vendorProfile          VendorProfile?
   avatar                 UserAvatar?
+  partyPhotos            PartyPhoto[]
   partyEvents            PartyEvent[]
   following              Follow[]          @relation("Follower")
   followers              Follow[]          @relation("Following")
@@ -246,6 +247,7 @@ model VendorProfile {
   favorites                 Favorite[]            @relation("VendorFavorites")
   inquiries                 Inquiry[]
   taggedPartyEvents         PartyEvent[]            @relation("PartyEventTaggedVendors")
+  taggedPartyPhotos         PartyPhoto[]            @relation("PartyPhotoTaggedVendors")
 }
 
 model PartyEvent {
@@ -256,13 +258,35 @@ model PartyEvent {
   theme         String?
   tags          String[]
   description   String?
+  location      String?
   coverImageUrl String?
   imageUrls     String[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photos        PartyPhoto[]
   taggedVendors VendorProfile[] @relation("PartyEventTaggedVendors")
+}
+
+model PartyPhoto {
+  id            String   @id @default(cuid())
+  userId        String
+  eventId       String?
+  contentType   String
+  data          Bytes
+  size          Int
+  sortOrder     Int      @default(0)
+  caption       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event         PartyEvent? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  taggedVendors VendorProfile[] @relation("PartyPhotoTaggedVendors")
+
+  @@index([eventId, sortOrder])
+  @@index([userId, createdAt])
 }
 
 model Follow {

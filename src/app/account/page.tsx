@@ -49,8 +49,7 @@ export default async function AccountPage() {
         bio: true,
         instagramUrl: true,
         tiktokUrl: true,
-        partyfulUrl: true,
-        partyPhotoUrls: true
+        partyfulUrl: true
       }
     }),
     db.order.findMany({

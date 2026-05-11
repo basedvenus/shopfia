@@ -123,48 +123,21 @@ export async function updateAccountProfileAction(formData: FormData) {
   }
 }
 
-const partyPhotoSchema = z.object({
-  imageUrl: z.string().trim().min(1, "Upload or paste an image.")
-});
-
-export async function addPartyPhotoAction(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { ok: false, error: "Sign in to add party photos." };
-  }
-
-  const parsed = partyPhotoSchema.safeParse({
-    imageUrl: formData.get("imageUrl")
-  });
-
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Add a valid image URL." };
-  }
-
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { partyPhotoUrls: true }
-  });
-
-  const nextPhotos = [parsed.data.imageUrl, ...(user?.partyPhotoUrls ?? [])].slice(0, 24);
-
-  await db.user.update({
-    where: { id: session.user.id },
-    data: { partyPhotoUrls: nextPhotos }
-  });
-
-  revalidatePath("/account");
-  return { ok: true };
-}
-
 const partyEventSchema = z.object({
   title: z.string().trim().min(2, "Add an event title.").max(100),
   theme: z.string().trim().max(100).optional().or(z.literal("")),
   tags: z.array(z.string().trim().min(1).max(30)).max(12).default([]),
   description: z.string().trim().max(500).optional().or(z.literal("")),
-  coverImageUrl: z.string().trim().min(1, "Upload or paste a cover image.").max(1_500_000),
-  imageUrls: z.array(z.string().trim().min(1).max(1_500_000)).max(12).default([]),
-  taggedVendorIds: z.array(z.string().cuid()).max(12).default([])
+  location: z.string().trim().max(120).optional().or(z.literal("")),
+  photos: z
+    .array(
+      z.object({
+        id: z.string().cuid(),
+        vendorIds: z.array(z.string().cuid()).max(8).default([])
+      })
+    )
+    .min(1, "Upload at least one party photo.")
+    .max(16, "Keep party stories to 16 photos or fewer.")
 });
 
 function slugify(value: string) {
@@ -182,53 +155,144 @@ export async function createPartyEventAction(formData: FormData) {
     return { ok: false, error: "Sign in to create a party gallery." };
   }
 
-  const imageUrls = formData
-    .getAll("imageUrls")
-    .map((value) => String(value).trim())
-    .filter(Boolean);
   const tags = formData
     .getAll("tags")
     .flatMap((value) => String(value).split(","))
-    .map((value) => value.trim().toLowerCase())
+    .map(normalizeTag)
     .filter(Boolean);
-  const taggedVendorIds = formData
-    .getAll("taggedVendorIds")
-    .map((value) => String(value).trim())
-    .filter(Boolean);
+  const photos = parsePartyPhotoPayload(formData.get("photos"));
 
   const parsed = partyEventSchema.safeParse({
     title: formData.get("title"),
     theme: formData.get("theme") || undefined,
     tags,
     description: formData.get("description") || undefined,
-    coverImageUrl: formData.get("coverImageUrl"),
-    imageUrls,
-    taggedVendorIds
+    location: formData.get("location") || undefined,
+    photos
   });
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check your event details." };
   }
 
-  const event = await db.partyEvent.create({
-    data: {
+  const uploadedPhotos = await db.partyPhoto.findMany({
+    where: {
+      id: { in: parsed.data.photos.map((photo) => photo.id) },
       userId: session.user.id,
-      slug: `${slugify(parsed.data.title) || "party"}-${Date.now().toString(36)}`,
-      title: parsed.data.title,
-      theme: parsed.data.theme || null,
-      tags: parsed.data.tags,
-      description: parsed.data.description || null,
-      coverImageUrl: parsed.data.coverImageUrl,
-      imageUrls: [parsed.data.coverImageUrl, ...parsed.data.imageUrls].slice(0, 12),
-      taggedVendors: {
-        connect: parsed.data.taggedVendorIds.map((id) => ({ id }))
-      }
+      eventId: null
+    },
+    select: {
+      id: true,
+      updatedAt: true
     }
+  });
+  const uploadedPhotoIds = new Set(uploadedPhotos.map((photo) => photo.id));
+  const orderedPhotos = parsed.data.photos.filter((photo) => uploadedPhotoIds.has(photo.id));
+
+  if (orderedPhotos.length === 0) {
+    return { ok: false, error: "Upload at least one party photo before saving." };
+  }
+
+  const verifiedVendors = await db.vendorProfile.findMany({
+    where: {
+      id: {
+        in: Array.from(new Set(orderedPhotos.flatMap((photo) => photo.vendorIds)))
+      },
+      verified: true
+    },
+    select: { id: true }
+  });
+  const verifiedVendorIds = new Set(verifiedVendors.map((vendor) => vendor.id));
+  const eventVendorIds = Array.from(
+    new Set(
+      orderedPhotos.flatMap((photo) =>
+        photo.vendorIds.filter((vendorId) => verifiedVendorIds.has(vendorId))
+      )
+    )
+  );
+  const photoUrlById = new Map(
+    uploadedPhotos.map((photo) => [
+      photo.id,
+      `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`
+    ])
+  );
+  const imageUrls = orderedPhotos
+    .map((photo) => photoUrlById.get(photo.id))
+    .filter((url): url is string => Boolean(url));
+
+  const event = await db.$transaction(async (tx) => {
+    const partyEvent = await tx.partyEvent.create({
+      data: {
+        userId: session.user.id,
+        slug: `${slugify(parsed.data.title) || "party"}-${Date.now().toString(36)}`,
+        title: parsed.data.title,
+        theme: parsed.data.theme || null,
+        tags: parsed.data.tags,
+        description: parsed.data.description || null,
+        location: parsed.data.location || null,
+        coverImageUrl: imageUrls[0] ?? null,
+        imageUrls,
+        taggedVendors: {
+          connect: eventVendorIds.map((id) => ({ id }))
+        }
+      }
+    });
+
+    await Promise.all(
+      orderedPhotos.map((photo, index) =>
+        tx.partyPhoto.update({
+          where: { id: photo.id },
+          data: {
+            eventId: partyEvent.id,
+            sortOrder: index,
+            taggedVendors: {
+              set: photo.vendorIds
+                .filter((vendorId) => verifiedVendorIds.has(vendorId))
+                .map((id) => ({ id }))
+            }
+          }
+        })
+      )
+    );
+
+    return partyEvent;
   });
 
   revalidatePath("/parties");
+  revalidatePath(`/events/${event.slug}`);
   revalidatePath("/");
   return { ok: true, eventSlug: event.slug };
+}
+
+function normalizeTag(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^#+/, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 30);
+}
+
+function parsePartyPhotoPayload(value: FormDataEntryValue | null) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(String(value)) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((photo) => {
+      if (!photo || typeof photo !== "object") {
+        return { id: "", vendorIds: [] };
+      }
+      const record = photo as { id?: unknown; vendorIds?: unknown };
+      return {
+        id: typeof record.id === "string" ? record.id : "",
+        vendorIds: Array.isArray(record.vendorIds)
+          ? record.vendorIds.filter((vendorId): vendorId is string => typeof vendorId === "string")
+          : []
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function toggleFollowAction(formData: FormData) {
