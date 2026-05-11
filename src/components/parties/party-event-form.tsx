@@ -36,6 +36,22 @@ type PartyEventFormProps = {
   vendors: VendorOption[];
 };
 
+const LOCATION_SUGGESTIONS = [
+  { value: "Fairfield, California", detail: "City" },
+  { value: "Vacaville, California", detail: "City" },
+  { value: "Suisun City, California", detail: "City" },
+  { value: "Vallejo, California", detail: "City" },
+  { value: "Benicia, California", detail: "City" },
+  { value: "Napa, California", detail: "City" },
+  { value: "Backyard Garden in Fairfield", detail: "Private celebration" },
+  { value: "Private Home in Fairfield", detail: "Home party" },
+  { value: "Garden Patio in Fairfield", detail: "Outdoor venue" },
+  { value: "Community Hall in Fairfield", detail: "Indoor venue" },
+  { value: "Winery Patio in Napa", detail: "Outdoor venue" },
+  { value: "Downtown Vacaville Studio", detail: "Photo-ready venue" },
+  { value: "Solano County Event Center", detail: "Venue" }
+];
+
 export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
   const isEditing = Boolean(initialParty);
   const [message, setMessage] = useState<string | null>(null);
@@ -159,11 +175,7 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
           defaultValue={initialParty?.theme ?? ""}
         />
       </div>
-      <Input
-        name="location"
-        placeholder="Venue or location, e.g. Backyard garden in Fairfield"
-        defaultValue={initialParty?.location ?? ""}
-      />
+      <LocationAutocompleteInput defaultValue={initialParty?.location ?? ""} />
       <Textarea
         name="description"
         placeholder="Tell the party story: the mood, inspiration, favorite details, or what made it special..."
@@ -310,6 +322,50 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
   );
 }
 
+function LocationAutocompleteInput({ defaultValue }: { defaultValue: string }) {
+  const [value, setValue] = useState(defaultValue);
+  const [isOpen, setIsOpen] = useState(false);
+  const suggestions = getLocationSuggestions(value);
+
+  return (
+    <div className="relative">
+      <Input
+        name="location"
+        placeholder="Venue or location, e.g. Backyard garden in Fairfield"
+        value={value}
+        autoComplete="off"
+        onChange={(event) => {
+          setValue(event.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => {
+          window.setTimeout(() => setIsOpen(false), 120);
+        }}
+      />
+      {isOpen && suggestions.length > 0 ? (
+        <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-30 overflow-hidden rounded-2xl border bg-white shadow-soft">
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion.value}
+              type="button"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                setValue(suggestion.value);
+                setIsOpen(false);
+              }}
+              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm transition hover:bg-primary/5"
+            >
+              <span className="font-medium">{suggestion.value}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">{suggestion.detail}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function IconButton({
   children,
   disabled,
@@ -364,4 +420,26 @@ function normalizeTag(value: string) {
     .replace(/^#+/, "")
     .replace(/[^a-z0-9]+/g, "")
     .slice(0, 30);
+}
+
+function getLocationSuggestions(value: string) {
+  const query = normalizeLocationQuery(value);
+  if (!query) return LOCATION_SUGGESTIONS.slice(0, 5);
+  const tokens = query.split(" ").filter(Boolean);
+
+  return LOCATION_SUGGESTIONS
+    .map((suggestion) => ({
+      ...suggestion,
+      normalized: normalizeLocationQuery(suggestion.value)
+    }))
+    .filter((suggestion) => tokens.every((token) => suggestion.normalized.includes(token)))
+    .slice(0, 5);
+}
+
+function normalizeLocationQuery(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ");
 }

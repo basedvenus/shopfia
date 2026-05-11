@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { MapPin, Plus, Sparkles } from "lucide-react";
-import { PartyEventForm, type EditablePartyEvent } from "@/components/parties/party-event-form";
-import { Button } from "@/components/ui/button";
+import { MapPin, Pencil, Sparkles } from "lucide-react";
+import { PartyEventForm } from "@/components/parties/party-event-form";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +20,7 @@ const fallbackEvents = [
   }
 ];
 
-export default async function PartiesPage({
-  searchParams
-}: {
-  searchParams?: { edit?: string };
-}) {
+export default async function PartiesPage() {
   const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
   const session = await auth();
   if (!session?.user?.id) redirect("/account");
@@ -48,30 +43,11 @@ export default async function PartiesPage({
     })
   ]);
 
-  const editSlug = typeof searchParams?.edit === "string" ? searchParams.edit : null;
-  const selectedEvent = editSlug ? events.find((event) => event.slug === editSlug) ?? null : null;
-  const formParty = selectedEvent
-    ? ({
-        id: selectedEvent.id,
-        slug: selectedEvent.slug,
-        title: selectedEvent.title,
-        theme: selectedEvent.theme,
-        tags: selectedEvent.tags,
-        description: selectedEvent.description,
-        location: selectedEvent.location,
-        photos: selectedEvent.photos.map((photo) => ({
-          id: photo.id,
-          url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
-          vendorIds: photo.taggedVendors.map((vendor) => vendor.id)
-        }))
-      } satisfies EditablePartyEvent)
-    : null;
-
   return (
     <div className="space-y-8">
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(390px,0.85fr)]">
         <div className="space-y-5">
-          <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
             <div>
               <p className="text-sm text-muted-foreground">Social party portfolio</p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight">My Parties</h1>
@@ -79,14 +55,6 @@ export default async function PartiesPage({
                 Curate visual stories with real photos, searchable hashtags, and vendor credits tied to the images they helped create.
               </p>
             </div>
-            {selectedEvent ? (
-              <Link href="/parties">
-                <Button variant="secondary">
-                  <Plus className="h-4 w-4" />
-                  New Party
-                </Button>
-              </Link>
-            ) : null}
           </div>
 
           {events.length > 0 ? (
@@ -94,22 +62,32 @@ export default async function PartiesPage({
               {events.map((event, index) => {
                 const image = getEventImage(event);
                 const vendorCount = new Set(event.photos.flatMap((photo) => photo.taggedVendors.map((vendor) => vendor.id))).size;
-                const isSelected = selectedEvent?.id === event.id;
                 const featured = index === 0 || index % 7 === 0;
                 return (
-                  <Link
+                  <article
                     key={event.id}
-                    href={`/parties?edit=${event.slug}`}
-                    className={`group relative overflow-hidden rounded-[1.5rem] border bg-muted shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${
+                    className={`group relative overflow-hidden rounded-[1.5rem] border border-white/80 bg-muted shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${
                       featured ? "col-span-2 row-span-2" : "col-span-2"
-                    } ${isSelected ? "border-primary ring-2 ring-primary/30" : "border-white/80"}`}
+                    }`}
                   >
+                    <Link
+                      href={`/events/${event.slug}`}
+                      className="absolute inset-0 z-10"
+                      aria-label={`Open ${event.title}`}
+                    />
+                    <Link
+                      href={`/events/${event.slug}?edit=1`}
+                      aria-label={`Edit ${event.title}`}
+                      className="absolute right-3 top-3 z-30 grid h-9 w-9 place-items-center rounded-full border border-white/80 bg-white/90 text-foreground opacity-100 shadow-sm backdrop-blur transition hover:bg-white md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Link>
                     <div
                       className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.04]"
                       style={{ backgroundImage: `url(${image})` }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                    <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 p-4 text-white">
                       <div className="mb-2 flex flex-wrap gap-1.5">
                         {event.tags.slice(0, featured ? 4 : 2).map((tag) => (
                           <span key={tag} className="rounded-full bg-white/20 px-2.5 py-1 text-[11px] backdrop-blur">
@@ -131,7 +109,7 @@ export default async function PartiesPage({
                         {vendorCount ? ` · ${vendorCount} vendor${vendorCount === 1 ? "" : "s"}` : ""}
                       </p>
                     </div>
-                  </Link>
+                  </article>
                 );
               })}
             </div>
@@ -169,20 +147,13 @@ export default async function PartiesPage({
         <aside className="rounded-[1.8rem] border border-white/70 bg-white/90 p-4 shadow-soft lg:sticky lg:top-24 lg:self-start">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold tracking-tight">{selectedEvent ? "Edit Party" : "Add Party"}</h2>
+              <h2 className="text-xl font-semibold tracking-tight">Add Party</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                {selectedEvent
-                  ? "Revise the story, reorder the gallery, and adjust photo-level vendor credits."
-                  : "Start with photos, then add tags and vendor credits."}
+                Start with photos, then add tags and vendor credits.
               </p>
             </div>
-            {selectedEvent ? (
-              <Link href={`/events/${selectedEvent.slug}`}>
-                <Button size="sm" variant="secondary">View story</Button>
-              </Link>
-            ) : null}
           </div>
-          <PartyEventForm key={selectedEvent?.id ?? "new-party"} initialParty={formParty} vendors={vendors} />
+          <PartyEventForm key="new-party" vendors={vendors} />
         </aside>
       </section>
     </div>

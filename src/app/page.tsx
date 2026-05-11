@@ -36,7 +36,7 @@ const partyTiles = [
       "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1200&q=80",
     href: "/explore?q=florals",
     tags: ["garden party", "tablescape"],
-    vendor: "Styled vendor credits",
+    vendor: "Florals, rentals, and table styling",
     className: ""
   }
 ];
@@ -45,49 +45,48 @@ const valueProps = [
   {
     icon: Search,
     title: "Browse real parties",
-    body: "See celebrations by theme, mood, tags, and the creatives who helped bring them to life."
+    body: "See showers, brunches, birthdays, and dinners by theme, mood, local vendors, and real photos."
   },
   {
     icon: Tags,
-    title: "Tag every creator",
-    body: "Credit florists, bakers, balloon artists, rental teams, photographers, and more."
+    title: "Find local artisans",
+    body: "Discover cookie artists, balloon stylists, florists, bakers, backdrops, rentals, photographers, and more."
   },
   {
     icon: BadgeCheck,
-    title: "Trust the proof",
-    body: "Vendor profiles become richer when real hosts tag their work in actual events."
+    title: "See the real work",
+    body: "Vendor profiles become richer when hosts tag the people who helped bring actual celebrations to life."
   }
 ];
-
-const categories = ["Baby shower", "Brunch", "Pastel", "Garden party", "Cookies", "Balloons", "Florals"];
 
 export default function Page() {
   return (
     <div className="-mt-6 space-y-16 pb-10">
-      <section className="grid min-h-[calc(100vh-5rem)] items-center gap-8 py-8 lg:grid-cols-[0.92fr_1.08fr]">
+      <section className="grid min-h-[calc(100vh-5rem)] items-center gap-8 py-8 lg:grid-cols-[0.88fr_1.12fr]">
         <div className="max-w-2xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/75 px-3 py-1 text-sm text-muted-foreground shadow-sm">
             <Sparkles className="h-4 w-4 text-primary" />
-            Real party inspiration, credited beautifully
+            Real parties, local vendors, warm inspiration
           </div>
           <h1 className="mt-5 text-5xl font-semibold tracking-tight text-foreground md:text-6xl lg:text-7xl">
-            Pinterest-worthy parties start here.
+            Bring your party to life.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">
-            ShopFia helps you discover trusted event creatives, browse real celebrations,
-            save inspiration, and see exactly which vendors made each moment happen.
+            From custom cookies to balloon garlands to florals to backdrops, ShopFia
+            helps you discover local artisans, browse real parties, and see the people
+            behind every celebration.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Link href="/parties">
-              <Button size="lg">
-                <PartyPopper className="h-4 w-4" />
-                Browse Parties
-              </Button>
-            </Link>
             <Link href="/explore">
-              <Button size="lg" variant="secondary">
+              <Button size="lg">
                 <Search className="h-4 w-4" />
                 Explore Vendors
+              </Button>
+            </Link>
+            <Link href="/parties">
+              <Button size="lg" variant="secondary">
+                <PartyPopper className="h-4 w-4" />
+                Browse Parties
               </Button>
             </Link>
             <Link href="/account">
@@ -97,54 +96,71 @@ export default function Page() {
               </Button>
             </Link>
           </div>
-          <div className="mt-8 flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <span key={category} className="rounded-full bg-white/80 px-3 py-1 text-sm text-muted-foreground shadow-sm">
-                {category}
-              </span>
-            ))}
+          <div className="mt-9 grid max-w-lg grid-cols-3 gap-3 text-sm">
+            <div className="rounded-[1.15rem] border border-white/80 bg-white/75 p-3 shadow-sm">
+              <p className="text-2xl font-semibold text-foreground">120+</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">party ideas and vendor moments</p>
+            </div>
+            <div className="rounded-[1.15rem] border border-white/80 bg-white/75 p-3 shadow-sm">
+              <p className="text-2xl font-semibold text-foreground">Local</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">artists, bakers, florists, stylists</p>
+            </div>
+            <div className="rounded-[1.15rem] border border-white/80 bg-white/75 p-3 shadow-sm">
+              <p className="text-2xl font-semibold text-foreground">Social</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">real hosts, real photos, real parties</p>
+            </div>
           </div>
         </div>
 
-        <div className="grid auto-rows-[180px] grid-cols-2 gap-3 md:auto-rows-[220px]">
-          {partyTiles.map((tile, index) => (
-            <Link
-              key={tile.title}
-              href={tile.href}
-              className={`group relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-muted shadow-soft ${tile.className}`}
-            >
-              <Image
-                src={tile.image}
-                alt={tile.title}
-                fill
-                priority={index === 0}
-                className="object-cover transition duration-500 group-hover:scale-[1.03]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-                <div className="mb-2 flex flex-wrap gap-1.5">
-                  {tile.tags.slice(0, 3).map((tag) => (
-                    <span key={tag} className="rounded-full bg-white/15 px-2 py-1 text-[11px] backdrop-blur">
-                      #{tag}
-                    </span>
-                  ))}
+        <div className="relative">
+          <div className="absolute -left-5 top-10 hidden w-28 rounded-[1.3rem] border border-white/80 bg-white/85 p-3 text-xs leading-5 text-muted-foreground shadow-soft backdrop-blur lg:block">
+            <Heart className="mb-2 h-4 w-4 text-primary" />
+            Saved by hosts planning nearby celebrations
+          </div>
+          <div className="absolute -right-4 bottom-24 hidden w-32 rounded-[1.3rem] border border-white/80 bg-white/85 p-3 text-xs leading-5 text-muted-foreground shadow-soft backdrop-blur lg:block">
+            <Camera className="mb-2 h-4 w-4 text-primary" />
+            New party photos added this week
+          </div>
+          <div className="grid auto-rows-[180px] grid-cols-2 gap-3 md:auto-rows-[220px]">
+            {partyTiles.map((tile, index) => (
+              <Link
+                key={tile.title}
+                href={tile.href}
+                className={`group relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-muted shadow-soft ${tile.className}`}
+              >
+                <Image
+                  src={tile.image}
+                  alt={tile.title}
+                  fill
+                  priority={index === 0}
+                  className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {tile.tags.slice(0, 3).map((tag) => (
+                      <span key={tag} className="rounded-full bg-white/15 px-2 py-1 text-[11px] backdrop-blur">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                  <h2 className="text-lg font-semibold">{tile.title}</h2>
+                  <p className="mt-1 text-xs text-white/80">{tile.vendor}</p>
                 </div>
-                <h2 className="text-lg font-semibold">{tile.title}</h2>
-                <p className="mt-1 text-xs text-white/80">{tile.vendor}</p>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
 
-          <div className="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/85 p-4 shadow-soft">
-            <div className="grid h-full place-items-center text-center">
-              <div>
-                <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent">
-                  <Camera className="h-5 w-5 text-primary" />
+            <div className="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/85 p-4 shadow-soft">
+              <div className="grid h-full place-items-center text-center">
+                <div>
+                  <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent">
+                    <Camera className="h-5 w-5 text-primary" />
+                  </div>
+                  <h2 className="mt-4 font-semibold">Tag vendors at your own party.</h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    Upload party photos, add tags, and share the vendors behind your celebration.
+                  </p>
                 </div>
-                <h2 className="mt-4 font-semibold">Tag vendors in your own event story</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Upload party photos, add tags, and credit the creatives guests keep asking about.
-                </p>
               </div>
             </div>
           </div>
@@ -175,7 +191,7 @@ export default function Page() {
           </h2>
           <p className="mt-4 text-sm leading-7 text-muted-foreground">
             ShopFia is built around the way people actually plan events: a friend posts a beautiful
-            shower, you tap into the party story, see the florist and baker credited, then save the
+            shower, you tap into the party story, see the florist and baker tagged, then save the
             vendor for your own celebration.
           </p>
           <Link href="/explore" className="mt-6 inline-flex">
@@ -187,7 +203,7 @@ export default function Page() {
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          {["Friend posts baby shower", "Vendor credits are linked", "You save the creative"].map((step, index) => (
+          {["Friend posts a baby shower", "Vendor tags are linked", "You save the artisan"].map((step, index) => (
             <div key={step} className="rounded-[1.5rem] border border-white/80 bg-white/85 p-5 shadow-sm">
               <div className="grid h-10 w-10 place-items-center rounded-full bg-accent font-semibold text-primary">
                 {index + 1}
@@ -197,7 +213,7 @@ export default function Page() {
                 {index === 0
                   ? "Real celebrations become searchable inspiration."
                   : index === 1
-                    ? "Each credited vendor gets context, attribution, and trust."
+                    ? "Each vendor tag shows where their work appeared."
                     : "Discovery turns into favorites, inquiries, and bookings."}
               </p>
             </div>

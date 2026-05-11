@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Heart, MapPin, UserPlus } from "lucide-react";
+import { ArrowLeft, Heart, MapPin, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
+import { PartyEventForm, type EditablePartyEvent } from "@/components/parties/party-event-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -31,7 +32,13 @@ const fallbackEvents = {
   }
 };
 
-export default async function EventPage({ params }: { params: { slug: string } }) {
+export default async function EventPage({
+  params,
+  searchParams
+}: {
+  params: { slug: string };
+  searchParams?: { edit?: string };
+}) {
   const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
   const fallback = fallbackEvents[params.slug as keyof typeof fallbackEvents];
   const event = await db.partyEvent
@@ -103,6 +110,24 @@ export default async function EventPage({ params }: { params: { slug: string } }
   const host = event?.user ?? null;
   const hostHandle = host?.username ? `@${host.username}` : host?.name ?? "ShopFia host";
   const isOwner = Boolean(session?.user?.id && host?.id && session.user.id === host.id);
+  const editRequested = searchParams?.edit === "1" || searchParams?.edit === "true";
+  const isEditing = Boolean(editRequested && isOwner && event);
+  const formParty = event
+    ? ({
+        id: event.id,
+        slug: event.slug,
+        title: event.title,
+        theme: event.theme,
+        tags: event.tags,
+        description: event.description,
+        location: event.location,
+        photos: event.photos.map((photo) => ({
+          id: photo.id,
+          url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
+          vendorIds: photo.taggedVendors.map((vendor) => vendor.id)
+        }))
+      } satisfies EditablePartyEvent)
+    : null;
   const isFollowingHost =
     session?.user?.id && host?.id
       ? Boolean(
@@ -116,6 +141,13 @@ export default async function EventPage({ params }: { params: { slug: string } }
           })
         )
       : false;
+  const editVendors = isEditing
+    ? await db.vendorProfile.findMany({
+        where: { verified: true },
+        select: { id: true, name: true, city: true, state: true },
+        orderBy: { name: "asc" }
+      })
+    : [];
 
   async function toggleFollow(formData: FormData) {
     "use server";
@@ -125,6 +157,33 @@ export default async function EventPage({ params }: { params: { slug: string } }
 
   return (
     <div className="space-y-8">
+      {isEditing && formParty ? (
+        <section className="grid gap-5 rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft lg:grid-cols-[0.72fr_1.28fr]">
+          <div className="flex flex-col justify-between gap-6 rounded-[1.6rem] bg-muted/60 p-5">
+            <div>
+              <p className="text-sm text-muted-foreground">Editing party story</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight">Edit {formParty.title}</h1>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                Update the story, location, hashtag bubbles, gallery order, cover photo, and vendor tags attached to each image.
+              </p>
+            </div>
+            <div
+              className="min-h-[260px] rounded-[1.4rem] bg-cover bg-center shadow-sm"
+              style={{ backgroundImage: `url(${hero})` }}
+            />
+            <Link href={`/events/${formParty.slug}`} className="inline-flex">
+              <Button type="button" variant="secondary">
+                <ArrowLeft className="h-4 w-4" />
+                View public story
+              </Button>
+            </Link>
+          </div>
+          <div className="rounded-[1.6rem] border bg-white p-4">
+            <PartyEventForm initialParty={formParty} vendors={editVendors} />
+          </div>
+        </section>
+      ) : null}
+
       <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
         <div className="relative min-h-[480px]">
           <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${hero})` }} />
@@ -156,8 +215,8 @@ export default async function EventPage({ params }: { params: { slug: string } }
                   <span className="text-white/70">{hostHandle}</span>
                 </div>
                 {isOwner && event ? (
-                  <Link href={`/parties?edit=${event.slug}`}>
-                    <Button type="button" size="sm" variant="secondary">Edit Party</Button>
+                  <Link href={`/events/${event.slug}?edit=1`}>
+                    <Button type="button" size="sm" variant="secondary">Edit story</Button>
                   </Link>
                 ) : null}
                 {session?.user?.id && session.user.id !== host.id ? (
@@ -212,7 +271,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
         <div className="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft">
           <h2 className="text-2xl font-semibold tracking-tight">Vendor Contributions</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            ShopFia event pages connect beautiful celebrations back to the creatives who made them happen.
+            ShopFia event pages connect beautiful celebrations back to the vendors who helped make them happen.
           </p>
           <div className="mt-5 grid gap-3">
             {vendors.length > 0 ? (
@@ -231,14 +290,14 @@ export default async function EventPage({ params }: { params: { slug: string } }
                       style={{ backgroundImage: `url(${vendor.logoUrl ?? vendor.coverPhoto ?? "/demo/fairfield-lemon-tablescape.png"})` }}
                     />
                     <div>
-                      <p className="text-sm font-semibold">Creative contribution by {vendor.name}</p>
+                      <p className="text-sm font-semibold">Vendor contribution by {vendor.name}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {vendor.city}{vendor.state ? `, ${vendor.state}` : ""}
                       </p>
                       <p className="mt-2 text-xs text-muted-foreground">
                         {taggedPhotoCount > 0
                           ? `Tagged in ${taggedPhotoCount} photo${taggedPhotoCount === 1 ? "" : "s"} from this party story.`
-                          : "Credited on this party story."}
+                          : "Tagged on this party story."}
                       </p>
                     </div>
                   </Link>
@@ -246,7 +305,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
               })
             ) : (
               <div className="rounded-[1.4rem] bg-muted/60 p-4 text-sm text-muted-foreground">
-                Vendor tags will appear here as this party story gets credited.
+                Vendor tags will appear here as this party story grows.
               </div>
             )}
           </div>
@@ -261,7 +320,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Tagged Vendor Moments</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Each credit can become a mini portfolio section with photos, context, and a direct vendor link.
+              Each vendor tag can become a mini portfolio section with photos, context, and a direct profile link.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -284,7 +343,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
                       {vendorIndex === 0 ? "Featured styling" : "Event detail"} by {vendor.name}
                     </h3>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Tagged photos give this vendor public validation from a real celebration, not just a static portfolio upload.
+                      Tagged photos give this vendor real context from a celebration, not just a static portfolio upload.
                     </p>
                     <Link href={`/vendor/profile/${vendor.slug}`} className="mt-3 inline-flex">
                       <Button size="sm" variant="secondary">View vendor profile</Button>
