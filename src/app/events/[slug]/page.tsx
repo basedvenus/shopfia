@@ -102,6 +102,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
   );
   const host = event?.user ?? null;
   const hostHandle = host?.username ? `@${host.username}` : host?.name ?? "ShopFia host";
+  const isOwner = Boolean(session?.user?.id && host?.id && session.user.id === host.id);
   const isFollowingHost =
     session?.user?.id && host?.id
       ? Boolean(
@@ -154,6 +155,11 @@ export default async function EventPage({ params }: { params: { slug: string } }
                   )}{" "}
                   <span className="text-white/70">{hostHandle}</span>
                 </div>
+                {isOwner && event ? (
+                  <Link href={`/parties?edit=${event.slug}`}>
+                    <Button type="button" size="sm" variant="secondary">Edit Party</Button>
+                  </Link>
+                ) : null}
                 {session?.user?.id && session.user.id !== host.id ? (
                   <form action={toggleFollow}>
                     <input type="hidden" name="followingId" value={host.id} />

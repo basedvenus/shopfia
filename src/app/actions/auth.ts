@@ -123,21 +123,29 @@ export async function updateAccountProfileAction(formData: FormData) {
   }
 }
 
-const partyEventSchema = z.object({
+const partyPhotoPayloadSchema = z.object({
+  id: z.string().cuid(),
+  vendorIds: z.array(z.string().cuid()).max(8).default([])
+});
+
+const partyEventFieldsSchema = z.object({
   title: z.string().trim().min(2, "Add an event title.").max(100),
   theme: z.string().trim().max(100).optional().or(z.literal("")),
   tags: z.array(z.string().trim().min(1).max(30)).max(12).default([]),
   description: z.string().trim().max(500).optional().or(z.literal("")),
-  location: z.string().trim().max(120).optional().or(z.literal("")),
+  location: z.string().trim().max(120).optional().or(z.literal(""))
+});
+
+const createPartyEventSchema = partyEventFieldsSchema.extend({
   photos: z
-    .array(
-      z.object({
-        id: z.string().cuid(),
-        vendorIds: z.array(z.string().cuid()).max(8).default([])
-      })
-    )
+    .array(partyPhotoPayloadSchema)
     .min(1, "Upload at least one party photo.")
     .max(16, "Keep party stories to 16 photos or fewer.")
+});
+
+const updatePartyEventSchema = partyEventFieldsSchema.extend({
+  eventId: z.string().cuid(),
+  photos: z.array(partyPhotoPayloadSchema).max(16, "Keep party stories to 16 photos or fewer.")
 });
 
 function slugify(value: string) {
@@ -155,6 +163,162 @@ export async function createPartyEventAction(formData: FormData) {
     return { ok: false, error: "Sign in to create a party gallery." };
   }
 
+  const parsed = createPartyEventSchema.safeParse(parsePartyEventFormData(formData));
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check your event details." };
+  }
+
+  const prepared = await preparePartyPhotoPersistence({
+    userId: session.user.id,
+    photos: parsed.data.photos
+  });
+
+  if (prepared.orderedPhotos.length === 0) {
+    return { ok: false, error: "Upload at least one party photo before saving." };
+  }
+
+  const event = await db.$transaction(async (tx) => {
+    const partyEvent = await tx.partyEvent.create({
+      data: {
+        userId: session.user.id,
+        slug: `${slugify(parsed.data.title) || "party"}-${Date.now().toString(36)}`,
+        title: parsed.data.title,
+        theme: parsed.data.theme || null,
+        tags: parsed.data.tags,
+        description: parsed.data.description || null,
+        location: parsed.data.location || null,
+        coverImageUrl: prepared.imageUrls[0] ?? null,
+        imageUrls: prepared.imageUrls,
+        taggedVendors: {
+          connect: prepared.eventVendorIds.map((id) => ({ id }))
+        }
+      }
+    });
+
+    await Promise.all(
+      prepared.orderedPhotos.map((photo, index) =>
+        tx.partyPhoto.update({
+          where: { id: photo.id },
+          data: {
+            eventId: partyEvent.id,
+            sortOrder: index,
+            taggedVendors: {
+              set: photo.vendorIds
+                .filter((vendorId) => prepared.verifiedVendorIds.has(vendorId))
+                .map((id) => ({ id }))
+            }
+          }
+        })
+      )
+    );
+
+    return partyEvent;
+  });
+
+  revalidatePath("/parties");
+  revalidatePath(`/events/${event.slug}`);
+  revalidatePath("/");
+  return { ok: true, eventSlug: event.slug };
+}
+
+export async function updatePartyEventAction(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, error: "Sign in to edit party stories." };
+  }
+
+  const parsed = updatePartyEventSchema.safeParse({
+    ...parsePartyEventFormData(formData),
+    eventId: formData.get("eventId")
+  });
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check your event details." };
+  }
+
+  const existingEvent = await db.partyEvent.findFirst({
+    where: {
+      id: parsed.data.eventId,
+      userId: session.user.id
+    },
+    select: {
+      id: true,
+      slug: true,
+      photos: {
+        select: {
+          id: true
+        }
+      }
+    }
+  });
+
+  if (!existingEvent) {
+    return { ok: false, error: "That party story could not be found." };
+  }
+
+  const prepared = await preparePartyPhotoPersistence({
+    userId: session.user.id,
+    photos: parsed.data.photos,
+    eventId: existingEvent.id
+  });
+  const keptPhotoIds = prepared.orderedPhotos.map((photo) => photo.id);
+
+  const event = await db.$transaction(async (tx) => {
+    await tx.partyPhoto.deleteMany({
+      where: {
+        eventId: existingEvent.id,
+        userId: session.user.id,
+        ...(keptPhotoIds.length ? { id: { notIn: keptPhotoIds } } : {})
+      }
+    });
+
+    const updatedEvent = await tx.partyEvent.update({
+      where: { id: existingEvent.id },
+      data: {
+        title: parsed.data.title,
+        theme: parsed.data.theme || null,
+        tags: parsed.data.tags,
+        description: parsed.data.description || null,
+        location: parsed.data.location || null,
+        coverImageUrl: prepared.imageUrls[0] ?? null,
+        imageUrls: prepared.imageUrls,
+        taggedVendors: {
+          set: prepared.eventVendorIds.map((id) => ({ id }))
+        }
+      },
+      select: {
+        slug: true
+      }
+    });
+
+    await Promise.all(
+      prepared.orderedPhotos.map((photo, index) =>
+        tx.partyPhoto.update({
+          where: { id: photo.id },
+          data: {
+            eventId: existingEvent.id,
+            sortOrder: index,
+            taggedVendors: {
+              set: photo.vendorIds
+                .filter((vendorId) => prepared.verifiedVendorIds.has(vendorId))
+                .map((id) => ({ id }))
+            }
+          }
+        })
+      )
+    );
+
+    return updatedEvent;
+  });
+
+  revalidatePath("/parties");
+  revalidatePath(`/events/${event.slug}`);
+  revalidatePath("/");
+  return { ok: true, eventSlug: event.slug };
+}
+
+function parsePartyEventFormData(formData: FormData) {
   const tags = formData
     .getAll("tags")
     .flatMap((value) => String(value).split(","))
@@ -162,24 +326,30 @@ export async function createPartyEventAction(formData: FormData) {
     .filter(Boolean);
   const photos = parsePartyPhotoPayload(formData.get("photos"));
 
-  const parsed = partyEventSchema.safeParse({
+  return {
     title: formData.get("title"),
     theme: formData.get("theme") || undefined,
     tags,
     description: formData.get("description") || undefined,
     location: formData.get("location") || undefined,
     photos
-  });
+  };
+}
 
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check your event details." };
-  }
-
+async function preparePartyPhotoPersistence({
+  eventId,
+  photos,
+  userId
+}: {
+  eventId?: string;
+  photos: Array<z.infer<typeof partyPhotoPayloadSchema>>;
+  userId: string;
+}) {
   const uploadedPhotos = await db.partyPhoto.findMany({
     where: {
-      id: { in: parsed.data.photos.map((photo) => photo.id) },
-      userId: session.user.id,
-      eventId: null
+      id: { in: photos.map((photo) => photo.id) },
+      userId,
+      OR: eventId ? [{ eventId }, { eventId: null }] : [{ eventId: null }]
     },
     select: {
       id: true,
@@ -187,11 +357,7 @@ export async function createPartyEventAction(formData: FormData) {
     }
   });
   const uploadedPhotoIds = new Set(uploadedPhotos.map((photo) => photo.id));
-  const orderedPhotos = parsed.data.photos.filter((photo) => uploadedPhotoIds.has(photo.id));
-
-  if (orderedPhotos.length === 0) {
-    return { ok: false, error: "Upload at least one party photo before saving." };
-  }
+  const orderedPhotos = photos.filter((photo) => uploadedPhotoIds.has(photo.id));
 
   const verifiedVendors = await db.vendorProfile.findMany({
     where: {
@@ -220,48 +386,12 @@ export async function createPartyEventAction(formData: FormData) {
     .map((photo) => photoUrlById.get(photo.id))
     .filter((url): url is string => Boolean(url));
 
-  const event = await db.$transaction(async (tx) => {
-    const partyEvent = await tx.partyEvent.create({
-      data: {
-        userId: session.user.id,
-        slug: `${slugify(parsed.data.title) || "party"}-${Date.now().toString(36)}`,
-        title: parsed.data.title,
-        theme: parsed.data.theme || null,
-        tags: parsed.data.tags,
-        description: parsed.data.description || null,
-        location: parsed.data.location || null,
-        coverImageUrl: imageUrls[0] ?? null,
-        imageUrls,
-        taggedVendors: {
-          connect: eventVendorIds.map((id) => ({ id }))
-        }
-      }
-    });
-
-    await Promise.all(
-      orderedPhotos.map((photo, index) =>
-        tx.partyPhoto.update({
-          where: { id: photo.id },
-          data: {
-            eventId: partyEvent.id,
-            sortOrder: index,
-            taggedVendors: {
-              set: photo.vendorIds
-                .filter((vendorId) => verifiedVendorIds.has(vendorId))
-                .map((id) => ({ id }))
-            }
-          }
-        })
-      )
-    );
-
-    return partyEvent;
-  });
-
-  revalidatePath("/parties");
-  revalidatePath(`/events/${event.slug}`);
-  revalidatePath("/");
-  return { ok: true, eventSlug: event.slug };
+  return {
+    eventVendorIds,
+    imageUrls,
+    orderedPhotos,
+    verifiedVendorIds
+  };
 }
 
 function normalizeTag(value: string) {

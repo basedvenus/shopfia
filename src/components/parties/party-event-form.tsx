@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition, type DragEvent, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Loader2, Upload, X } from "lucide-react";
-import { createPartyEventAction } from "@/app/actions/auth";
+import { ArrowDown, ArrowUp, ImagePlus, Loader2, Star, Upload, X } from "lucide-react";
+import { createPartyEventAction, updatePartyEventAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,15 +20,28 @@ type UploadedPartyPhoto = {
   vendorIds: string[];
 };
 
+export type EditablePartyEvent = {
+  id: string;
+  slug: string;
+  title: string;
+  theme: string | null;
+  tags: string[];
+  description: string | null;
+  location: string | null;
+  photos: UploadedPartyPhoto[];
+};
+
 type PartyEventFormProps = {
+  initialParty?: EditablePartyEvent | null;
   vendors: VendorOption[];
 };
 
-export function PartyEventForm({ vendors }: PartyEventFormProps) {
+export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
+  const isEditing = Boolean(initialParty);
   const [message, setMessage] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [photos, setPhotos] = useState<UploadedPartyPhoto[]>([]);
+  const [tags, setTags] = useState<string[]>(() => initialParty?.tags ?? []);
+  const [photos, setPhotos] = useState<UploadedPartyPhoto[]>(() => initialParty?.photos ?? []);
   const [isUploading, setIsUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,17 +113,32 @@ export function PartyEventForm({ vendors }: PartyEventFormProps) {
     });
   }
 
+  function setCoverPhoto(photoId: string) {
+    setPhotos((current) => {
+      const index = current.findIndex((photo) => photo.id === photoId);
+      if (index <= 0) return current;
+      const next = [...current];
+      const [photo] = next.splice(index, 1);
+      return [photo, ...next];
+    });
+  }
+
   return (
     <form
       action={(formData) => {
         setMessage(null);
+        if (initialParty) {
+          formData.set("eventId", initialParty.id);
+        }
         tags.forEach((tag) => formData.append("tags", tag));
         formData.set("photos", JSON.stringify(photos.map(({ id, vendorIds }) => ({ id, vendorIds }))));
 
         startTransition(async () => {
-          const result = await createPartyEventAction(formData);
+          const result = initialParty
+            ? await updatePartyEventAction(formData)
+            : await createPartyEventAction(formData);
           if (!result.ok) {
-            setMessage(result.error ?? "Could not create party story.");
+            setMessage(result.error ?? "Could not save party story.");
             return;
           }
           window.location.href = `/events/${result.eventSlug}`;
@@ -119,14 +147,28 @@ export function PartyEventForm({ vendors }: PartyEventFormProps) {
       className="grid gap-5"
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input name="title" placeholder="Party Name, e.g. Lemon Garden Brunch" required />
-        <Input name="theme" placeholder="Theme, e.g. Citrus baby shower" />
+        <Input
+          name="title"
+          placeholder="Party Name, e.g. Lemon Garden Brunch"
+          required
+          defaultValue={initialParty?.title ?? ""}
+        />
+        <Input
+          name="theme"
+          placeholder="Theme, e.g. Citrus baby shower"
+          defaultValue={initialParty?.theme ?? ""}
+        />
       </div>
-      <Input name="location" placeholder="Venue or location, e.g. Backyard garden in Fairfield" />
+      <Input
+        name="location"
+        placeholder="Venue or location, e.g. Backyard garden in Fairfield"
+        defaultValue={initialParty?.location ?? ""}
+      />
       <Textarea
         name="description"
         placeholder="Tell the party story: the mood, inspiration, favorite details, or what made it special..."
         className="min-h-[110px]"
+        defaultValue={initialParty?.description ?? ""}
       />
 
       <div className="grid gap-2">
@@ -165,7 +207,7 @@ export function PartyEventForm({ vendors }: PartyEventFormProps) {
         <label
           onDragOver={(event) => event.preventDefault()}
           onDrop={onDrop}
-          className="grid min-h-[190px] cursor-pointer place-items-center rounded-[1.5rem] border border-dashed border-primary/40 bg-white/80 p-5 text-center transition hover:border-primary hover:bg-primary/5"
+          className="grid min-h-[180px] cursor-pointer place-items-center rounded-[1.5rem] border border-dashed border-primary/40 bg-white/80 p-5 text-center transition hover:border-primary hover:bg-primary/5"
         >
           <input
             ref={fileInputRef}
@@ -185,7 +227,7 @@ export function PartyEventForm({ vendors }: PartyEventFormProps) {
             </span>
             <span className="font-semibold">{isUploading ? "Uploading photos..." : "Drag photos here or click to upload"}</span>
             <span className="max-w-sm text-xs leading-5 text-muted-foreground">
-              Add multiple photos, then tag the vendors who contributed to each image.
+              First photo is the cover. Reorder anytime, then tag vendors on each image.
             </span>
           </span>
         </label>
@@ -208,7 +250,12 @@ export function PartyEventForm({ vendors }: PartyEventFormProps) {
                       <p className="text-sm font-semibold">Photo {index + 1}</p>
                       <p className="text-xs text-muted-foreground">Tag vendors for this specific image.</p>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex flex-wrap gap-1">
+                      {index > 0 ? (
+                        <IconButton label="Make cover" onClick={() => setCoverPhoto(photo.id)}>
+                          <Star className="h-4 w-4" />
+                        </IconButton>
+                      ) : null}
                       <IconButton label="Move up" disabled={index === 0} onClick={() => movePhoto(photo.id, -1)}>
                         <ArrowUp className="h-4 w-4" />
                       </IconButton>
@@ -250,13 +297,13 @@ export function PartyEventForm({ vendors }: PartyEventFormProps) {
         ) : (
           <div className="flex items-center gap-2 rounded-[1.2rem] bg-muted/60 p-3 text-sm text-muted-foreground">
             <ImagePlus className="h-4 w-4" />
-            Your uploaded party photos will preview here.
+            Uploaded party photos will preview here.
           </div>
         )}
       </div>
 
-      <Button type="submit" disabled={isPending || isUploading || photos.length === 0}>
-        {isPending ? "Creating Party..." : "Add Party"}
+      <Button type="submit" disabled={isPending || isUploading || (!isEditing && photos.length === 0)}>
+        {isPending ? "Saving..." : isEditing ? "Save changes" : "Add Party"}
       </Button>
       {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
     </form>
