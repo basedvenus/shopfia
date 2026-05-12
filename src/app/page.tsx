@@ -2,13 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
+  ArrowUpRight,
   BadgeCheck,
-  Camera,
   Heart,
-  PartyPopper,
+  MapPin,
   Search,
-  Sparkles,
   Tags,
+  Upload,
   UsersRound
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,71 +43,85 @@ const partyTiles = [
 
 const valueProps = [
   {
-    icon: Search,
-    title: "Browse real parties",
-    body: "See showers, brunches, birthdays, and dinners by theme, mood, local vendors, and real photos."
+    icon: Tags,
+    title: "Real parties. Tagged vendors.",
+    body: "See the cake, florals, balloons, rentals, and backdrops behind each celebration."
   },
   {
-    icon: Tags,
-    title: "Find local artisans",
-    body: "Discover cookie artists, balloon stylists, florists, bakers, backdrops, rentals, photographers, and more."
+    icon: Search,
+    title: "Inspiration you can hire.",
+    body: "Browse by theme, detail, city, and vendor so saved ideas can turn into real bookings."
   },
   {
     icon: BadgeCheck,
-    title: "See the real work",
-    body: "Vendor profiles become richer when hosts tag the people who helped bring actual celebrations to life."
+    title: "Community-built proof.",
+    body: "Hosts help vendor profiles grow through real event photos, not anonymous review blurbs."
   }
 ];
 
 export default function Page() {
   return (
-    <div className="-mt-6 space-y-16 pb-10">
-      <section className="grid min-h-[calc(100vh-5rem)] items-center gap-10 overflow-hidden py-8 lg:grid-cols-[0.88fr_1.12fr]">
+    <div className="-mt-6 space-y-16 pb-10 [font-family:Inter,ui-sans-serif,system-ui,sans-serif]">
+      <section className="grid min-h-[calc(100vh-5rem)] items-center gap-12 overflow-hidden py-8 lg:grid-cols-[0.86fr_1.14fr]">
         <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/75 px-3 py-1 text-sm text-muted-foreground shadow-sm">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Real parties, local vendors, warm inspiration
+          <div className="flex items-center gap-4 text-xs font-semibold uppercase text-primary">
+            <span className="h-px w-12 bg-primary" />
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            <span>Real parties · local vendors</span>
           </div>
-          <h1 className="mt-5 text-5xl font-semibold tracking-tight text-foreground md:text-6xl lg:text-7xl">
-            Bring your party to life.
+          <h1 className="mt-7 text-5xl font-semibold leading-[1.02] tracking-normal text-foreground md:text-6xl lg:text-7xl [font-family:'PP_Neue_Montreal','Satoshi','Instrument_Sans',Inter,ui-sans-serif,system-ui,sans-serif]">
+            Discover the
+            <br />
+            people behind
+            <br />
+            <span className="font-normal italic text-primary [font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif]">
+              the party.
+            </span>
           </h1>
-          <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">
-            From custom cookies to balloon garlands to florals to backdrops, ShopFia
-            helps you discover local artisans, browse real parties, and see the people
-            behind every celebration.
+          <p className="mt-6 max-w-xl text-base leading-8 text-muted-foreground md:text-lg">
+            From custom cookies to balloon garlands to florals and decor, ShopFia
+            connects you with trusted local vendors through real celebrations shared
+            by your community.
           </p>
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/explore">
-              <Button size="lg">
-                <Search className="h-4 w-4" />
+              <Button size="lg" className="h-12 rounded-md px-8">
                 Explore Vendors
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link href="/parties">
-              <Button size="lg" variant="secondary">
-                <PartyPopper className="h-4 w-4" />
+              <Button size="lg" variant="secondary" className="h-12 rounded-md px-8">
                 Browse Parties
               </Button>
             </Link>
             <Link href="/account">
-              <Button size="lg" variant="secondary">
-                <UsersRound className="h-4 w-4" />
+              <Button size="lg" variant="secondary" className="h-12 rounded-md px-8">
                 Sign Up
               </Button>
             </Link>
           </div>
-          <div className="mt-9 grid max-w-lg grid-cols-3 gap-3 text-sm">
-            <div className="rounded-[1.15rem] border border-white/80 bg-white/75 p-3 shadow-sm">
-              <p className="text-2xl font-semibold text-foreground">120+</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">party ideas and vendor moments</p>
+          <div className="mt-12 grid max-w-xl grid-cols-3 divide-x divide-primary/20 border-y border-primary/15 py-5 text-sm">
+            <div className="pr-5">
+              <div className="mb-5 grid h-11 w-11 place-items-center rounded-full border border-primary/25 bg-primary/10 text-primary">
+                <UsersRound className="h-5 w-5" />
+              </div>
+              <p className="text-3xl font-semibold text-foreground">120+</p>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">party ideas and vendor moments</p>
             </div>
-            <div className="rounded-[1.15rem] border border-white/80 bg-white/75 p-3 shadow-sm">
-              <p className="text-2xl font-semibold text-foreground">Local</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">artists, bakers, florists, stylists</p>
+            <div className="px-5">
+              <div className="mb-5 grid h-11 w-11 place-items-center rounded-full border border-primary/25 bg-primary/10 text-primary">
+                <MapPin className="h-5 w-5" />
+              </div>
+              <p className="text-3xl font-semibold text-foreground">Local</p>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">artists, bakers, florists, stylists</p>
             </div>
-            <div className="rounded-[1.15rem] border border-white/80 bg-white/75 p-3 shadow-sm">
-              <p className="text-2xl font-semibold text-foreground">Social</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">real hosts, real photos, real parties</p>
+            <div className="pl-5">
+              <div className="mb-5 grid h-11 w-11 place-items-center rounded-full border border-primary/25 bg-primary/10 text-primary">
+                <Heart className="h-5 w-5" />
+              </div>
+              <p className="text-3xl font-semibold text-foreground">Social</p>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">real hosts, real photos, real parties</p>
             </div>
           </div>
         </div>
@@ -118,7 +132,7 @@ export default function Page() {
               <Link
                 key={tile.title}
                 href={tile.href}
-                className={`group relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-muted shadow-soft ${tile.className}`}
+                className={`group relative overflow-hidden rounded-xl border border-white/80 bg-muted shadow-sm ${tile.className}`}
               >
                 <Image
                   src={tile.image}
@@ -129,34 +143,37 @@ export default function Page() {
                   className="object-cover transition duration-500 group-hover:scale-[1.03]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/85 text-foreground opacity-0 transition group-hover:opacity-100">
+                  <ArrowUpRight className="h-4 w-4" />
+                </div>
                 <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                   <div className="mb-2 flex flex-wrap gap-1.5">
                     {tile.tags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="rounded-full bg-white/15 px-2 py-1 text-[11px] backdrop-blur">
+                      <span key={tag} className="rounded-md bg-white/15 px-2 py-1 text-[11px] backdrop-blur">
                         #{tag}
                       </span>
                     ))}
                   </div>
-                  <h2 className="text-lg font-semibold">{tile.title}</h2>
+                  <h2 className="text-xl font-semibold">{tile.title}</h2>
                   <p className="mt-1 text-xs text-white/80">{tile.vendor}</p>
                 </div>
               </Link>
             ))}
 
-            <div className="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/85 p-4 shadow-soft">
-              <div className="grid h-full place-items-center text-center">
-                <div>
-                  <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent">
-                    <Camera className="h-5 w-5 text-primary" />
-                  </div>
-                  <h2 className="mt-4 font-semibold">Tag vendors at your own party.</h2>
+            <div className="relative col-span-2 overflow-hidden rounded-xl border border-white/80 bg-white/80 p-6 shadow-sm">
+              <div className="flex h-full items-center gap-6">
+                <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full border border-primary/30 bg-white text-primary">
+                  <Upload className="h-8 w-8" />
+                </div>
+                <div className="max-w-md">
+                  <h2 className="text-xl font-semibold">Tag vendors at your own party.</h2>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
                     Upload party photos, add tags, and share the vendors behind your celebration.
                   </p>
-                  <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    <Heart className="h-3.5 w-3.5" />
-                    Real hosts, real recommendations
-                  </div>
+                  <Link href="/parties" className="mt-4 inline-flex items-center gap-2 border-b border-primary/40 pb-1 text-sm font-medium text-primary">
+                    For hosts: real recommendations
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </div>
               </div>
             </div>
@@ -168,9 +185,9 @@ export default function Page() {
         {valueProps.map((item) => {
           const Icon = item.icon;
           return (
-            <article key={item.title} className="rounded-[1.5rem] border border-white/80 bg-white/85 p-5 shadow-sm">
+            <article key={item.title} className="rounded-xl border border-white/80 bg-white/85 p-5 shadow-sm">
               <Icon className="h-5 w-5 text-primary" />
-              <h2 className="mt-4 text-xl font-semibold tracking-tight">{item.title}</h2>
+              <h2 className="mt-4 text-xl font-semibold tracking-normal">{item.title}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
             </article>
           );
@@ -181,9 +198,9 @@ export default function Page() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-sm text-muted-foreground shadow-sm">
             <Heart className="h-4 w-4 text-primary" />
-            The social product loop
+            Discovery through real events
           </div>
-          <h2 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">
+          <h2 className="mt-4 text-3xl font-semibold tracking-normal md:text-4xl">
             Follow hosts. Find vendors. Save what feels like you.
           </h2>
           <p className="mt-4 text-sm leading-7 text-muted-foreground">
@@ -201,7 +218,7 @@ export default function Page() {
 
         <div className="grid gap-3 md:grid-cols-3">
           {["Friend posts a baby shower", "Vendor tags are linked", "You save the artisan"].map((step, index) => (
-            <div key={step} className="rounded-[1.5rem] border border-white/80 bg-white/85 p-5 shadow-sm">
+            <div key={step} className="rounded-xl border border-white/80 bg-white/85 p-5 shadow-sm">
               <div className="grid h-10 w-10 place-items-center rounded-full bg-accent font-semibold text-primary">
                 {index + 1}
               </div>

@@ -10,7 +10,7 @@ import {
   type SharedUserProfile
 } from "@/lib/user-profile";
 
-const title = "ShopFia - Discover Event Creatives & Real Party Inspiration";
+const title = "ShopFia - Discover Local Vendors & Real Party Inspiration";
 const description =
   "Browse real celebrations, discover trusted vendors, and plan beautiful events.";
 
