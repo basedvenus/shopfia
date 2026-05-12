@@ -62,7 +62,7 @@ const valueProps = [
 export default function Page() {
   return (
     <div className="-mt-6 space-y-16 pb-10">
-      <section className="grid min-h-[calc(100vh-5rem)] items-center gap-8 py-8 lg:grid-cols-[0.88fr_1.12fr]">
+      <section className="grid min-h-[calc(100vh-5rem)] items-center gap-10 overflow-hidden py-8 lg:grid-cols-[0.88fr_1.12fr]">
         <div className="max-w-2xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/75 px-3 py-1 text-sm text-muted-foreground shadow-sm">
             <Sparkles className="h-4 w-4 text-primary" />
@@ -113,14 +113,6 @@ export default function Page() {
         </div>
 
         <div className="relative">
-          <div className="absolute -left-5 top-10 hidden w-28 rounded-[1.3rem] border border-white/80 bg-white/85 p-3 text-xs leading-5 text-muted-foreground shadow-soft backdrop-blur lg:block">
-            <Heart className="mb-2 h-4 w-4 text-primary" />
-            Saved by hosts planning nearby celebrations
-          </div>
-          <div className="absolute -right-4 bottom-24 hidden w-32 rounded-[1.3rem] border border-white/80 bg-white/85 p-3 text-xs leading-5 text-muted-foreground shadow-soft backdrop-blur lg:block">
-            <Camera className="mb-2 h-4 w-4 text-primary" />
-            New party photos added this week
-          </div>
           <div className="grid auto-rows-[180px] grid-cols-2 gap-3 md:auto-rows-[220px]">
             {partyTiles.map((tile, index) => (
               <Link
@@ -133,6 +125,7 @@ export default function Page() {
                   alt={tile.title}
                   fill
                   priority={index === 0}
+                  sizes={index === 0 ? "(min-width: 1024px) 32vw, 50vw" : "(min-width: 1024px) 28vw, 50vw"}
                   className="object-cover transition duration-500 group-hover:scale-[1.03]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
@@ -160,6 +153,10 @@ export default function Page() {
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
                     Upload party photos, add tags, and share the vendors behind your celebration.
                   </p>
+                  <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    <Heart className="h-3.5 w-3.5" />
+                    Real hosts, real recommendations
+                  </div>
                 </div>
               </div>
             </div>
