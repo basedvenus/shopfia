@@ -92,7 +92,7 @@ export default function Page() {
             <Link href="/account">
               <Button size="lg" variant="secondary">
                 <UsersRound className="h-4 w-4" />
-                Create Your Profile
+                Sign Up
               </Button>
             </Link>
           </div>
