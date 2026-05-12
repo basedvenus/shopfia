@@ -21,9 +21,9 @@
     opacity="0.62"
   />
   <path
-    d="M31.9 52.2C29.1 55.1 32.8 57.2 29.7 60.4C28.9 61.3 28.2 61.8 27.4 62.4"
-    stroke="#EFA19D"
-    stroke-width="3.25"
+    d="M32 50.5C32.2 54.4 27.4 55.7 30.4 59.8C31.3 61.1 29.3 62.6 27.4 63.2"
+    stroke="#C86F69"
+    stroke-width="5.25"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
