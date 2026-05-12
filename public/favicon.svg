@@ -4,26 +4,27 @@
       <stop stop-color="#F2A6A4"/>
       <stop offset="1" stop-color="#FFD0AC"/>
     </linearGradient>
-    <filter id="soft-shadow" x="8" y="2" width="48" height="60" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+    <filter id="soft-shadow" x="8" y="1" width="48" height="54" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
       <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#F0A9A4" flood-opacity="0.22"/>
     </filter>
   </defs>
   <path
-    d="M32 5.5C20.6 5.5 12.4 15 12.4 27.2C12.4 39.8 21.1 48.2 28.7 49.8L26.3 56.1C25.9 57.2 27.1 58.3 28.1 57.7L32 55.5L35.9 57.7C36.9 58.3 38.1 57.2 37.7 56.1L35.3 49.8C42.9 48.2 51.6 39.8 51.6 27.2C51.6 15 43.4 5.5 32 5.5Z"
+    d="M32 3.8C20.6 3.8 12.7 13.1 12.7 25.1C12.7 37.2 21.2 45.2 28.7 46.8L26.9 52C26.5 53.1 27.7 54 28.7 53.4L32 51.5L35.3 53.4C36.3 54 37.5 53.1 37.1 52L35.3 46.8C42.8 45.2 51.3 37.2 51.3 25.1C51.3 13.1 43.4 3.8 32 3.8Z"
     fill="url(#shopfia-balloon)"
     filter="url(#soft-shadow)"
   />
   <path
-    d="M24.6 13.2C20 16.3 17.4 21.6 17.4 27.4"
+    d="M24.6 11.7C20 14.8 17.4 20 17.4 25.7"
     stroke="#FFE8DD"
     stroke-width="4"
     stroke-linecap="round"
     opacity="0.62"
   />
   <path
-    d="M32 54.8C29.2 57.4 30.2 60.1 27.7 62.2"
-    stroke="#F2A6A4"
-    stroke-width="4"
+    d="M31.9 52.2C29.1 55.1 32.8 57.2 29.7 60.4C28.9 61.3 28.2 61.8 27.4 62.4"
+    stroke="#EFA19D"
+    stroke-width="3.25"
     stroke-linecap="round"
+    stroke-linejoin="round"
   />
 </svg>
