@@ -20,4 +20,10 @@
     stroke-linecap="round"
     opacity="0.62"
   />
+  <path
+    d="M32 54.8C29.2 57.4 30.2 60.1 27.7 62.2"
+    stroke="#F2A6A4"
+    stroke-width="4"
+    stroke-linecap="round"
+  />
 </svg>
