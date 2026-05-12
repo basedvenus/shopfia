@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   applicationName: "ShopFia",
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.svg?v=2", type: "image/svg+xml" },
       { url: "/logo.png", type: "image/png" }
     ],
     apple: "/logo.png"
