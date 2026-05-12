@@ -26,9 +26,9 @@ export async function upsertVendorProfileAction(formData: FormData) {
     state: formData.get("state"),
     zipCode: formData.get("zipCode"),
     serviceRadiusMiles: formData.get("serviceRadiusMiles") || undefined,
-    weekendAvailable: true,
+    weekendAvailable: formData.get("weekendAvailable") === "on",
     serviceAreaNotes: formData.get("serviceAreaNotes"),
-    availabilityNotes: undefined,
+    availabilityNotes: formData.get("availabilityNotes") || undefined,
     logoUrl: formData.get("logoUrl") || undefined,
     categoryIds: formDataToArray(formData, "categoryIds"),
     photoUrls: formDataToArray(formData, "photoUrls")
@@ -50,7 +50,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
         serviceRadiusMiles: parsed.serviceRadiusMiles,
         weekendAvailable: parsed.weekendAvailable,
         serviceAreaNotes: parsed.serviceAreaNotes || null,
-        availabilityNotes: null,
+        availabilityNotes: parsed.availabilityNotes || null,
         logoUrl: parsed.logoUrl || null,
         photos: parsed.photoUrls,
         coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null
@@ -68,7 +68,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
         serviceRadiusMiles: parsed.serviceRadiusMiles,
         weekendAvailable: parsed.weekendAvailable,
         serviceAreaNotes: parsed.serviceAreaNotes || null,
-        availabilityNotes: null,
+        availabilityNotes: parsed.availabilityNotes || null,
         logoUrl: parsed.logoUrl || null,
         photos: parsed.photoUrls,
         coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null
@@ -102,6 +102,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
 
   revalidatePath("/onboarding");
   revalidatePath("/vendor/dashboard");
+  revalidatePath(`/vendor/profile/${vendor.slug}`);
 }
 
 export async function upsertOfferingAction(formData: FormData) {
