@@ -1,21 +1,23 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="shopfia-flame" x1="22" y1="7" x2="45" y2="58" gradientUnits="userSpaceOnUse">
+    <linearGradient id="shopfia-balloon" x1="17" y1="7" x2="48" y2="58" gradientUnits="userSpaceOnUse">
       <stop stop-color="#F2A6A4"/>
       <stop offset="1" stop-color="#FFD0AC"/>
     </linearGradient>
-    <filter id="soft-shadow" x="10" y="2" width="44" height="60" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+    <filter id="soft-shadow" x="8" y="2" width="48" height="60" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
       <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#F0A9A4" flood-opacity="0.22"/>
     </filter>
   </defs>
   <path
-    d="M31.9 5.5C25.1 17 17.4 26.3 17.4 38C17.4 50.4 23.7 58.5 32 58.5C40.4 58.5 46.6 50.4 46.6 38C46.6 26.4 38.8 17 31.9 5.5Z"
-    fill="url(#shopfia-flame)"
+    d="M32 5.5C20.6 5.5 12.4 15 12.4 27.2C12.4 39.8 21.1 48.2 28.7 49.8L26.3 56.1C25.9 57.2 27.1 58.3 28.1 57.7L32 55.5L35.9 57.7C36.9 58.3 38.1 57.2 37.7 56.1L35.3 49.8C42.9 48.2 51.6 39.8 51.6 27.2C51.6 15 43.4 5.5 32 5.5Z"
+    fill="url(#shopfia-balloon)"
     filter="url(#soft-shadow)"
   />
   <path
-    d="M32.2 17.4C28.5 24.2 24.7 29.9 24.7 37.2C24.7 44.8 27.8 49.4 32 49.4C36.3 49.4 39.3 44.8 39.3 37.2C39.3 30 35.7 24.2 32.2 17.4Z"
-    fill="#FFE2D3"
-    opacity="0.38"
+    d="M24.6 13.2C20 16.3 17.4 21.6 17.4 27.4"
+    stroke="#FFE8DD"
+    stroke-width="4"
+    stroke-linecap="round"
+    opacity="0.62"
   />
 </svg>
