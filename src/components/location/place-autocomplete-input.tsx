@@ -58,6 +58,7 @@ export function PlaceAutocompleteInput({
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,34 +75,57 @@ export function PlaceAutocompleteInput({
     const query = inputValue.trim();
     if (query.length < 2) {
       setSuggestions([]);
+      setErrorMessage(null);
+      setIsLoading(false);
       return;
     }
     if (selectedPlace?.formattedAddress === query) {
       setSuggestions([]);
       setIsOpen(false);
+      setErrorMessage(null);
+      setIsLoading(false);
       return;
     }
 
     let ignore = false;
+    const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
       setIsLoading(true);
+      setErrorMessage(null);
+      const requestTimeout = window.setTimeout(() => controller.abort(), 5500);
       try {
-        const response = await fetch(`/api/places/autocomplete?input=${encodeURIComponent(query)}`);
-        const data = (await response.json()) as { suggestions?: PlaceSuggestion[] };
+        const response = await fetch(`/api/places/autocomplete?input=${encodeURIComponent(query)}`, {
+          signal: controller.signal
+        });
+        const data = (await response.json()) as { error?: string; suggestions?: PlaceSuggestion[] };
         if (!ignore) {
-          setSuggestions(data.suggestions ?? []);
-          setIsOpen(true);
+          if (!response.ok) {
+            setSuggestions([]);
+            setErrorMessage(data.error ?? "Location suggestions could not be loaded.");
+            setIsOpen(true);
+          } else {
+            const nextSuggestions = data.suggestions ?? [];
+            setSuggestions(nextSuggestions);
+            setErrorMessage(nextSuggestions.length ? null : "No matching locations found.");
+            setIsOpen(true);
+          }
         }
       } catch (error) {
         console.error("[places] client autocomplete failed", error);
-        if (!ignore) setSuggestions([]);
+        if (!ignore) {
+          setSuggestions([]);
+          setErrorMessage("Location suggestions could not be loaded. Please try again.");
+          setIsOpen(true);
+        }
       } finally {
+        window.clearTimeout(requestTimeout);
         if (!ignore) setIsLoading(false);
       }
     }, 180);
 
     return () => {
       ignore = true;
+      controller.abort();
       window.clearTimeout(timeout);
     };
   }, [inputValue, selectedPlace?.formattedAddress]);
@@ -111,28 +135,32 @@ export function PlaceAutocompleteInput({
     setIsOpen(false);
     setSuggestions([]);
     setIsLoading(true);
+    setErrorMessage(null);
 
     try {
       const response = await fetch(`/api/places/details?placeId=${encodeURIComponent(suggestion.placeId)}`);
-      const data = (await response.json()) as { place?: PlaceDetails };
+      const data = (await response.json()) as { error?: string; place?: PlaceDetails };
       const place = data.place;
-      if (place) {
+      if (!response.ok) {
+        setSelectedPlace(null);
+        setInputValue(suggestion.description);
+        setErrorMessage(data.error ?? "That location could not be selected.");
+        setIsOpen(true);
+      } else if (place) {
         setSelectedPlace(place);
         setInputValue(place.formattedAddress);
+        setErrorMessage(null);
       } else {
-        setSelectedPlace({
-          formattedAddress: suggestion.description,
-          placeId: suggestion.placeId,
-          types: suggestion.types
-        });
+        setSelectedPlace(null);
+        setErrorMessage("That location could not be selected.");
+        setIsOpen(true);
       }
     } catch (error) {
       console.error("[places] client details failed", error);
-      setSelectedPlace({
-        formattedAddress: suggestion.description,
-        placeId: suggestion.placeId,
-        types: suggestion.types
-      });
+      setSelectedPlace(null);
+      setInputValue(suggestion.description);
+      setErrorMessage("That location could not be selected. Please try again.");
+      setIsOpen(true);
     } finally {
       setIsLoading(false);
     }
@@ -168,7 +196,7 @@ export function PlaceAutocompleteInput({
         {isLoading ? (
           <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
         ) : null}
-        {isOpen && suggestions.length > 0 ? (
+        {isOpen && (suggestions.length > 0 || errorMessage) ? (
           <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-50 overflow-hidden rounded-[1.2rem] border bg-white shadow-soft">
             {suggestions.map((suggestion) => (
               <button
@@ -188,6 +216,11 @@ export function PlaceAutocompleteInput({
                 </span>
               </button>
             ))}
+            {errorMessage ? (
+              <div className="px-4 py-3 text-sm leading-5 text-muted-foreground">
+                {errorMessage}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
