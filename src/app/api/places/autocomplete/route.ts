@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const apiKey = getGooglePlacesApiKey();
   if (!apiKey) {
     return NextResponse.json(
-      { error: "Google Places is not configured.", suggestions: [] },
+      { error: "Location search needs a Google Places API key to show suggestions.", suggestions: [] },
       { status: 503 }
     );
   }
