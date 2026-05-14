@@ -11,7 +11,11 @@ import { ServiceAreaPicker } from "@/components/vendor/service-area-picker";
 
 export const dynamic = "force-dynamic";
 
-export default async function VendorOnboardingPage() {
+export default async function VendorOnboardingPage({
+  searchParams
+}: {
+  searchParams?: { profileError?: string };
+}) {
   const [{ requireRole }, { db }] = await Promise.all([
     import("@/lib/auth/guards"),
     import("@/lib/db")
@@ -47,6 +51,11 @@ export default async function VendorOnboardingPage() {
           <CardTitle>1. Vendor Profile</CardTitle>
         </CardHeader>
         <CardContent>
+          {searchParams?.profileError ? (
+            <div className="mb-4 rounded-[1.2rem] border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {searchParams.profileError}
+            </div>
+          ) : null}
           <form action={upsertVendorProfileAction} className="grid gap-4 md:grid-cols-2">
             <div>
               <ImageUploadField

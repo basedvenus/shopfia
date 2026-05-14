@@ -74,17 +74,23 @@ export async function ensureSellerAccountForVendorProfile(
     }
   });
 
+  const shopSlug = await getAvailableShopSlug(
+    resolvedClient,
+    vendorProfile.slug,
+    vendorProfile.id
+  );
+
   const shop = await resolvedClient.shop.upsert({
     where: { vendorProfileId: vendorProfile.id },
     update: {
       name: vendorProfile.name,
-      slug: vendorProfile.slug
+      slug: shopSlug
     },
     create: {
       sellerId: seller.id,
       vendorProfileId: vendorProfile.id,
       name: vendorProfile.name,
-      slug: vendorProfile.slug
+      slug: shopSlug
     }
   });
 
@@ -97,6 +103,31 @@ export async function ensureSellerAccountForVendorProfile(
         });
 
   return { seller: patchedSeller, shop, vendorProfile };
+}
+
+async function getAvailableShopSlug(
+  client: DbClient,
+  preferredSlug: string,
+  vendorProfileId: string
+) {
+  const candidates = [
+    preferredSlug,
+    `${preferredSlug}-${vendorProfileId.slice(-6)}`,
+    `${preferredSlug}-${vendorProfileId.slice(-10)}`
+  ];
+
+  for (const slug of candidates) {
+    const existing = await client.shop.findUnique({
+      where: { slug },
+      select: { vendorProfileId: true }
+    });
+
+    if (!existing || existing.vendorProfileId === vendorProfileId) {
+      return slug;
+    }
+  }
+
+  return `${preferredSlug}-${Date.now()}`;
 }
 
 export async function createListing(

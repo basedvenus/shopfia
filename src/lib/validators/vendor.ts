@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+const imageValueSchema = z
+  .string()
+  .max(5_000_000)
+  .refine(
+    (value) =>
+      value === "" ||
+      value.startsWith("data:image/") ||
+      value.startsWith("/api/") ||
+      z.string().url().safeParse(value).success,
+    "Use an uploaded image or a valid image URL."
+  );
+
 export const vendorOnboardingSchema = z.object({
   name: z.string().min(2).max(80),
   slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/),
@@ -21,9 +33,9 @@ export const vendorOnboardingSchema = z.object({
   weekendAvailable: z.coerce.boolean().optional().default(true),
   serviceAreaNotes: z.string().max(500).optional().or(z.literal("")),
   availabilityNotes: z.string().max(300).optional().or(z.literal("")),
-  logoUrl: z.string().max(1_500_000).optional().or(z.literal("")),
-  categoryIds: z.array(z.string().cuid()).min(1),
-  photoUrls: z.array(z.string().url()).max(8).default([])
+  logoUrl: imageValueSchema.optional().or(z.literal("")),
+  categoryIds: z.array(z.string().cuid()).max(12).default([]),
+  photoUrls: z.array(imageValueSchema).max(8).default([])
 });
 
 const pricedOptionSchema = z.object({
@@ -43,7 +55,7 @@ export const offeringSchema = z.object({
   categoryId: z.string().cuid(),
   eventCategoryIds: z.array(z.string().min(1)).max(12).default([]),
   tags: z.array(z.string().min(1).max(30)).max(12).default([]),
-  photos: z.array(z.string().url()).max(10).default([]),
+  photos: z.array(imageValueSchema).max(10).default([]),
   packages: z.array(pricedOptionSchema).max(8).default([]),
   addons: z.array(pricedOptionSchema).max(12).default([]),
   durationMinutes: z.coerce.number().int().min(15).max(1440).optional(),

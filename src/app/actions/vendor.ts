@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { CategoryAudience, OffsiteAdsTier, UserRole } from "@prisma/client";
+import { CategoryAudience, OffsiteAdsTier, Prisma, UserRole } from "@prisma/client";
 import { requireRole, requireSession, requireVerifiedVendorProfile } from "@/lib/auth/guards";
 import { createListing, ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
 import { vendorOnboardingSchema, offeringSchema } from "@/lib/validators/vendor";
@@ -41,6 +41,14 @@ function formDataToPricedOptions(formData: FormData, prefix: "package" | "addon"
   }));
 }
 
+function redirectWithVendorProfileError(message: string): never {
+  redirect(`/onboarding?profileError=${encodeURIComponent(message)}#profile`);
+}
+
+function isUniqueConstraintError(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
 export async function upsertVendorProfileAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireSession();
@@ -48,7 +56,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
     .trim()
     .replace(/^@/, "")
     .toLowerCase();
-  const parsed = vendorOnboardingSchema.parse({
+  const result = vendorOnboardingSchema.safeParse({
     name: formData.get("name"),
     slug: formData.get("slug") || slugify(vendorUsername || formData.get("name")),
     username: vendorUsername || undefined,
@@ -67,6 +75,11 @@ export async function upsertVendorProfileAction(formData: FormData) {
     categoryIds: formDataToArray(formData, "categoryIds"),
     photoUrls: formDataToArray(formData, "photoUrls")
   });
+  if (!result.success) {
+    console.error("[vendor] profile validation failed", result.error.flatten());
+    redirectWithVendorProfileError("Check the required profile fields and try saving again.");
+  }
+  const parsed = result.data;
 
   let vendor;
   try {
@@ -112,22 +125,29 @@ export async function upsertVendorProfileAction(formData: FormData) {
         coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null
       }
     });
-  } catch {
-    throw new Error("That vendor username is already taken.");
+  } catch (error) {
+    console.error("[vendor] profile upsert failed", error);
+    redirectWithVendorProfileError(
+      isUniqueConstraintError(error)
+        ? "That vendor username or shop username is already taken."
+        : "Your vendor profile could not be saved. Please try again."
+    );
   }
 
   const validVendorCategoryCount = await db.category.count({
     where: { id: { in: parsed.categoryIds }, audience: CategoryAudience.VENDOR }
   });
   if (validVendorCategoryCount !== parsed.categoryIds.length) {
-    throw new Error("One or more selected categories are invalid for vendors");
+    redirectWithVendorProfileError("One or more selected categories are invalid for vendors.");
   }
 
   await db.vendorCategory.deleteMany({ where: { vendorId: vendor.id } });
-  await db.vendorCategory.createMany({
-    data: parsed.categoryIds.map((categoryId) => ({ vendorId: vendor.id, categoryId })),
-    skipDuplicates: true
-  });
+  if (parsed.categoryIds.length > 0) {
+    await db.vendorCategory.createMany({
+      data: parsed.categoryIds.map((categoryId) => ({ vendorId: vendor.id, categoryId })),
+      skipDuplicates: true
+    });
+  }
 
   if (session.user.role === UserRole.BUYER) {
     await db.user.update({
@@ -136,7 +156,15 @@ export async function upsertVendorProfileAction(formData: FormData) {
     });
   }
 
-  await ensureSellerAccountForVendorProfile(vendor.id);
+  try {
+    await ensureSellerAccountForVendorProfile(vendor.id);
+  } catch (error) {
+    console.error("[vendor] seller account sync failed after profile save", {
+      error,
+      vendorId: vendor.id,
+      userId: session.user.id
+    });
+  }
 
   revalidatePath("/onboarding");
   revalidatePath("/vendor/dashboard");
