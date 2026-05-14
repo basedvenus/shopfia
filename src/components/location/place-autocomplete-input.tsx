@@ -23,6 +23,7 @@ type PlaceAutocompleteInputProps = {
   defaultValue?: string;
   fieldNames: LocationFieldNames;
   helperText?: string;
+  inputClassName?: string;
   label?: string;
   placeholder?: string;
   required?: boolean;
@@ -45,6 +46,7 @@ export function PlaceAutocompleteInput({
   defaultValue,
   fieldNames,
   helperText,
+  inputClassName,
   label,
   placeholder = "Search vendors, venues, or locations",
   required
@@ -182,7 +184,7 @@ export function PlaceAutocompleteInput({
           required={required}
           autoComplete="off"
           placeholder={placeholder}
-          className="pl-9 pr-9"
+          className={`pl-9 pr-9 ${inputClassName ?? ""}`}
           onChange={(event) => {
             const nextValue = event.target.value;
             setInputValue(nextValue);

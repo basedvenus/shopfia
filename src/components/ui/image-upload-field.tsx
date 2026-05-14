@@ -15,16 +15,19 @@ type UploadResult = {
 type ImageUploadFieldProps = {
   name: string;
   label: string;
+  changeLabel?: string;
   defaultValue?: string | null;
   helperText?: string;
   onChangePreview?: (value: string) => void;
   onUploadComplete?: (result: UploadResult) => void;
   rounded?: "full" | "large";
   uploadEndpoint?: string;
+  uploadLabel?: string;
   value?: string | null;
 };
 
 export function ImageUploadField({
+  changeLabel = "Change image",
   name,
   label,
   defaultValue,
@@ -33,6 +36,7 @@ export function ImageUploadField({
   onUploadComplete,
   rounded = "large",
   uploadEndpoint,
+  uploadLabel = "Upload image",
   value: controlledValue
 }: ImageUploadFieldProps) {
   const [internalValue, setInternalValue] = useState(defaultValue ?? "");
@@ -124,7 +128,7 @@ export function ImageUploadField({
           />
         ) : null}
         <span className="relative z-10 rounded-full bg-white/90 px-3 py-1.5 shadow-sm">
-          {previewValue ? "Change image" : "Upload image"}
+          {previewValue ? changeLabel : uploadLabel}
         </span>
         <input type="file" accept="image/*" className="sr-only" onChange={handleFile} />
       </label>

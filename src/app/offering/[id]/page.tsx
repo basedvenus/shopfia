@@ -84,7 +84,9 @@ export default async function OfferingPage({ params }: { params: { id: string } 
             </div>
 
             <div className="space-y-3">
-              <h1 className="text-3xl font-semibold tracking-tight">{offering.title}</h1>
+              <h1 className="text-3xl font-semibold tracking-tight [font-family:'PP_Neue_Montreal','Satoshi','Instrument_Sans',Inter,ui-sans-serif,system-ui,sans-serif] md:text-4xl">
+                {offering.title}
+              </h1>
               <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1">
                   <Star className="h-4 w-4 fill-current text-amber-500" />
@@ -108,7 +110,7 @@ export default async function OfferingPage({ params }: { params: { id: string } 
                 </div>
                 {offering.messageForPricing ? (
                   <Button asChild size="sm" className="mt-3">
-                    <a href="#inquiry">Request Proposal</a>
+                    <a href="#inquiry">Check Availability</a>
                   </Button>
                 ) : null}
               </div>
@@ -122,7 +124,7 @@ export default async function OfferingPage({ params }: { params: { id: string } 
               </div>
               <div className="rounded-[1.3rem] bg-muted/70 p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Session Time
+                  Timing
                 </div>
                 <div className="mt-2 text-xl font-semibold">
                   {offering.durationMinutes ? `${offering.durationMinutes} mins` : "Varies"}
@@ -174,7 +176,7 @@ export default async function OfferingPage({ params }: { params: { id: string } 
               <div className="flex items-start gap-2">
                 <Star className="mt-0.5 h-4 w-4 shrink-0 fill-current text-amber-500" />
                 <span>
-                  This page is the “what it is + how much it starts at” view from the vendor profile.
+                  Share a few details and the vendor can reply inside ShopFia messages.
                 </span>
               </div>
             </CardContent>
@@ -214,14 +216,15 @@ export default async function OfferingPage({ params }: { params: { id: string } 
       <aside className="space-y-4">
         <Card id="inquiry" className="border-white/70 bg-white/95">
           <CardHeader>
-            <CardTitle>Request Proposal</CardTitle>
+            <CardTitle className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-2xl font-normal italic">
+              Ask About This Setup
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Share a few details and the vendor can confirm pricing and availability.
+              Share a few details and the vendor can confirm availability, fit, and next steps.
             </p>
             <ListingInquiryForm
-              defaultEmail={session?.user?.email}
               defaultName={session?.user?.name}
               listingId={offering.listing?.id}
               offeringId={offering.id}

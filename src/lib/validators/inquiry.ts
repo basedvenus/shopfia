@@ -34,7 +34,4 @@ export const publicInquirySchema = z.object({
   ),
   inspirationUrls: z.array(z.string().max(5_000_000)).max(5).default([]),
   message: z.string().trim().min(8, "Inquiry details are required.").max(2000)
-}).refine((data) => Boolean(data.email || data.phone), {
-  message: "Add an email or phone number.",
-  path: ["email"]
 });
