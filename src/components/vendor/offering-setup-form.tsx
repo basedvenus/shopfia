@@ -15,12 +15,37 @@ type CategoryOption = {
 };
 
 type PricedRow = {
+  description?: string;
   id: string;
+  name?: string;
+  priceCents?: number;
 };
 
 function createRow(): PricedRow {
   return { id: crypto.randomUUID() };
 }
+
+type PricedOption = {
+  description?: string;
+  name: string;
+  priceCents?: number;
+};
+
+type ExistingOffering = {
+  addons: PricedOption[];
+  basePriceCents: number | null;
+  categoryId: string;
+  description: string;
+  eventCategoryIds: string[];
+  id: string;
+  messageForPricing: boolean;
+  packages: PricedOption[];
+  photos: string[];
+  slug: string;
+  tags: string[];
+  title: string;
+  type: "SERVICE" | "PRODUCT" | "CUSTOM_ORDER";
+};
 
 function slugify(value: string) {
   return value
@@ -32,17 +57,24 @@ function slugify(value: string) {
 
 export function OfferingSetupForm({
   categories,
-  eventCategories
+  eventCategories,
+  offering
 }: {
   categories: CategoryOption[];
   eventCategories: CategoryOption[];
+  offering?: ExistingOffering;
 }) {
-  const [title, setTitle] = useState("");
-  const [messageForPricing, setMessageForPricing] = useState(false);
-  const [hasPackages, setHasPackages] = useState(false);
-  const [packages, setPackages] = useState<PricedRow[]>([createRow()]);
-  const [addons, setAddons] = useState<PricedRow[]>([createRow()]);
+  const [title, setTitle] = useState(offering?.title ?? "");
+  const [messageForPricing, setMessageForPricing] = useState(offering?.messageForPricing ?? false);
+  const [hasPackages, setHasPackages] = useState(Boolean(offering?.packages.length));
+  const [packages, setPackages] = useState<PricedRow[]>(
+    offering?.packages.length ? offering.packages.map(optionToRow) : [createRow()]
+  );
+  const [addons, setAddons] = useState<PricedRow[]>(
+    offering?.addons.length ? offering.addons.map(optionToRow) : [createRow()]
+  );
   const generatedSlug = useMemo(() => slugify(title), [title]);
+  const tagValues = [...(offering?.tags ?? []), "", "", "", ""].slice(0, 4);
 
   return (
     <ValidatedForm
@@ -50,15 +82,16 @@ export function OfferingSetupForm({
       className="space-y-6"
       errorIntro="Your offering is almost ready. Fix the highlighted field and save again."
     >
-      <input type="hidden" name="slug" value={generatedSlug || "new-offering"} />
+      {offering ? <input type="hidden" name="id" value={offering.id} /> : null}
+      <input type="hidden" name="slug" value={generatedSlug || offering?.slug || "new-offering"} />
 
       <section className="grid gap-4 md:grid-cols-[0.8fr_1.2fr]">
         <div className="rounded-[1.5rem] bg-[#fbf7f5] p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            First service
+            {offering ? "Edit service" : "First service"}
           </p>
           <h3 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">
-            Build a storefront tile hosts can understand at a glance.
+            {offering ? "Keep this storefront tile current and easy to inquire about." : "Build a storefront tile hosts can understand at a glance."}
           </h3>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
             Start simple: what you make, what it looks like, and whether pricing starts publicly
@@ -72,6 +105,7 @@ export function OfferingSetupForm({
               name="type"
               className="h-11 rounded-2xl border bg-white px-3 text-sm"
               data-required-label="Offering Type"
+              defaultValue={offering?.type ?? "SERVICE"}
               required
             >
               <option value="SERVICE">Service</option>
@@ -96,6 +130,7 @@ export function OfferingSetupForm({
               name="categoryId"
               className="h-11 rounded-2xl border bg-white px-3 text-sm"
               data-required-label="Service Category"
+              defaultValue={offering?.categoryId ?? ""}
               required
             >
               <option value="">Choose the closest category</option>
@@ -120,7 +155,12 @@ export function OfferingSetupForm({
                   key={category.id}
                   className="inline-flex cursor-pointer items-center gap-2 rounded-full border bg-[#fbf7f5] px-3 py-2 text-sm transition hover:border-primary/45"
                 >
-                  <input type="checkbox" name="eventCategoryIds" value={category.id} />
+                  <input
+                    type="checkbox"
+                    name="eventCategoryIds"
+                    value={category.id}
+                    defaultChecked={offering?.eventCategoryIds.includes(category.id)}
+                  />
                   {category.name}
                 </label>
               ))}
@@ -133,6 +173,7 @@ export function OfferingSetupForm({
               placeholder="Describe the style, what is included, and what kinds of parties this is best for..."
               className="min-h-[130px]"
               data-required-label="Description"
+              defaultValue={offering?.description ?? ""}
               required
             />
           </FieldShell>
@@ -143,11 +184,13 @@ export function OfferingSetupForm({
         <ImageUploadField
           name="photos"
           label="Cover photo (Optional)"
+          defaultValue={offering?.photos[0]}
           helperText="Use a real example or styled image that represents this offering."
         />
         <ImageUploadField
           name="photos"
           label="Detail photo (Optional)"
+          defaultValue={offering?.photos[1]}
           helperText="Optional closeup, setup shot, or inspiration image."
         />
       </section>
@@ -174,7 +217,12 @@ export function OfferingSetupForm({
         {!messageForPricing ? (
           <div className="mt-4 max-w-sm">
             <FieldShell label="Starting price" optional>
-              <Input name="startingPrice" inputMode="decimal" placeholder="$250 (optional)" />
+              <Input
+                name="startingPrice"
+                inputMode="decimal"
+                placeholder="$250 (optional)"
+                defaultValue={formatCentsAsDollars(offering?.basePriceCents)}
+              />
             </FieldShell>
           </div>
         ) : (
@@ -194,8 +242,8 @@ export function OfferingSetupForm({
           </div>
         </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-4">
-          {[0, 1, 2, 3].map((index) => (
-            <Input key={index} name="tags" placeholder={`Tag ${index + 1}`} />
+          {tagValues.map((tag, index) => (
+            <Input key={index} name="tags" placeholder={`Tag ${index + 1}`} defaultValue={tag} />
           ))}
         </div>
       </section>
@@ -224,6 +272,9 @@ export function OfferingSetupForm({
               <PricedOptionFields
                 key={row.id}
                 descriptionName="packageDescriptions"
+                defaultDescription={row.description}
+                defaultName={row.name}
+                defaultPrice={formatCentsAsDollars(row.priceCents)}
                 nameName="packageNames"
                 priceName="packagePrices"
                 title={`Package ${index + 1}`}
@@ -257,6 +308,9 @@ export function OfferingSetupForm({
             <PricedOptionFields
               key={row.id}
               descriptionName="addonDescriptions"
+              defaultDescription={row.description}
+              defaultName={row.name}
+              defaultPrice={formatCentsAsDollars(row.priceCents)}
               nameName="addonNames"
               priceName="addonPrices"
               title={`Add-on ${index + 1}`}
@@ -268,13 +322,16 @@ export function OfferingSetupForm({
       </section>
 
       <SubmitButton type="submit" size="lg" pendingText="Saving offering...">
-        Save offering
+        {offering ? "Update offering" : "Save offering"}
       </SubmitButton>
     </ValidatedForm>
   );
 }
 
 function PricedOptionFields({
+  defaultDescription,
+  defaultName,
+  defaultPrice,
   descriptionName,
   nameName,
   onRemove,
@@ -282,6 +339,9 @@ function PricedOptionFields({
   priceName,
   title
 }: {
+  defaultDescription?: string;
+  defaultName?: string;
+  defaultPrice?: string;
   descriptionName: string;
   nameName: string;
   onRemove?: () => void;
@@ -300,10 +360,28 @@ function PricedOptionFields({
         ) : null}
       </div>
       <div className="grid gap-2 md:grid-cols-[1fr_1.2fr_0.55fr]">
-        <Input name={nameName} placeholder={optional ? "Delivery" : "Deluxe Package"} />
-        <Input name={descriptionName} placeholder={optional ? "Local delivery and setup" : "5 hours, balloons included"} />
-        <Input name={priceName} inputMode="decimal" placeholder="$150" />
+        <Input name={nameName} placeholder={optional ? "Delivery" : "Deluxe Package"} defaultValue={defaultName} />
+        <Input
+          name={descriptionName}
+          placeholder={optional ? "Local delivery and setup" : "5 hours, balloons included"}
+          defaultValue={defaultDescription}
+        />
+        <Input name={priceName} inputMode="decimal" placeholder="$150" defaultValue={defaultPrice} />
       </div>
     </div>
   );
+}
+
+function optionToRow(option: PricedOption): PricedRow {
+  return {
+    description: option.description,
+    id: crypto.randomUUID(),
+    name: option.name,
+    priceCents: option.priceCents
+  };
+}
+
+function formatCentsAsDollars(value?: number | null) {
+  if (value == null) return undefined;
+  return String(value / 100);
 }

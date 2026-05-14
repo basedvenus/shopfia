@@ -401,12 +401,20 @@ export default async function VendorDashboardPage() {
                       <SoftChip key={tag}>#{tag}</SoftChip>
                     ))}
                   </div>
-                  <Button asChild variant="secondary" className="w-full">
-                    <Link href={`/offering/${offering.id}#inquiry`}>
-                      Inquiry preview
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button asChild variant="secondary" className="w-full">
+                      <Link href={`/vendor/offering/${offering.id}`}>
+                        <Edit3 className="h-4 w-4" />
+                        Edit service
+                      </Link>
+                    </Button>
+                    <Button asChild variant="secondary" className="w-full">
+                      <Link href={`/offering/${offering.id}#inquiry`}>
+                        Inquiry preview
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </article>
             ))}

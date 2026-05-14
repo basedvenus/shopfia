@@ -330,6 +330,7 @@ export async function upsertOfferingAction(formData: FormData) {
   });
 
   revalidatePath("/vendor/dashboard");
+  revalidatePath(`/vendor/offering/${offeringId}`);
   revalidatePath(`/vendor/profile/${vendor.slug}`);
   revalidatePath(`/offering/${offeringId}`);
   revalidatePath("/listings");
