@@ -312,6 +312,7 @@ model Category {
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
   offerings  Offering[]
+  eventOfferings OfferingEventCategory[]
   vendors    VendorCategory[]
 }
 
@@ -351,12 +352,25 @@ model Offering {
 
   vendor           VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   category         Category      @relation(fields: [categoryId], references: [id])
+  eventCategories  OfferingEventCategory[]
   listing          Listing?
   quoteRequests    QuoteRequest[]
   orders           Order[]
   inquiries        Inquiry[]
 
   @@unique([vendorId, slug])
+}
+
+model OfferingEventCategory {
+  id          String    @id @default(cuid())
+  offeringId  String
+  categoryId  String
+  createdAt   DateTime  @default(now())
+
+  offering    Offering  @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([offeringId, categoryId])
 }
 
 model Listing {

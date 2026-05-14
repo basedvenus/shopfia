@@ -17,14 +17,16 @@ export default async function VendorOnboardingPage() {
     import("@/lib/db")
   ]);
   const session = await requireRole([UserRole.BUYER, UserRole.VENDOR, UserRole.ADMIN]);
-  const [categories, existingVendor] = await Promise.all([
+  const [categories, eventCategories, existingVendor] = await Promise.all([
     db.category.findMany({ where: { audience: CategoryAudience.VENDOR }, orderBy: { name: "asc" } }),
+    db.category.findMany({ where: { audience: CategoryAudience.BUYER }, orderBy: { name: "asc" } }),
     db.vendorProfile.findUnique({
       where: { userId: session.user.id },
       include: { categories: true, offerings: { take: 1 } }
     })
   ]);
   const sortedCategories = sortVendorCategories(categories);
+  const sortedEventCategories = sortEventCategories(eventCategories);
 
   return (
     <div className="space-y-6">
@@ -163,6 +165,10 @@ export default async function VendorOnboardingPage() {
               id: category.id,
               name: displayCategoryName(category.name)
             }))}
+            eventCategories={sortedEventCategories.map((category) => ({
+              id: category.id,
+              name: category.name
+            }))}
           />
         </CardContent>
       </Card>
@@ -181,13 +187,13 @@ function Field({ children, label }: { children: ReactNode; label: string }) {
 
 const categoryOrder = [
   "Cakes & Desserts",
-  "Decor & Installation",
-  "Event Planning",
   "Florals",
-  "Food & Beverage",
-  "Kids Activities",
+  "Decor & Installation",
+  "Styled Setups",
+  "Event Planning",
   "Party Favors & Gifts",
-  "Styled Setups"
+  "Food & Beverage",
+  "Kids Activities"
 ];
 
 function displayCategoryName(name: string) {
@@ -205,5 +211,28 @@ function sortVendorCategories<T extends { name: string }>(categories: T[]) {
     }
 
     return displayCategoryName(left.name).localeCompare(displayCategoryName(right.name));
+  });
+}
+
+const eventCategoryOrder = [
+  "Baby Shower",
+  "Birthday Party",
+  "Wedding",
+  "Corporate Event",
+  "Holiday Party",
+  "Graduation Party"
+];
+
+function sortEventCategories<T extends { name: string }>(categories: T[]) {
+  return categories.filter((category) => eventCategoryOrder.includes(category.name)).sort((left, right) => {
+    const leftIndex = eventCategoryOrder.indexOf(left.name);
+    const rightIndex = eventCategoryOrder.indexOf(right.name);
+
+    if (leftIndex !== -1 || rightIndex !== -1) {
+      return (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex) -
+        (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex);
+    }
+
+    return left.name.localeCompare(right.name);
   });
 }

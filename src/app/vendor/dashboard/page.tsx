@@ -68,7 +68,10 @@ export default async function VendorDashboardPage() {
           include: { category: true }
         },
         offerings: {
-          include: { category: true },
+          include: {
+            category: true,
+            eventCategories: { include: { category: true } }
+          },
           orderBy: { createdAt: "desc" }
         },
         shop: {
@@ -390,6 +393,9 @@ export default async function VendorDashboardPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {offering.eventCategories.slice(0, 3).map((eventCategory) => (
+                      <SoftChip key={eventCategory.id}>{eventCategory.category.name}</SoftChip>
+                    ))}
                     {offering.tags.slice(0, 4).map((tag) => (
                       <SoftChip key={tag}>#{tag}</SoftChip>
                     ))}

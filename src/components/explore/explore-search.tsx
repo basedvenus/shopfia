@@ -9,6 +9,7 @@ type Filters = {
   q?: string;
   city?: string;
   categoryId?: string;
+  eventCategoryId?: string;
   minPrice?: number;
   maxPrice?: number;
   minRating?: number;
@@ -19,9 +20,11 @@ type Filters = {
 
 export function ExploreSearch({
   categories,
+  eventCategories,
   filters
 }: {
   categories: Category[];
+  eventCategories: Category[];
   filters: Filters;
 }) {
   return (
@@ -32,7 +35,7 @@ export function ExploreSearch({
           <Input
             name="q"
             defaultValue={filters.q}
-            placeholder="Search vendors, categories, tags, keywords..."
+            placeholder="Search vendors, events, categories, tags..."
             className="pl-9"
           />
         </div>
@@ -50,9 +53,9 @@ export function ExploreSearch({
         </Button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-8">
         <div>
-          <label className="mb-1 block text-xs text-muted-foreground">Category</label>
+          <label className="mb-1 block text-xs text-muted-foreground">Service</label>
           <select
             name="categoryId"
             defaultValue={filters.categoryId ?? ""}
@@ -60,6 +63,21 @@ export function ExploreSearch({
           >
             <option value="">All categories</option>
             {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-muted-foreground">Event</label>
+          <select
+            name="eventCategoryId"
+            defaultValue={filters.eventCategoryId ?? ""}
+            className="flex h-10 w-full rounded-2xl border bg-white px-3 text-sm"
+          >
+            <option value="">All events</option>
+            {eventCategories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>

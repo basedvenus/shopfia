@@ -402,9 +402,16 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                   </div>
                   <div className="relative flex h-full flex-col justify-between p-4 text-white">
                     <div className="flex items-start justify-between gap-3">
-                      <Badge className="bg-white/15 text-white backdrop-blur" variant="default">
-                        {offering.category.name}
-                      </Badge>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge className="bg-white/15 text-white backdrop-blur" variant="default">
+                          {offering.category.name}
+                        </Badge>
+                        {offering.eventCategories.slice(0, 2).map((eventCategory) => (
+                          <Badge key={eventCategory.id} className="bg-white/15 text-white backdrop-blur" variant="default">
+                            {eventCategory.category.name}
+                          </Badge>
+                        ))}
+                      </div>
                       <div className="rounded-full bg-white/15 px-3 py-1 text-xs backdrop-blur">
                         {formatOfferingPrice(offering)}
                       </div>

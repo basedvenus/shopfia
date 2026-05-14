@@ -33,6 +33,44 @@ function getDistanceSortScore(vendor: {
   return 1000 + vendor.serviceRadiusMiles;
 }
 
+const serviceCategoryOrder = [
+  "Cakes & Desserts",
+  "Florals",
+  "Decor & Installation",
+  "Styled Setups",
+  "Event Planning",
+  "Party Favors & Gifts",
+  "Food & Beverage",
+  "Kids Activities"
+];
+
+const eventCategoryOrder = [
+  "Baby Shower",
+  "Birthday Party",
+  "Wedding",
+  "Corporate Event",
+  "Holiday Party",
+  "Graduation Party"
+];
+
+function displayCategoryName(name: string) {
+  return name === "Party Favors and Gifts" ? "Party Favors & Gifts" : name;
+}
+
+function sortByOrder<T extends { name: string }>(items: T[], order: string[]) {
+  return [...items].sort((left, right) => {
+    const leftIndex = order.indexOf(displayCategoryName(left.name));
+    const rightIndex = order.indexOf(displayCategoryName(right.name));
+
+    if (leftIndex !== -1 || rightIndex !== -1) {
+      return (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex) -
+        (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex);
+    }
+
+    return displayCategoryName(left.name).localeCompare(displayCategoryName(right.name));
+  });
+}
+
 export async function getExploreData(input: Record<string, string | string[] | undefined>) {
   const { db } = await import("@/lib/db");
 
@@ -44,6 +82,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
     city: clean(input.city),
     zip: clean(input.zip),
     categoryId: clean(input.categoryId),
+    eventCategoryId: clean(input.eventCategoryId),
     minPrice: clean(input.minPrice),
     maxPrice: clean(input.maxPrice),
     availableWeekend: clean(input.availableWeekend),
@@ -54,54 +93,80 @@ export async function getExploreData(input: Record<string, string | string[] | u
   const minPriceCents = parsed.minPrice != null ? Math.round(parsed.minPrice * 100) : undefined;
   const maxPriceCents = parsed.maxPrice != null ? Math.round(parsed.maxPrice * 100) : undefined;
 
-  
-  const where: Prisma.VendorProfileWhereInput = {
-    verified: true,
-    ...(parsed.city
-      ? {
-          OR: [
-            {
-              city: {
-                contains: parsed.city,
-                mode: "insensitive"
-              }
-            },
-            {
-              zipCode: {
-                contains: parsed.city,
-                mode: "insensitive"
-              }
-            }
-          ]
+  const andFilters: Prisma.VendorProfileWhereInput[] = [{ verified: true }];
+
+  if (parsed.city) {
+    andFilters.push({
+      OR: [
+        {
+          city: {
+            contains: parsed.city,
+            mode: "insensitive"
+          }
+        },
+        {
+          zipCode: {
+            contains: parsed.city,
+            mode: "insensitive"
+          }
         }
-      : {}),
-    ...(parsed.minRating ? { averageRating: { gte: parsed.minRating } } : {}),
-    ...(parsed.radius ? { serviceRadiusMiles: { gte: parsed.radius } } : {}),
-    ...(parsed.availableWeekend === "true" ? { weekendAvailable: true } : {}),
-    ...(parsed.availableWeekend === "false" ? { weekendAvailable: false } : {}),
-    ...(parsed.categoryId
-      ? { categories: { some: { categoryId: parsed.categoryId } } }
-      : {}),
-    ...(parsed.q
-      ? {
-          OR: [
-            { name: { contains: parsed.q, mode: "insensitive" } },
-            { bio: { contains: parsed.q, mode: "insensitive" } },
-            {
-              offerings: {
-                some: {
-                  OR: [
-                    { title: { contains: parsed.q, mode: "insensitive" } },
-                    { description: { contains: parsed.q, mode: "insensitive" } },
-                    { tags: { has: parsed.q.toLowerCase() } }
-                  ]
+      ]
+    });
+  }
+
+  if (parsed.minRating) andFilters.push({ averageRating: { gte: parsed.minRating } });
+  if (parsed.radius) andFilters.push({ serviceRadiusMiles: { gte: parsed.radius } });
+  if (parsed.availableWeekend === "true") andFilters.push({ weekendAvailable: true });
+  if (parsed.availableWeekend === "false") andFilters.push({ weekendAvailable: false });
+
+  if (parsed.categoryId) {
+    andFilters.push({
+      OR: [
+        { categories: { some: { categoryId: parsed.categoryId } } },
+        { offerings: { some: { active: true, categoryId: parsed.categoryId } } }
+      ]
+    });
+  }
+
+  if (parsed.eventCategoryId) {
+    andFilters.push({
+      offerings: {
+        some: {
+          active: true,
+          eventCategories: { some: { categoryId: parsed.eventCategoryId } }
+        }
+      }
+    });
+  }
+
+  if (parsed.q) {
+    andFilters.push({
+      OR: [
+        { name: { contains: parsed.q, mode: "insensitive" } },
+        { bio: { contains: parsed.q, mode: "insensitive" } },
+        {
+          offerings: {
+            some: {
+              OR: [
+                { title: { contains: parsed.q, mode: "insensitive" } },
+                { description: { contains: parsed.q, mode: "insensitive" } },
+                { tags: { has: parsed.q.toLowerCase() } },
+                {
+                  eventCategories: {
+                    some: {
+                      category: { name: { contains: parsed.q, mode: "insensitive" } }
+                    }
+                  }
                 }
-              }
+              ]
             }
-          ]
+          }
         }
-      : {})
-  };
+      ]
+    });
+  }
+
+  const where: Prisma.VendorProfileWhereInput = { AND: andFilters };
 
   const orderBy =
     parsed.sort === "top-rated"
@@ -119,7 +184,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
             { createdAt: "desc" as const }
           ];
 
-  const [vendors, categories] = await Promise.all([
+  const [vendors, categories, eventCategories] = await Promise.all([
     db.vendorProfile.findMany({
       where,
       take: 30,
@@ -138,6 +203,10 @@ export async function getExploreData(input: Record<string, string | string[] | u
     }),
     db.category.findMany({
       where: { audience: CategoryAudience.VENDOR },
+      orderBy: { name: "asc" }
+    }),
+    db.category.findMany({
+      where: { audience: CategoryAudience.BUYER },
       orderBy: { name: "asc" }
     })
   ]);
@@ -164,5 +233,16 @@ export async function getExploreData(input: Record<string, string | string[] | u
         })
       : filteredByPrice;
 
-  return { filters: parsed, vendors: finalVendors, categories };
+  return {
+    filters: parsed,
+    vendors: finalVendors,
+    categories: sortByOrder(categories, serviceCategoryOrder).map((category) => ({
+      ...category,
+      name: displayCategoryName(category.name)
+    })),
+    eventCategories: sortByOrder(
+      eventCategories.filter((category) => eventCategoryOrder.includes(category.name)),
+      eventCategoryOrder
+    )
+  };
 }

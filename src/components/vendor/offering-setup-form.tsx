@@ -30,7 +30,13 @@ function slugify(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-export function OfferingSetupForm({ categories }: { categories: CategoryOption[] }) {
+export function OfferingSetupForm({
+  categories,
+  eventCategories
+}: {
+  categories: CategoryOption[];
+  eventCategories: CategoryOption[];
+}) {
   const [title, setTitle] = useState("");
   const [messageForPricing, setMessageForPricing] = useState(false);
   const [hasPackages, setHasPackages] = useState(false);
@@ -77,7 +83,7 @@ export function OfferingSetupForm({ categories }: { categories: CategoryOption[]
           </Field>
 
           <label className="grid gap-2 text-sm font-medium">
-            Category
+            Service category
             <select name="categoryId" className="h-11 rounded-2xl border bg-white px-3 text-sm" required>
               <option value="">Choose the closest category</option>
               {categories.map((category) => (
@@ -87,6 +93,26 @@ export function OfferingSetupForm({ categories }: { categories: CategoryOption[]
               ))}
             </select>
           </label>
+
+          <div className="rounded-[1.4rem] border bg-white p-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium">Event types</label>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Pick every event this offering fits. These tags power Shop by Event feeds automatically.
+              </p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {eventCategories.map((category) => (
+                <label
+                  key={category.id}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border bg-[#fbf7f5] px-3 py-2 text-sm transition hover:border-primary/45"
+                >
+                  <input type="checkbox" name="eventCategoryIds" value={category.id} />
+                  {category.name}
+                </label>
+              ))}
+            </div>
+          </div>
 
           <Field label="Description">
             <Textarea

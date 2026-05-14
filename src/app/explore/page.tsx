@@ -26,12 +26,16 @@ export default async function ExplorePage({
             Discover local vendors for your next event
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Browse bakers, florists, rentals, balloon artists, and custom gift makers near you.
+            Browse bakers, florists, rentals, balloon artists, and custom gift makers by service or event.
           </p>
         </div>
         <div className="mt-5">
           <Suspense>
-            <ExploreSearch categories={data.categories} filters={data.filters} />
+            <ExploreSearch
+              categories={data.categories}
+              eventCategories={data.eventCategories}
+              filters={data.filters}
+            />
           </Suspense>
         </div>
       </section>

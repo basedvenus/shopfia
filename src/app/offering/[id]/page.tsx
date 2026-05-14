@@ -27,6 +27,7 @@ export default async function OfferingPage({ params }: { params: { id: string } 
         }
       },
       category: true,
+      eventCategories: { include: { category: true } },
       listing: {
         select: {
           id: true
@@ -80,6 +81,11 @@ export default async function OfferingPage({ params }: { params: { id: string } 
           <div className="space-y-4 p-5">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{offering.category.name}</Badge>
+              {offering.eventCategories.map((eventCategory) => (
+                <Badge key={eventCategory.id} variant="outline">
+                  {eventCategory.category.name}
+                </Badge>
+              ))}
               <Badge variant="accent">{offering.type.toLowerCase()}</Badge>
               <Badge variant="outline">Verified reviews only</Badge>
             </div>

@@ -23,7 +23,8 @@ const categories = [
   { name: "Baby Shower", iconName: "baby", audience: CategoryAudience.BUYER },
   { name: "Wedding", iconName: "heart", audience: CategoryAudience.BUYER },
   { name: "Corporate Event", iconName: "briefcase", audience: CategoryAudience.BUYER },
-  { name: "Holiday Party", iconName: "sparkles", audience: CategoryAudience.BUYER }
+  { name: "Holiday Party", iconName: "sparkles", audience: CategoryAudience.BUYER },
+  { name: "Graduation Party", iconName: "graduation-cap", audience: CategoryAudience.BUYER }
 ] as const;
 
 const cookiePhotos = [
@@ -170,10 +171,11 @@ async function ensureOffering(input: {
   categoryId: string;
   photos: string[];
   tags: string[];
+  eventCategoryIds?: string[];
   durationMinutes?: number;
   turnaroundDays?: number;
 }) {
-  return prisma.offering.upsert({
+  const offering = await prisma.offering.upsert({
     where: {
       vendorId_slug: {
         vendorId: input.vendorId,
@@ -207,6 +209,19 @@ async function ensureOffering(input: {
       allowInstantBook: false
     }
   });
+
+  await prisma.offeringEventCategory.deleteMany({ where: { offeringId: offering.id } });
+  if (input.eventCategoryIds?.length) {
+    await prisma.offeringEventCategory.createMany({
+      data: input.eventCategoryIds.map((categoryId) => ({
+        offeringId: offering.id,
+        categoryId
+      })),
+      skipDuplicates: true
+    });
+  }
+
+  return offering;
 }
 
 async function ensureCompletedOrder(input: {
@@ -405,6 +420,11 @@ async function main() {
         "One dozen hand-decorated sugar cookies with a custom color story, florals, lettering, and premium gift-box presentation.",
       basePriceCents: 7200,
       categoryId: categoryMap["Cakes & Desserts"],
+      eventCategoryIds: [
+        categoryMap["Baby Shower"],
+        categoryMap["Birthday Party"],
+        categoryMap["Wedding"]
+      ],
       photos: [cookiePhotos[0], cookiePhotos[1]],
       tags: ["custom cookies", "hand-piped", "party favors"],
       durationMinutes: 30,
@@ -419,6 +439,11 @@ async function main() {
         "A styled favor display with 3-5 dozen custom cookies, signage, trays, ribbon details, and setup for showers, birthdays, or brand events.",
       basePriceCents: 28500,
       categoryId: categoryMap["Styled Setups"],
+      eventCategoryIds: [
+        categoryMap["Baby Shower"],
+        categoryMap["Birthday Party"],
+        categoryMap["Corporate Event"]
+      ],
       photos: [cookiePhotos[0], cookiePhotos[2], cookiePhotos[3]],
       tags: ["favor display", "onsite styling", "custom signage"],
       durationMinutes: 90,
@@ -433,6 +458,11 @@ async function main() {
         "Six coordinated cookies in a keepsake box for bridesmaids, birthdays, teacher gifts, or thoughtful hostess moments.",
       basePriceCents: 4200,
       categoryId: categoryMap["Party Favors and Gifts"],
+      eventCategoryIds: [
+        categoryMap["Birthday Party"],
+        categoryMap["Wedding"],
+        categoryMap["Graduation Party"]
+      ],
       photos: [cookiePhotos[1], cookiePhotos[0]],
       tags: ["gift box", "custom favors", "pickup option"],
       turnaroundDays: 5
@@ -506,6 +536,11 @@ async function main() {
         "A refined floral package with a petite statement arrangement, bud vases, and candle styling for showers, dinners, and micro-events.",
       basePriceCents: 18500,
       categoryId: categoryMap["Florals"],
+      eventCategoryIds: [
+        categoryMap["Baby Shower"],
+        categoryMap["Wedding"],
+        categoryMap["Holiday Party"]
+      ],
       photos: [floristPhotos[1], floristPhotos[0], floristPhotos[3]],
       tags: ["florals", "micro events", "candle styling"],
       turnaroundDays: 10
@@ -519,6 +554,11 @@ async function main() {
         "Layered linens, place settings, florals, candles, and seasonal details for dinner parties, bridal brunches, and backyard celebrations.",
       basePriceCents: 42000,
       categoryId: categoryMap["Styled Setups"],
+      eventCategoryIds: [
+        categoryMap["Baby Shower"],
+        categoryMap["Birthday Party"],
+        categoryMap["Graduation Party"]
+      ],
       photos: [floristPhotos[0], floristPhotos[2], floristPhotos[1]],
       tags: ["tablescape", "place settings", "intimate events"],
       durationMinutes: 180,

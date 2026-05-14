@@ -62,7 +62,7 @@ export function VendorCard({ vendor }: VendorCardProps) {
         <div className="flex flex-wrap gap-2">
           {vendor.categories.slice(0, 3).map((vc) => (
             <Badge key={vc.category.name} variant="outline">
-              {vc.category.name}
+              {displayCategoryName(vc.category.name)}
             </Badge>
           ))}
         </div>
@@ -80,4 +80,8 @@ export function VendorCard({ vendor }: VendorCardProps) {
       </CardContent>
     </Card>
   );
+}
+
+function displayCategoryName(name: string) {
+  return name === "Party Favors and Gifts" ? "Party Favors & Gifts" : name;
 }

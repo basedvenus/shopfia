@@ -13,7 +13,10 @@ export async function getVendorProfileBySlug(slug: string) {
       categories: { include: { category: true } },
       offerings: {
         where: { active: true },
-        include: { category: true },
+        include: {
+          category: true,
+          eventCategories: { include: { category: true } }
+        },
         orderBy: { createdAt: "desc" }
       },
       reviews: {

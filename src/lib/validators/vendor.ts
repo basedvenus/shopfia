@@ -41,6 +41,7 @@ export const offeringSchema = z.object({
   basePriceCents: z.coerce.number().int().min(0).optional(),
   messageForPricing: z.coerce.boolean().optional().default(false),
   categoryId: z.string().cuid(),
+  eventCategoryIds: z.array(z.string().min(1)).max(12).default([]),
   tags: z.array(z.string().min(1).max(30)).max(12).default([]),
   photos: z.array(z.string().url()).max(10).default([]),
   packages: z.array(pricedOptionSchema).max(8).default([]),

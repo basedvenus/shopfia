@@ -5,6 +5,7 @@ export const exploreSearchSchema = z.object({
   city: z.string().optional(),
   zip: z.string().optional(),
   categoryId: z.string().cuid().optional(),
+  eventCategoryId: z.string().min(1).optional(),
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),
   availableWeekend: z.enum(["true", "false"]).optional(),

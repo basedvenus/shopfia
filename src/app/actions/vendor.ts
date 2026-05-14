@@ -159,6 +159,7 @@ export async function upsertOfferingAction(formData: FormData) {
     basePriceCents: formData.get("basePriceCents") || dollarsToCents(formData.get("startingPrice")) || undefined,
     messageForPricing: formData.get("messageForPricing") === "on",
     categoryId: formData.get("categoryId"),
+    eventCategoryIds: formDataToArray(formData, "eventCategoryIds"),
     tags: formDataToArray(formData, "tags"),
     photos: formDataToArray(formData, "photos"),
     packages: formDataToPricedOptions(formData, "package"),
@@ -176,6 +177,16 @@ export async function upsertOfferingAction(formData: FormData) {
   });
   if (!offeringCategory) {
     throw new Error("Offering category must be a vendor category");
+  }
+
+  const uniqueEventCategoryIds = [...new Set(parsed.eventCategoryIds)];
+  const validEventCategoryCount = uniqueEventCategoryIds.length
+    ? await db.category.count({
+        where: { id: { in: uniqueEventCategoryIds }, audience: CategoryAudience.BUYER }
+      })
+    : 0;
+  if (validEventCategoryCount !== uniqueEventCategoryIds.length) {
+    throw new Error("Event types must be Shop by Event categories");
   }
 
   const payload = {
@@ -208,6 +219,18 @@ export async function upsertOfferingAction(formData: FormData) {
     offeringId = offering.id;
   }
 
+  if (!offeringId) {
+    throw new Error("Offering could not be saved");
+  }
+
+  await db.offeringEventCategory.deleteMany({ where: { offeringId } });
+  if (uniqueEventCategoryIds.length > 0) {
+    await db.offeringEventCategory.createMany({
+      data: uniqueEventCategoryIds.map((categoryId) => ({ offeringId, categoryId })),
+      skipDuplicates: true
+    });
+  }
+
   const minPrice = await db.offering.findFirst({
     where: { vendorId: vendor.id, active: true, messageForPricing: false, basePriceCents: { not: null } },
     orderBy: { basePriceCents: "asc" },
@@ -235,6 +258,7 @@ export async function upsertOfferingAction(formData: FormData) {
   revalidatePath("/vendor/dashboard");
   revalidatePath(`/vendor/profile/${vendor.slug}`);
   revalidatePath("/explore");
+  revalidatePath("/categories");
 }
 
 export async function updateSellerMarketplaceSettingsAction(formData: FormData) {
