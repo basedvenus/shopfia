@@ -18,8 +18,8 @@ export async function createPublicInquiryAction(formData: FormData) {
     listingId: formData.get("listingId") || undefined,
     offeringId: formData.get("offeringId") || undefined,
     name: formData.get("name"),
-    email: formData.get("email"),
-    phone: formData.get("phone"),
+    email: optionalFormValue(formData.get("email")),
+    phone: optionalFormValue(formData.get("phone")),
     eventDate: formData.get("eventDate") ?? "",
     eventLocation: formData.get("eventLocation"),
     formattedAddress: formData.get("locationFormattedAddress") || undefined,
@@ -38,9 +38,10 @@ export async function createPublicInquiryAction(formData: FormData) {
     message: formData.get("message")
   });
   if (!parsedResult.success) {
+    console.error("[inquiry] validation failed", parsedResult.error.flatten());
     return {
       success: false,
-      error: parsedResult.error.issues[0]?.message ?? "Check your inquiry details."
+      error: getInquiryValidationMessage(parsedResult.error.issues)
     };
   }
   const parsed = parsedResult.data;
@@ -193,6 +194,36 @@ export async function createPublicInquiryAction(formData: FormData) {
     conversationId: result.conversationId,
     inquiryId: result.inquiryId
   };
+}
+
+function optionalFormValue(value: FormDataEntryValue | null) {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function getInquiryValidationMessage(issues: { path: (string | number)[]; message: string }[]) {
+  const issue = issues[0];
+  if (!issue) return "Check your inquiry details.";
+
+  const field = String(issue.path[0] ?? "");
+  const fieldLabels: Record<string, string> = {
+    budgetDollars: "Budget",
+    eventDate: "Event date",
+    eventLocation: "Event location",
+    guestCount: "Guest count",
+    inspirationUrls: "Inspiration",
+    message: "Inquiry message",
+    name: "Your name",
+    offeringId: "Listing",
+    vendorProfileId: "Vendor"
+  };
+
+  if (issue.message === "Invalid input" || issue.message === "Required") {
+    return fieldLabels[field] ? `${fieldLabels[field]} is required.` : "Check your inquiry details.";
+  }
+
+  return issue.message;
 }
 
 function buildInquiryMessage({

@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+const optionalText = z.preprocess(
+  (value) => (value === "" || value == null ? undefined : value),
+  z.string().trim().optional()
+);
+
 const optionalNumber = z.preprocess(
   (value) => (value === "" || value == null ? undefined : value),
   z.coerce.number().min(0).optional()
@@ -16,9 +21,18 @@ export const publicInquirySchema = z.object({
   listingId: z.string().cuid().optional().or(z.literal("")),
   offeringId: z.string().cuid().optional().or(z.literal("")),
   name: z.string().trim().min(2, "Name is required.").max(120),
-  email: z.string().trim().email().max(200).optional().or(z.literal("")),
-  phone: z.string().trim().max(40).optional().or(z.literal("")),
-  eventDate: z.string().trim().min(1, "Event date is required."),
+  email: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : value),
+    z.string().trim().email("Enter a valid email address.").max(200).optional()
+  ),
+  phone: optionalText.pipe(z.string().max(40).optional()),
+  eventDate: z
+    .string()
+    .trim()
+    .min(1, "Event date is required.")
+    .refine((value) => !Number.isNaN(new Date(`${value}T00:00:00`).getTime()), {
+      message: "Enter a valid event date."
+    }),
   eventLocation: z.string().trim().min(2, "Event location is required.").max(240),
   formattedAddress: z.string().trim().max(240).optional().or(z.literal("")),
   locationCity: z.string().trim().max(80).optional().or(z.literal("")),
