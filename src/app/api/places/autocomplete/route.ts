@@ -23,36 +23,50 @@ export async function GET(request: Request) {
     );
   }
 
-  const params = new URLSearchParams({
-    input,
-    key: apiKey,
-    components: "country:us",
-    language: "en"
-  });
-
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params.toString()}`,
+      "https://places.googleapis.com/v1/places:autocomplete",
       {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": [
+            "suggestions.placePrediction.placeId",
+            "suggestions.placePrediction.text",
+            "suggestions.placePrediction.structuredFormat",
+            "suggestions.placePrediction.types"
+          ].join(",")
+        },
+        body: JSON.stringify({
+          input,
+          includedRegionCodes: ["us"],
+          includeQueryPredictions: false,
+          languageCode: "en"
+        }),
         next: { revalidate: 60 * 60 * 24 },
         signal: AbortSignal.timeout(GOOGLE_PLACES_TIMEOUT_MS)
       }
     );
     const data = (await response.json()) as GoogleAutocompleteResponse;
 
-    if (!response.ok || !["OK", "ZERO_RESULTS"].includes(data.status ?? "")) {
+    if (!response.ok || data.error) {
       console.error("[places] autocomplete failed", {
-        status: data.status,
-        error: data.error_message
+        status: data.error?.status,
+        error: data.error?.message
       });
       return NextResponse.json(
-        { error: data.error_message ?? "Location suggestions could not be loaded.", suggestions: [] },
+        { error: data.error?.message ?? "Location suggestions could not be loaded.", suggestions: [] },
         { status: 502 }
       );
     }
 
     return NextResponse.json({
-      suggestions: (data.predictions ?? []).slice(0, 8).map(normalizeGoogleSuggestion),
+      suggestions: (data.suggestions ?? [])
+        .map((suggestion) => suggestion.placePrediction)
+        .filter((prediction): prediction is NonNullable<typeof prediction> => Boolean(prediction))
+        .slice(0, 8)
+        .map(normalizeGoogleSuggestion),
       source: "google"
     });
   } catch (error) {

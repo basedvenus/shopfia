@@ -23,35 +23,40 @@ export async function GET(request: Request) {
     );
   }
 
-  const params = new URLSearchParams({
-    place_id: placeId,
-    fields: "place_id,formatted_address,geometry,address_component,name,types",
-    key: apiKey
-  });
-
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/details/json?${params.toString()}`,
+      `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
       {
+        headers: {
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": [
+            "id",
+            "formattedAddress",
+            "location",
+            "addressComponents",
+            "displayName",
+            "types"
+          ].join(",")
+        },
         next: { revalidate: 60 * 60 * 24 * 14 },
         signal: AbortSignal.timeout(GOOGLE_PLACES_TIMEOUT_MS)
       }
     );
     const data = (await response.json()) as GooglePlaceDetailsResponse;
 
-    if (!response.ok || data.status !== "OK" || !data.result) {
+    if (!response.ok || data.error || !data.id || !data.location) {
       console.error("[places] details failed", {
         placeId,
-        status: data.status,
-        error: data.error_message
+        status: data.error?.status,
+        error: data.error?.message
       });
       return NextResponse.json(
-        { error: data.error_message ?? "Place details could not be loaded." },
+        { error: data.error?.message ?? "Place details could not be loaded." },
         { status: 502 }
       );
     }
 
-    return NextResponse.json({ place: normalizeGoogleDetails(data.result), source: "google" });
+    return NextResponse.json({ place: normalizeGoogleDetails(data), source: "google" });
   } catch (error) {
     console.error("[places] details request failed", { placeId, error });
     return NextResponse.json(

@@ -26,36 +26,36 @@ export function getGooglePlacesApiKey() {
 
 export function normalizeGoogleSuggestion(prediction: GoogleAutocompletePrediction): PlaceSuggestion {
   return {
-    placeId: prediction.place_id,
-    description: prediction.description,
-    mainText: prediction.structured_formatting?.main_text ?? prediction.description,
-    secondaryText: prediction.structured_formatting?.secondary_text,
+    placeId: prediction.placeId,
+    description: prediction.text.text,
+    mainText: prediction.structuredFormat?.mainText?.text ?? prediction.text.text,
+    secondaryText: prediction.structuredFormat?.secondaryText?.text,
     types: prediction.types ?? [],
     source: "google"
   };
 }
 
 export function normalizeGoogleDetails(result: GooglePlaceDetailsResult): PlaceDetails {
-  const components = result.address_components ?? [];
+  const components = result.addressComponents ?? [];
   const city =
     findAddressComponent(components, "locality") ??
     findAddressComponent(components, "postal_town") ??
     findAddressComponent(components, "sublocality") ??
     findAddressComponent(components, "administrative_area_level_2") ??
-    result.name ??
+    result.displayName?.text ??
     "";
-  const state = findAddressComponent(components, "administrative_area_level_1", "short_name") ?? "";
-  const zipCode = findAddressComponent(components, "postal_code", "short_name");
+  const state = findAddressComponent(components, "administrative_area_level_1", "shortText") ?? "";
+  const zipCode = findAddressComponent(components, "postal_code", "shortText");
 
   return {
-    placeId: result.place_id,
-    formattedAddress: result.formatted_address ?? result.name ?? "",
+    placeId: result.id,
+    formattedAddress: result.formattedAddress ?? result.displayName?.text ?? "",
     city,
     state,
     zipCode,
-    lat: result.geometry.location.lat,
-    lng: result.geometry.location.lng,
-    name: result.name,
+    lat: result.location.latitude,
+    lng: result.location.longitude,
+    name: result.displayName?.text,
     types: result.types ?? [],
     source: "google"
   };
@@ -64,49 +64,61 @@ export function normalizeGoogleDetails(result: GooglePlaceDetailsResult): PlaceD
 function findAddressComponent(
   components: GoogleAddressComponent[],
   type: string,
-  key: "long_name" | "short_name" = "long_name"
+  key: "longText" | "shortText" = "longText"
 ) {
   return components.find((component) => component.types.includes(type))?.[key];
 }
 
 type GoogleAutocompletePrediction = {
-  description: string;
-  place_id: string;
-  structured_formatting?: {
-    main_text?: string;
-    secondary_text?: string;
+  placeId: string;
+  text: {
+    text: string;
+  };
+  structuredFormat?: {
+    mainText?: {
+      text: string;
+    };
+    secondaryText?: {
+      text: string;
+    };
   };
   types?: string[];
 };
 
 export type GoogleAutocompleteResponse = {
-  predictions?: GoogleAutocompletePrediction[];
-  status?: string;
-  error_message?: string;
+  suggestions?: Array<{
+    placePrediction?: GoogleAutocompletePrediction;
+  }>;
+  error?: {
+    message?: string;
+    status?: string;
+  };
 };
 
 type GoogleAddressComponent = {
-  long_name: string;
-  short_name: string;
+  longText: string;
+  shortText: string;
   types: string[];
 };
 
 type GooglePlaceDetailsResult = {
-  address_components?: GoogleAddressComponent[];
-  formatted_address?: string;
-  geometry: {
-    location: {
-      lat: number;
-      lng: number;
-    };
+  addressComponents?: GoogleAddressComponent[];
+  displayName?: {
+    text: string;
+    languageCode?: string;
   };
-  name?: string;
-  place_id: string;
+  formattedAddress?: string;
+  id: string;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
   types?: string[];
 };
 
-export type GooglePlaceDetailsResponse = {
-  result?: GooglePlaceDetailsResult;
-  status?: string;
-  error_message?: string;
+export type GooglePlaceDetailsResponse = GooglePlaceDetailsResult & {
+  error?: {
+    message?: string;
+    status?: string;
+  };
 };
