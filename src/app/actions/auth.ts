@@ -2,6 +2,7 @@
 
 import { hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
@@ -125,7 +126,8 @@ export async function updateAccountProfileAction(formData: FormData) {
 
 const partyPhotoPayloadSchema = z.object({
   id: z.string().cuid(),
-  vendorIds: z.array(z.string().cuid()).max(8).default([])
+  vendorIds: z.array(z.string().cuid()).max(8).default([]),
+  vendorRatings: z.record(z.string().cuid(), z.coerce.number().int().min(1).max(5)).default({})
 });
 
 const optionalCoordinate = (min: number, max: number) =>
@@ -217,20 +219,27 @@ export async function createPartyEventAction(formData: FormData) {
     });
 
     await Promise.all(
-      prepared.orderedPhotos.map((photo, index) =>
-        tx.partyPhoto.update({
+      prepared.orderedPhotos.map(async (photo, index) => {
+        const ratedVendorIds = getRatedVendorIds(photo, prepared.validVendorIds);
+        await tx.partyPhoto.update({
           where: { id: photo.id },
           data: {
             eventId: partyEvent.id,
             sortOrder: index,
             taggedVendors: {
               set: photo.vendorIds
-                .filter((vendorId) => prepared.verifiedVendorIds.has(vendorId))
+                .filter((vendorId) => prepared.validVendorIds.has(vendorId))
                 .map((id) => ({ id }))
             }
           }
-        })
-      )
+        });
+        await persistPartyPhotoVendorRatings({
+          photo,
+          ratedVendorIds,
+          tx,
+          userId: session.user.id
+        });
+      })
     );
 
     return partyEvent;
@@ -320,20 +329,27 @@ export async function updatePartyEventAction(formData: FormData) {
     });
 
     await Promise.all(
-      prepared.orderedPhotos.map((photo, index) =>
-        tx.partyPhoto.update({
+      prepared.orderedPhotos.map(async (photo, index) => {
+        const ratedVendorIds = getRatedVendorIds(photo, prepared.validVendorIds);
+        await tx.partyPhoto.update({
           where: { id: photo.id },
           data: {
             eventId: existingEvent.id,
             sortOrder: index,
             taggedVendors: {
               set: photo.vendorIds
-                .filter((vendorId) => prepared.verifiedVendorIds.has(vendorId))
+                .filter((vendorId) => prepared.validVendorIds.has(vendorId))
                 .map((id) => ({ id }))
             }
           }
-        })
-      )
+        });
+        await persistPartyPhotoVendorRatings({
+          photo,
+          ratedVendorIds,
+          tx,
+          userId: session.user.id
+        });
+      })
     );
 
     return updatedEvent;
@@ -393,20 +409,19 @@ async function preparePartyPhotoPersistence({
   const uploadedPhotoIds = new Set(uploadedPhotos.map((photo) => photo.id));
   const orderedPhotos = photos.filter((photo) => uploadedPhotoIds.has(photo.id));
 
-  const verifiedVendors = await db.vendorProfile.findMany({
+  const validVendors = await db.vendorProfile.findMany({
     where: {
       id: {
         in: Array.from(new Set(orderedPhotos.flatMap((photo) => photo.vendorIds)))
-      },
-      verified: true
+      }
     },
     select: { id: true }
   });
-  const verifiedVendorIds = new Set(verifiedVendors.map((vendor) => vendor.id));
+  const validVendorIds = new Set(validVendors.map((vendor) => vendor.id));
   const eventVendorIds = Array.from(
     new Set(
       orderedPhotos.flatMap((photo) =>
-        photo.vendorIds.filter((vendorId) => verifiedVendorIds.has(vendorId))
+        photo.vendorIds.filter((vendorId) => validVendorIds.has(vendorId))
       )
     )
   );
@@ -424,8 +439,63 @@ async function preparePartyPhotoPersistence({
     eventVendorIds,
     imageUrls,
     orderedPhotos,
-    verifiedVendorIds
+    validVendorIds
   };
+}
+
+function getRatedVendorIds(
+  photo: z.infer<typeof partyPhotoPayloadSchema>,
+  validVendorIds: Set<string>
+) {
+  return photo.vendorIds.filter(
+    (vendorId) =>
+      validVendorIds.has(vendorId) &&
+      typeof photo.vendorRatings[vendorId] === "number" &&
+      photo.vendorRatings[vendorId] >= 1 &&
+      photo.vendorRatings[vendorId] <= 5
+  );
+}
+
+async function persistPartyPhotoVendorRatings({
+  photo,
+  ratedVendorIds,
+  tx,
+  userId
+}: {
+  photo: z.infer<typeof partyPhotoPayloadSchema>;
+  ratedVendorIds: string[];
+  tx: Prisma.TransactionClient;
+  userId: string;
+}) {
+  await tx.partyPhotoVendorRating.deleteMany({
+    where: {
+      photoId: photo.id,
+      userId,
+      ...(ratedVendorIds.length ? { vendorId: { notIn: ratedVendorIds } } : {})
+    }
+  });
+
+  await Promise.all(
+    ratedVendorIds.map((vendorId) =>
+      tx.partyPhotoVendorRating.upsert({
+        where: {
+          photoId_vendorId: {
+            photoId: photo.id,
+            vendorId
+          }
+        },
+        update: {
+          rating: photo.vendorRatings[vendorId]
+        },
+        create: {
+          photoId: photo.id,
+          rating: photo.vendorRatings[vendorId],
+          userId,
+          vendorId
+        }
+      })
+    )
+  );
 }
 
 function normalizeTag(value: string) {
@@ -446,12 +516,26 @@ function parsePartyPhotoPayload(value: FormDataEntryValue | null) {
       if (!photo || typeof photo !== "object") {
         return { id: "", vendorIds: [] };
       }
-      const record = photo as { id?: unknown; vendorIds?: unknown };
+      const record = photo as { id?: unknown; vendorIds?: unknown; vendorRatings?: unknown };
+      const vendorRatings =
+        record.vendorRatings && typeof record.vendorRatings === "object" && !Array.isArray(record.vendorRatings)
+          ? Object.fromEntries(
+              Object.entries(record.vendorRatings as Record<string, unknown>).filter(
+                ([vendorId, rating]) =>
+                  typeof vendorId === "string" &&
+                  typeof rating === "number" &&
+                  Number.isInteger(rating) &&
+                  rating >= 1 &&
+                  rating <= 5
+              )
+            )
+          : {};
       return {
         id: typeof record.id === "string" ? record.id : "",
         vendorIds: Array.isArray(record.vendorIds)
           ? record.vendorIds.filter((vendorId): vendorId is string => typeof vendorId === "string")
-          : []
+          : [],
+        vendorRatings
       };
     });
   } catch {

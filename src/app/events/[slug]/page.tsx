@@ -49,7 +49,7 @@ export default async function EventPage({
         taggedVendors: true,
         photos: {
           orderBy: { sortOrder: "asc" },
-          include: { taggedVendors: true }
+          include: { taggedVendors: true, vendorRatings: true }
         }
       }
     })
@@ -131,7 +131,10 @@ export default async function EventPage({
         photos: event.photos.map((photo) => ({
           id: photo.id,
           url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
-          vendorIds: photo.taggedVendors.map((vendor) => vendor.id)
+          vendorIds: photo.taggedVendors.map((vendor) => vendor.id),
+          vendorRatings: Object.fromEntries(
+            photo.vendorRatings.map((rating) => [rating.vendorId, rating.rating])
+          )
         }))
       } satisfies EditablePartyEvent)
     : null;
@@ -150,8 +153,7 @@ export default async function EventPage({
       : false;
   const editVendors = isEditing
     ? await db.vendorProfile.findMany({
-        where: { verified: true },
-        select: { id: true, name: true, city: true, state: true },
+        select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true },
         orderBy: { name: "asc" }
       })
     : [];

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, useTransition, type DragEvent, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Loader2, Star, Upload, X } from "lucide-react";
+import { useMemo, useRef, useState, useTransition, type DragEvent, type ReactNode } from "react";
+import { ArrowDown, ArrowUp, ImagePlus, Loader2, Search, Star, Upload, X } from "lucide-react";
 import { createPartyEventAction, updatePartyEventAction } from "@/app/actions/auth";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { Button } from "@/components/ui/button";
@@ -11,14 +11,17 @@ import { Textarea } from "@/components/ui/textarea";
 type VendorOption = {
   id: string;
   name: string;
+  username: string | null;
   city: string;
   state: string | null;
+  logoUrl: string | null;
 };
 
 type UploadedPartyPhoto = {
   id: string;
   url: string;
   vendorIds: string[];
+  vendorRatings: Record<string, number>;
 };
 
 export type EditablePartyEvent = {
@@ -89,18 +92,42 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
     void uploadFiles(event.dataTransfer.files);
   }
 
-  function togglePhotoVendor(photoId: string, vendorId: string) {
+  function togglePhotoVendor(photoId: string, vendorId: string, forceSelected?: boolean) {
     setPhotos((current) =>
       current.map((photo) => {
         if (photo.id !== photoId) return photo;
         const hasVendor = photo.vendorIds.includes(vendorId);
+        const shouldSelect = forceSelected ?? !hasVendor;
+        const vendorRatings = { ...photo.vendorRatings };
+        if (!shouldSelect) {
+          delete vendorRatings[vendorId];
+        }
         return {
           ...photo,
-          vendorIds: hasVendor
-            ? photo.vendorIds.filter((id) => id !== vendorId)
-            : [...photo.vendorIds, vendorId]
+          vendorIds: shouldSelect
+            ? hasVendor
+              ? photo.vendorIds
+              : [...photo.vendorIds, vendorId].slice(0, 8)
+            : photo.vendorIds.filter((id) => id !== vendorId),
+          vendorRatings
         };
       })
+    );
+  }
+
+  function setPhotoVendorRating(photoId: string, vendorId: string, rating: number) {
+    setPhotos((current) =>
+      current.map((photo) =>
+        photo.id === photoId
+          ? {
+              ...photo,
+              vendorRatings: {
+                ...photo.vendorRatings,
+                [vendorId]: rating
+              }
+            }
+          : photo
+      )
     );
   }
 
@@ -139,7 +166,10 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
           formData.set("eventId", initialParty.id);
         }
         tags.forEach((tag) => formData.append("tags", tag));
-        formData.set("photos", JSON.stringify(photos.map(({ id, vendorIds }) => ({ id, vendorIds }))));
+        formData.set(
+          "photos",
+          JSON.stringify(photos.map(({ id, vendorIds, vendorRatings }) => ({ id, vendorIds, vendorRatings })))
+        );
 
         startTransition(async () => {
           const result = initialParty
@@ -293,29 +323,13 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
                       </IconButton>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {vendors.length > 0 ? (
-                      vendors.map((vendor) => {
-                        const selected = photo.vendorIds.includes(vendor.id);
-                        return (
-                          <button
-                            key={vendor.id}
-                            type="button"
-                            onClick={() => togglePhotoVendor(photo.id, vendor.id)}
-                            className={`rounded-full border px-3 py-1.5 text-xs transition ${
-                              selected
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border bg-white text-muted-foreground hover:border-primary/60"
-                            }`}
-                          >
-                            {vendor.name}
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Verified vendors will appear here as tag options.</p>
-                    )}
-                  </div>
+                  <PhotoVendorTagger
+                    onAddVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, true)}
+                    onRateVendor={(vendorId, rating) => setPhotoVendorRating(photo.id, vendorId, rating)}
+                    onRemoveVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, false)}
+                    photo={photo}
+                    vendors={vendors}
+                  />
                 </div>
               </article>
             ))}
@@ -361,6 +375,162 @@ function IconButton({
   );
 }
 
+function PhotoVendorTagger({
+  onAddVendor,
+  onRateVendor,
+  onRemoveVendor,
+  photo,
+  vendors
+}: {
+  onAddVendor: (vendorId: string) => void;
+  onRateVendor: (vendorId: string, rating: number) => void;
+  onRemoveVendor: (vendorId: string) => void;
+  photo: UploadedPartyPhoto;
+  vendors: VendorOption[];
+}) {
+  const [query, setQuery] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
+  const selectedVendors = vendors.filter((vendor) => photo.vendorIds.includes(vendor.id));
+  const matches = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return vendors.filter((vendor) => !photo.vendorIds.includes(vendor.id)).slice(0, 5);
+    }
+
+    return vendors
+      .filter((vendor) => {
+        if (photo.vendorIds.includes(vendor.id)) return false;
+        return [
+          vendor.name,
+          vendor.username ? `@${vendor.username}` : "",
+          vendor.city,
+          vendor.state ?? ""
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedQuery);
+      })
+      .slice(0, 5);
+  }, [photo.vendorIds, query, vendors]);
+  const showDropdown = isFocused && (query.trim().length > 0 || matches.length > 0);
+
+  return (
+    <div className="grid gap-3">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => window.setTimeout(() => setIsFocused(false), 120)}
+          placeholder="Search vendor name or username"
+          className="h-11 rounded-full border-[#eadbd7] bg-white pl-9 shadow-none"
+        />
+        {showDropdown ? (
+          <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-20 overflow-hidden rounded-[1.2rem] border border-[#eadbd7] bg-white shadow-[0_16px_42px_rgba(80,55,45,0.13)]">
+            {matches.length > 0 ? (
+              matches.map((vendor) => (
+                <button
+                  key={vendor.id}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    onAddVendor(vendor.id);
+                    setQuery("");
+                    setIsFocused(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#fff7f4]"
+                >
+                  <VendorAvatar vendor={vendor} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-foreground">{vendor.name}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {vendor.username ? `@${vendor.username}` : "Vendor profile"}
+                      {vendor.city ? ` · ${vendor.city}${vendor.state ? `, ${vendor.state}` : ""}` : ""}
+                    </span>
+                  </span>
+                </button>
+              ))
+            ) : (
+              <div className="px-4 py-3 text-sm text-muted-foreground">No vendors found.</div>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      {selectedVendors.length > 0 ? (
+        <div className="grid gap-2">
+          {selectedVendors.map((vendor) => (
+            <div
+              key={vendor.id}
+              className="rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <VendorAvatar vendor={vendor} />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{vendor.name}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {vendor.username ? `@${vendor.username}` : "Tagged vendor"}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onRemoveVendor(vendor.id)}
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-muted-foreground transition hover:text-foreground"
+                  aria-label={`Remove ${vendor.name}`}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mt-3 flex items-center gap-1.5">
+                <span className="mr-1 text-xs text-muted-foreground">Rate</span>
+                {[1, 2, 3, 4, 5].map((rating) => {
+                  const selected = (photo.vendorRatings[vendor.id] ?? 0) >= rating;
+                  return (
+                    <button
+                      key={rating}
+                      type="button"
+                      onClick={() => onRateVendor(vendor.id, rating)}
+                      className={`transition ${selected ? "text-primary" : "text-[#d8c7c2] hover:text-primary/70"}`}
+                      aria-label={`Rate ${vendor.name} ${rating} star${rating === 1 ? "" : "s"}`}
+                    >
+                      <Star className={`h-4 w-4 ${selected ? "fill-current" : ""}`} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Search and tag the vendors who contributed to this photo.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function VendorAvatar({ vendor }: { vendor: VendorOption }) {
+  if (vendor.logoUrl) {
+    return (
+      <img
+        src={vendor.logoUrl}
+        alt=""
+        className="h-9 w-9 shrink-0 rounded-full object-cover"
+      />
+    );
+  }
+
+  return (
+    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+      {vendor.name.slice(0, 2).toUpperCase()}
+    </span>
+  );
+}
+
 async function uploadPartyPhoto(file: File) {
   const formData = new FormData();
   formData.set("file", file);
@@ -379,7 +549,8 @@ async function uploadPartyPhoto(file: File) {
 
   return {
     ...result.photo,
-    vendorIds: []
+    vendorIds: [],
+    vendorRatings: {}
   };
 }
 
