@@ -89,9 +89,9 @@ export default async function ListingsPage() {
 
                   <div className="flex items-center justify-between text-sm">
                     <span>
-                      From{" "}
+                      {listing.priceFrom != null ? "From " : ""}
                       <span className="font-semibold">
-                        {listing.priceFrom != null ? formatCurrency(listing.priceFrom) : "Custom"}
+                        {listing.priceFrom != null ? formatCurrency(listing.priceFrom) : "Message for pricing"}
                       </span>
                     </span>
                     <span className="text-muted-foreground">

@@ -11,6 +11,8 @@ export const vendorOnboardingSchema = z.object({
     .optional()
     .or(z.literal("")),
   website: z.string().url().optional().or(z.literal("")),
+  instagramUrl: z.string().url().optional().or(z.literal("")),
+  tiktokUrl: z.string().url().optional().or(z.literal("")),
   bio: z.string().max(600).optional().or(z.literal("")),
   city: z.string().min(2).max(80),
   state: z.string().max(40).optional().or(z.literal("")),
@@ -24,16 +26,25 @@ export const vendorOnboardingSchema = z.object({
   photoUrls: z.array(z.string().url()).max(8).default([])
 });
 
+const pricedOptionSchema = z.object({
+  name: z.string().min(1).max(80),
+  description: z.string().max(240).optional().or(z.literal("")),
+  priceCents: z.coerce.number().int().min(0).optional()
+});
+
 export const offeringSchema = z.object({
   id: z.string().cuid().optional(),
-  type: z.enum(["SERVICE", "PRODUCT"]),
+  type: z.enum(["SERVICE", "PRODUCT", "CUSTOM_ORDER"]),
   title: z.string().min(2).max(120),
   slug: z.string().min(2).max(120).regex(/^[a-z0-9-]+$/),
   description: z.string().min(20).max(4000),
   basePriceCents: z.coerce.number().int().min(0).optional(),
+  messageForPricing: z.coerce.boolean().optional().default(false),
   categoryId: z.string().cuid(),
   tags: z.array(z.string().min(1).max(30)).max(12).default([]),
   photos: z.array(z.string().url()).max(10).default([]),
+  packages: z.array(pricedOptionSchema).max(8).default([]),
+  addons: z.array(pricedOptionSchema).max(12).default([]),
   durationMinutes: z.coerce.number().int().min(15).max(1440).optional(),
   turnaroundDays: z.coerce.number().int().min(0).max(365).optional(),
   inventoryCount: z.coerce.number().int().min(0).max(100000).optional(),

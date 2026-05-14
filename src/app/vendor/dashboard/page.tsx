@@ -218,6 +218,18 @@ export default async function VendorDashboardPage() {
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Link>
                     ) : null}
+                    {vendor.instagramUrl ? (
+                      <Link href={vendor.instagramUrl} target="_blank" className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
+                        Instagram
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    ) : null}
+                    {vendor.tiktokUrl ? (
+                      <Link href={vendor.tiktokUrl} target="_blank" className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
+                        TikTok
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    ) : null}
                   </div>
                   <p className="mt-4 max-w-2xl text-sm leading-6 text-white/86">
                     {vendor.bio || "Add a business description so hosts can understand your style, service, and the kinds of celebrations you love creating."}
@@ -370,7 +382,7 @@ export default async function VendorDashboardPage() {
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="text-xl font-semibold tracking-[-0.025em]">{offering.title}</h3>
                       <div className="whitespace-nowrap text-sm font-semibold text-primary">
-                        {offering.basePriceCents ? `From ${formatCurrency(offering.basePriceCents)}` : "Quote"}
+                        {formatOfferingPrice(offering)}
                       </div>
                     </div>
                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
@@ -539,8 +551,8 @@ export default async function VendorDashboardPage() {
           <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em]">Booking identity and service details</h2>
           <div className="mt-5 grid gap-3">
             <InfoRow label="Booking availability" value={vendor.availabilityNotes || (vendor.weekendAvailable ? "Weekend availability open" : "Limited weekend availability")} />
-            <InfoRow label="Contact preference" value={vendor.website ? "Website inquiry preferred" : "ShopFia inquiry preferred"} />
-            <InfoRow label="Pricing range" value={vendor.startingPriceCents ? `Starts at ${formatCurrency(vendor.startingPriceCents)}` : "Quote-based"} />
+            <InfoRow label="Contact preference" value={vendor.website || vendor.instagramUrl || vendor.tiktokUrl ? "Website or social inquiry available" : "ShopFia inquiry preferred"} />
+            <InfoRow label="Pricing range" value={vendor.startingPriceCents ? `Starts at ${formatCurrency(vendor.startingPriceCents)}` : "Message for pricing"} />
             <InfoRow label="Travel radius" value={`${vendor.serviceRadiusMiles} miles`} />
           </div>
           <div className="mt-6">
@@ -831,6 +843,11 @@ function formatLocation(city: string, state?: string | null) {
 function formatHost(user?: { name: string | null; username: string | null } | null) {
   if (!user) return "ShopFia host";
   return user.username ? `@${user.username}` : user.name ?? "ShopFia host";
+}
+
+function formatOfferingPrice(offering: { basePriceCents: number | null; messageForPricing: boolean }) {
+  if (offering.messageForPricing) return "Message for pricing";
+  return offering.basePriceCents ? `From ${formatCurrency(offering.basePriceCents)}` : "Message for pricing";
 }
 
 function VendorLogo({

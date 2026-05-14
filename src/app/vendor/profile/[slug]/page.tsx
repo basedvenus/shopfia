@@ -167,6 +167,18 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       ) : null}
+                      {vendor.instagramUrl ? (
+                        <Link href={vendor.instagramUrl} target="_blank" className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
+                          Instagram
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      ) : null}
+                      {vendor.tiktokUrl ? (
+                        <Link href={vendor.tiktokUrl} target="_blank" className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
+                          TikTok
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -216,7 +228,7 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                   Starting At
                 </div>
                 <div className="mt-2 text-2xl font-semibold">
-                  {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Quote"}
+                  {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Message for pricing"}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">Custom scope and delivery options</p>
               </div>
@@ -394,9 +406,7 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                         {offering.category.name}
                       </Badge>
                       <div className="rounded-full bg-white/15 px-3 py-1 text-xs backdrop-blur">
-                        {offering.basePriceCents
-                          ? `From ${formatCurrency(offering.basePriceCents)}`
-                          : "Custom quote"}
+                        {formatOfferingPrice(offering)}
                       </div>
                     </div>
                     <div>
@@ -514,4 +524,9 @@ function formatReviewDate(date: Date) {
     day: "numeric",
     year: "numeric"
   }).format(date);
+}
+
+function formatOfferingPrice(offering: { basePriceCents: number | null; messageForPricing: boolean }) {
+  if (offering.messageForPricing) return "Message for pricing";
+  return offering.basePriceCents ? `From ${formatCurrency(offering.basePriceCents)}` : "Message for pricing";
 }

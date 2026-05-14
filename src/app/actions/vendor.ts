@@ -13,14 +13,47 @@ function formDataToArray(formData: FormData, key: string) {
     .filter(Boolean);
 }
 
+function slugify(value: FormDataEntryValue | null) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function dollarsToCents(value: FormDataEntryValue | null) {
+  const normalized = String(value ?? "").replace(/[$,]/g, "").trim();
+  if (!normalized) return undefined;
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? Math.round(amount * 100) : undefined;
+}
+
+function formDataToPricedOptions(formData: FormData, prefix: "package" | "addon") {
+  const names = formDataToArray(formData, `${prefix}Names`);
+  const descriptions = formData.getAll(`${prefix}Descriptions`).map((value) => String(value).trim());
+  const prices = formData.getAll(`${prefix}Prices`);
+
+  return names.map((name, index) => ({
+    name,
+    description: descriptions[index] ?? "",
+    priceCents: dollarsToCents(prices[index] ?? null)
+  }));
+}
+
 export async function upsertVendorProfileAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireSession();
+  const vendorUsername = String(formData.get("username") ?? "")
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase();
   const parsed = vendorOnboardingSchema.parse({
     name: formData.get("name"),
-    slug: formData.get("slug"),
-    username: formData.get("username") || undefined,
+    slug: formData.get("slug") || slugify(vendorUsername || formData.get("name")),
+    username: vendorUsername || undefined,
     website: formData.get("website") || undefined,
+    instagramUrl: formData.get("instagramUrl") || undefined,
+    tiktokUrl: formData.get("tiktokUrl") || undefined,
     bio: formData.get("bio"),
     city: formData.get("city"),
     state: formData.get("state"),
@@ -43,6 +76,8 @@ export async function upsertVendorProfileAction(formData: FormData) {
         slug: parsed.slug,
         username: parsed.username || null,
         website: parsed.website || null,
+        instagramUrl: parsed.instagramUrl || null,
+        tiktokUrl: parsed.tiktokUrl || null,
         bio: parsed.bio || null,
         city: parsed.city,
         state: parsed.state || null,
@@ -61,6 +96,8 @@ export async function upsertVendorProfileAction(formData: FormData) {
         slug: parsed.slug,
         username: parsed.username || null,
         website: parsed.website || null,
+        instagramUrl: parsed.instagramUrl || null,
+        tiktokUrl: parsed.tiktokUrl || null,
         bio: parsed.bio || null,
         city: parsed.city,
         state: parsed.state || null,
@@ -75,7 +112,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
       }
     });
   } catch {
-    throw new Error("That vendor username or public slug is already taken.");
+    throw new Error("That vendor username is already taken.");
   }
 
   const validVendorCategoryCount = await db.category.count({
@@ -108,9 +145,6 @@ export async function upsertVendorProfileAction(formData: FormData) {
 export async function upsertOfferingAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.VENDOR, UserRole.ADMIN]);
-  if (session.user.role === UserRole.VENDOR) {
-    await requireVerifiedVendorProfile(session.user.id);
-  }
   const vendor = await db.vendorProfile.findUnique({
     where: { userId: session.user.id }
   });
@@ -120,12 +154,15 @@ export async function upsertOfferingAction(formData: FormData) {
     id: formData.get("id") || undefined,
     type: formData.get("type"),
     title: formData.get("title"),
-    slug: formData.get("slug"),
+    slug: formData.get("slug") || slugify(formData.get("title")),
     description: formData.get("description"),
-    basePriceCents: formData.get("basePriceCents") || undefined,
+    basePriceCents: formData.get("basePriceCents") || dollarsToCents(formData.get("startingPrice")) || undefined,
+    messageForPricing: formData.get("messageForPricing") === "on",
     categoryId: formData.get("categoryId"),
     tags: formDataToArray(formData, "tags"),
     photos: formDataToArray(formData, "photos"),
+    packages: formDataToPricedOptions(formData, "package"),
+    addons: formDataToPricedOptions(formData, "addon"),
     durationMinutes: formData.get("durationMinutes") || undefined,
     turnaroundDays: formData.get("turnaroundDays") || undefined,
     inventoryCount: formData.get("inventoryCount") || undefined,
@@ -147,10 +184,13 @@ export async function upsertOfferingAction(formData: FormData) {
     title: parsed.title,
     slug: parsed.slug,
     description: parsed.description,
-    basePriceCents: parsed.basePriceCents ?? null,
+    basePriceCents: parsed.messageForPricing ? null : parsed.basePriceCents ?? null,
+    messageForPricing: parsed.messageForPricing,
     categoryId: parsed.categoryId,
     tags: parsed.tags.map((t) => t.toLowerCase()),
     photos: parsed.photos,
+    variantsJson: parsed.packages,
+    addonsJson: parsed.addons,
     durationMinutes: parsed.durationMinutes ?? null,
     turnaroundDays: parsed.turnaroundDays ?? null,
     inventoryCount: parsed.type === "PRODUCT" ? (parsed.inventoryCount ?? null) : null,
@@ -169,7 +209,7 @@ export async function upsertOfferingAction(formData: FormData) {
   }
 
   const minPrice = await db.offering.findFirst({
-    where: { vendorId: vendor.id, active: true, basePriceCents: { not: null } },
+    where: { vendorId: vendor.id, active: true, messageForPricing: false, basePriceCents: { not: null } },
     orderBy: { basePriceCents: "asc" },
     select: { basePriceCents: true }
   });
@@ -185,7 +225,7 @@ export async function upsertOfferingAction(formData: FormData) {
     title: parsed.title,
     category: offeringCategory.name,
     description: parsed.description,
-    priceFrom: parsed.basePriceCents ?? null,
+    priceFrom: parsed.messageForPricing ? null : parsed.basePriceCents ?? null,
     city: vendor.city,
     quantity: parsed.type === "PRODUCT" ? parsed.inventoryCount ?? 1 : 1,
     autoRenew: parsed.autoRenewListing,

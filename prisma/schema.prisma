@@ -16,6 +16,7 @@ enum UserRole {
 enum OfferingType {
   SERVICE
   PRODUCT
+  CUSTOM_ORDER
 }
 
 enum QuoteRequestStatus {
@@ -210,6 +211,8 @@ model VendorProfile {
   username                  String?               @unique
   name                      String
   website                   String?
+  instagramUrl              String?
+  tiktokUrl                 String?
   bio                       String?
   city                      String
   state                     String?
@@ -331,6 +334,7 @@ model Offering {
   slug             String
   description      String
   basePriceCents   Int?
+  messageForPricing Boolean      @default(false)
   categoryId       String
   tags             String[]
   photos           String[]

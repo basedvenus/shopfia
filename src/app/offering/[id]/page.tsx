@@ -37,6 +37,9 @@ export default async function OfferingPage({ params }: { params: { id: string } 
 
   if (!offering || !offering.active || !offering.vendor.verified) return notFound();
   const photos = offering.photos.length > 0 ? offering.photos : [fallbackImage];
+  const priceLabel = formatOfferingPrice(offering);
+  const packages = getPricedOptions(offering.variantsJson);
+  const addons = getPricedOptions(offering.addonsJson);
 
   async function submitInquiry(formData: FormData) {
     "use server";
@@ -99,10 +102,10 @@ export default async function OfferingPage({ params }: { params: { id: string } 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-[1.3rem] bg-muted/70 p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Price Anchor
+                  Pricing
                 </div>
                 <div className="mt-2 text-xl font-semibold">
-                  {offering.basePriceCents ? formatCurrency(offering.basePriceCents) : "Custom quote"}
+                  {priceLabel}
                 </div>
               </div>
               <div className="rounded-[1.3rem] bg-muted/70 p-4">
@@ -173,13 +176,42 @@ export default async function OfferingPage({ params }: { params: { id: string } 
             </CardContent>
           </Card>
         </div>
+
+        {packages.length > 0 || addons.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {packages.length > 0 ? (
+              <Card className="border-white/70 bg-white/95">
+                <CardHeader>
+                  <CardTitle>Packages</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {packages.map((item) => (
+                    <PricedOptionCard key={item.name} option={item} />
+                  ))}
+                </CardContent>
+              </Card>
+            ) : null}
+            {addons.length > 0 ? (
+              <Card className="border-white/70 bg-white/95">
+                <CardHeader>
+                  <CardTitle>Add-ons</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {addons.map((item) => (
+                    <PricedOptionCard key={item.name} option={item} />
+                  ))}
+                </CardContent>
+              </Card>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       <aside className="space-y-4">
         <Card className="border-white/70 bg-white/95">
           <CardHeader>
             <CardTitle>
-              {offering.basePriceCents ? formatCurrency(offering.basePriceCents) : "Custom Quote"}
+              {priceLabel}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -210,6 +242,50 @@ export default async function OfferingPage({ params }: { params: { id: string } 
       </aside>
     </div>
   );
+}
+
+type PricedOption = {
+  name: string;
+  description?: string;
+  priceCents?: number;
+};
+
+function getPricedOptions(value: unknown): PricedOption[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.reduce<PricedOption[]>((options, item) => {
+      if (!item || typeof item !== "object") return options;
+      const record = item as Record<string, unknown>;
+      const name = typeof record.name === "string" ? record.name.trim() : "";
+      if (!name) return options;
+      const description = typeof record.description === "string" ? record.description.trim() : "";
+      const priceCents = typeof record.priceCents === "number" ? record.priceCents : undefined;
+      options.push({ name, description, priceCents });
+      return options;
+    }, []);
+}
+
+function PricedOptionCard({ option }: { option: PricedOption }) {
+  return (
+    <div className="rounded-[1.2rem] bg-muted/60 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="font-semibold">{option.name}</div>
+          {option.description ? (
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">{option.description}</p>
+          ) : null}
+        </div>
+        <div className="whitespace-nowrap text-sm font-semibold">
+          {option.priceCents != null ? formatCurrency(option.priceCents) : "Message for pricing"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatOfferingPrice(offering: { basePriceCents: number | null; messageForPricing: boolean }) {
+  if (offering.messageForPricing) return "Message for pricing";
+  return offering.basePriceCents ? formatCurrency(offering.basePriceCents) : "Message for pricing";
 }
 
 function buildHighlights(offering: {

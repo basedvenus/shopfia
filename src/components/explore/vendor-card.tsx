@@ -68,9 +68,9 @@ export function VendorCard({ vendor }: VendorCardProps) {
         </div>
         <div className="flex items-center justify-between">
           <p className="text-sm">
-            From{" "}
+            {vendor.startingPriceCents ? "From " : ""}
             <span className="font-semibold">
-              {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Quote"}
+              {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Message for pricing"}
             </span>
           </p>
           <Link href={`/vendor/profile/${vendor.slug}`}>
