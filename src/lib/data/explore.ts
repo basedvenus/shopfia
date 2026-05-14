@@ -120,6 +120,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
     availableWeekend: clean(input.availableWeekend),
     minRating: clean(input.minRating),
     radius: clean(input.radius),
+    verified: clean(input.verified),
     sort: clean(input.sort),
   });
   const minPriceCents = parsed.minPrice != null ? Math.round(parsed.minPrice * 100) : undefined;
@@ -153,6 +154,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
 
   if (parsed.minRating) andFilters.push({ averageRating: { gte: parsed.minRating } });
   if (parsed.radius) andFilters.push({ serviceRadiusMiles: { gte: parsed.radius } });
+  if (parsed.verified === "true") andFilters.push({ verified: true });
   if (parsed.availableWeekend === "true") andFilters.push({ weekendAvailable: true });
   if (parsed.availableWeekend === "false") andFilters.push({ weekendAvailable: false });
 

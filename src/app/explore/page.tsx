@@ -15,18 +15,18 @@ export default async function ExplorePage({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-white/60 bg-white/50 p-6 shadow-soft backdrop-blur">
+      <section className="rounded-[2rem] border border-white/60 bg-white/55 p-6 shadow-soft">
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <Badge variant="accent">Local event services + artisan goods</Badge>
-          <Badge variant="outline">Fast browsing</Badge>
-          <Badge variant="outline">Message, quote, book</Badge>
+          <Badge variant="outline" className="border-primary/20 bg-white/70 uppercase tracking-[0.18em] text-primary">
+            Discover Local Celebrations
+          </Badge>
         </div>
         <div className="max-w-3xl">
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            Discover local vendors for your next event
+            Explore vendors, services, and real event inspiration.
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Browse bakers, florists, rentals, balloon artists, and custom gift makers by service or event.
+            Search what you need first, then refine by category, event style, availability, and travel radius when you are ready.
           </p>
         </div>
         <div className="mt-5">

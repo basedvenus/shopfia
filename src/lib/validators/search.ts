@@ -21,5 +21,6 @@ export const exploreSearchSchema = z.object({
   availableWeekend: z.enum(["true", "false"]).optional(),
   minRating: z.coerce.number().min(0).max(5).optional(),
   radius: z.coerce.number().int().min(1).max(200).optional(),
+  verified: z.enum(["true"]).optional(),
   sort: z.enum(["recommended", "distance", "top-rated", "newest"]).optional()
 });
