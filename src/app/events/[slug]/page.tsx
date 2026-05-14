@@ -121,6 +121,13 @@ export default async function EventPage({
         tags: event.tags,
         description: event.description,
         location: event.location,
+        formattedAddress: event.formattedAddress,
+        city: event.city,
+        state: event.state,
+        zipCode: event.zipCode,
+        locationLat: event.locationLat,
+        locationLng: event.locationLng,
+        googlePlaceId: event.googlePlaceId,
         photos: event.photos.map((photo) => ({
           id: photo.id,
           url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,

@@ -128,12 +128,25 @@ const partyPhotoPayloadSchema = z.object({
   vendorIds: z.array(z.string().cuid()).max(8).default([])
 });
 
+const optionalCoordinate = (min: number, max: number) =>
+  z.preprocess(
+    (value) => (value === "" || value == null ? undefined : value),
+    z.coerce.number().min(min).max(max).optional()
+  );
+
 const partyEventFieldsSchema = z.object({
   title: z.string().trim().min(2, "Add an event title.").max(100),
   theme: z.string().trim().max(100).optional().or(z.literal("")),
   tags: z.array(z.string().trim().min(1).max(30)).max(12).default([]),
   description: z.string().trim().max(500).optional().or(z.literal("")),
-  location: z.string().trim().max(120).optional().or(z.literal(""))
+  location: z.string().trim().max(240).optional().or(z.literal("")),
+  formattedAddress: z.string().trim().max(240).optional().or(z.literal("")),
+  city: z.string().trim().max(80).optional().or(z.literal("")),
+  state: z.string().trim().max(40).optional().or(z.literal("")),
+  zipCode: z.string().trim().max(12).optional().or(z.literal("")),
+  locationLat: optionalCoordinate(-90, 90),
+  locationLng: optionalCoordinate(-180, 180),
+  googlePlaceId: z.string().trim().max(180).optional().or(z.literal(""))
 });
 
 const createPartyEventSchema = partyEventFieldsSchema.extend({
@@ -187,7 +200,14 @@ export async function createPartyEventAction(formData: FormData) {
         theme: parsed.data.theme || null,
         tags: parsed.data.tags,
         description: parsed.data.description || null,
-        location: parsed.data.location || null,
+        location: parsed.data.formattedAddress || parsed.data.location || null,
+        formattedAddress: parsed.data.formattedAddress || null,
+        city: parsed.data.city || null,
+        state: parsed.data.state || null,
+        zipCode: parsed.data.zipCode || null,
+        locationLat: parsed.data.locationLat ?? null,
+        locationLng: parsed.data.locationLng ?? null,
+        googlePlaceId: parsed.data.googlePlaceId || null,
         coverImageUrl: prepared.imageUrls[0] ?? null,
         imageUrls: prepared.imageUrls,
         taggedVendors: {
@@ -280,7 +300,14 @@ export async function updatePartyEventAction(formData: FormData) {
         theme: parsed.data.theme || null,
         tags: parsed.data.tags,
         description: parsed.data.description || null,
-        location: parsed.data.location || null,
+        location: parsed.data.formattedAddress || parsed.data.location || null,
+        formattedAddress: parsed.data.formattedAddress || null,
+        city: parsed.data.city || null,
+        state: parsed.data.state || null,
+        zipCode: parsed.data.zipCode || null,
+        locationLat: parsed.data.locationLat ?? null,
+        locationLng: parsed.data.locationLng ?? null,
+        googlePlaceId: parsed.data.googlePlaceId || null,
         coverImageUrl: prepared.imageUrls[0] ?? null,
         imageUrls: prepared.imageUrls,
         taggedVendors: {
@@ -332,6 +359,13 @@ function parsePartyEventFormData(formData: FormData) {
     tags,
     description: formData.get("description") || undefined,
     location: formData.get("location") || undefined,
+    formattedAddress: formData.get("locationFormattedAddress") || undefined,
+    city: formData.get("locationCity") || undefined,
+    state: formData.get("locationState") || undefined,
+    zipCode: formData.get("locationZipCode") || undefined,
+    locationLat: formData.get("locationLat") || undefined,
+    locationLng: formData.get("locationLng") || undefined,
+    googlePlaceId: formData.get("locationPlaceId") || undefined,
     photos
   };
 }

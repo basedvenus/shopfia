@@ -139,6 +139,12 @@ export async function createListing(
     description: string;
     priceFrom?: number | null;
     city: string;
+    state?: string | null;
+    zipCode?: string | null;
+    formattedAddress?: string | null;
+    locationLat?: number | null;
+    locationLng?: number | null;
+    googlePlaceId?: string | null;
     quantity?: number | null;
     autoRenew?: boolean;
     publish?: boolean;
@@ -166,6 +172,12 @@ export async function createListing(
             description: input.description,
             priceFrom: input.priceFrom ?? null,
             city: input.city,
+            state: input.state ?? null,
+            zipCode: input.zipCode ?? null,
+            formattedAddress: input.formattedAddress ?? null,
+            locationLat: input.locationLat ?? null,
+            locationLng: input.locationLng ?? null,
+            googlePlaceId: input.googlePlaceId ?? null,
             quantity,
             availableQuantity:
               existing.availableQuantity > 0 ? existing.availableQuantity : quantity,
@@ -191,6 +203,12 @@ export async function createListing(
             description: input.description,
             priceFrom: input.priceFrom ?? null,
             city: input.city,
+            state: input.state ?? null,
+            zipCode: input.zipCode ?? null,
+            formattedAddress: input.formattedAddress ?? null,
+            locationLat: input.locationLat ?? null,
+            locationLng: input.locationLng ?? null,
+            googlePlaceId: input.googlePlaceId ?? null,
             quantity,
             availableQuantity: quantity,
             autoRenew: input.autoRenew ?? false,

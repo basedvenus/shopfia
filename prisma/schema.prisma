@@ -214,11 +214,13 @@ model VendorProfile {
   instagramUrl              String?
   tiktokUrl                 String?
   bio                       String?
+  formattedAddress          String?
   city                      String
   state                     String?
   zipCode                   String?
   locationLat               Float?
   locationLng               Float?
+  googlePlaceId             String?
   serviceRadiusMiles        Int                   @default(15)
   photos                    String[]
   coverPhoto                String?
@@ -251,6 +253,9 @@ model VendorProfile {
   inquiries                 Inquiry[]
   taggedPartyEvents         PartyEvent[]            @relation("PartyEventTaggedVendors")
   taggedPartyPhotos         PartyPhoto[]            @relation("PartyPhotoTaggedVendors")
+
+  @@index([locationLat, locationLng])
+  @@index([googlePlaceId])
 }
 
 model PartyEvent {
@@ -262,6 +267,13 @@ model PartyEvent {
   tags          String[]
   description   String?
   location      String?
+  formattedAddress String?
+  city          String?
+  state         String?
+  zipCode       String?
+  locationLat   Float?
+  locationLng   Float?
+  googlePlaceId String?
   coverImageUrl String?
   imageUrls     String[]
   createdAt     DateTime @default(now())
@@ -270,6 +282,9 @@ model PartyEvent {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   photos        PartyPhoto[]
   taggedVendors VendorProfile[] @relation("PartyEventTaggedVendors")
+
+  @@index([locationLat, locationLng])
+  @@index([googlePlaceId])
 }
 
 model PartyPhoto {
@@ -383,6 +398,12 @@ model Listing {
   description        String
   priceFrom          Int?
   city               String
+  formattedAddress   String?
+  state              String?
+  zipCode            String?
+  locationLat        Float?
+  locationLng        Float?
+  googlePlaceId      String?
   quantity           Int                 @default(1)
   availableQuantity  Int                 @default(1)
   autoRenew          Boolean             @default(false)
@@ -400,6 +421,9 @@ model Listing {
   feeEvents          ListingFeeEvent[]
   orders             Order[]             @relation("ListingOrders")
   inquiries          Inquiry[]
+
+  @@index([locationLat, locationLng])
+  @@index([googlePlaceId])
 }
 
 model Inquiry {

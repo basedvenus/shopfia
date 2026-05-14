@@ -12,6 +12,12 @@ const imageValueSchema = z
     "Use an uploaded image or a valid image URL."
   );
 
+const optionalCoordinate = (min: number, max: number) =>
+  z.preprocess(
+    (value) => (value === "" || value == null ? undefined : value),
+    z.coerce.number().min(min).max(max).optional()
+  );
+
 export const vendorOnboardingSchema = z.object({
   name: z.string().min(2).max(80),
   slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/),
@@ -24,9 +30,13 @@ export const vendorOnboardingSchema = z.object({
   instagramUrl: z.string().url().optional().or(z.literal("")),
   tiktokUrl: z.string().url().optional().or(z.literal("")),
   bio: z.string().max(600).optional().or(z.literal("")),
+  formattedAddress: z.string().max(240).optional().or(z.literal("")),
   city: z.string().min(2).max(80),
   state: z.string().max(40).optional().or(z.literal("")),
   zipCode: z.string().max(12).optional().or(z.literal("")),
+  locationLat: optionalCoordinate(-90, 90),
+  locationLng: optionalCoordinate(-180, 180),
+  googlePlaceId: z.string().max(180).optional().or(z.literal("")),
   serviceRadiusMiles: z.coerce.number().int().min(1).max(200).optional().default(25),
   weekendAvailable: z.coerce.boolean().optional().default(true),
   serviceAreaNotes: z.string().max(500).optional().or(z.literal("")),

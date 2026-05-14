@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, MapPin } from "lucide-react";
+import { Search } from "lucide-react";
+import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -8,6 +9,10 @@ type Category = { id: string; name: string };
 type Filters = {
   q?: string;
   city?: string;
+  placeId?: string;
+  locationLabel?: string;
+  lat?: number;
+  lng?: number;
   categoryId?: string;
   eventCategoryId?: string;
   minPrice?: number;
@@ -39,15 +44,23 @@ export function ExploreSearch({
             className="pl-9"
           />
         </div>
-        <div className="relative">
-          <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            name="city"
-            defaultValue={filters.city}
-            placeholder="City or zip"
-            className="pl-9"
-          />
-        </div>
+        <PlaceAutocompleteInput
+          defaultValue={filters.locationLabel ?? filters.city ?? ""}
+          defaultPlace={{
+            formattedAddress: filters.locationLabel ?? filters.city,
+            placeId: filters.placeId,
+            lat: filters.lat,
+            lng: filters.lng
+          }}
+          fieldNames={{
+            input: "city",
+            placeId: "placeId",
+            lat: "lat",
+            lng: "lng",
+            label: "locationLabel"
+          }}
+          placeholder="Search vendors, venues, or locations"
+        />
         <Button type="submit" className="w-full lg:w-auto">
           Explore
         </Button>

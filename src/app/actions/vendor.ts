@@ -14,6 +14,14 @@ function formDataToArray(formData: FormData, key: string) {
     .filter(Boolean);
 }
 
+function firstFormValue(formData: FormData, ...keys: string[]) {
+  for (const key of keys) {
+    const value = String(formData.get(key) ?? "").trim();
+    if (value) return value;
+  }
+  return undefined;
+}
+
 function slugify(value: FormDataEntryValue | null) {
   return String(value ?? "")
     .trim()
@@ -83,9 +91,13 @@ export async function upsertVendorProfileAction(formData: FormData) {
     instagramUrl: formData.get("instagramUrl") || undefined,
     tiktokUrl: formData.get("tiktokUrl") || undefined,
     bio: formData.get("bio"),
-    city: formData.get("city"),
-    state: formData.get("state"),
-    zipCode: formData.get("zipCode"),
+    formattedAddress: firstFormValue(formData, "formattedAddress", "locationFormattedAddress"),
+    city: firstFormValue(formData, "locationCity", "city"),
+    state: firstFormValue(formData, "locationState", "state"),
+    zipCode: firstFormValue(formData, "locationZipCode", "zipCode"),
+    locationLat: firstFormValue(formData, "locationLat"),
+    locationLng: firstFormValue(formData, "locationLng"),
+    googlePlaceId: firstFormValue(formData, "googlePlaceId", "locationPlaceId"),
     serviceRadiusMiles: formData.get("serviceRadiusMiles") || undefined,
     weekendAvailable: formData.get("weekendAvailable") === "on",
     serviceAreaNotes: formData.get("serviceAreaNotes"),
@@ -123,9 +135,13 @@ export async function upsertVendorProfileAction(formData: FormData) {
         instagramUrl: parsed.instagramUrl || null,
         tiktokUrl: parsed.tiktokUrl || null,
         bio: parsed.bio || null,
+        formattedAddress: parsed.formattedAddress || null,
         city: parsed.city,
         state: parsed.state || null,
         zipCode: parsed.zipCode || null,
+        locationLat: parsed.locationLat ?? null,
+        locationLng: parsed.locationLng ?? null,
+        googlePlaceId: parsed.googlePlaceId || null,
         serviceRadiusMiles: parsed.serviceRadiusMiles,
         weekendAvailable: parsed.weekendAvailable,
         serviceAreaNotes: parsed.serviceAreaNotes || null,
@@ -143,9 +159,13 @@ export async function upsertVendorProfileAction(formData: FormData) {
         instagramUrl: parsed.instagramUrl || null,
         tiktokUrl: parsed.tiktokUrl || null,
         bio: parsed.bio || null,
+        formattedAddress: parsed.formattedAddress || null,
         city: parsed.city,
         state: parsed.state || null,
         zipCode: parsed.zipCode || null,
+        locationLat: parsed.locationLat ?? null,
+        locationLng: parsed.locationLng ?? null,
+        googlePlaceId: parsed.googlePlaceId || null,
         serviceRadiusMiles: parsed.serviceRadiusMiles,
         weekendAvailable: parsed.weekendAvailable,
         serviceAreaNotes: parsed.serviceAreaNotes || null,
@@ -324,6 +344,12 @@ export async function upsertOfferingAction(formData: FormData) {
     description: parsed.description,
     priceFrom: parsed.messageForPricing ? null : parsed.basePriceCents ?? null,
     city: vendor.city,
+    state: vendor.state,
+    zipCode: vendor.zipCode,
+    formattedAddress: vendor.formattedAddress,
+    locationLat: vendor.locationLat,
+    locationLng: vendor.locationLng,
+    googlePlaceId: vendor.googlePlaceId,
     quantity: parsed.type === "PRODUCT" ? parsed.inventoryCount ?? 1 : 1,
     autoRenew: parsed.autoRenewListing,
     publish: true

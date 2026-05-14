@@ -5,11 +5,39 @@ function normalizeLocation(value: string | null | undefined) {
   return value?.trim().toLowerCase() ?? "";
 }
 
+function distanceMiles(
+  from: { lat: number; lng: number },
+  to: { lat: number | null; lng: number | null }
+) {
+  if (to.lat == null || to.lng == null) return Number.POSITIVE_INFINITY;
+  const earthRadiusMiles = 3958.8;
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const deltaLat = toRadians(to.lat - from.lat);
+  const deltaLng = toRadians(to.lng - from.lng);
+  const fromLat = toRadians(from.lat);
+  const toLat = toRadians(to.lat);
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(fromLat) * Math.cos(toLat) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+
+  return earthRadiusMiles * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function getDistanceSortScore(vendor: {
   city: string;
   zipCode: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
   serviceRadiusMiles: number;
-}, locationQuery?: string) {
+}, locationQuery?: string, point?: { lat: number; lng: number }) {
+  if (point) {
+    const miles = distanceMiles(point, {
+      lat: vendor.locationLat ?? null,
+      lng: vendor.locationLng ?? null
+    });
+    if (Number.isFinite(miles)) return miles;
+  }
+
   const query = normalizeLocation(locationQuery);
   if (!query) {
     return vendor.serviceRadiusMiles;
@@ -81,6 +109,10 @@ export async function getExploreData(input: Record<string, string | string[] | u
     q: clean(input.q),
     city: clean(input.city),
     zip: clean(input.zip),
+    placeId: clean(input.placeId),
+    locationLabel: clean(input.locationLabel),
+    lat: clean(input.lat),
+    lng: clean(input.lng),
     categoryId: clean(input.categoryId),
     eventCategoryId: clean(input.eventCategoryId),
     minPrice: clean(input.minPrice),
@@ -92,12 +124,15 @@ export async function getExploreData(input: Record<string, string | string[] | u
   });
   const minPriceCents = parsed.minPrice != null ? Math.round(parsed.minPrice * 100) : undefined;
   const maxPriceCents = parsed.maxPrice != null ? Math.round(parsed.maxPrice * 100) : undefined;
+  const searchPoint = parsed.lat != null && parsed.lng != null
+    ? { lat: parsed.lat, lng: parsed.lng }
+    : undefined;
 
   const andFilters: Prisma.VendorProfileWhereInput[] = [
     { offerings: { some: { active: true } } }
   ];
 
-  if (parsed.city) {
+  if (parsed.city && !searchPoint) {
     andFilters.push({
       OR: [
         {
@@ -221,11 +256,33 @@ export async function getExploreData(input: Record<string, string | string[] | u
     return true;
   });
 
+  const filteredByLocation = searchPoint
+    ? filteredByPrice.filter((vendor) => {
+        const miles = distanceMiles(searchPoint, {
+          lat: vendor.locationLat,
+          lng: vendor.locationLng
+        });
+        if (Number.isFinite(miles)) {
+          return miles <= Math.max(parsed.radius ?? 50, vendor.serviceRadiusMiles);
+        }
+
+        const query = parsed.locationLabel ?? parsed.city;
+        const normalizedQuery = normalizeLocation(query);
+        return (
+          !normalizedQuery ||
+          normalizeLocation(vendor.city).includes(normalizedQuery) ||
+          normalizedQuery.includes(normalizeLocation(vendor.city)) ||
+          (vendor.zipCode ? normalizedQuery.includes(vendor.zipCode) : false)
+        );
+      })
+    : filteredByPrice;
+
   const finalVendors =
     parsed.sort === "distance"
-      ? [...filteredByPrice].sort((left, right) => {
+      ? [...filteredByLocation].sort((left, right) => {
           const scoreDifference =
-            getDistanceSortScore(left, parsed.city) - getDistanceSortScore(right, parsed.city);
+            getDistanceSortScore(left, parsed.city, searchPoint) -
+            getDistanceSortScore(right, parsed.city, searchPoint);
 
           if (scoreDifference !== 0) {
             return scoreDifference;
@@ -233,7 +290,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
 
           return (right.rankingScore?.score ?? 0) - (left.rankingScore?.score ?? 0);
         })
-      : filteredByPrice;
+      : filteredByLocation;
 
   return {
     filters: parsed,

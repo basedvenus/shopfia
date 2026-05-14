@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldShell, SubmitButton, ValidatedForm } from "@/components/ui/validated-form";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
+import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { OfferingSetupForm } from "@/components/vendor/offering-setup-form";
 import { ServiceAreaPicker } from "@/components/vendor/service-area-picker";
 
@@ -108,6 +109,33 @@ export default async function VendorOnboardingPage({
             <FieldShell label="Website" optional>
               <Input name="website" type="url" placeholder="https://yourbusiness.com" defaultValue={existingVendor?.website ?? ""} />
             </FieldShell>
+            <div className="md:col-span-2">
+              <PlaceAutocompleteInput
+                label="Business Location"
+                helperText="Choose a city, venue, neighborhood, or address so hosts can discover you nearby."
+                placeholder="Fairfield, CA or Solano County Event Center"
+                defaultValue={existingVendor?.formattedAddress ?? ""}
+                defaultPlace={{
+                  formattedAddress: existingVendor?.formattedAddress ?? undefined,
+                  city: existingVendor?.city,
+                  state: existingVendor?.state ?? undefined,
+                  zipCode: existingVendor?.zipCode ?? undefined,
+                  lat: existingVendor?.locationLat ?? undefined,
+                  lng: existingVendor?.locationLng ?? undefined,
+                  placeId: existingVendor?.googlePlaceId ?? undefined
+                }}
+                fieldNames={{
+                  input: "formattedAddress",
+                  formattedAddress: "formattedAddress",
+                  city: "locationCity",
+                  state: "locationState",
+                  zipCode: "locationZipCode",
+                  lat: "locationLat",
+                  lng: "locationLng",
+                  placeId: "googlePlaceId"
+                }}
+              />
+            </div>
             <FieldShell label="City" required helperText="Enter the main city your business serves.">
               <Input
                 name="city"
