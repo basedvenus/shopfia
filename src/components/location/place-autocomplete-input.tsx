@@ -184,7 +184,7 @@ export function PlaceAutocompleteInput({
           required={required}
           autoComplete="off"
           placeholder={placeholder}
-          className={`pl-9 pr-9 ${inputClassName ?? ""}`}
+          className={`${inputClassName ?? ""} pl-10 pr-9`}
           onChange={(event) => {
             const nextValue = event.target.value;
             setInputValue(nextValue);

@@ -96,17 +96,17 @@ export function ListingInquiryForm({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Budget">
+          <Field label="Budget" optional>
             <Input
               name="budgetDollars"
               type="number"
               min={0}
               step="0.01"
-              placeholder="e.g. $500 - $1,500"
+              placeholder="e.g. 500"
               className={softInputClassName}
             />
           </Field>
-          <Field label="Guest Count" helper="Optional">
+          <Field label="Guest Count" optional>
             <Input
               name="guestCount"
               type="number"
@@ -175,18 +175,25 @@ function Field({
   children,
   helper,
   label,
+  optional,
   required
 }: {
   children: ReactNode;
   helper?: string;
   label: string;
+  optional?: boolean;
   required?: boolean;
 }) {
   return (
     <label className="grid gap-2">
-      <span className="text-sm font-semibold text-[#4b403c]">
-        {label}
-        {required ? <span className="ml-1 text-primary">*</span> : null}
+      <span className="flex min-h-5 items-center justify-between gap-2 text-sm font-semibold text-[#4b403c]">
+        <span>
+          {label}
+          {required ? <span className="ml-1 text-primary">*</span> : null}
+        </span>
+        {optional ? (
+          <span className="text-xs font-normal text-muted-foreground">Optional</span>
+        ) : null}
       </span>
       {children}
       {helper ? <span className="text-xs leading-5 text-muted-foreground">{helper}</span> : null}
