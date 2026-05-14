@@ -125,19 +125,19 @@ export default async function ListingsPage() {
                     {listing.offering?.active ? (
                       <Link href={`/offering/${listing.offering.id}`} className="flex-1">
                         <Badge className="w-full justify-center py-2" variant="accent">
-                          {listing.priceFrom != null ? "View listing" : "Message for pricing"}
+                          View Listing
                         </Badge>
                       </Link>
                     ) : (
                       <Link href={`/vendor/profile/${vendor.slug}`} className="flex-1">
                         <Badge className="w-full justify-center py-2" variant="accent">
-                          Contact vendor
+                          View Listing
                         </Badge>
                       </Link>
                     )}
                     <Link href={`/vendor/profile/${vendor.slug}`} className="flex-1">
                       <Badge className="w-full justify-center py-2" variant="outline">
-                        Vendor
+                        Vendor Profile
                       </Badge>
                     </Link>
                   </div>

@@ -1,18 +1,24 @@
 import { sendMessageAction } from "@/app/actions/messaging";
 import { sendQuoteResponseAction } from "@/app/actions/quotes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 export const dynamic = "force-dynamic";
 
-export default async function MessagesPage() {
+export default async function MessagesPage({
+  searchParams
+}: {
+  searchParams?: { conversationId?: string };
+}) {
   const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
   const session = await auth();
   if (!session?.user?.id) {
     return <p className="text-sm text-muted-foreground">Sign in to access messages.</p>;
   }
+  const selectedConversationId = searchParams?.conversationId;
 
   const conversations = await db.conversation.findMany({
     where:
@@ -31,6 +37,12 @@ export default async function MessagesPage() {
       vendorProfile: {
         select: { id: true, name: true, slug: true }
       },
+      listing: {
+        select: { id: true, title: true }
+      },
+      offering: {
+        select: { id: true, title: true }
+      },
       messages: {
         orderBy: { createdAt: "asc" },
         take: 8
@@ -39,6 +51,37 @@ export default async function MessagesPage() {
     orderBy: { lastMessageAt: "desc" },
     take: 20
   });
+  const conversationIds = conversations.map((conversation) => conversation.id);
+  const unreadMessages =
+    conversationIds.length > 0
+      ? await db.message.findMany({
+          where: {
+            conversationId: { in: conversationIds },
+            senderId: { not: session.user.id },
+            readAt: null
+          },
+          select: { conversationId: true }
+        })
+      : [];
+  const unreadByConversation = new Map<string, number>();
+  unreadMessages.forEach((message) => {
+    unreadByConversation.set(
+      message.conversationId,
+      (unreadByConversation.get(message.conversationId) ?? 0) + 1
+    );
+  });
+
+  if (selectedConversationId && conversationIds.includes(selectedConversationId)) {
+    await db.message.updateMany({
+      where: {
+        conversationId: selectedConversationId,
+        senderId: { not: session.user.id },
+        readAt: null
+      },
+      data: { readAt: new Date() }
+    });
+    unreadByConversation.set(selectedConversationId, 0);
+  }
 
   const quoteRequests = await db.quoteRequest.findMany({
     where:
@@ -63,36 +106,49 @@ export default async function MessagesPage() {
         {conversations.length === 0 ? (
           <Card><CardContent className="p-4 text-sm text-muted-foreground">No conversations yet.</CardContent></Card>
         ) : (
-          conversations.map((conversation) => (
-            <Card key={conversation.id}>
-              <CardHeader className="pb-1">
-                <CardTitle className="text-base">
-                  {conversation.vendorProfile.name}
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    Buyer: {conversation.buyer.name ?? "Buyer"}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="max-h-64 space-y-2 overflow-auto rounded-2xl bg-muted/30 p-3">
-                  {conversation.messages.map((msg) => (
-                    <div key={msg.id} className="rounded-xl border bg-white p-2 text-sm">
-                      <div className="mb-1 text-xs text-muted-foreground">
-                        {msg.senderId === conversation.buyerId ? "Buyer" : "Vendor"} ·{" "}
-                        {new Date(msg.createdAt).toLocaleString()}
+          conversations.map((conversation) => {
+            const unreadCount = unreadByConversation.get(conversation.id) ?? 0;
+            const contextTitle = conversation.listing?.title ?? conversation.offering?.title;
+            const isSelected = conversation.id === selectedConversationId;
+
+            return (
+              <Card
+                key={conversation.id}
+                className={isSelected ? "border-primary/40 bg-white/95 shadow-soft" : undefined}
+              >
+                <CardHeader className="pb-1">
+                  <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+                    <span>{conversation.vendorProfile.name}</span>
+                    {unreadCount > 0 ? <Badge variant="accent">{unreadCount} unread</Badge> : null}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      Buyer: {conversation.buyer.name ?? "Buyer"}
+                    </span>
+                  </CardTitle>
+                  {contextTitle ? (
+                    <p className="text-xs text-muted-foreground">Inquiry: {contextTitle}</p>
+                  ) : null}
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="max-h-64 space-y-2 overflow-auto rounded-2xl bg-muted/30 p-3">
+                    {conversation.messages.map((msg) => (
+                      <div key={msg.id} className="rounded-xl border bg-white p-2 text-sm">
+                        <div className="mb-1 text-xs text-muted-foreground">
+                          {msg.senderId === conversation.buyerId ? "Buyer" : "Vendor"} ·{" "}
+                          {new Date(msg.createdAt).toLocaleString()}
+                        </div>
+                        <div>{msg.body}</div>
                       </div>
-                      <div>{msg.body}</div>
-                    </div>
-                  ))}
-                </div>
-                <form action={sendMessageAction} className="space-y-2">
-                  <input type="hidden" name="conversationId" value={conversation.id} />
-                  <Textarea name="body" placeholder="Reply..." className="min-h-[80px]" required />
-                  <Button type="submit" size="sm">Send</Button>
-                </form>
-              </CardContent>
-            </Card>
-          ))
+                    ))}
+                  </div>
+                  <form action={sendMessageAction} className="space-y-2">
+                    <input type="hidden" name="conversationId" value={conversation.id} />
+                    <Textarea name="body" placeholder="Reply..." className="min-h-[80px]" required />
+                    <Button type="submit" size="sm">Send</Button>
+                  </form>
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </section>
 

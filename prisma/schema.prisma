@@ -144,6 +144,7 @@ model User {
   buyerOrders            Order[]           @relation("BuyerOrders")
   vendorOrders           Order[]           @relation("VendorOrders")
   buyerReviews           Review[]          @relation("BuyerReviews")
+  buyerInquiries         Inquiry[]
   sentMessages           Message[]         @relation("SentMessages")
   conversationsAsBuyer   Conversation[]    @relation("ConversationBuyer")
   conversationsAsVendor  Conversation[]    @relation("ConversationVendor")
@@ -372,6 +373,7 @@ model Offering {
   quoteRequests    QuoteRequest[]
   orders           Order[]
   inquiries        Inquiry[]
+  conversations    Conversation[]
 
   @@unique([vendorId, slug])
 }
@@ -421,6 +423,7 @@ model Listing {
   feeEvents          ListingFeeEvent[]
   orders             Order[]             @relation("ListingOrders")
   inquiries          Inquiry[]
+  conversations      Conversation[]
 
   @@index([locationLat, locationLng])
   @@index([googlePlaceId])
@@ -428,23 +431,40 @@ model Listing {
 
 model Inquiry {
   id               String        @id @default(cuid())
+  buyerId          String?
   vendorProfileId  String
   listingId        String?
   offeringId       String?
+  conversationId   String?
   name             String
-  email            String
+  email            String?
   phone            String?
   eventDate        DateTime?
-  eventLocation    String
+  eventLocation    String?
+  formattedAddress String?
+  locationCity     String?
+  locationState    String?
+  locationZipCode  String?
+  locationLat      Float?
+  locationLng      Float?
+  googlePlaceId    String?
+  guestCount       Int?
+  inspirationUrls  String[]      @default([])
   budgetCents      Int?
   message          String?
   status           InquiryStatus @default(NEW)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
+  buyer            User?         @relation(fields: [buyerId], references: [id], onDelete: SetNull)
   vendorProfile    VendorProfile @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
   listing          Listing?      @relation(fields: [listingId], references: [id], onDelete: SetNull)
   offering         Offering?     @relation(fields: [offeringId], references: [id], onDelete: SetNull)
+  conversation     Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([buyerId])
+  @@index([conversationId])
+  @@index([locationLat, locationLng])
 }
 
 model ListingFeeEvent {
@@ -507,6 +527,8 @@ model Conversation {
   buyerId          String
   vendorId         String
   vendorProfileId  String
+  listingId        String?
+  offeringId       String?
   lastMessageAt    DateTime      @default(now())
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
@@ -514,9 +536,14 @@ model Conversation {
   buyer            User          @relation("ConversationBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
   vendor           User          @relation("ConversationVendor", fields: [vendorId], references: [id], onDelete: Cascade)
   vendorProfile    VendorProfile @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  listing          Listing?      @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  offering         Offering?     @relation(fields: [offeringId], references: [id], onDelete: SetNull)
+  inquiries        Inquiry[]
   messages         Message[]
 
   @@unique([buyerId, vendorId])
+  @@index([listingId])
+  @@index([offeringId])
 }
 
 model Message {
@@ -525,10 +552,13 @@ model Message {
   senderId       String
   body           String
   attachments    String[]
+  readAt         DateTime?
   createdAt      DateTime     @default(now())
 
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, readAt])
 }
 
 model Order {

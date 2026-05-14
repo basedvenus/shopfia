@@ -79,7 +79,7 @@ export function VendorCard({ vendor }: VendorCardProps) {
             </span>
           </p>
           <Link href={`/vendor/profile/${vendor.slug}`}>
-            <Button size="sm">{vendor.startingPriceCents ? "View" : "Message for pricing"}</Button>
+            <Button size="sm">View Profile</Button>
           </Link>
         </div>
       </CardContent>

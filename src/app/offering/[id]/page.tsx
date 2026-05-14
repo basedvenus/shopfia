@@ -2,12 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Clock3, MapPin, Sparkles, Star } from "lucide-react";
 import { notFound } from "next/navigation";
-import { createPublicInquiryAction } from "@/app/actions/inquiries";
+import { auth } from "@/auth";
+import { ListingInquiryForm } from "@/components/inquiries/listing-inquiry-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +15,7 @@ const fallbackImage =
   "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1200&q=80";
 
 export default async function OfferingPage({ params }: { params: { id: string } }) {
-  const { db } = await import("@/lib/db");
+  const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
   const offering = await db.offering.findUnique({
     where: { id: params.id },
     include: {
@@ -41,12 +40,6 @@ export default async function OfferingPage({ params }: { params: { id: string } 
   const priceLabel = formatOfferingPrice(offering);
   const packages = getPricedOptions(offering.variantsJson);
   const addons = getPricedOptions(offering.addonsJson);
-
-  async function submitInquiry(formData: FormData) {
-    "use server";
-
-    await createPublicInquiryAction(formData);
-  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.55fr_0.95fr]">
@@ -115,7 +108,7 @@ export default async function OfferingPage({ params }: { params: { id: string } 
                 </div>
                 {offering.messageForPricing ? (
                   <Button asChild size="sm" className="mt-3">
-                    <a href="#inquiry">Message for pricing</a>
+                    <a href="#inquiry">Request Proposal</a>
                   </Button>
                 ) : null}
               </div>
@@ -221,33 +214,19 @@ export default async function OfferingPage({ params }: { params: { id: string } 
       <aside className="space-y-4">
         <Card id="inquiry" className="border-white/70 bg-white/95">
           <CardHeader>
-            <CardTitle>
-              {priceLabel}
-            </CardTitle>
+            <CardTitle>Request Proposal</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Send the event date, location, and any references. The vendor can confirm scope from
-              here.
+              Share a few details and the vendor can confirm pricing and availability.
             </p>
-            <form action={submitInquiry} className="space-y-3">
-              <input type="hidden" name="vendorProfileId" value={offering.vendorId} />
-              <input type="hidden" name="offeringId" value={offering.id} />
-              <input type="hidden" name="listingId" value={offering.listing?.id ?? ""} />
-              <Input name="name" placeholder="Your name" required />
-              <Input name="email" type="email" placeholder="Your email" required />
-              <Input name="phone" placeholder="Phone (optional)" />
-              <Input name="eventDate" type="date" />
-              <Input name="eventLocation" placeholder="Event location" required />
-              <Input name="budgetDollars" type="number" step="0.01" min={0} placeholder="Budget (optional)" />
-              <Textarea
-                name="message"
-                placeholder="What size, style, quantity, or setup do you need?"
-              />
-              <Button type="submit" className="w-full">
-                Send inquiry
-              </Button>
-            </form>
+            <ListingInquiryForm
+              defaultEmail={session?.user?.email}
+              defaultName={session?.user?.name}
+              listingId={offering.listing?.id}
+              offeringId={offering.id}
+              vendorProfileId={offering.vendorId}
+            />
           </CardContent>
         </Card>
       </aside>
@@ -287,7 +266,7 @@ function PricedOptionCard({ option }: { option: PricedOption }) {
           ) : null}
         </div>
         <div className="whitespace-nowrap text-sm font-semibold">
-          {option.priceCents != null ? formatCurrency(option.priceCents) : "Message for pricing"}
+          {option.priceCents != null ? formatCurrency(option.priceCents) : "Custom proposal"}
         </div>
       </div>
     </div>
@@ -295,8 +274,8 @@ function PricedOptionCard({ option }: { option: PricedOption }) {
 }
 
 function formatOfferingPrice(offering: { basePriceCents: number | null; messageForPricing: boolean }) {
-  if (offering.messageForPricing) return "Message for pricing";
-  return offering.basePriceCents ? formatCurrency(offering.basePriceCents) : "Message for pricing";
+  if (offering.messageForPricing) return "Custom proposal";
+  return offering.basePriceCents ? formatCurrency(offering.basePriceCents) : "Custom proposal";
 }
 
 function buildHighlights(offering: {
