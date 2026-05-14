@@ -230,6 +230,11 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                 <div className="mt-2 text-2xl font-semibold">
                   {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Message for pricing"}
                 </div>
+                {!vendor.startingPriceCents ? (
+                  <Button asChild size="sm" className="mt-3">
+                    <a href="#inquiry">Message for pricing</a>
+                  </Button>
+                ) : null}
                 <p className="mt-1 text-sm text-muted-foreground">Custom scope and delivery options</p>
               </div>
               <div className="rounded-[1.5rem] bg-muted/70 p-4">
@@ -264,7 +269,7 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
         </div>
 
         <div className="space-y-4">
-          <Card className="border-white/70 bg-white/95">
+          <Card id="inquiry" className="border-white/70 bg-white/95">
             <CardHeader>
               <CardTitle>Send an inquiry</CardTitle>
             </CardHeader>
@@ -413,7 +418,7 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                         ))}
                       </div>
                       <div className="rounded-full bg-white/15 px-3 py-1 text-xs backdrop-blur">
-                        {formatOfferingPrice(offering)}
+                        {offering.messageForPricing ? "Message for pricing" : formatOfferingPrice(offering)}
                       </div>
                     </div>
                     <div>

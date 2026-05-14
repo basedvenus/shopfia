@@ -13,9 +13,7 @@ export default async function ListingsPage() {
       shop: {
         is: {
           vendorProfile: {
-            is: {
-              verified: true
-            }
+            isNot: null
           }
         }
       }
@@ -91,7 +89,7 @@ export default async function ListingsPage() {
                     <span>
                       {listing.priceFrom != null ? "From " : ""}
                       <span className="font-semibold">
-                        {listing.priceFrom != null ? formatCurrency(listing.priceFrom) : "Message for pricing"}
+                        {listing.priceFrom != null ? formatCurrency(listing.priceFrom) : "Custom pricing"}
                       </span>
                     </span>
                     <span className="text-muted-foreground">
@@ -103,7 +101,7 @@ export default async function ListingsPage() {
                     {listing.offering?.active ? (
                       <Link href={`/offering/${listing.offering.id}`} className="flex-1">
                         <Badge className="w-full justify-center py-2" variant="accent">
-                          View listing
+                          {listing.priceFrom != null ? "View listing" : "Message for pricing"}
                         </Badge>
                       </Link>
                     ) : (

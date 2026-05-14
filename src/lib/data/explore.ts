@@ -93,7 +93,9 @@ export async function getExploreData(input: Record<string, string | string[] | u
   const minPriceCents = parsed.minPrice != null ? Math.round(parsed.minPrice * 100) : undefined;
   const maxPriceCents = parsed.maxPrice != null ? Math.round(parsed.maxPrice * 100) : undefined;
 
-  const andFilters: Prisma.VendorProfileWhereInput[] = [{ verified: true }];
+  const andFilters: Prisma.VendorProfileWhereInput[] = [
+    { offerings: { some: { active: true } } }
+  ];
 
   if (parsed.city) {
     andFilters.push({
@@ -195,8 +197,8 @@ export async function getExploreData(input: Record<string, string | string[] | u
         categories: { include: { category: true } },
         offerings: {
           where: { active: true },
-          select: { id: true, basePriceCents: true, type: true },
-          take: 1,
+          select: { id: true, basePriceCents: true, category: { select: { name: true } }, type: true },
+          take: 3,
           orderBy: { createdAt: "desc" }
         }
       }

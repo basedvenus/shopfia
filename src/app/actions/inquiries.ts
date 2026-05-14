@@ -20,9 +20,9 @@ export async function createPublicInquiryAction(formData: FormData) {
 
   const vendor = await db.vendorProfile.findUnique({
     where: { id: parsed.vendorProfileId },
-    select: { id: true, slug: true, verified: true }
+    select: { id: true, slug: true }
   });
-  if (!vendor || !vendor.verified) {
+  if (!vendor) {
     throw new Error("Vendor not found");
   }
 

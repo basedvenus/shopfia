@@ -269,14 +269,13 @@ export default async function VendorDashboardPage() {
           </div>
         </div>
 
-        <div className="grid gap-px bg-[#eadbd8] sm:grid-cols-2 xl:grid-cols-7">
+        <div className="grid gap-px bg-[#eadbd8] sm:grid-cols-2 xl:grid-cols-6">
           <StatTile label="Parties Served" value={String(Math.max(completedOrders.length, vendor.taggedPartyEvents.length))} />
           <StatTile label="Reviews" value={String(reviewCount)} />
           <StatTile label="Average Rating" value={averageRating ? `${averageRating.toFixed(1)} ★` : "New"} />
           <StatTile label="Repeat Clients" value={String(repeatClients)} />
           <StatTile label="Saves" value={String(saves)} />
           <StatTile label="Profile Views" value={profileViews ? String(profileViews) : "New"} />
-          <StatTile label="Bookings Done" value={String(completedOrders.length)} />
         </div>
       </section>
 
@@ -384,9 +383,11 @@ export default async function VendorDashboardPage() {
                   <div>
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="text-xl font-semibold tracking-[-0.025em]">{offering.title}</h3>
-                      <div className="whitespace-nowrap text-sm font-semibold text-primary">
-                        {formatOfferingPrice(offering)}
-                      </div>
+                      <Button asChild size="sm" variant={offering.messageForPricing ? "default" : "secondary"}>
+                        <Link href={`/offering/${offering.id}#inquiry`}>
+                          {offering.messageForPricing ? "Message for pricing" : formatOfferingPrice(offering)}
+                        </Link>
+                      </Button>
                     </div>
                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
                       {offering.description}
@@ -401,7 +402,7 @@ export default async function VendorDashboardPage() {
                     ))}
                   </div>
                   <Button asChild variant="secondary" className="w-full">
-                    <Link href={`/offering/${offering.id}`}>
+                    <Link href={`/offering/${offering.id}#inquiry`}>
                       Inquiry preview
                       <ArrowUpRight className="h-4 w-4" />
                     </Link>
@@ -704,9 +705,9 @@ function VendorOnboardingGate() {
           <div className="overflow-hidden rounded-[2rem] border border-white bg-white">
             <div className="h-56 bg-[linear-gradient(135deg,#f1c8c3,#f7efe8_48%,#e9b7b3)]" />
             <div className="grid gap-px bg-[#eadbd8] sm:grid-cols-4">
-              {["Parties Served", "Reviews", "Saves", "Bookings"].map((item, index) => (
+              {["Parties Served", "Reviews", "Repeat Clients", "Profile Views"].map((item, index) => (
                 <div key={item} className="bg-white p-5">
-                  <div className="text-3xl font-semibold">{["128", "42", "89", "64"][index]}</div>
+                  <div className="text-3xl font-semibold">{["128", "42", "31", "2.4k"][index]}</div>
                   <div className="mt-1 text-sm text-muted-foreground">{item}</div>
                 </div>
               ))}

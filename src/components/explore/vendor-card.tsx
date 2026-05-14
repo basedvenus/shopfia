@@ -21,11 +21,16 @@ type VendorCardProps = {
     rankingScore: { score: number; tierLabel: string } | null;
     startingPriceCents: number | null;
     categories: { category: { name: string } }[];
+    offerings: { category: { name: string } }[];
   };
 };
 
 export function VendorCard({ vendor }: VendorCardProps) {
   const image = vendor.coverPhoto ?? vendor.photos[0] ?? "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1000&q=80";
+  const categoryNames = unique([
+    ...vendor.categories.map((vc) => vc.category.name),
+    ...vendor.offerings.map((offering) => offering.category.name)
+  ]);
 
   return (
     <Card className="overflow-hidden border-white/50 bg-white/90">
@@ -60,9 +65,9 @@ export function VendorCard({ vendor }: VendorCardProps) {
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          {vendor.categories.slice(0, 3).map((vc) => (
-            <Badge key={vc.category.name} variant="outline">
-              {displayCategoryName(vc.category.name)}
+          {categoryNames.slice(0, 3).map((category) => (
+            <Badge key={category} variant="outline">
+              {displayCategoryName(category)}
             </Badge>
           ))}
         </div>
@@ -70,11 +75,11 @@ export function VendorCard({ vendor }: VendorCardProps) {
           <p className="text-sm">
             {vendor.startingPriceCents ? "From " : ""}
             <span className="font-semibold">
-              {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Message for pricing"}
+              {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Custom pricing"}
             </span>
           </p>
           <Link href={`/vendor/profile/${vendor.slug}`}>
-            <Button size="sm">View</Button>
+            <Button size="sm">{vendor.startingPriceCents ? "View" : "Message for pricing"}</Button>
           </Link>
         </div>
       </CardContent>
@@ -84,4 +89,8 @@ export function VendorCard({ vendor }: VendorCardProps) {
 
 function displayCategoryName(name: string) {
   return name === "Party Favors and Gifts" ? "Party Favors & Gifts" : name;
+}
+
+function unique(values: string[]) {
+  return [...new Set(values.filter(Boolean))];
 }

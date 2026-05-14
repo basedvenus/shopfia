@@ -331,6 +331,8 @@ export async function upsertOfferingAction(formData: FormData) {
 
   revalidatePath("/vendor/dashboard");
   revalidatePath(`/vendor/profile/${vendor.slug}`);
+  revalidatePath(`/offering/${offeringId}`);
+  revalidatePath("/listings");
   revalidatePath("/explore");
   revalidatePath("/categories");
   redirect("/vendor/dashboard#services");

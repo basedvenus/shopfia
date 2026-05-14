@@ -36,7 +36,7 @@ export default async function OfferingPage({ params }: { params: { id: string } 
     }
   });
 
-  if (!offering || !offering.active || !offering.vendor.verified) return notFound();
+  if (!offering || !offering.active) return notFound();
   const photos = offering.photos.length > 0 ? offering.photos : [fallbackImage];
   const priceLabel = formatOfferingPrice(offering);
   const packages = getPricedOptions(offering.variantsJson);
@@ -113,6 +113,11 @@ export default async function OfferingPage({ params }: { params: { id: string } 
                 <div className="mt-2 text-xl font-semibold">
                   {priceLabel}
                 </div>
+                {offering.messageForPricing ? (
+                  <Button asChild size="sm" className="mt-3">
+                    <a href="#inquiry">Message for pricing</a>
+                  </Button>
+                ) : null}
               </div>
               <div className="rounded-[1.3rem] bg-muted/70 p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
@@ -214,7 +219,7 @@ export default async function OfferingPage({ params }: { params: { id: string } 
       </section>
 
       <aside className="space-y-4">
-        <Card className="border-white/70 bg-white/95">
+        <Card id="inquiry" className="border-white/70 bg-white/95">
           <CardHeader>
             <CardTitle>
               {priceLabel}
