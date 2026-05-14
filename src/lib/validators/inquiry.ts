@@ -19,7 +19,7 @@ export const publicInquirySchema = z.object({
   email: z.string().trim().email().max(200).optional().or(z.literal("")),
   phone: z.string().trim().max(40).optional().or(z.literal("")),
   eventDate: z.string().trim().min(1, "Event date is required."),
-  eventLocation: z.string().trim().max(240).optional().or(z.literal("")),
+  eventLocation: z.string().trim().min(2, "Event location is required.").max(240),
   formattedAddress: z.string().trim().max(240).optional().or(z.literal("")),
   locationCity: z.string().trim().max(80).optional().or(z.literal("")),
   locationState: z.string().trim().max(40).optional().or(z.literal("")),
