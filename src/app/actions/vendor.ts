@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { CategoryAudience, OffsiteAdsTier, UserRole } from "@prisma/client";
 import { requireRole, requireSession, requireVerifiedVendorProfile } from "@/lib/auth/guards";
 import { createListing, ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
@@ -140,11 +141,12 @@ export async function upsertVendorProfileAction(formData: FormData) {
   revalidatePath("/onboarding");
   revalidatePath("/vendor/dashboard");
   revalidatePath(`/vendor/profile/${vendor.slug}`);
+  redirect("/vendor/dashboard");
 }
 
 export async function upsertOfferingAction(formData: FormData) {
   const { db } = await import("@/lib/db");
-  const session = await requireRole([UserRole.VENDOR, UserRole.ADMIN]);
+  const session = await requireSession();
   const vendor = await db.vendorProfile.findUnique({
     where: { userId: session.user.id }
   });
@@ -259,6 +261,7 @@ export async function upsertOfferingAction(formData: FormData) {
   revalidatePath(`/vendor/profile/${vendor.slug}`);
   revalidatePath("/explore");
   revalidatePath("/categories");
+  redirect("/vendor/dashboard#services");
 }
 
 export async function updateSellerMarketplaceSettingsAction(formData: FormData) {

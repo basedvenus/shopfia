@@ -68,7 +68,6 @@ export default async function RootLayout({
 
     if (dbUser) {
       initialProfile = serializeUserProfile(dbUser);
-      console.log("[profile] layout rehydrated", initialProfile);
     }
   }
 

@@ -160,16 +160,25 @@ export default async function VendorOnboardingPage() {
           <CardTitle>2. Add First Offering</CardTitle>
         </CardHeader>
         <CardContent>
-          <OfferingSetupForm
-            categories={sortedCategories.map((category) => ({
-              id: category.id,
-              name: displayCategoryName(category.name)
-            }))}
-            eventCategories={sortedEventCategories.map((category) => ({
-              id: category.id,
-              name: category.name
-            }))}
-          />
+          {existingVendor ? (
+            <OfferingSetupForm
+              categories={sortedCategories.map((category) => ({
+                id: category.id,
+                name: displayCategoryName(category.name)
+              }))}
+              eventCategories={sortedEventCategories.map((category) => ({
+                id: category.id,
+                name: category.name
+              }))}
+            />
+          ) : (
+            <div className="rounded-[1.5rem] border bg-[#fbf7f5] p-5">
+              <h3 className="font-semibold">Save your vendor profile first.</h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                Once your business profile is tied to your account, you will land in your vendor dashboard and can add offerings from there.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
