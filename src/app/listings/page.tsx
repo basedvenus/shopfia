@@ -1,9 +1,13 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+const fallbackListingImage =
+  "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1200&q=80";
 
 export default async function ListingsPage() {
   const { db } = await import("@/lib/db");
@@ -34,6 +38,8 @@ export default async function ListingsPage() {
               slug: true,
               name: true,
               city: true,
+              coverPhoto: true,
+              photos: true,
               state: true
             }
           }
@@ -66,9 +72,28 @@ export default async function ListingsPage() {
           {listings.map((listing) => {
             const vendor = listing.shop?.vendorProfile;
             if (!vendor) return null;
+            const image =
+              listing.offering?.photos[0] ??
+              vendor.coverPhoto ??
+              vendor.photos[0] ??
+              fallbackListingImage;
 
             return (
               <Card key={listing.id} className="overflow-hidden border-white/50 bg-white/90">
+                <div className="relative aspect-[4/3] bg-[#f8ece9]">
+                  <Image
+                    src={image}
+                    alt={listing.title}
+                    fill
+                    sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute left-3 top-3">
+                    <Badge className="bg-white/85 backdrop-blur" variant="outline">
+                      {listing.category}
+                    </Badge>
+                  </div>
+                </div>
                 <CardContent className="space-y-4 p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -78,7 +103,6 @@ export default async function ListingsPage() {
                         {vendor.state ? `, ${vendor.state}` : ""}
                       </p>
                     </div>
-                    <Badge variant="outline">{listing.category}</Badge>
                   </div>
 
                   <p className="line-clamp-3 text-sm text-muted-foreground">
