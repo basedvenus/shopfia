@@ -1,10 +1,9 @@
-import type { ReactNode } from "react";
 import { CategoryAudience, UserRole } from "@prisma/client";
 import { upsertVendorProfileAction } from "@/app/actions/vendor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { FieldShell, SubmitButton, ValidatedForm } from "@/components/ui/validated-form";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { OfferingSetupForm } from "@/components/vendor/offering-setup-form";
 import { ServiceAreaPicker } from "@/components/vendor/service-area-picker";
@@ -14,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function VendorOnboardingPage({
   searchParams
 }: {
-  searchParams?: { profileError?: string };
+  searchParams?: { offeringError?: string; profileError?: string };
 }) {
   const [{ requireRole }, { db }] = await Promise.all([
     import("@/lib/auth/guards"),
@@ -56,11 +55,15 @@ export default async function VendorOnboardingPage({
               {searchParams.profileError}
             </div>
           ) : null}
-          <form action={upsertVendorProfileAction} className="grid gap-4 md:grid-cols-2">
+          <ValidatedForm
+            action={upsertVendorProfileAction}
+            className="grid gap-4 md:grid-cols-2"
+            errorIntro="Your vendor profile is almost there. Fix the highlighted field and save again."
+          >
             <div>
               <ImageUploadField
                 name="logoUrl"
-                label="Vendor logo"
+                label="Vendor logo (Optional)"
                 defaultValue={existingVendor?.logoUrl}
                 rounded="full"
                 helperText="Start with the mark hosts will remember."
@@ -69,47 +72,63 @@ export default async function VendorOnboardingPage({
             <div>
               <ImageUploadField
                 name="photoUrls"
-                label="Cover/banner image"
+                label="Cover/banner image (Optional)"
                 defaultValue={existingVendor?.coverPhoto ?? existingVendor?.photos[0]}
                 helperText="Optional. This becomes the hero image on your storefront."
               />
             </div>
-            <Field label="Business Name">
-              <Input name="name" placeholder="Solano Flora & Table" defaultValue={existingVendor?.name} required />
-            </Field>
-            <Field label="Vendor Username">
+            <FieldShell
+              label="Business Name"
+              required
+              helperText="Use the public name hosts will recognize on your storefront."
+            >
+              <Input
+                name="name"
+                placeholder="Solano Flora & Table"
+                defaultValue={existingVendor?.name}
+                data-required-label="Business Name"
+                required
+              />
+            </FieldShell>
+            <FieldShell label="Vendor Username" optional helperText="Example: solanoflora. This helps shape your public shop link.">
               <Input name="username" placeholder="solanoflora" defaultValue={existingVendor?.username ?? existingVendor?.slug ?? ""} />
-            </Field>
-            <Field label="Instagram Link">
+            </FieldShell>
+            <FieldShell label="Instagram Link" optional>
               <Input name="instagramUrl" type="url" placeholder="https://instagram.com/yourbusiness" defaultValue={existingVendor?.instagramUrl ?? ""} />
-            </Field>
-            <Field label="TikTok Link">
+            </FieldShell>
+            <FieldShell label="TikTok Link" optional>
               <Input name="tiktokUrl" type="url" placeholder="https://tiktok.com/@yourbusiness" defaultValue={existingVendor?.tiktokUrl ?? ""} />
-            </Field>
-            <Field label="Website (optional)">
+            </FieldShell>
+            <FieldShell label="Website" optional>
               <Input name="website" type="url" placeholder="https://yourbusiness.com" defaultValue={existingVendor?.website ?? ""} />
-            </Field>
-            <Field label="City">
-              <Input name="city" placeholder="Fairfield" defaultValue={existingVendor?.city} required />
-            </Field>
-            <Field label="State">
+            </FieldShell>
+            <FieldShell label="City" required helperText="Enter the main city your business serves.">
+              <Input
+                name="city"
+                placeholder="Fairfield"
+                defaultValue={existingVendor?.city}
+                data-required-label="City"
+                required
+              />
+            </FieldShell>
+            <FieldShell label="State" optional>
               <Input name="state" placeholder="CA" defaultValue={existingVendor?.state ?? ""} />
-            </Field>
-            <Field label="Zip Code">
+            </FieldShell>
+            <FieldShell label="Zip Code" optional>
               <Input name="zipCode" placeholder="94533" defaultValue={existingVendor?.zipCode ?? ""} />
-            </Field>
+            </FieldShell>
             <div className="md:col-span-2">
-              <Field label="Business Description">
+              <FieldShell label="Business Description" optional helperText="A few warm details help hosts understand your style and specialties.">
                 <Textarea
                   name="bio"
                   placeholder="Describe your style, specialties, and the types of celebrations you love creating..."
                   defaultValue={existingVendor?.bio ?? ""}
                   className="min-h-[120px]"
                 />
-              </Field>
+              </FieldShell>
             </div>
             <div>
-              <Field label="Travel Radius">
+              <FieldShell label="Travel Radius" optional helperText="We default to 25 miles if you leave this as-is.">
                 <Input
                   name="serviceRadiusMiles"
                   type="number"
@@ -118,7 +137,7 @@ export default async function VendorOnboardingPage({
                   placeholder="25 miles"
                   defaultValue={existingVendor?.serviceRadiusMiles ?? 25}
                 />
-              </Field>
+              </FieldShell>
             </div>
             <div className="flex items-end">
               <label className="flex min-h-11 w-full items-center gap-2 rounded-2xl border bg-white px-3 py-3 text-sm">
@@ -134,17 +153,20 @@ export default async function VendorOnboardingPage({
               <ServiceAreaPicker defaultValue={existingVendor?.serviceAreaNotes} />
             </div>
             <div className="md:col-span-2">
-              <Field label="Booking Notes">
+              <FieldShell label="Booking Notes" optional>
                 <Textarea
                   name="availabilityNotes"
                   placeholder="Booking availability, contact preferences, travel notes, or lead time..."
                   defaultValue={existingVendor?.availabilityNotes ?? ""}
                   className="min-h-[90px]"
                 />
-              </Field>
+              </FieldShell>
             </div>
             <div className="md:col-span-2 rounded-[1.5rem] border p-4">
-              <label className="mb-3 block text-sm font-medium">Categories</label>
+              <label className="mb-1 block text-sm font-medium">Categories <span className="text-xs font-normal text-muted-foreground">Optional</span></label>
+              <p className="mb-3 text-xs leading-5 text-muted-foreground">
+                Pick categories now or add them later from your vendor dashboard.
+              </p>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {sortedCategories.map((category) => {
                   const checked = existingVendor?.categories.some((c) => c.categoryId === category.id);
@@ -158,9 +180,11 @@ export default async function VendorOnboardingPage({
               </div>
             </div>
             <div className="md:col-span-2">
-              <Button type="submit">Save vendor profile</Button>
+              <SubmitButton type="submit" pendingText="Saving vendor profile...">
+                Save vendor profile
+              </SubmitButton>
             </div>
-          </form>
+          </ValidatedForm>
         </CardContent>
       </Card>
 
@@ -169,6 +193,11 @@ export default async function VendorOnboardingPage({
           <CardTitle>2. Add First Offering</CardTitle>
         </CardHeader>
         <CardContent>
+          {searchParams?.offeringError ? (
+            <div className="mb-4 rounded-[1.2rem] border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {searchParams.offeringError}
+            </div>
+          ) : null}
           {existingVendor ? (
             <OfferingSetupForm
               categories={sortedCategories.map((category) => ({
@@ -191,15 +220,6 @@ export default async function VendorOnboardingPage({
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function Field({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <label className="grid gap-2 text-sm font-medium">
-      {label}
-      {children}
-    </label>
   );
 }
 

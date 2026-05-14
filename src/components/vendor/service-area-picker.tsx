@@ -55,7 +55,12 @@ export function ServiceAreaPicker({ defaultValue }: { defaultValue?: string | nu
 
   return (
     <div className="grid gap-2" ref={wrapperRef}>
-      <label className="text-sm font-medium">Service Areas</label>
+      <label className="text-sm font-medium">
+        Service Areas <span className="text-xs font-normal text-muted-foreground">Optional</span>
+      </label>
+      <p className="text-xs leading-5 text-muted-foreground">
+        Add nearby cities or neighborhoods so hosts know where you travel.
+      </p>
       <div className="relative">
         <input
           value={query}

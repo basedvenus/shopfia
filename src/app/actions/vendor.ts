@@ -45,8 +45,27 @@ function redirectWithVendorProfileError(message: string): never {
   redirect(`/onboarding?profileError=${encodeURIComponent(message)}#profile`);
 }
 
+function redirectWithOfferingError(message: string): never {
+  redirect(`/onboarding?offeringError=${encodeURIComponent(message)}#services`);
+}
+
 function isUniqueConstraintError(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
+function firstValidationMessage(
+  error: { issues: Array<{ path: Array<string | number>; message: string }> },
+  labels: Record<string, string>
+) {
+  const issue = error.issues[0];
+  const field = String(issue?.path[0] ?? "");
+  const label = labels[field];
+
+  if (label && /required|expected|received|too_small|required/i.test(issue?.message ?? "")) {
+    return `${label} is required`;
+  }
+
+  return label ? `${label}: ${issue.message}` : issue?.message ?? "Check the required fields and try again.";
 }
 
 export async function upsertVendorProfileAction(formData: FormData) {
@@ -77,7 +96,18 @@ export async function upsertVendorProfileAction(formData: FormData) {
   });
   if (!result.success) {
     console.error("[vendor] profile validation failed", result.error.flatten());
-    redirectWithVendorProfileError("Check the required profile fields and try saving again.");
+    redirectWithVendorProfileError(
+      firstValidationMessage(result.error, {
+        name: "Business Name",
+        city: "City",
+        slug: "Vendor Username",
+        username: "Vendor Username",
+        website: "Website",
+        instagramUrl: "Instagram Link",
+        tiktokUrl: "TikTok Link",
+        photoUrls: "Cover/banner image"
+      })
+    );
   }
   const parsed = result.data;
 
@@ -180,7 +210,7 @@ export async function upsertOfferingAction(formData: FormData) {
   });
   if (!vendor) throw new Error("Create vendor profile first");
 
-  const parsed = offeringSchema.parse({
+  const result = offeringSchema.safeParse({
     id: formData.get("id") || undefined,
     type: formData.get("type"),
     title: formData.get("title"),
@@ -200,13 +230,27 @@ export async function upsertOfferingAction(formData: FormData) {
     allowInstantBook: formData.get("allowInstantBook") === "on",
     autoRenewListing: formData.get("autoRenewListing") === "on"
   });
+  if (!result.success) {
+    console.error("[vendor] offering validation failed", result.error.flatten());
+    redirectWithOfferingError(
+      firstValidationMessage(result.error, {
+        type: "Offering Type",
+        title: "Offering Title",
+        description: "Description",
+        categoryId: "Service Category",
+        photos: "Offering photo",
+        basePriceCents: "Starting price"
+      })
+    );
+  }
+  const parsed = result.data;
 
   const offeringCategory = await db.category.findFirst({
     where: { id: parsed.categoryId, audience: CategoryAudience.VENDOR },
     select: { id: true, name: true }
   });
   if (!offeringCategory) {
-    throw new Error("Offering category must be a vendor category");
+    redirectWithOfferingError("Service Category is required");
   }
 
   const uniqueEventCategoryIds = [...new Set(parsed.eventCategoryIds)];
@@ -216,7 +260,7 @@ export async function upsertOfferingAction(formData: FormData) {
       })
     : 0;
   if (validEventCategoryCount !== uniqueEventCategoryIds.length) {
-    throw new Error("Event types must be Shop by Event categories");
+    redirectWithOfferingError("One or more selected event types are invalid.");
   }
 
   const payload = {

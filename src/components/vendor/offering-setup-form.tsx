@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { upsertOfferingAction } from "@/app/actions/vendor";
@@ -8,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { FieldShell, SubmitButton, ValidatedForm } from "@/components/ui/validated-form";
 
 type CategoryOption = {
   id: string;
@@ -45,7 +45,11 @@ export function OfferingSetupForm({
   const generatedSlug = useMemo(() => slugify(title), [title]);
 
   return (
-    <form action={upsertOfferingAction} className="space-y-6">
+    <ValidatedForm
+      action={upsertOfferingAction}
+      className="space-y-6"
+      errorIntro="Your offering is almost ready. Fix the highlighted field and save again."
+    >
       <input type="hidden" name="slug" value={generatedSlug || "new-offering"} />
 
       <section className="grid gap-4 md:grid-cols-[0.8fr_1.2fr]">
@@ -63,28 +67,37 @@ export function OfferingSetupForm({
         </div>
 
         <div className="grid gap-3">
-          <label className="grid gap-2 text-sm font-medium">
-            What are you listing?
-            <select name="type" className="h-11 rounded-2xl border bg-white px-3 text-sm">
+          <FieldShell label="Offering Type" required helperText="Choose the closest fit for what hosts are booking or buying.">
+            <select
+              name="type"
+              className="h-11 rounded-2xl border bg-white px-3 text-sm"
+              data-required-label="Offering Type"
+              required
+            >
               <option value="SERVICE">Service</option>
               <option value="PRODUCT">Physical Product</option>
               <option value="CUSTOM_ORDER">Custom Order</option>
             </select>
-          </label>
+          </FieldShell>
 
-          <Field label="Offering title">
+          <FieldShell label="Offering Title" required helperText="Example: Luxury Balloon Garland or Custom Cookie Set.">
             <Input
               name="title"
               placeholder="Luxury balloon garland, custom cookie set, floral tablescape..."
               value={title}
               onChange={(event) => setTitle(event.target.value)}
+              data-required-label="Offering Title"
               required
             />
-          </Field>
+          </FieldShell>
 
-          <label className="grid gap-2 text-sm font-medium">
-            Service category
-            <select name="categoryId" className="h-11 rounded-2xl border bg-white px-3 text-sm" required>
+          <FieldShell label="Service Category" required helperText="This controls where your listing appears under Shop by Category.">
+            <select
+              name="categoryId"
+              className="h-11 rounded-2xl border bg-white px-3 text-sm"
+              data-required-label="Service Category"
+              required
+            >
               <option value="">Choose the closest category</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -92,13 +105,13 @@ export function OfferingSetupForm({
                 </option>
               ))}
             </select>
-          </label>
+          </FieldShell>
 
           <div className="rounded-[1.4rem] border bg-white p-4">
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium">Event types</label>
               <p className="text-sm leading-6 text-muted-foreground">
-                Pick every event this offering fits. These tags power Shop by Event feeds automatically.
+                Optional. Pick every event this offering fits. These tags power Shop by Event feeds automatically.
               </p>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -114,26 +127,27 @@ export function OfferingSetupForm({
             </div>
           </div>
 
-          <Field label="Description">
+          <FieldShell label="Description" required helperText="Tell hosts what is included, your style, and what makes this offering special.">
             <Textarea
               name="description"
               placeholder="Describe the style, what is included, and what kinds of parties this is best for..."
               className="min-h-[130px]"
+              data-required-label="Description"
               required
             />
-          </Field>
+          </FieldShell>
         </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
         <ImageUploadField
           name="photos"
-          label="Cover photo"
+          label="Cover photo (Optional)"
           helperText="Use a real example or styled image that represents this offering."
         />
         <ImageUploadField
           name="photos"
-          label="Detail photo"
+          label="Detail photo (Optional)"
           helperText="Optional closeup, setup shot, or inspiration image."
         />
       </section>
@@ -159,9 +173,9 @@ export function OfferingSetupForm({
 
         {!messageForPricing ? (
           <div className="mt-4 max-w-sm">
-            <Field label="Starting price">
+            <FieldShell label="Starting price" optional>
               <Input name="startingPrice" inputMode="decimal" placeholder="$250 (optional)" />
-            </Field>
+            </FieldShell>
           </div>
         ) : (
           <div className="mt-4 rounded-[1.2rem] bg-[#fbf7f5] p-4 text-sm text-muted-foreground">
@@ -253,17 +267,10 @@ export function OfferingSetupForm({
         </div>
       </section>
 
-      <Button type="submit" size="lg">Save offering</Button>
-    </form>
-  );
-}
-
-function Field({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <label className="grid gap-2 text-sm font-medium">
-      {label}
-      {children}
-    </label>
+      <SubmitButton type="submit" size="lg" pendingText="Saving offering...">
+        Save offering
+      </SubmitButton>
+    </ValidatedForm>
   );
 }
 
