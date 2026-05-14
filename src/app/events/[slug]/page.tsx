@@ -223,7 +223,14 @@ export default async function EventPage({
                 </div>
                 {isOwner && event ? (
                   <Link href={`/events/${event.slug}?edit=1`}>
-                    <Button type="button" size="sm" variant="secondary">Edit story</Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="border-white/80 bg-white text-foreground shadow-soft hover:bg-white/90"
+                    >
+                      Edit party
+                    </Button>
                   </Link>
                 ) : null}
                 {session?.user?.id && session.user.id !== host.id ? (
