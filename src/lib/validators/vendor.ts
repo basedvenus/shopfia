@@ -19,9 +19,7 @@ export const vendorOnboardingSchema = z.object({
     .string()
     .min(3)
     .max(40)
-    .regex(/^[a-z0-9._-]+$/)
-    .optional()
-    .or(z.literal("")),
+    .regex(/^[a-z0-9._-]+$/),
   website: z.string().url().optional().or(z.literal("")),
   instagramUrl: z.string().url().optional().or(z.literal("")),
   tiktokUrl: z.string().url().optional().or(z.literal("")),

@@ -78,7 +78,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
   const result = vendorOnboardingSchema.safeParse({
     name: formData.get("name"),
     slug: formData.get("slug") || slugify(vendorUsername || formData.get("name")),
-    username: vendorUsername || undefined,
+    username: vendorUsername,
     website: formData.get("website") || undefined,
     instagramUrl: formData.get("instagramUrl") || undefined,
     tiktokUrl: formData.get("tiktokUrl") || undefined,

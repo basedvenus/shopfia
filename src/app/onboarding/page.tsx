@@ -90,8 +90,14 @@ export default async function VendorOnboardingPage({
                 required
               />
             </FieldShell>
-            <FieldShell label="Vendor Username" optional helperText="Example: solanoflora. This helps shape your public shop link.">
-              <Input name="username" placeholder="solanoflora" defaultValue={existingVendor?.username ?? existingVendor?.slug ?? ""} />
+            <FieldShell label="Vendor Username" required helperText="Example: solanoflora. This becomes part of your public storefront identity.">
+              <Input
+                name="username"
+                placeholder="solanoflora"
+                defaultValue={existingVendor?.username ?? existingVendor?.slug ?? ""}
+                data-required-label="Vendor Username"
+                required
+              />
             </FieldShell>
             <FieldShell label="Instagram Link" optional>
               <Input name="instagramUrl" type="url" placeholder="https://instagram.com/yourbusiness" defaultValue={existingVendor?.instagramUrl ?? ""} />
