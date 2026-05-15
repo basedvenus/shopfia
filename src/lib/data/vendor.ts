@@ -1,7 +1,15 @@
 export async function getVendorProfileBySlug(slug: string) {
   const { db } = await import("@/lib/db");
+  const normalizedSlug = decodeURIComponent(slug).trim();
+
   return db.vendorProfile.findFirst({
-    where: { slug, verified: true },
+    where: {
+      OR: [
+        { slug: normalizedSlug },
+        { username: normalizedSlug },
+        { id: normalizedSlug }
+      ]
+    },
     include: {
       user: {
         select: {

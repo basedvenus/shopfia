@@ -42,10 +42,16 @@ export default async function EventPage({
   searchParams?: { edit?: string };
 }) {
   const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
-  const fallback = fallbackEvents[params.slug as keyof typeof fallbackEvents];
+  const requestedSlug = decodeURIComponent(params.slug).trim();
+  const fallback = fallbackEvents[requestedSlug as keyof typeof fallbackEvents];
   const event = await db.partyEvent
-    .findUnique({
-      where: { slug: params.slug },
+    .findFirst({
+      where: {
+        OR: [
+          { slug: requestedSlug },
+          { id: requestedSlug }
+        ]
+      },
       include: {
         user: { select: { id: true, name: true, username: true, image: true } },
         taggedVendors: true,
