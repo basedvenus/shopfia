@@ -13,9 +13,11 @@ import {
 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
+import { ProfileBadge } from "@/components/badges/profile-badge";
 import { ListingInquiryForm } from "@/components/inquiries/listing-inquiry-form";
 import { Badge } from "@/components/ui/badge";
 import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
+import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -25,24 +27,34 @@ const fallbackImage =
 
 export default async function OfferingPage({ params }: { params: { id: string } }) {
   const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
-  const offering = await db.offering.findUnique({
-    where: { id: params.id },
-    include: {
-      vendor: {
-        include: {
-          sellerRatingAggregate: true,
-          rankingScore: true
-        }
-      },
-      category: true,
-      eventCategories: { include: { category: true } },
-      listing: {
-        select: {
-          id: true
+  const [offering, originalMemberCutoff] = await Promise.all([
+    db.offering.findUnique({
+      where: { id: params.id },
+      include: {
+        vendor: {
+          include: {
+            user: {
+              select: {
+                createdAt: true,
+                email: true,
+                username: true
+              }
+            },
+            sellerRatingAggregate: true,
+            rankingScore: true
+          }
+        },
+        category: true,
+        eventCategories: { include: { category: true } },
+        listing: {
+          select: {
+            id: true
+          }
         }
       }
-    }
-  });
+    }),
+    getOriginalMemberCutoffDate(db)
+  ]);
 
   if (!offering || !offering.active) return notFound();
 
@@ -63,6 +75,7 @@ export default async function OfferingPage({ params }: { params: { id: string } 
   ).toFixed(1);
   const reviewCount =
     offering.vendor.sellerRatingAggregate?.totalReviews ?? offering.vendor.reviewCount;
+  const vendorBadge = getProfileBadge(offering.vendor.user, originalMemberCutoff, { vendorContext: true });
   const eventTags = [
     offering.category.name,
     ...offering.eventCategories.map((eventCategory) => eventCategory.category.name),
@@ -140,6 +153,7 @@ export default async function OfferingPage({ params }: { params: { id: string } 
             <Badge className="rounded-full px-5 py-2 text-sm font-medium" variant="accent">
               Verified Vendor
             </Badge>
+            <ProfileBadge badge={vendorBadge} />
           </div>
 
           <div className="space-y-5">
@@ -196,7 +210,9 @@ export default async function OfferingPage({ params }: { params: { id: string } 
                 <p className="flex gap-2">
                   <MapPin className="mt-1 h-4 w-4 shrink-0 text-primary" />
                   <span>
-                    Sold by <span className="font-medium text-foreground">{offering.vendor.name}</span> in{" "}
+                    Sold by <span className="font-medium text-foreground">{offering.vendor.name}</span>{" "}
+                    <ProfileBadge badge={vendorBadge} className="mx-1 align-middle" />
+                    in{" "}
                     {offering.vendor.city}
                     {offering.vendor.state ? `, ${offering.vendor.state}` : ""}
                   </span>

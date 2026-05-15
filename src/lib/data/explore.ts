@@ -229,6 +229,13 @@ export async function getExploreData(input: Record<string, string | string[] | u
       take: 30,
       orderBy,
       include: {
+        user: {
+          select: {
+            createdAt: true,
+            email: true,
+            username: true
+          }
+        },
         sellerRatingAggregate: true,
         rankingScore: true,
         categories: { include: { category: true } },

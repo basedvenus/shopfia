@@ -2,9 +2,11 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { Heart, MapPin, Tags } from "lucide-react";
 import { CroppedImage } from "@/components/ui/cropped-image";
+import { ProfileBadge } from "@/components/badges/profile-badge";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { db } from "@/lib/db";
 import { normalizeImageCrop } from "@/lib/image-crop";
+import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { getSafeProfileImage } from "@/lib/profile-image";
 
 export const dynamic = "force-dynamic";
@@ -40,13 +42,15 @@ export default async function PartiesPage({
 }: {
   searchParams?: { feed?: string };
 }) {
-  const session = await auth();
+  const [session, originalMemberCutoff] = await Promise.all([auth(), getOriginalMemberCutoffDate(db)]);
   const selectedFeed = getSelectedFeed(searchParams?.feed);
   const parties = await db.partyEvent.findMany({
     include: {
       user: {
         select: {
           id: true,
+          createdAt: true,
+          email: true,
           image: true,
           name: true,
           username: true
@@ -149,6 +153,7 @@ export default async function PartiesPage({
               const vendors = getUniqueVendors(party);
               const hostImage = getSafeProfileImage(party.user.image);
               const hostName = party.user.name ?? party.user.username ?? "ShopFia host";
+              const hostBadge = getProfileBadge(party.user, originalMemberCutoff);
               const tall = index % 5 === 0 || index % 7 === 3;
 
               return (
@@ -193,6 +198,7 @@ export default async function PartiesPage({
                           </span>
                         )}
                         <span className="truncate text-sm text-muted-foreground">{hostName}</span>
+                        <ProfileBadge badge={hostBadge} />
                       </div>
                       <span className="shrink-0 rounded-full bg-[#fff7f4] px-3 py-1 text-xs text-muted-foreground">
                         {party.theme ?? "Party story"}

@@ -4,7 +4,9 @@ import { MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ProfileBadge } from "@/components/badges/profile-badge";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
+import { getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
 
 type VendorCardProps = {
@@ -21,14 +23,21 @@ type VendorCardProps = {
     reviewCount: number;
     rankingScore: { score: number; tierLabel: string } | null;
     startingPriceCents: number | null;
+    user: {
+      createdAt: Date | string;
+      email: string | null;
+      username: string | null;
+    };
     categories: { category: { name: string } }[];
     offerings: { category: { name: string } }[];
   };
   isSaved?: boolean;
+  originalMemberCutoff?: Date | string | null;
 };
 
-export function VendorCard({ isSaved = false, vendor }: VendorCardProps) {
+export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendor }: VendorCardProps) {
   const image = vendor.coverPhoto ?? vendor.photos[0] ?? "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1000&q=80";
+  const profileBadge = getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true });
   const categoryNames = unique([
     ...vendor.categories.map((vc) => vc.category.name),
     ...vendor.offerings.map((offering) => offering.category.name)
@@ -49,7 +58,10 @@ export function VendorCard({ isSaved = false, vendor }: VendorCardProps) {
       <CardContent className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="line-clamp-1 font-semibold">{vendor.name}</h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="line-clamp-1 font-semibold">{vendor.name}</h3>
+              <ProfileBadge badge={profileBadge} />
+            </div>
             <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
               <MapPin className="h-3.5 w-3.5" />
               <span>

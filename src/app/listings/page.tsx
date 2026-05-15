@@ -2,8 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { ProfileBadge } from "@/components/badges/profile-badge";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
+import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
 import { auth } from "@/auth";
 
@@ -14,7 +16,8 @@ const fallbackListingImage =
 
 export default async function ListingsPage() {
   const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
-  const listings = await db.listing.findMany({
+  const [listings, originalMemberCutoff] = await Promise.all([
+    db.listing.findMany({
     where: {
       status: "ACTIVE",
       shop: {
@@ -44,7 +47,14 @@ export default async function ListingsPage() {
               city: true,
               coverPhoto: true,
               photos: true,
-              state: true
+              state: true,
+              user: {
+                select: {
+                  createdAt: true,
+                  email: true,
+                  username: true
+                }
+              }
             }
           }
         }
@@ -52,7 +62,9 @@ export default async function ListingsPage() {
     },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     take: 48
-  });
+    }),
+    getOriginalMemberCutoffDate(db)
+  ]);
   const savedOfferingIds = session?.user?.id
     ? new Set(
         (
@@ -85,6 +97,7 @@ export default async function ListingsPage() {
           {listings.map((listing) => {
             const vendor = listing.shop?.vendorProfile;
             if (!vendor) return null;
+            const vendorBadge = getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true });
             const image =
               listing.offering?.photos[0] ??
               vendor.coverPhoto ??
@@ -130,10 +143,13 @@ export default async function ListingsPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h2 className="font-semibold">{listing.title}</h2>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {vendor.name} · {vendor.city}
-                        {vendor.state ? `, ${vendor.state}` : ""}
-                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        <span>
+                          {vendor.name} · {vendor.city}
+                          {vendor.state ? `, ${vendor.state}` : ""}
+                        </span>
+                        <ProfileBadge badge={vendorBadge} />
+                      </div>
                     </div>
                   </div>
 

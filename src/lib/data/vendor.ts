@@ -13,7 +13,10 @@ export async function getVendorProfileBySlug(slug: string) {
     include: {
       user: {
         select: {
-          id: true
+          id: true,
+          createdAt: true,
+          email: true,
+          username: true
         }
       },
       sellerRatingAggregate: true,
@@ -30,7 +33,7 @@ export async function getVendorProfileBySlug(slug: string) {
       reviews: {
         include: {
           buyer: {
-            select: { id: true, name: true, image: true }
+            select: { id: true, createdAt: true, email: true, name: true, username: true, image: true }
           },
           response: true
         },
@@ -41,6 +44,8 @@ export async function getVendorProfileBySlug(slug: string) {
         include: {
           user: {
             select: {
+              createdAt: true,
+              email: true,
               name: true,
               username: true,
               image: true
@@ -61,6 +66,8 @@ export async function getVendorProfileBySlug(slug: string) {
             include: {
               user: {
                 select: {
+                  createdAt: true,
+                  email: true,
                   name: true,
                   username: true,
                   image: true

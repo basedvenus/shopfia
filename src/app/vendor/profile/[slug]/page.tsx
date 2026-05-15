@@ -14,12 +14,14 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
 import { createPublicInquiryAction } from "@/app/actions/inquiries";
+import { ProfileBadge } from "@/components/badges/profile-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { db } from "@/lib/db";
+import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorProfileBySlug } from "@/lib/data/vendor";
 
@@ -51,7 +53,11 @@ const demoTaggedEvents = {
 } as const;
 
 export default async function VendorProfilePage({ params }: { params: { slug: string } }) {
-  const [vendor, session] = await Promise.all([getVendorProfileBySlug(params.slug), auth()]);
+  const [vendor, session, originalMemberCutoff] = await Promise.all([
+    getVendorProfileBySlug(params.slug),
+    auth(),
+    getOriginalMemberCutoffDate(db)
+  ]);
   if (!vendor) return notFound();
 
   const gallery = vendor.photos.length > 0 ? vendor.photos : [fallbackImage];
@@ -105,6 +111,7 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
           photoCount: 0
         }));
   const currentUserId = session?.user?.id;
+  const vendorBadge = getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true });
   const isFollowingVendor =
     currentUserId && currentUserId !== vendor.user.id
       ? Boolean(
@@ -156,9 +163,12 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                     />
                   ) : null}
                   <div>
-                    <h1 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">
-                      {vendor.name}
-                    </h1>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">
+                        {vendor.name}
+                      </h1>
+                      <ProfileBadge badge={vendorBadge} light />
+                    </div>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/80">
                       {vendor.username ? <span>@{vendor.username}</span> : null}
                       {vendor.website ? (
@@ -480,7 +490,10 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              {vendor.reviews.map((review) => (
+              {vendor.reviews.map((review) => {
+                const reviewerBadge = getProfileBadge(review.buyer, originalMemberCutoff);
+
+                return (
                 <Card key={review.id} className="border-white/70 bg-white/95">
                   <CardContent className="space-y-4 p-5">
                     <div className="flex items-start justify-between gap-3">
@@ -489,7 +502,10 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                           {getInitials(review.buyer.name)}
                         </div>
                         <div>
-                          <div className="font-medium">{review.buyer.name ?? "Buyer"}</div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium">{review.buyer.name ?? "Buyer"}</span>
+                            <ProfileBadge badge={reviewerBadge} />
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {review.reviewerDisplayLabel} · {formatReviewDate(review.createdAt)}
                           </div>
@@ -511,7 +527,8 @@ export default async function VendorProfilePage({ params }: { params: { slug: st
                     ) : null}
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

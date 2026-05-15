@@ -4,20 +4,24 @@ import { notFound } from "next/navigation";
 import { Heart, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
+import { ProfileBadge } from "@/components/badges/profile-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { getSafeProfileImage } from "@/lib/profile-image";
+import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 
 export const dynamic = "force-dynamic";
 
 export default async function PublicProfilePage({ params }: { params: { username: string } }) {
   const username = params.username.replace(/^@/, "").toLowerCase();
-  const [profile, session] = await Promise.all([
+  const [profile, session, originalMemberCutoff] = await Promise.all([
     db.user.findUnique({
       where: { username },
       select: {
         id: true,
+        createdAt: true,
+        email: true,
         name: true,
         username: true,
         bio: true,
@@ -31,7 +35,8 @@ export default async function PublicProfilePage({ params }: { params: { username
         }
       }
     }),
-    auth()
+    auth(),
+    getOriginalMemberCutoffDate(db)
   ]);
 
   if (!profile) return notFound();
@@ -52,6 +57,7 @@ export default async function PublicProfilePage({ params }: { params: { username
       : false;
   const initials = getInitials(profile.name ?? profile.username);
   const profileImage = getSafeProfileImage(profile.image);
+  const profileBadge = getProfileBadge(profile, originalMemberCutoff);
 
   async function toggleFollow(formData: FormData) {
     "use server";
@@ -74,7 +80,10 @@ export default async function PublicProfilePage({ params }: { params: { username
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Party host profile</p>
-                <h1 className="text-3xl font-semibold tracking-tight">{profile.name ?? "ShopFia host"}</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-3xl font-semibold tracking-tight">{profile.name ?? "ShopFia host"}</h1>
+                  <ProfileBadge badge={profileBadge} />
+                </div>
                 <p className="text-sm font-medium text-muted-foreground">@{profile.username}</p>
                 {profile.bio ? (
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">{profile.bio}</p>

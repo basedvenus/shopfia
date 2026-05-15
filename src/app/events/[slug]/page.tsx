@@ -4,10 +4,12 @@ import { ArrowLeft, Heart, MapPin, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
 import { PartyEventForm, type EditablePartyEvent } from "@/components/parties/party-event-form";
+import { ProfileBadge } from "@/components/badges/profile-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { normalizeImageCrop } from "@/lib/image-crop";
+import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,7 @@ export default async function EventPage({
   searchParams?: { edit?: string };
 }) {
   const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
+  const originalMemberCutoff = await getOriginalMemberCutoffDate(db);
   const requestedSlug = decodeURIComponent(params.slug).trim();
   const fallback = fallbackEvents[requestedSlug as keyof typeof fallbackEvents];
   const event = await db.partyEvent
@@ -53,11 +56,22 @@ export default async function EventPage({
         ]
       },
       include: {
-        user: { select: { id: true, name: true, username: true, image: true } },
-        taggedVendors: true,
+        user: { select: { id: true, createdAt: true, email: true, name: true, username: true, image: true } },
+        taggedVendors: {
+          include: {
+            user: { select: { createdAt: true, email: true, username: true } }
+          }
+        },
         photos: {
           orderBy: { sortOrder: "asc" },
-          include: { taggedVendors: true, vendorRatings: true }
+          include: {
+            taggedVendors: {
+              include: {
+                user: { select: { createdAt: true, email: true, username: true } }
+              }
+            },
+            vendorRatings: true
+          }
         }
       }
     })
@@ -73,7 +87,8 @@ export default async function EventPage({
           city: true,
           state: true,
           coverPhoto: true,
-          logoUrl: true
+          logoUrl: true,
+          user: { select: { createdAt: true, email: true, username: true } }
         }
       })
     : [];
@@ -119,6 +134,7 @@ export default async function EventPage({
     ).values()
   );
   const host = event?.user ?? null;
+  const hostBadge = getProfileBadge(host, originalMemberCutoff);
   const hostHandle = host?.username ? `@${host.username}` : host?.name ?? "ShopFia host";
   const isOwner = Boolean(session?.user?.id && host?.id && session.user.id === host.id);
   const editRequested = searchParams?.edit === "1" || searchParams?.edit === "true";
@@ -233,6 +249,7 @@ export default async function EventPage({
                     <span className="font-semibold text-white">{host.name ?? "ShopFia host"}</span>
                   )}{" "}
                   <span className="text-white/70">{hostHandle}</span>
+                  <ProfileBadge badge={hostBadge} light className="ml-2 align-middle" />
                 </div>
                 {isOwner && event ? (
                   <Link href={`/events/${event.slug}?edit=1`}>
@@ -318,6 +335,7 @@ export default async function EventPage({
                     />
                     <div>
                       <p className="text-sm font-semibold">Vendor contribution by {vendor.name}</p>
+                      <ProfileBadge badge={getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true })} />
                       <p className="mt-1 text-xs text-muted-foreground">
                         {vendor.city}{vendor.state ? `, ${vendor.state}` : ""}
                       </p>
@@ -369,6 +387,7 @@ export default async function EventPage({
                     <h3 className="font-semibold">
                       {vendorIndex === 0 ? "Featured styling" : "Event detail"} by {vendor.name}
                     </h3>
+                    <ProfileBadge badge={getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true })} className="mt-2" />
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       Tagged photos give this vendor real context from a celebration, not just a static portfolio upload.
                     </p>

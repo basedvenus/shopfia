@@ -4,6 +4,7 @@ import { ExploreSearch } from "@/components/explore/explore-search";
 import { VendorCard } from "@/components/explore/vendor-card";
 import { getExploreData } from "@/lib/data/explore";
 import { auth } from "@/auth";
+import { getOriginalMemberCutoffDate } from "@/lib/profile-badges";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,12 @@ export default async function ExplorePage({
 }: {
   searchParams: Record<string, string | string[] | undefined>;
 }) {
-  const [data, session] = await Promise.all([getExploreData(searchParams), auth()]);
   const { db } = await import("@/lib/db");
+  const [data, session, originalMemberCutoff] = await Promise.all([
+    getExploreData(searchParams),
+    auth(),
+    getOriginalMemberCutoffDate(db)
+  ]);
   const savedVendorIds = session?.user?.id
     ? new Set(
         (
@@ -64,7 +69,12 @@ export default async function ExplorePage({
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {data.vendors.map((vendor) => (
-              <VendorCard key={vendor.id} vendor={vendor} isSaved={savedVendorIds.has(vendor.id)} />
+              <VendorCard
+                key={vendor.id}
+                vendor={vendor}
+                isSaved={savedVendorIds.has(vendor.id)}
+                originalMemberCutoff={originalMemberCutoff}
+              />
             ))}
           </div>
         )}
