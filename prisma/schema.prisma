@@ -142,6 +142,7 @@ model User {
   followers              Follow[]          @relation("Following")
   seller                 Seller?
   buyerFavorites         Favorite[]        @relation("BuyerFavorites")
+  favoriteCollections    FavoriteCollection[]
   buyerQuotes            QuoteRequest[]    @relation("BuyerQuoteRequests")
   buyerOrders            Order[]           @relation("BuyerOrders")
   vendorOrders           Order[]           @relation("VendorOrders")
@@ -291,6 +292,7 @@ model PartyEvent {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   photos        PartyPhoto[]
   taggedVendors VendorProfile[] @relation("PartyEventTaggedVendors")
+  favorites     Favorite[] @relation("PartyEventFavorites")
 
   @@index([locationLat, locationLng])
   @@index([googlePlaceId])
@@ -403,6 +405,7 @@ model Offering {
   orders           Order[]
   inquiries        Inquiry[]
   conversations    Conversation[]
+  favorites        Favorite[] @relation("OfferingFavorites")
 
   @@unique([vendorId, slug])
 }
@@ -815,13 +818,38 @@ model ReviewReminder {
 model Favorite {
   id         String         @id @default(cuid())
   buyerId     String
-  vendorId    String
+  vendorId    String?
+  partyEventId String?
+  offeringId   String?
+  collectionId String?
   createdAt   DateTime      @default(now())
 
   buyer       User          @relation("BuyerFavorites", fields: [buyerId], references: [id], onDelete: Cascade)
-  vendor      VendorProfile @relation("VendorFavorites", fields: [vendorId], references: [id], onDelete: Cascade)
+  vendor      VendorProfile? @relation("VendorFavorites", fields: [vendorId], references: [id], onDelete: Cascade)
+  partyEvent  PartyEvent?    @relation("PartyEventFavorites", fields: [partyEventId], references: [id], onDelete: Cascade)
+  offering    Offering?      @relation("OfferingFavorites", fields: [offeringId], references: [id], onDelete: Cascade)
+  collection  FavoriteCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
 
   @@unique([buyerId, vendorId])
+  @@unique([buyerId, partyEventId])
+  @@unique([buyerId, offeringId])
+  @@index([buyerId, createdAt])
+  @@index([collectionId])
+}
+
+model FavoriteCollection {
+  id          String     @id @default(cuid())
+  buyerId     String
+  name        String
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  buyer       User       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  favorites   Favorite[]
+
+  @@unique([buyerId, name])
+  @@index([buyerId, createdAt])
 }
 
 model Report {

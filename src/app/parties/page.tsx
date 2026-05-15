@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { Heart, MapPin, Tags } from "lucide-react";
 import { CroppedImage } from "@/components/ui/cropped-image";
+import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { db } from "@/lib/db";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { getSafeProfileImage } from "@/lib/profile-image";
@@ -86,6 +87,16 @@ export default async function PartiesPage({
         ).map((follow) => follow.followingId)
       )
     : new Set<string>();
+  const savedPartyIds = session?.user?.id
+    ? new Set(
+        (
+          await db.favorite.findMany({
+            where: { buyerId: session.user.id, partyEventId: { not: null } },
+            select: { partyEventId: true }
+          })
+        ).map((favorite) => favorite.partyEventId).filter(Boolean) as string[]
+      )
+    : new Set<string>();
   const visibleParties = getPartiesForFeed(parties, selectedFeed, followingIds);
 
   return (
@@ -141,14 +152,17 @@ export default async function PartiesPage({
               const tall = index % 5 === 0 || index % 7 === 3;
 
               return (
-                <Link
+                <article
                   key={party.id}
-                  href={`/events/${party.slug}`}
-                  className="group mb-4 block break-inside-avoid overflow-hidden rounded-[1.35rem] border border-white/75 bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"
+                  className="group relative mb-4 break-inside-avoid overflow-hidden rounded-[1.35rem] border border-white/75 bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"
                 >
+                  <Link href={`/events/${party.slug}`} className="absolute inset-0 z-10" aria-label={`Open ${party.title}`} />
                   <div className={`relative overflow-hidden bg-muted ${tall ? "aspect-[3/4]" : "aspect-[4/5]"}`}>
                     <CroppedImage src={image} alt="" crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                    <div className="absolute right-4 top-4 z-20">
+                      <FavoriteToggle targetType="party" targetId={party.id} isSaved={savedPartyIds.has(party.id)} />
+                    </div>
                     <div className="absolute left-4 top-4 flex flex-wrap gap-1.5">
                       {(party.tags.length ? party.tags : [party.theme].filter(Boolean))
                         .slice(0, 3)
@@ -186,8 +200,8 @@ export default async function PartiesPage({
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
-                        <Heart className="h-3.5 w-3.5" />
-                        Save
+                        <Heart className={`h-3.5 w-3.5 ${savedPartyIds.has(party.id) ? "fill-current text-primary" : ""}`} />
+                        {savedPartyIds.has(party.id) ? "Saved" : "Save"}
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
                         <Tags className="h-3.5 w-3.5" />
@@ -204,7 +218,7 @@ export default async function PartiesPage({
                       </p>
                     )}
                   </div>
-                </Link>
+                </article>
               );
             })
           : demoParties.map((party) => (

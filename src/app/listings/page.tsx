@@ -2,8 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
 import { formatCurrency } from "@/lib/utils";
+import { auth } from "@/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +13,7 @@ const fallbackListingImage =
   "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1200&q=80";
 
 export default async function ListingsPage() {
-  const { db } = await import("@/lib/db");
+  const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
   const listings = await db.listing.findMany({
     where: {
       status: "ACTIVE",
@@ -51,6 +53,16 @@ export default async function ListingsPage() {
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     take: 48
   });
+  const savedOfferingIds = session?.user?.id
+    ? new Set(
+        (
+          await db.favorite.findMany({
+            where: { buyerId: session.user.id, offeringId: { not: null } },
+            select: { offeringId: true }
+          })
+        ).map((favorite) => favorite.offeringId).filter(Boolean) as string[]
+      )
+    : new Set<string>();
 
   return (
     <div className="space-y-6">
@@ -84,7 +96,12 @@ export default async function ListingsPage() {
             const crop = normalizeImageCrop(offeringPhotoCrops[0]);
 
             return (
-              <Card key={listing.id} className="overflow-hidden border-white/50 bg-white/90">
+              <Card key={listing.id} className="group relative overflow-hidden border-white/50 bg-white/90 transition hover:-translate-y-0.5 hover:shadow-soft">
+                <Link
+                  href={listing.offering?.active ? `/offering/${listing.offering.id}` : `/vendor/profile/${vendor.slug}`}
+                  className="absolute inset-0 z-10"
+                  aria-label={`View ${listing.title}`}
+                />
                 <div className="relative aspect-[4/3] bg-[#f8ece9]">
                   <Image
                     src={image}
@@ -99,6 +116,15 @@ export default async function ListingsPage() {
                       {listing.category}
                     </Badge>
                   </div>
+                  {listing.offering?.id ? (
+                    <div className="absolute right-3 top-3 z-20">
+                      <FavoriteToggle
+                        targetType="offering"
+                        targetId={listing.offering.id}
+                        isSaved={savedOfferingIds.has(listing.offering.id)}
+                      />
+                    </div>
+                  ) : null}
                 </div>
                 <CardContent className="space-y-4 p-5">
                   <div className="flex items-start justify-between gap-3">
@@ -129,19 +155,19 @@ export default async function ListingsPage() {
 
                   <div className="flex gap-2">
                     {listing.offering?.active ? (
-                      <Link href={`/offering/${listing.offering.id}`} className="flex-1">
+                      <Link href={`/offering/${listing.offering.id}`} className="relative z-20 flex-1">
                         <Badge className="w-full justify-center py-2" variant="accent">
                           View Listing
                         </Badge>
                       </Link>
                     ) : (
-                      <Link href={`/vendor/profile/${vendor.slug}`} className="flex-1">
+                      <Link href={`/vendor/profile/${vendor.slug}`} className="relative z-20 flex-1">
                         <Badge className="w-full justify-center py-2" variant="accent">
                           View Listing
                         </Badge>
                       </Link>
                     )}
-                    <Link href={`/vendor/profile/${vendor.slug}`} className="flex-1">
+                    <Link href={`/vendor/profile/${vendor.slug}`} className="relative z-20 flex-1">
                       <Badge className="w-full justify-center py-2" variant="outline">
                         Vendor Profile
                       </Badge>

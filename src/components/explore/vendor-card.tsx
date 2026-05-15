@@ -4,6 +4,7 @@ import { MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { formatCurrency } from "@/lib/utils";
 
 type VendorCardProps = {
@@ -23,9 +24,10 @@ type VendorCardProps = {
     categories: { category: { name: string } }[];
     offerings: { category: { name: string } }[];
   };
+  isSaved?: boolean;
 };
 
-export function VendorCard({ vendor }: VendorCardProps) {
+export function VendorCard({ isSaved = false, vendor }: VendorCardProps) {
   const image = vendor.coverPhoto ?? vendor.photos[0] ?? "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1000&q=80";
   const categoryNames = unique([
     ...vendor.categories.map((vc) => vc.category.name),
@@ -33,11 +35,15 @@ export function VendorCard({ vendor }: VendorCardProps) {
   ]);
 
   return (
-    <Card className="overflow-hidden border-white/50 bg-white/90">
+    <Card className="group relative overflow-hidden border-white/50 bg-white/90 transition hover:-translate-y-0.5 hover:shadow-soft">
+      <Link href={`/vendor/profile/${vendor.slug}`} className="absolute inset-0 z-10" aria-label={`View ${vendor.name}`} />
       <div className="relative aspect-[4/3]">
         <Image src={image} alt={vendor.name} fill className="object-cover" />
         <div className="absolute left-3 top-3 flex gap-2">
           {vendor.verified && <Badge variant="accent">Verified</Badge>}
+        </div>
+        <div className="absolute right-3 top-3 z-20">
+          <FavoriteToggle targetType="vendor" targetId={vendor.id} isSaved={isSaved} />
         </div>
       </div>
       <CardContent className="space-y-3 p-4">
@@ -78,7 +84,7 @@ export function VendorCard({ vendor }: VendorCardProps) {
               {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Custom pricing"}
             </span>
           </p>
-          <Link href={`/vendor/profile/${vendor.slug}`}>
+          <Link href={`/vendor/profile/${vendor.slug}`} className="relative z-20">
             <Button size="sm">View Profile</Button>
           </Link>
         </div>

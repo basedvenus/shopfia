@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { ExploreSearch } from "@/components/explore/explore-search";
 import { VendorCard } from "@/components/explore/vendor-card";
 import { getExploreData } from "@/lib/data/explore";
+import { auth } from "@/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,18 @@ export default async function ExplorePage({
 }: {
   searchParams: Record<string, string | string[] | undefined>;
 }) {
-  const data = await getExploreData(searchParams);
+  const [data, session] = await Promise.all([getExploreData(searchParams), auth()]);
+  const { db } = await import("@/lib/db");
+  const savedVendorIds = session?.user?.id
+    ? new Set(
+        (
+          await db.favorite.findMany({
+            where: { buyerId: session.user.id, vendorId: { not: null } },
+            select: { vendorId: true }
+          })
+        ).map((favorite) => favorite.vendorId).filter(Boolean) as string[]
+      )
+    : new Set<string>();
 
   return (
     <div className="space-y-6">
@@ -52,7 +64,7 @@ export default async function ExplorePage({
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {data.vendors.map((vendor) => (
-              <VendorCard key={vendor.id} vendor={vendor} />
+              <VendorCard key={vendor.id} vendor={vendor} isSaved={savedVendorIds.has(vendor.id)} />
             ))}
           </div>
         )}

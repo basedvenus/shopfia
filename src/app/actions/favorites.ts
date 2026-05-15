@@ -1,30 +1,116 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/guards";
+import { z } from "zod";
+import { requireSession } from "@/lib/auth/guards";
 
-export async function toggleFavoriteAction(vendorId: string) {
+const favoriteTargetSchema = z.discriminatedUnion("targetType", [
+  z.object({ targetType: z.literal("vendor"), targetId: z.string().min(1) }),
+  z.object({ targetType: z.literal("party"), targetId: z.string().min(1) }),
+  z.object({ targetType: z.literal("offering"), targetId: z.string().min(1) })
+]);
+
+export type FavoriteTargetType = z.infer<typeof favoriteTargetSchema>["targetType"];
+
+export async function toggleFavoriteAction(targetTypeOrVendorId: FavoriteTargetType | string, targetId?: string) {
   const { db } = await import("@/lib/db");
-  const session = await requireRole([UserRole.BUYER, UserRole.ADMIN]);
-  const vendor = await db.vendorProfile.findUnique({
-    where: { id: vendorId },
-    select: { id: true }
-  });
-  if (!vendor) throw new Error("Vendor not found");
+  const session = await requireSession();
+  const target = targetId
+    ? favoriteTargetSchema.parse({ targetType: targetTypeOrVendorId, targetId })
+    : favoriteTargetSchema.parse({ targetType: "vendor", targetId: targetTypeOrVendorId });
 
-  const existing = await db.favorite.findUnique({
-    where: { buyerId_vendorId: { buyerId: session.user.id, vendorId } }
-  });
-
-  if (existing) {
-    await db.favorite.delete({ where: { id: existing.id } });
-  } else {
-    await db.favorite.create({
-      data: { buyerId: session.user.id, vendorId }
+  if (target.targetType === "vendor") {
+    const vendor = await db.vendorProfile.findUnique({
+      where: { id: target.targetId },
+      select: { id: true, slug: true }
     });
+    if (!vendor) throw new Error("Vendor not found");
+
+    const existing = await db.favorite.findUnique({
+      where: { buyerId_vendorId: { buyerId: session.user.id, vendorId: vendor.id } }
+    });
+
+    if (existing) {
+      await db.favorite.delete({ where: { id: existing.id } });
+    } else {
+      await db.favorite.create({
+        data: { buyerId: session.user.id, vendorId: vendor.id }
+      });
+    }
+
+    revalidatePath(`/vendor/profile/${vendor.slug}`);
+  }
+
+  if (target.targetType === "party") {
+    const party = await db.partyEvent.findUnique({
+      where: { id: target.targetId },
+      select: { id: true, slug: true }
+    });
+    if (!party) throw new Error("Party not found");
+
+    const existing = await db.favorite.findUnique({
+      where: { buyerId_partyEventId: { buyerId: session.user.id, partyEventId: party.id } }
+    });
+
+    if (existing) {
+      await db.favorite.delete({ where: { id: existing.id } });
+    } else {
+      await db.favorite.create({
+        data: { buyerId: session.user.id, partyEventId: party.id }
+      });
+    }
+
+    revalidatePath(`/events/${party.slug}`);
+    revalidatePath("/parties");
+  }
+
+  if (target.targetType === "offering") {
+    const offering = await db.offering.findUnique({
+      where: { id: target.targetId },
+      select: { id: true, vendor: { select: { slug: true } } }
+    });
+    if (!offering) throw new Error("Service not found");
+
+    const existing = await db.favorite.findUnique({
+      where: { buyerId_offeringId: { buyerId: session.user.id, offeringId: offering.id } }
+    });
+
+    if (existing) {
+      await db.favorite.delete({ where: { id: existing.id } });
+    } else {
+      await db.favorite.create({
+        data: { buyerId: session.user.id, offeringId: offering.id }
+      });
+    }
+
+    revalidatePath(`/offering/${offering.id}`);
+    revalidatePath(`/vendor/profile/${offering.vendor.slug}`);
   }
 
   revalidatePath("/favorites");
   revalidatePath("/explore");
+  revalidatePath("/listings");
+}
+
+export async function createFavoriteCollectionAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
+  const session = await requireSession();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  await db.favoriteCollection.upsert({
+    where: {
+      buyerId_name: {
+        buyerId: session.user.id,
+        name
+      }
+    },
+    update: {},
+    create: {
+      buyerId: session.user.id,
+      name
+    }
+  });
+
+  revalidatePath("/favorites");
 }
