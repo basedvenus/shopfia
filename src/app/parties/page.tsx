@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { CalendarHeart, MapPin, Sparkles, Tags } from "lucide-react";
+import { auth } from "@/auth";
+import { Heart, MapPin, Tags } from "lucide-react";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { db } from "@/lib/db";
 import { normalizeImageCrop } from "@/lib/image-crop";
@@ -16,7 +17,6 @@ const demoParties = [
     coverImageUrl: "/demo/fairfield-lemon-tablescape.png",
     slug: "citrus-garden-brunch",
     vendorCount: 1,
-    photoCount: 1,
     host: "ShopFia"
   },
   {
@@ -27,16 +27,25 @@ const demoParties = [
     coverImageUrl: "/demo/vacaville-cookie-tulips.png",
     slug: "tulip-cookie-shower",
     vendorCount: 1,
-    photoCount: 1,
     host: "ShopFia"
   }
 ];
 
-export default async function PartiesPage() {
+const feedTabs = ["For You", "Following", "Nearby", "Trending"] as const;
+type FeedTab = (typeof feedTabs)[number];
+
+export default async function PartiesPage({
+  searchParams
+}: {
+  searchParams?: { feed?: string };
+}) {
+  const session = await auth();
+  const selectedFeed = getSelectedFeed(searchParams?.feed);
   const parties = await db.partyEvent.findMany({
     include: {
       user: {
         select: {
+          id: true,
           image: true,
           name: true,
           username: true
@@ -49,7 +58,8 @@ export default async function PartiesPage() {
             select: {
               id: true,
               name: true,
-              slug: true
+              slug: true,
+              userId: true
             }
           }
         }
@@ -58,48 +68,85 @@ export default async function PartiesPage() {
         select: {
           id: true,
           name: true,
-          slug: true
+          slug: true,
+          userId: true
         }
       }
     },
     orderBy: [{ createdAt: "desc" }],
-    take: 36
+    take: 60
   });
+  const followingIds = session?.user?.id
+    ? new Set(
+        (
+          await db.follow.findMany({
+            where: { followerId: session.user.id },
+            select: { followingId: true }
+          })
+        ).map((follow) => follow.followingId)
+      )
+    : new Set<string>();
+  const visibleParties = getPartiesForFeed(parties, selectedFeed, followingIds);
 
   return (
-    <div className="space-y-8">
-      <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/60 p-6 shadow-soft md:p-8">
-        <div className="flex max-w-4xl flex-col gap-4">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-white/75 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            <Sparkles className="h-3.5 w-3.5" />
-            Real parties near you
-          </div>
-          <div>
-            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
-              Discover real parties near you.
+    <div className="space-y-5">
+      <section className="border-b border-primary/10 pb-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="max-w-3xl">
+            <div className="mb-3 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/75">
+              <span className="h-px w-10 bg-primary/60" />
+              <span>Party feed</span>
+            </div>
+            <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">
+              Discover real party inspiration near you.
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
-              Browse celebrations styled by local artisans, see tagged vendors in context, and save the details that feel like your next event.
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
+              Scroll real celebrations, see the vendors tagged in the moment, and save the details that feel like your next gathering.
             </p>
           </div>
+          <Link href="/my-parties" className="hidden rounded-full border border-primary/20 bg-white/75 px-4 py-2 text-sm font-medium text-primary shadow-sm transition hover:bg-white md:inline-flex">
+            Share your party
+          </Link>
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {parties.length > 0
-          ? parties.map((party) => {
+      <nav className="sticky top-20 z-20 -mx-4 border-b border-border/50 bg-background/90 px-4 py-3 backdrop-blur md:top-20">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {feedTabs.map((tab) => {
+            const active = selectedFeed === tab;
+            return (
+              <Link
+                key={tab}
+                href={tab === "For You" ? "/parties" : `/parties?feed=${encodeURIComponent(tab.toLowerCase())}`}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  active
+                    ? "bg-foreground text-background shadow-sm"
+                    : "border border-border/70 bg-white/75 text-muted-foreground hover:bg-white hover:text-foreground"
+                }`}
+              >
+                {tab}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      <section className="columns-1 gap-4 sm:columns-2 xl:columns-3 2xl:columns-4">
+        {visibleParties.length > 0
+          ? visibleParties.map((party, index) => {
               const { crop, image } = getEventImage(party);
               const vendors = getUniqueVendors(party);
               const hostImage = getSafeProfileImage(party.user.image);
               const hostName = party.user.name ?? party.user.username ?? "ShopFia host";
+              const tall = index % 5 === 0 || index % 7 === 3;
 
               return (
                 <Link
                   key={party.id}
                   href={`/events/${party.slug}`}
-                  className="group overflow-hidden rounded-[1.6rem] border border-white/75 bg-white/85 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"
+                  className="group mb-4 block break-inside-avoid overflow-hidden rounded-[1.35rem] border border-white/75 bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"
                 >
-                  <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+                  <div className={`relative overflow-hidden bg-muted ${tall ? "aspect-[3/4]" : "aspect-[4/5]"}`}>
                     <CroppedImage src={image} alt="" crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                     <div className="absolute left-4 top-4 flex flex-wrap gap-1.5">
@@ -121,7 +168,7 @@ export default async function PartiesPage() {
                       ) : null}
                     </div>
                   </div>
-                  <div className="space-y-4 p-5">
+                  <div className="space-y-3 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-2.5">
                         {hostImage ? (
@@ -131,7 +178,7 @@ export default async function PartiesPage() {
                             {hostName.slice(0, 2).toUpperCase()}
                           </span>
                         )}
-                        <span className="truncate text-sm text-muted-foreground">Posted by {hostName}</span>
+                        <span className="truncate text-sm text-muted-foreground">{hostName}</span>
                       </div>
                       <span className="shrink-0 rounded-full bg-[#fff7f4] px-3 py-1 text-xs text-muted-foreground">
                         {party.theme ?? "Party story"}
@@ -139,8 +186,8 @@ export default async function PartiesPage() {
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
-                        <CalendarHeart className="h-3.5 w-3.5" />
-                        {party.photos.length || party.imageUrls.length || 1} photos
+                        <Heart className="h-3.5 w-3.5" />
+                        Save
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
                         <Tags className="h-3.5 w-3.5" />
@@ -149,7 +196,7 @@ export default async function PartiesPage() {
                     </div>
                     {vendors.length > 0 ? (
                       <p className="line-clamp-1 text-sm text-muted-foreground">
-                        Vendors: {vendors.slice(0, 3).map((vendor) => vendor.name).join(", ")}
+                        Tagged: {vendors.slice(0, 3).map((vendor) => vendor.name).join(", ")}
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground">
@@ -164,7 +211,7 @@ export default async function PartiesPage() {
               <Link
                 key={party.title}
                 href={`/events/${party.slug}`}
-                className="group overflow-hidden rounded-[1.6rem] border border-white/75 bg-white/85 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"
+                className="group mb-4 block break-inside-avoid overflow-hidden rounded-[1.35rem] border border-white/75 bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"
               >
                 <div className="relative aspect-[4/5] overflow-hidden bg-muted">
                   <div
@@ -187,17 +234,17 @@ export default async function PartiesPage() {
                     </p>
                   </div>
                 </div>
-                <div className="space-y-4 p-5">
+                <div className="space-y-3 p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm text-muted-foreground">Posted by {party.host}</span>
+                    <span className="text-sm text-muted-foreground">{party.host}</span>
                     <span className="rounded-full bg-[#fff7f4] px-3 py-1 text-xs text-muted-foreground">
                       {party.theme}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
-                      <CalendarHeart className="h-3.5 w-3.5" />
-                      {party.photoCount} photo
+                      <Heart className="h-3.5 w-3.5" />
+                      Save
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
                       <Tags className="h-3.5 w-3.5" />
@@ -210,6 +257,72 @@ export default async function PartiesPage() {
       </section>
     </div>
   );
+}
+
+function getSelectedFeed(value?: string): FeedTab {
+  const normalized = value?.toLowerCase();
+  if (normalized === "following") return "Following";
+  if (normalized === "nearby") return "Nearby";
+  if (normalized === "trending") return "Trending";
+  return "For You";
+}
+
+function getPartiesForFeed<T extends {
+  city: string | null;
+  state: string | null;
+  createdAt: Date;
+  user: { id: string };
+  taggedVendors: Array<{ id: string; userId: string }>;
+  photos: Array<{ taggedVendors: Array<{ id: string; userId: string }> }>;
+  tags: string[];
+  imageUrls: string[];
+}>(parties: T[], feed: FeedTab, followingIds: Set<string>) {
+  if (feed === "Following") {
+    const followed = parties.filter((party) => {
+      if (followingIds.has(party.user.id)) return true;
+      if (party.taggedVendors.some((vendor) => followingIds.has(vendor.userId))) return true;
+      return party.photos.some((photo) =>
+        photo.taggedVendors.some((vendor) => followingIds.has(vendor.userId))
+      );
+    });
+    return followed.length ? followed : parties;
+  }
+
+  if (feed === "Nearby") {
+    return [...parties].sort((left, right) => nearbyScore(left) - nearbyScore(right));
+  }
+
+  if (feed === "Trending") {
+    return [...parties].sort((left, right) => trendingScore(right) - trendingScore(left));
+  }
+
+  return parties;
+}
+
+function nearbyScore(party: { city: string | null; state: string | null }) {
+  const location = `${party.city ?? ""} ${party.state ?? ""}`.toLowerCase();
+  if (location.includes("fairfield")) return 0;
+  if (location.includes("vacaville")) return 1;
+  if (location.includes("vallejo")) return 2;
+  if (location.includes("benicia")) return 3;
+  if (location.includes("ca") || location.includes("california")) return 10;
+  return 20;
+}
+
+function trendingScore(party: {
+  tags: string[];
+  imageUrls: string[];
+  photos: Array<{ taggedVendors: Array<{ id: string }> }>;
+  taggedVendors: Array<{ id: string }>;
+  createdAt: Date;
+}) {
+  const vendorCount = new Set([
+    ...party.taggedVendors.map((vendor) => vendor.id),
+    ...party.photos.flatMap((photo) => photo.taggedVendors.map((vendor) => vendor.id))
+  ]).size;
+  const photoCount = party.photos.length || party.imageUrls.length || 1;
+  const freshness = Math.max(0, 30 - Math.floor((Date.now() - party.createdAt.getTime()) / 86400000));
+  return vendorCount * 8 + photoCount * 3 + party.tags.length * 2 + freshness;
 }
 
 function getUniqueVendors(party: {
