@@ -3,12 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/guards";
+import { checkServerActionRateLimit } from "@/lib/security/request";
 import { getMarketplaceFeeConfig } from "@/lib/services/marketplace-fees";
 import { marketplaceFeeConfigSchema, rankingConfigSchema } from "@/lib/validators/vendor";
 
 export async function setVendorModerationAction(formData: FormData) {
   const { db } = await import("@/lib/db");
-  await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.ADMIN]);
+  await assertAdminRateLimit(session.user.id);
   const vendorId = String(formData.get("vendorId"));
   const mode = String(formData.get("mode"));
   if (!vendorId || !["approve", "suspend"].includes(mode)) {
@@ -26,7 +28,8 @@ export async function setVendorModerationAction(formData: FormData) {
 
 export async function removeOfferingAction(formData: FormData) {
   const { db } = await import("@/lib/db");
-  await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.ADMIN]);
+  await assertAdminRateLimit(session.user.id);
   const offeringId = String(formData.get("offeringId"));
   await db.offering.update({ where: { id: offeringId }, data: { active: false } });
   revalidatePath("/admin");
@@ -35,7 +38,8 @@ export async function removeOfferingAction(formData: FormData) {
 
 export async function updateMarketplaceFeeConfigAction(formData: FormData) {
   const { db } = await import("@/lib/db");
-  await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.ADMIN]);
+  await assertAdminRateLimit(session.user.id);
   const parsed = marketplaceFeeConfigSchema.parse({
     listingFeeFlat: formData.get("listingFeeFlat"),
     listingDurationDays: formData.get("listingDurationDays"),
@@ -91,4 +95,12 @@ export async function updateMarketplaceFeeConfigAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/onboarding");
   revalidatePath("/vendor/dashboard");
+}
+
+async function assertAdminRateLimit(userId: string) {
+  const rate = await checkServerActionRateLimit([
+    { key: "admin-action:ip:{ip}", limit: 30, intervalMs: 60_000 },
+    { key: `admin-action:user:${userId}`, limit: 20, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) throw new Error("Rate limit exceeded");
 }

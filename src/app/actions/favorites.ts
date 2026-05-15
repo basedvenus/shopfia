@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/lib/auth/guards";
+import { checkServerActionRateLimit } from "@/lib/security/request";
 
 const favoriteTargetSchema = z.discriminatedUnion("targetType", [
   z.object({ targetType: z.literal("vendor"), targetId: z.string().min(1) }),
@@ -15,6 +16,12 @@ export type FavoriteTargetType = z.infer<typeof favoriteTargetSchema>["targetTyp
 export async function toggleFavoriteAction(targetTypeOrVendorId: FavoriteTargetType | string, targetId?: string) {
   const { db } = await import("@/lib/db");
   const session = await requireSession();
+  const rate = await checkServerActionRateLimit([
+    { key: "favorite-toggle:ip:{ip}", limit: 80, intervalMs: 60_000 },
+    { key: `favorite-toggle:user:${session.user.id}`, limit: 45, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) throw new Error("Please wait a minute before saving more items.");
+
   const target = targetId
     ? favoriteTargetSchema.parse({ targetType: targetTypeOrVendorId, targetId })
     : favoriteTargetSchema.parse({ targetType: "vendor", targetId: targetTypeOrVendorId });
@@ -95,6 +102,12 @@ export async function toggleFavoriteAction(targetTypeOrVendorId: FavoriteTargetT
 export async function createFavoriteCollectionAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireSession();
+  const rate = await checkServerActionRateLimit([
+    { key: "favorite-collection:ip:{ip}", limit: 20, intervalMs: 60_000 },
+    { key: `favorite-collection:user:${session.user.id}`, limit: 8, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) return;
+
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
 

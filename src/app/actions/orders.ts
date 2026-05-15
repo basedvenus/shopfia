@@ -3,11 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { OrderStatus, UserRole } from "@prisma/client";
 import { requireRole, requireVerifiedVendorProfile } from "@/lib/auth/guards";
+import { checkServerActionRateLimit } from "@/lib/security/request";
 import { finalizeOrder, issueRefund } from "@/lib/services/marketplace-fees";
 
 export async function updateOrderStatusAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.VENDOR, UserRole.ADMIN]);
+  const rate = await checkServerActionRateLimit([
+    { key: "order-status:ip:{ip}", limit: 30, intervalMs: 60_000 },
+    { key: `order-status:user:${session.user.id}`, limit: 18, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) throw new Error("Rate limit exceeded");
+
   if (session.user.role === UserRole.VENDOR) {
     await requireVerifiedVendorProfile(session.user.id);
   }

@@ -3,12 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/guards";
+import { checkServerActionRateLimit } from "@/lib/security/request";
 import { createVerifiedReview, respondToReview } from "@/lib/services/reviews";
 import { createReviewSchema, reviewResponseSchema } from "@/lib/validators/review";
 
 export async function createReviewAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.BUYER, UserRole.ADMIN]);
+  const rate = await checkServerActionRateLimit([
+    { key: "review-create:ip:{ip}", limit: 15, intervalMs: 60_000 },
+    { key: `review-create:user:${session.user.id}`, limit: 6, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) throw new Error("Rate limit exceeded");
+
   const parsed = createReviewSchema.parse({
     orderId: formData.get("orderId"),
     rating: formData.get("rating"),
@@ -36,6 +43,12 @@ export async function createReviewAction(formData: FormData) {
 export async function respondToReviewAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.VENDOR, UserRole.ADMIN]);
+  const rate = await checkServerActionRateLimit([
+    { key: "review-response:ip:{ip}", limit: 20, intervalMs: 60_000 },
+    { key: `review-response:user:${session.user.id}`, limit: 10, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) throw new Error("Rate limit exceeded");
+
   const parsed = reviewResponseSchema.parse({
     reviewId: formData.get("reviewId"),
     body: formData.get("body")

@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { CategoryAudience, OffsiteAdsTier, Prisma, UserRole } from "@prisma/client";
 import { requireRole, requireSession, requireVerifiedVendorProfile } from "@/lib/auth/guards";
 import { parseImageCrop, parseImageCropArray } from "@/lib/image-crop";
+import { securityLog } from "@/lib/security/audit-log";
+import { checkServerActionRateLimit } from "@/lib/security/request";
 import { createListing, ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
 import { vendorOnboardingSchema, offeringSchema } from "@/lib/validators/vendor";
 
@@ -80,6 +82,14 @@ function firstValidationMessage(
 export async function upsertVendorProfileAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireSession();
+  const rate = await checkServerActionRateLimit([
+    { key: "vendor-profile:ip:{ip}", limit: 18, intervalMs: 60_000 },
+    { key: `vendor-profile:user:${session.user.id}`, limit: 8, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    redirectWithVendorProfileError("Please wait a minute before saving your vendor profile again.");
+  }
+
   const vendorUsername = String(formData.get("username") ?? "")
     .trim()
     .replace(/^@/, "")
@@ -108,7 +118,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
     photoUrls: formDataToArray(formData, "photoUrls")
   });
   if (!result.success) {
-    console.error("[vendor] profile validation failed", result.error.flatten());
+    securityLog("vendor_profile_validation_failed", { userId: session.user.id });
     redirectWithVendorProfileError(
       firstValidationMessage(result.error, {
         name: "Business Name",
@@ -186,7 +196,10 @@ export async function upsertVendorProfileAction(formData: FormData) {
       }
     });
   } catch (error) {
-    console.error("[vendor] profile upsert failed", error);
+    securityLog("vendor_profile_upsert_failed", {
+      code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : "unknown",
+      userId: session.user.id
+    });
     redirectWithVendorProfileError(
       isUniqueConstraintError(error)
         ? "That vendor username or shop username is already taken."
@@ -219,8 +232,8 @@ export async function upsertVendorProfileAction(formData: FormData) {
   try {
     await ensureSellerAccountForVendorProfile(vendor.id);
   } catch (error) {
-    console.error("[vendor] seller account sync failed after profile save", {
-      error,
+    securityLog("vendor_seller_account_sync_failed", {
+      error: error instanceof Error ? error.message : "unknown",
       vendorId: vendor.id,
       userId: session.user.id
     });
@@ -235,6 +248,14 @@ export async function upsertVendorProfileAction(formData: FormData) {
 export async function upsertOfferingAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireSession();
+  const rate = await checkServerActionRateLimit([
+    { key: "vendor-offering:ip:{ip}", limit: 24, intervalMs: 60_000 },
+    { key: `vendor-offering:user:${session.user.id}`, limit: 10, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    redirectWithOfferingError("Please wait a minute before saving another offering.");
+  }
+
   const vendor = await db.vendorProfile.findUnique({
     where: { userId: session.user.id }
   });
@@ -261,7 +282,7 @@ export async function upsertOfferingAction(formData: FormData) {
     autoRenewListing: formData.get("autoRenewListing") === "on"
   });
   if (!result.success) {
-    console.error("[vendor] offering validation failed", result.error.flatten());
+    securityLog("vendor_offering_validation_failed", { userId: session.user.id });
     redirectWithOfferingError(
       firstValidationMessage(result.error, {
         type: "Offering Type",

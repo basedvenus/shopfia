@@ -25,11 +25,12 @@ export const dynamic = "force-dynamic";
 const fallbackImage =
   "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1200&q=80";
 
-export default async function OfferingPage({ params }: { params: { id: string } }) {
+export default async function OfferingPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
   const [offering, originalMemberCutoff] = await Promise.all([
     db.offering.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         vendor: {
           include: {

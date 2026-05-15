@@ -40,12 +40,16 @@ export default async function EventPage({
   params,
   searchParams
 }: {
-  params: { slug: string };
-  searchParams?: { edit?: string };
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ edit?: string }>;
 }) {
+  const [{ slug }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve({} as { edit?: string })
+  ]);
   const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
   const originalMemberCutoff = await getOriginalMemberCutoffDate(db);
-  const requestedSlug = decodeURIComponent(params.slug).trim();
+  const requestedSlug = decodeURIComponent(slug).trim();
   const fallback = fallbackEvents[requestedSlug as keyof typeof fallbackEvents];
   const event = await db.partyEvent
     .findFirst({
@@ -137,7 +141,7 @@ export default async function EventPage({
   const hostBadge = getProfileBadge(host, originalMemberCutoff);
   const hostHandle = host?.username ? `@${host.username}` : host?.name ?? "ShopFia host";
   const isOwner = Boolean(session?.user?.id && host?.id && session.user.id === host.id);
-  const editRequested = searchParams?.edit === "1" || searchParams?.edit === "true";
+  const editRequested = resolvedSearchParams.edit === "1" || resolvedSearchParams.edit === "true";
   const isEditing = Boolean(editRequested && isOwner && event);
   const formParty = event
     ? ({

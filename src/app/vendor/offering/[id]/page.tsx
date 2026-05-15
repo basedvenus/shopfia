@@ -15,7 +15,8 @@ type PricedOption = {
   priceCents?: number;
 };
 
-export default async function VendorOfferingEditPage({ params }: { params: { id: string } }) {
+export default async function VendorOfferingEditPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/account?next=login");
@@ -23,7 +24,7 @@ export default async function VendorOfferingEditPage({ params }: { params: { id:
 
   const [offering, categories, eventCategories] = await Promise.all([
     db.offering.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         eventCategories: { select: { categoryId: true } },
         vendor: { select: { id: true, name: true, slug: true, userId: true } }

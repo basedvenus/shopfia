@@ -4,6 +4,8 @@ import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { parseImageCrop } from "@/lib/image-crop";
+import { assertSameOrigin, enforceRequestRateLimit } from "@/lib/security/request";
+import { readVerifiedImageFile } from "@/lib/security/uploads";
 import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 
 export const runtime = "nodejs";
@@ -16,6 +18,15 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Sign in to upload an avatar." }, { status: 401 });
   }
+  if (!assertSameOrigin(request)) {
+    return NextResponse.json({ error: "Invalid origin." }, { status: 403 });
+  }
+
+  const limited = enforceRequestRateLimit(request, [
+    { key: "upload-avatar:ip:{ip}", limit: 20, intervalMs: 60_000 },
+    { key: `upload-avatar:user:${session.user.id}`, limit: 8, intervalMs: 60_000 }
+  ]);
+  if (limited) return limited;
 
   const formData = await request.formData();
   const file = formData.get("file");
@@ -25,21 +36,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Choose an image file." }, { status: 400 });
   }
 
-  if (!ALLOWED_AVATAR_TYPES.has(file.type)) {
+  let bytes: Buffer;
+  try {
+    bytes = await readVerifiedImageFile(file, {
+      allowedTypes: ALLOWED_AVATAR_TYPES,
+      maxBytes: MAX_AVATAR_BYTES
+    });
+  } catch (error) {
     return NextResponse.json(
-      { error: "Use a JPG, PNG, WebP, or GIF image." },
+      { error: error instanceof Error ? error.message : "That image could not be uploaded." },
       { status: 400 }
     );
   }
 
-  if (file.size > MAX_AVATAR_BYTES) {
-    return NextResponse.json(
-      { error: "That image is too large. Choose a photo under 8MB." },
-      { status: 400 }
-    );
-  }
-
-  const bytes = Buffer.from(await file.arrayBuffer());
   const result = await db.$transaction(async (tx) => {
     const avatar = await tx.userAvatar.upsert({
       where: { userId: session.user.id },
@@ -77,22 +86,6 @@ export async function POST(request: Request) {
       savedImage: savedUser?.image ?? null,
       url
     };
-  });
-
-  console.log("[profile] avatar upload succeeded", {
-    avatarId: result.avatarId,
-    size: file.size,
-    type: file.type,
-    storagePath: `UserAvatar:${result.avatarId}`,
-    returnedPath: result.url,
-    publicUrl: result.url,
-    url: result.url
-  });
-
-  console.log("[profile] avatar persistence check", {
-    currentAvatarUrl: result.savedImage,
-    expectedAvatarUrl: result.url,
-    persisted: result.persisted
   });
 
   revalidatePath("/", "layout");

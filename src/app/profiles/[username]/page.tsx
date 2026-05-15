@@ -13,8 +13,9 @@ import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badg
 
 export const dynamic = "force-dynamic";
 
-export default async function PublicProfilePage({ params }: { params: { username: string } }) {
-  const username = params.username.replace(/^@/, "").toLowerCase();
+export default async function PublicProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  const { username: rawUsername } = await params;
+  const username = rawUsername.replace(/^@/, "").toLowerCase();
   const [profile, session, originalMemberCutoff] = await Promise.all([
     db.user.findUnique({
       where: { username },

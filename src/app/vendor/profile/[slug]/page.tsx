@@ -52,9 +52,10 @@ const demoTaggedEvents = {
   ]
 } as const;
 
-export default async function VendorProfilePage({ params }: { params: { slug: string } }) {
+export default async function VendorProfilePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const [vendor, session, originalMemberCutoff] = await Promise.all([
-    getVendorProfileBySlug(params.slug),
+    getVendorProfileBySlug(slug),
     auth(),
     getOriginalMemberCutoffDate(db)
   ]);

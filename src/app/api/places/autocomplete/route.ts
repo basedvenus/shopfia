@@ -4,15 +4,26 @@ import {
   normalizeGoogleSuggestion,
   type GoogleAutocompleteResponse
 } from "@/lib/places";
+import { enforceRequestRateLimit } from "@/lib/security/request";
+import { securityLog } from "@/lib/security/audit-log";
 
 const GOOGLE_PLACES_TIMEOUT_MS = 4500;
 
 export async function GET(request: Request) {
+  const limited = enforceRequestRateLimit(request, [
+    { key: "places-autocomplete:ip:{ip}", limit: 60, intervalMs: 60_000 }
+  ]);
+  if (limited) return limited;
+
   const url = new URL(request.url);
   const input = (url.searchParams.get("input") ?? url.searchParams.get("q") ?? "").trim();
 
   if (input.length < 2) {
     return NextResponse.json({ suggestions: [], source: "google" });
+  }
+
+  if (input.length > 120) {
+    return NextResponse.json({ error: "Search is too long.", suggestions: [] }, { status: 400 });
   }
 
   const apiKey = getGooglePlacesApiKey();
@@ -51,7 +62,7 @@ export async function GET(request: Request) {
     const data = (await response.json()) as GoogleAutocompleteResponse;
 
     if (!response.ok || data.error) {
-      console.error("[places] autocomplete failed", {
+      securityLog("places_autocomplete_failed", {
         status: data.error?.status,
         error: data.error?.message
       });
@@ -70,7 +81,9 @@ export async function GET(request: Request) {
       source: "google"
     });
   } catch (error) {
-    console.error("[places] autocomplete request failed", error);
+    securityLog("places_autocomplete_request_failed", {
+      error: error instanceof Error ? error.message : "unknown"
+    });
     return NextResponse.json(
       { error: "Location suggestions timed out. Please try again.", suggestions: [] },
       { status: 504 }

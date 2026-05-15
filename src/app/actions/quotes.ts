@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { QuoteRequestStatus, QuoteStatus, UserRole } from "@prisma/client";
 import { requireRole, requireVerifiedVendorProfile } from "@/lib/auth/guards";
-import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { checkServerActionRateLimit } from "@/lib/security/request";
 import { canAcceptQuote, quotePayableAmount } from "@/lib/payments";
 import { ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
 import { getStripeServer } from "@/lib/stripe";
@@ -12,7 +12,10 @@ import { acceptQuoteSchema, quoteRequestSchema, quoteResponseSchema } from "@/li
 export async function createQuoteRequestAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.BUYER, UserRole.ADMIN]);
-  const rate = checkRateLimit(`quote-request:${session.user.id}`, 10, 60_000);
+  const rate = await checkServerActionRateLimit([
+    { key: "quote-request:ip:{ip}", limit: 20, intervalMs: 60_000 },
+    { key: `quote-request:${session.user.id}`, limit: 10, intervalMs: 60_000 }
+  ]);
   if (!rate.ok) throw new Error("Rate limit exceeded");
 
   const parsed = quoteRequestSchema.parse({
@@ -85,6 +88,11 @@ export async function createQuoteRequestAction(formData: FormData) {
 export async function sendQuoteResponseAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.VENDOR, UserRole.ADMIN]);
+  const rate = await checkServerActionRateLimit([
+    { key: "quote-response:ip:{ip}", limit: 30, intervalMs: 60_000 },
+    { key: `quote-response:user:${session.user.id}`, limit: 14, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) throw new Error("Rate limit exceeded");
   if (session.user.role === UserRole.VENDOR) {
     await requireVerifiedVendorProfile(session.user.id);
   }
@@ -151,6 +159,11 @@ export async function sendQuoteResponseAction(formData: FormData) {
 export async function acceptQuoteAndCreatePaymentIntentAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.BUYER, UserRole.ADMIN]);
+  const rate = await checkServerActionRateLimit([
+    { key: "quote-payment:ip:{ip}", limit: 12, intervalMs: 60_000 },
+    { key: `quote-payment:user:${session.user.id}`, limit: 5, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) throw new Error("Rate limit exceeded");
   const parsed = acceptQuoteSchema.parse({
     quoteId: formData.get("quoteId"),
     payMode: formData.get("payMode") ?? "deposit"

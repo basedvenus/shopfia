@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { auth } from "@/auth";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { securityLog } from "@/lib/security/audit-log";
+import { checkServerActionRateLimit } from "@/lib/security/request";
 import { publicInquirySchema } from "@/lib/validators/inquiry";
 
 export async function createPublicInquiryAction(formData: FormData) {
@@ -11,6 +13,13 @@ export async function createPublicInquiryAction(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) {
     return { success: false, error: "Sign in to send an inquiry." };
+  }
+
+  const ipRate = await checkServerActionRateLimit([
+    { key: "inquiry:ip:{ip}", limit: 20, intervalMs: 60_000 }
+  ]);
+  if (!ipRate.ok) {
+    return { success: false, error: "Please wait a minute before sending another inquiry." };
   }
 
   const parsedResult = publicInquirySchema.safeParse({
@@ -38,7 +47,7 @@ export async function createPublicInquiryAction(formData: FormData) {
     message: formData.get("message")
   });
   if (!parsedResult.success) {
-    console.error("[inquiry] validation failed", parsedResult.error.flatten());
+    securityLog("inquiry_validation_failed", { userId: session.user.id });
     return {
       success: false,
       error: getInquiryValidationMessage(parsedResult.error.issues)

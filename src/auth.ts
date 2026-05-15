@@ -8,6 +8,8 @@ import { UserRole } from "@prisma/client";
 import { compare } from "bcryptjs";
 import { db } from "@/lib/db";
 import { authProviderConfig } from "@/lib/auth/provider-config";
+import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { securityLog } from "@/lib/security/audit-log";
 import { getSafeProfileImage } from "@/lib/profile-image";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -31,6 +33,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!email || !password) return null;
 
+        const rate = checkRateLimit(`login:email:${email}`, 5, 60_000);
+        if (!rate.ok) {
+          securityLog("login_rate_limited", { email });
+          return null;
+        }
+
         const user = await db.user.findUnique({
           where: { email },
           select: {
@@ -44,10 +52,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
         });
 
-        if (!user?.passwordHash) return null;
+        if (!user?.passwordHash) {
+          securityLog("login_failed_unknown_or_oauth_only", { email });
+          return null;
+        }
 
         const passwordMatches = await compare(password, user.passwordHash);
-        if (!passwordMatches) return null;
+        if (!passwordMatches) {
+          securityLog("login_failed_bad_password", { email, userId: user.id });
+          return null;
+        }
 
         return {
           id: user.id,

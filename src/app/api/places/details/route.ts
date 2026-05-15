@@ -4,14 +4,21 @@ import {
   normalizeGoogleDetails,
   type GooglePlaceDetailsResponse
 } from "@/lib/places";
+import { enforceRequestRateLimit } from "@/lib/security/request";
+import { securityLog } from "@/lib/security/audit-log";
 
 const GOOGLE_PLACES_TIMEOUT_MS = 4500;
 
 export async function GET(request: Request) {
+  const limited = enforceRequestRateLimit(request, [
+    { key: "places-details:ip:{ip}", limit: 80, intervalMs: 60_000 }
+  ]);
+  if (limited) return limited;
+
   const url = new URL(request.url);
   const placeId = (url.searchParams.get("placeId") ?? "").trim();
 
-  if (!placeId) {
+  if (!placeId || placeId.length > 180 || !/^[A-Za-z0-9_:-]+$/.test(placeId)) {
     return NextResponse.json({ error: "placeId is required" }, { status: 400 });
   }
 
@@ -45,7 +52,7 @@ export async function GET(request: Request) {
     const data = (await response.json()) as GooglePlaceDetailsResponse;
 
     if (!response.ok || data.error || !data.id || !data.location) {
-      console.error("[places] details failed", {
+      securityLog("places_details_failed", {
         placeId,
         status: data.error?.status,
         error: data.error?.message
@@ -58,7 +65,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ place: normalizeGoogleDetails(data), source: "google" });
   } catch (error) {
-    console.error("[places] details request failed", { placeId, error });
+    securityLog("places_details_request_failed", {
+      placeId,
+      error: error instanceof Error ? error.message : "unknown"
+    });
     return NextResponse.json(
       { error: "Place details timed out. Please try again." },
       { status: 504 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { requireSession } from "@/lib/auth/guards";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { checkServerActionRateLimit } from "@/lib/security/request";
 import { sendMessageSchema } from "@/lib/validators/message";
 
 export async function sendMessageAction(formData: FormData) {
@@ -18,6 +19,11 @@ export async function sendMessageAction(formData: FormData) {
       .map((v) => String(v))
       .filter(Boolean)
   });
+
+  const ipRate = await checkServerActionRateLimit([
+    { key: "message:ip:{ip}", limit: 30, intervalMs: 60_000 }
+  ]);
+  if (!ipRate.ok) throw new Error("Rate limit exceeded");
 
   const rate = checkRateLimit(`message:${session.user.id}`, 12, 60_000);
   if (!rate.ok) throw new Error("Rate limit exceeded");

@@ -7,6 +7,8 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { parseImageCrop } from "@/lib/image-crop";
+import { securityLog } from "@/lib/security/audit-log";
+import { checkServerActionRateLimit } from "@/lib/security/request";
 import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 
 const signUpSchema = z.object({
@@ -30,6 +32,15 @@ export async function createPasswordAccountAction(formData: FormData) {
   }
 
   const email = parsed.data.email.toLowerCase();
+  const signupRate = await checkServerActionRateLimit([
+    { key: "signup:ip:{ip}", limit: 5, intervalMs: 60_000 },
+    { key: `signup:email:${email}`, limit: 3, intervalMs: 60_000 }
+  ]);
+  if (!signupRate.ok) {
+    securityLog("signup_rate_limited", { email });
+    return { ok: false, error: "Please wait a minute before creating another account." };
+  }
+
   const existingUser = await db.user.findUnique({
     where: { email },
     select: { id: true, passwordHash: true }
@@ -79,6 +90,14 @@ export async function updateAccountProfileAction(formData: FormData) {
     return { ok: false, error: "Sign in to update your profile." };
   }
 
+  const rate = await checkServerActionRateLimit([
+    { key: "profile-update:ip:{ip}", limit: 30, intervalMs: 60_000 },
+    { key: `profile-update:user:${session.user.id}`, limit: 12, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    return { ok: false, error: "Please wait a minute before updating your profile again." };
+  }
+
   const parsed = profileSchema.safeParse({
     name: formData.get("name") || undefined,
     username: formData.get("username") || undefined,
@@ -109,10 +128,6 @@ export async function updateAccountProfileAction(formData: FormData) {
     });
 
     const profile = serializeUserProfile(updatedUser);
-
-    console.log("[profile] saved profile fields to database", {
-      profile
-    });
 
     revalidatePath("/account");
     revalidatePath("/my-parties");
@@ -183,6 +198,14 @@ export async function createPartyEventAction(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) {
     return { ok: false, error: "Sign in to create a party gallery." };
+  }
+
+  const rate = await checkServerActionRateLimit([
+    { key: "party-create:ip:{ip}", limit: 20, intervalMs: 60_000 },
+    { key: `party-create:user:${session.user.id}`, limit: 8, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    return { ok: false, error: "Please wait a minute before creating another party." };
   }
 
   const parsed = createPartyEventSchema.safeParse(parsePartyEventFormData(formData));
@@ -264,6 +287,14 @@ export async function updatePartyEventAction(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) {
     return { ok: false, error: "Sign in to edit party stories." };
+  }
+
+  const rate = await checkServerActionRateLimit([
+    { key: "party-update:ip:{ip}", limit: 30, intervalMs: 60_000 },
+    { key: `party-update:user:${session.user.id}`, limit: 12, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    return { ok: false, error: "Please wait a minute before updating this party again." };
   }
 
   const parsed = updatePartyEventSchema.safeParse({
@@ -577,6 +608,14 @@ export async function toggleFollowAction(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) {
     return { ok: false, error: "Sign in to follow creators." };
+  }
+
+  const rate = await checkServerActionRateLimit([
+    { key: "follow-toggle:ip:{ip}", limit: 60, intervalMs: 60_000 },
+    { key: `follow-toggle:user:${session.user.id}`, limit: 30, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    return { ok: false, error: "Please wait a minute before following more profiles." };
   }
 
   const followingId = String(formData.get("followingId") ?? "");

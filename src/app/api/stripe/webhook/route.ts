@@ -2,15 +2,22 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getStripeServer } from "@/lib/stripe";
+import { enforceRequestRateLimit } from "@/lib/security/request";
+import { securityLog } from "@/lib/security/audit-log";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const limited = enforceRequestRateLimit(req, [
+    { key: "stripe-webhook:ip:{ip}", limit: 120, intervalMs: 60_000 }
+  ]);
+  if (limited) return limited;
+
   const [{ db }, { finalizeOrder }] = await Promise.all([
     import("@/lib/db"),
     import("@/lib/services/marketplace-fees")
   ]);
-  const signature = headers().get("stripe-signature");
+  const signature = (await headers()).get("stripe-signature");
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!signature || !secret) {
     return NextResponse.json({ error: "Missing webhook secret/signature" }, { status: 400 });
@@ -22,6 +29,9 @@ export async function POST(req: Request) {
   try {
     event = stripe.webhooks.constructEvent(body, signature, secret);
   } catch (error) {
+    securityLog("stripe_webhook_signature_failed", {
+      error: error instanceof Error ? error.message : "unknown"
+    });
     return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
   }
 

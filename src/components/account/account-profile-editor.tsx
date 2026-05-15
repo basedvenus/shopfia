@@ -32,10 +32,6 @@ export function AccountProfileEditor({
   const { profile, setProfile } = useProfile();
 
   function onAvatarUploaded(profileFromUpload?: SharedUserProfile) {
-    console.log("[profile] upload URL received", {
-      profileFromUpload
-    });
-
     if (profileFromUpload) {
       setProfile(profileFromUpload);
     }
@@ -104,7 +100,6 @@ export function AccountProfileEditor({
               }
 
               if (result.profile) {
-                console.log("[profile] save returned profile", result.profile);
                 setProfile(result.profile);
               }
 

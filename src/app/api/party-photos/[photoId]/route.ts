@@ -1,16 +1,23 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { assertSameOrigin, enforceRequestRateLimit } from "@/lib/security/request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: Request,
-  { params }: { params: { photoId: string } }
+  request: Request,
+  { params }: { params: Promise<{ photoId: string }> }
 ) {
+  const { photoId } = await params;
+  const limited = enforceRequestRateLimit(request, [
+    { key: "party-photo-read:ip:{ip}", limit: 240, intervalMs: 60_000 }
+  ]);
+  if (limited) return limited;
+
   const photo = await db.partyPhoto.findUnique({
-    where: { id: params.photoId },
+    where: { id: photoId },
     select: {
       contentType: true,
       data: true,
@@ -37,17 +44,27 @@ export async function GET(
 }
 
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { photoId: string } }
+  request: Request,
+  { params }: { params: Promise<{ photoId: string }> }
 ) {
+  const { photoId } = await params;
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Sign in to remove party photos." }, { status: 401 });
   }
+  if (!assertSameOrigin(request)) {
+    return NextResponse.json({ error: "Invalid origin." }, { status: 403 });
+  }
+
+  const limited = enforceRequestRateLimit(request, [
+    { key: "party-photo-delete:ip:{ip}", limit: 30, intervalMs: 60_000 },
+    { key: `party-photo-delete:user:${session.user.id}`, limit: 20, intervalMs: 60_000 }
+  ]);
+  if (limited) return limited;
 
   const result = await db.partyPhoto.deleteMany({
     where: {
-      id: params.photoId,
+      id: photoId,
       userId: session.user.id,
       eventId: null
     }

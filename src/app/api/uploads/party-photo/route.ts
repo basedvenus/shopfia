@@ -3,6 +3,8 @@ import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { parseImageCrop } from "@/lib/image-crop";
+import { assertSameOrigin, enforceRequestRateLimit } from "@/lib/security/request";
+import { readVerifiedImageFile } from "@/lib/security/uploads";
 
 export const runtime = "nodejs";
 
@@ -14,6 +16,15 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Sign in to upload party photos." }, { status: 401 });
   }
+  if (!assertSameOrigin(request)) {
+    return NextResponse.json({ error: "Invalid origin." }, { status: 403 });
+  }
+
+  const limited = enforceRequestRateLimit(request, [
+    { key: "upload-party-photo:ip:{ip}", limit: 30, intervalMs: 60_000 },
+    { key: `upload-party-photo:user:${session.user.id}`, limit: 18, intervalMs: 60_000 }
+  ]);
+  if (limited) return limited;
 
   const formData = await request.formData();
   const file = formData.get("file");
@@ -23,16 +34,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Choose an image file." }, { status: 400 });
   }
 
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+  let bytes: Buffer;
+  try {
+    bytes = await readVerifiedImageFile(file, {
+      allowedTypes: ALLOWED_IMAGE_TYPES,
+      maxBytes: MAX_PARTY_PHOTO_BYTES
+    });
+  } catch (error) {
     return NextResponse.json(
-      { error: "Use a JPG, PNG, WebP, or GIF image." },
-      { status: 400 }
-    );
-  }
-
-  if (file.size > MAX_PARTY_PHOTO_BYTES) {
-    return NextResponse.json(
-      { error: "That image is too large. Choose a photo under 10MB." },
+      { error: error instanceof Error ? error.message : "That image could not be uploaded." },
       { status: 400 }
     );
   }
@@ -41,7 +51,7 @@ export async function POST(request: Request) {
     data: {
       userId: session.user.id,
       contentType: file.type,
-      data: Buffer.from(await file.arrayBuffer()),
+      data: bytes,
       size: file.size,
       crop: crop ?? Prisma.JsonNull
     },
@@ -52,12 +62,6 @@ export async function POST(request: Request) {
     }
   });
   const url = `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`;
-
-  console.log("[party] photo upload succeeded", {
-    photoId: photo.id,
-    publicUrl: url,
-    size: photo.size
-  });
 
   return NextResponse.json({
     photo: {

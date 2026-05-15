@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createConnectAccount, createConnectAccountLink } from "@/lib/stripe";
+import { assertSameOrigin, enforceRequestRateLimit } from "@/lib/security/request";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const origin = request.headers.get("origin");
+  const limited = enforceRequestRateLimit(request, [
+    { key: "stripe-connect:ip:{ip}", limit: 15, intervalMs: 60_000 },
+    { key: `stripe-connect:user:${session.user.id}`, limit: 6, intervalMs: 60_000 }
+  ]);
+  if (limited) return limited;
+
   const url = new URL(request.url);
   const expectedOrigin = `${url.protocol}//${url.host}`;
-  if (origin && origin !== expectedOrigin) {
+  if (!assertSameOrigin(request)) {
     return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
   }
 
