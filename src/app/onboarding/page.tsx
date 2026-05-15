@@ -66,6 +66,7 @@ export default async function VendorOnboardingPage({
                 name="logoUrl"
                 label="Vendor logo (Optional)"
                 defaultValue={existingVendor?.logoUrl}
+                defaultCrop={existingVendor?.logoCrop as { x: number; y: number; zoom: number } | null}
                 rounded="full"
                 helperText="Start with the mark hosts will remember."
               />
@@ -75,6 +76,7 @@ export default async function VendorOnboardingPage({
                 name="photoUrls"
                 label="Cover/banner image (Optional)"
                 defaultValue={existingVendor?.coverPhoto ?? existingVendor?.photos[0]}
+                defaultCrop={existingVendor?.coverPhotoCrop as { x: number; y: number; zoom: number } | null}
                 helperText="Optional. This becomes the hero image on your storefront."
               />
             </div>

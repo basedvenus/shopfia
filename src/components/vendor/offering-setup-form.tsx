@@ -41,6 +41,7 @@ type ExistingOffering = {
   messageForPricing: boolean;
   packages: PricedOption[];
   photos: string[];
+  photoCrops?: Array<{ x: number; y: number; zoom: number }>;
   slug: string;
   tags: string[];
   title: string;
@@ -185,12 +186,14 @@ export function OfferingSetupForm({
           name="photos"
           label="Cover photo (Optional)"
           defaultValue={offering?.photos[0]}
+          defaultCrop={offering?.photoCrops?.[0]}
           helperText="Use a real example or styled image that represents this offering."
         />
         <ImageUploadField
           name="photos"
           label="Detail photo (Optional)"
           defaultValue={offering?.photos[1]}
+          defaultCrop={offering?.photoCrops?.[1]}
           helperText="Optional closeup, setup shot, or inspiration image."
         />
       </section>

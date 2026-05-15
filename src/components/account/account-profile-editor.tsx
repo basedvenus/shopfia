@@ -50,6 +50,7 @@ export function AccountProfileEditor({
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div className="flex flex-wrap items-center gap-4">
             <ProfileAvatarPreview
+              crop={profile?.imageCrop as { x: number; y: number; zoom: number } | null}
               image={profile?.image}
               initials={initials}
               displayName={currentDisplayName}
@@ -132,7 +133,9 @@ export function AccountProfileEditor({
             name="image"
             label="Profile picture"
             defaultValue={profile?.image}
+            defaultCrop={profile?.imageCrop as { x: number; y: number; zoom: number } | null}
             value={profile?.image}
+            valueCrop={profile?.imageCrop as { x: number; y: number; zoom: number } | null}
             rounded="full"
             helperText="Click to upload. The image is saved to your profile when the upload finishes."
             onUploadComplete={(result) => onAvatarUploaded(result.profile)}

@@ -123,6 +123,7 @@ model User {
   emailVerified          DateTime?
   passwordHash           String?
   image                  String?
+  imageCrop              Json?
   username               String?           @unique
   bio                    String?
   instagramUrl           String?
@@ -225,8 +226,11 @@ model VendorProfile {
   googlePlaceId             String?
   serviceRadiusMiles        Int                   @default(15)
   photos                    String[]
+  photoCrops                Json?
   coverPhoto                String?
+  coverPhotoCrop            Json?
   logoUrl                   String?
+  logoCrop                  Json?
   verified                  Boolean               @default(false)
   stripeAccountId           String?
   stripeOnboardingComplete  Boolean               @default(false)
@@ -278,7 +282,9 @@ model PartyEvent {
   locationLng   Float?
   googlePlaceId String?
   coverImageUrl String?
+  coverImageCrop Json?
   imageUrls     String[]
+  imageCrops    Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -299,6 +305,7 @@ model PartyPhoto {
   size          Int
   sortOrder     Int      @default(0)
   caption       String?
+  crop          Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -376,6 +383,7 @@ model Offering {
   categoryId       String
   tags             String[]
   photos           String[]
+  photoCrops       Json?
   active           Boolean       @default(true)
   durationMinutes  Int?
   turnaroundDays   Int?

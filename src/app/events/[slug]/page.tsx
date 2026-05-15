@@ -6,6 +6,8 @@ import { toggleFollowAction } from "@/app/actions/auth";
 import { PartyEventForm, type EditablePartyEvent } from "@/components/parties/party-event-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CroppedImage } from "@/components/ui/cropped-image";
+import { normalizeImageCrop } from "@/lib/image-crop";
 
 export const dynamic = "force-dynamic";
 
@@ -79,14 +81,16 @@ export default async function EventPage({
   const legacyImages = event?.imageUrls?.length ? event.imageUrls : fallback?.imageUrls ?? [];
   const photos = event?.photos?.length
     ? event.photos.map((photo) => ({
-        id: photo.id,
-        url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
-        taggedVendors: photo.taggedVendors
+      id: photo.id,
+      url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
+      crop: normalizeImageCrop(photo.crop),
+      taggedVendors: photo.taggedVendors
       }))
     : legacyImages.map((image, index) => ({
-        id: `${image}-${index}`,
-        url: image,
-        taggedVendors: event?.taggedVendors ?? fallbackVendors
+      id: `${image}-${index}`,
+      url: image,
+      crop: normalizeImageCrop(null),
+      taggedVendors: event?.taggedVendors ?? fallbackVendors
       }));
   const safePhotos = photos.length
     ? photos
@@ -94,6 +98,7 @@ export default async function EventPage({
         {
           id: "placeholder",
           url: fallback?.coverImageUrl ?? "/demo/fairfield-lemon-tablescape.png",
+          crop: normalizeImageCrop(null),
           taggedVendors: []
         }
       ];
@@ -131,6 +136,7 @@ export default async function EventPage({
         photos: event.photos.map((photo) => ({
           id: photo.id,
           url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
+          crop: normalizeImageCrop(photo.crop),
           vendorIds: photo.taggedVendors.map((vendor) => vendor.id),
           vendorRatings: Object.fromEntries(
             photo.vendorRatings.map((rating) => [rating.vendorId, rating.rating])
@@ -176,10 +182,9 @@ export default async function EventPage({
                 Update the story, location, hashtag bubbles, gallery order, cover photo, and vendor tags attached to each image.
               </p>
             </div>
-            <div
-              className="min-h-[260px] rounded-[1.4rem] bg-cover bg-center shadow-sm"
-              style={{ backgroundImage: `url(${hero})` }}
-            />
+            <div className="relative min-h-[260px] overflow-hidden rounded-[1.4rem] bg-muted shadow-sm">
+              <CroppedImage src={hero} alt="" crop={safePhotos[0]?.crop} className="absolute inset-0 h-full w-full object-cover" />
+            </div>
             <Link href={`/events/${formParty.slug}`} className="inline-flex">
               <Button type="button" variant="secondary">
                 <ArrowLeft className="h-4 w-4" />
@@ -195,7 +200,7 @@ export default async function EventPage({
 
       <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
         <div className="relative min-h-[480px]">
-          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${hero})` }} />
+          <CroppedImage src={hero} alt="" crop={safePhotos[0]?.crop} className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="relative flex min-h-[480px] flex-col justify-end p-6 text-white md:p-8">
             <div className="mb-3 flex flex-wrap gap-2">
@@ -266,7 +271,7 @@ export default async function EventPage({
                 index === 0 ? "col-span-2 row-span-2" : ""
               }`}
             >
-              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${photo.url})` }} />
+              <CroppedImage src={photo.url} alt="" crop={photo.crop} className="absolute inset-0 h-full w-full object-cover" />
               {photo.taggedVendors.length > 0 ? (
                 <div className="absolute inset-x-2 bottom-2 flex flex-wrap gap-1.5">
                   {photo.taggedVendors.slice(0, 3).map((vendor) => (
@@ -350,7 +355,7 @@ export default async function EventPage({
                   <div className="grid grid-cols-3 gap-1 p-2">
                     {displayPhotos.slice(0, 3).map((photo) => (
                       <div key={`${vendor.id}-${photo.id}`} className="relative aspect-square overflow-hidden rounded-[1rem] bg-muted">
-                        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${photo.url})` }} />
+                        <CroppedImage src={photo.url} alt="" crop={photo.crop} className="absolute inset-0 h-full w-full object-cover" />
                       </div>
                     ))}
                   </div>

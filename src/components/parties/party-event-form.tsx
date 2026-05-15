@@ -5,8 +5,11 @@ import { ArrowDown, ArrowUp, ImagePlus, Loader2, Search, Star, Upload, X } from 
 import { createPartyEventAction, updatePartyEventAction } from "@/app/actions/auth";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { Button } from "@/components/ui/button";
+import { CroppedImage } from "@/components/ui/cropped-image";
+import { ImageCropEditor } from "@/components/ui/image-crop-editor";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DEFAULT_IMAGE_CROP, type ImageCrop } from "@/lib/image-crop";
 
 type VendorOption = {
   id: string;
@@ -18,6 +21,7 @@ type VendorOption = {
 };
 
 type UploadedPartyPhoto = {
+  crop: ImageCrop;
   id: string;
   url: string;
   vendorIds: string[];
@@ -53,6 +57,7 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>(() => initialParty?.tags ?? []);
   const [photos, setPhotos] = useState<UploadedPartyPhoto[]>(() => initialParty?.photos ?? []);
+  const [editingCropPhoto, setEditingCropPhoto] = useState<UploadedPartyPhoto | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +82,7 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
     try {
       const uploaded = await Promise.all(files.map(uploadPartyPhoto));
       setPhotos((current) => [...current, ...uploaded].slice(0, 16));
+      setEditingCropPhoto(uploaded[0] ?? null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not upload one of those photos.");
     } finally {
@@ -131,6 +137,12 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
     );
   }
 
+  function setPhotoCrop(photoId: string, crop: ImageCrop) {
+    setPhotos((current) =>
+      current.map((photo) => (photo.id === photoId ? { ...photo, crop } : photo))
+    );
+  }
+
   function removePhoto(photoId: string) {
     setPhotos((current) => current.filter((photo) => photo.id !== photoId));
     void fetch(`/api/party-photos/${photoId}`, { method: "DELETE" });
@@ -168,7 +180,7 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
         tags.forEach((tag) => formData.append("tags", tag));
         formData.set(
           "photos",
-          JSON.stringify(photos.map(({ id, vendorIds, vendorRatings }) => ({ id, vendorIds, vendorRatings })))
+          JSON.stringify(photos.map(({ crop, id, vendorIds, vendorRatings }) => ({ crop, id, vendorIds, vendorRatings })))
         );
 
         startTransition(async () => {
@@ -293,7 +305,7 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
             {photos.map((photo, index) => (
               <article key={photo.id} className="grid gap-3 rounded-[1.4rem] border bg-white p-3 sm:grid-cols-[150px_1fr]">
                 <div className="relative aspect-square overflow-hidden rounded-[1rem] bg-muted">
-                  <img src={photo.url} alt="" className="h-full w-full object-cover object-center" />
+                  <CroppedImage src={photo.url} alt="" crop={photo.crop} className="h-full w-full object-cover object-center" />
                   {index === 0 ? (
                     <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium shadow-sm">
                       Cover
@@ -312,6 +324,9 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
                           <Star className="h-4 w-4" />
                         </IconButton>
                       ) : null}
+                      <IconButton label="Reposition photo" onClick={() => setEditingCropPhoto(photo)}>
+                        <ImagePlus className="h-4 w-4" />
+                      </IconButton>
                       <IconButton label="Move up" disabled={index === 0} onClick={() => movePhoto(photo.id, -1)}>
                         <ArrowUp className="h-4 w-4" />
                       </IconButton>
@@ -346,6 +361,19 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
         {isPending ? "Saving..." : isEditing ? "Save changes" : "Add Party"}
       </Button>
       {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
+      {editingCropPhoto ? (
+        <ImageCropEditor
+          aspectLabel="Party photo crop"
+          crop={editingCropPhoto.crop}
+          imageUrl={editingCropPhoto.url}
+          onCancel={() => setEditingCropPhoto(null)}
+          onSave={(crop) => {
+            setPhotoCrop(editingCropPhoto.id, crop);
+            setEditingCropPhoto(null);
+          }}
+          previewClassName="aspect-[4/3]"
+        />
+      ) : null}
     </form>
   );
 }
@@ -549,6 +577,7 @@ async function uploadPartyPhoto(file: File) {
 
   return {
     ...result.photo,
+    crop: DEFAULT_IMAGE_CROP,
     vendorIds: [],
     vendorRatings: {}
   };

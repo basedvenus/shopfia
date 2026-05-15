@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { parseImageCrop } from "@/lib/image-crop";
 
 export const runtime = "nodejs";
 
@@ -15,6 +17,7 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const file = formData.get("file");
+  const crop = parseImageCrop(formData.get("crop"));
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Choose an image file." }, { status: 400 });
@@ -39,7 +42,8 @@ export async function POST(request: Request) {
       userId: session.user.id,
       contentType: file.type,
       data: Buffer.from(await file.arrayBuffer()),
-      size: file.size
+      size: file.size,
+      crop: crop ?? Prisma.JsonNull
     },
     select: {
       id: true,

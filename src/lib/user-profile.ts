@@ -6,6 +6,7 @@ export const userProfileSelect = {
   email: true,
   id: true,
   image: true,
+  imageCrop: true,
   instagramUrl: true,
   name: true,
   partyfulUrl: true,
@@ -19,7 +20,7 @@ export const userProfileSelect = {
       slug: true
     }
   }
-} satisfies Prisma.UserSelect;
+} as const satisfies Prisma.UserSelect;
 
 export type SharedUserProfile = Prisma.UserGetPayload<{
   select: typeof userProfileSelect;

@@ -90,6 +90,7 @@ export default async function VendorOfferingEditPage({ params }: { params: { id:
               messageForPricing: offering.messageForPricing,
               packages: getPricedOptions(offering.variantsJson),
               photos: offering.photos,
+              photoCrops: getImageCrops(offering.photoCrops),
               slug: offering.slug,
               tags: offering.tags,
               title: offering.title,
@@ -115,6 +116,21 @@ function getPricedOptions(value: unknown): PricedOption[] {
     options.push({ name, description, priceCents });
     return options;
   }, []);
+}
+
+function getImageCrops(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const record = item as Record<string, unknown>;
+      const x = Number(record.x);
+      const y = Number(record.y);
+      const zoom = Number(record.zoom);
+      if (![x, y, zoom].every(Number.isFinite)) return null;
+      return { x, y, zoom };
+    })
+    .filter((crop): crop is { x: number; y: number; zoom: number } => Boolean(crop));
 }
 
 const categoryOrder = [

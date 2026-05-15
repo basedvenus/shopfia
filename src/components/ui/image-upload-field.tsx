@@ -1,6 +1,9 @@
 "use client";
 
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
+import { CroppedImage } from "@/components/ui/cropped-image";
+import { ImageCropEditor } from "@/components/ui/image-crop-editor";
+import { DEFAULT_IMAGE_CROP, normalizeImageCrop, type ImageCrop } from "@/lib/image-crop";
 import type { SharedUserProfile } from "@/lib/user-profile";
 
 type UploadResult = {
@@ -16,40 +19,64 @@ type ImageUploadFieldProps = {
   name: string;
   label: string;
   changeLabel?: string;
+  cropName?: string;
+  defaultCrop?: ImageCrop | null;
   defaultValue?: string | null;
   helperText?: string;
   onChangePreview?: (value: string) => void;
+  onCropChange?: (crop: ImageCrop) => void;
   onUploadComplete?: (result: UploadResult) => void;
   rounded?: "full" | "large";
   uploadEndpoint?: string;
   uploadLabel?: string;
   value?: string | null;
+  valueCrop?: ImageCrop | null;
 };
 
 export function ImageUploadField({
   changeLabel = "Change image",
+  cropName,
+  defaultCrop,
   name,
   label,
   defaultValue,
   helperText,
   onChangePreview,
+  onCropChange,
   onUploadComplete,
   rounded = "large",
   uploadEndpoint,
   uploadLabel = "Upload image",
-  value: controlledValue
+  value: controlledValue,
+  valueCrop
 }: ImageUploadFieldProps) {
   const [internalValue, setInternalValue] = useState(defaultValue ?? "");
+  const [internalCrop, setInternalCrop] = useState<ImageCrop>(() => normalizeImageCrop(defaultCrop));
   const [uploadPreviewValue, setUploadPreviewValue] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const isRound = rounded === "full";
   const value = controlledValue !== undefined ? controlledValue ?? "" : internalValue;
+  const crop = valueCrop ? normalizeImageCrop(valueCrop) : internalCrop;
   const previewValue = uploadPreviewValue ?? value;
+  const resolvedCropName = cropName ?? `${name}Crop`;
+
+  useEffect(() => {
+    setInternalCrop(normalizeImageCrop(defaultCrop));
+  }, [defaultCrop]);
 
   function updateValue(nextValue: string) {
     setInternalValue(nextValue);
     setUploadPreviewValue(null);
     onChangePreview?.(nextValue);
+  }
+
+  function updateCrop(nextCrop: ImageCrop) {
+    const normalized = normalizeImageCrop(nextCrop);
+    setInternalCrop(normalized);
+    onCropChange?.(normalized);
   }
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
@@ -63,53 +90,82 @@ export function ImageUploadField({
       return;
     }
 
-    if (uploadEndpoint) {
-      const localPreviewUrl = URL.createObjectURL(file);
-      setUploadPreviewValue(localPreviewUrl);
+    const localPreviewUrl = URL.createObjectURL(file);
+    setPendingFile(file);
+    setPendingPreview(localPreviewUrl);
+    setEditorOpen(true);
+  }
 
-      try {
-        const uploadData = new FormData();
-        uploadData.set("file", file);
-        const response = await fetch(uploadEndpoint, {
-          method: "POST",
-          body: uploadData
-        });
-        const result = (await response.json()) as UploadResult;
-
-        if (!response.ok || !result.url) {
-          throw new Error(result.error ?? "Upload failed.");
-        }
-
-        console.log("[profile] upload response", result);
-        console.log("[profile] upload handler generated URL", {
-          path: result.path,
-          publicUrl: result.publicUrl,
-          persisted: result.persisted,
-          url: result.url
-        });
-        updateValue(result.url);
-        onUploadComplete?.(result);
-        setMessage(
-          result.persisted
-            ? "Photo uploaded and saved to your profile."
-            : "Photo uploaded, but persistence was not confirmed."
-        );
-      } catch (error) {
-        setUploadPreviewValue(null);
-        onChangePreview?.(value);
-        setMessage(error instanceof Error ? error.message : "That image could not be uploaded.");
-      } finally {
-        URL.revokeObjectURL(localPreviewUrl);
-      }
+  async function saveEditedImage(nextCrop: ImageCrop) {
+    if (!pendingFile || !pendingPreview) {
+      updateCrop(nextCrop);
+      setEditorOpen(false);
       return;
     }
 
+    setMessage(null);
+    updateCrop(nextCrop);
+    setUploadPreviewValue(pendingPreview);
+
+    if (uploadEndpoint) {
+      await uploadOriginalImage(pendingFile, nextCrop);
+    } else {
+      await storeOriginalImagePreview(pendingFile);
+    }
+
+    URL.revokeObjectURL(pendingPreview);
+    setPendingFile(null);
+    setPendingPreview(null);
+    setEditorOpen(false);
+  }
+
+  async function uploadOriginalImage(file: File, nextCrop: ImageCrop) {
     try {
-      const nextValue = await resizeImageFile(file, isRound ? 320 : 1200, isRound);
+      const uploadData = new FormData();
+      uploadData.set("file", file);
+      uploadData.set("crop", JSON.stringify(nextCrop));
+      const response = await fetch(uploadEndpoint!, {
+        method: "POST",
+        body: uploadData
+      });
+      const result = (await response.json()) as UploadResult;
+
+      if (!response.ok || !result.url) {
+        throw new Error(result.error ?? "Upload failed.");
+      }
+
+      updateValue(result.url);
+      onUploadComplete?.(result);
+      setMessage(
+        result.persisted
+          ? "Photo uploaded and saved."
+          : "Photo uploaded. Positioning will save with this form."
+      );
+    } catch (error) {
+      setUploadPreviewValue(null);
+      onChangePreview?.(value);
+      setMessage(error instanceof Error ? error.message : "That image could not be uploaded.");
+    }
+  }
+
+  async function storeOriginalImagePreview(file: File) {
+    try {
+      const nextValue = await resizeImageFile(file, isRound ? 900 : 1600);
       updateValue(nextValue);
+      setMessage("Image added. Positioning will save with this form.");
     } catch {
+      setUploadPreviewValue(null);
       setMessage("That image could not be processed. Try a different photo.");
     }
+  }
+
+  function cancelEditor() {
+    if (pendingPreview) {
+      URL.revokeObjectURL(pendingPreview);
+    }
+    setPendingFile(null);
+    setPendingPreview(null);
+    setEditorOpen(false);
   }
 
   return (
@@ -121,9 +177,10 @@ export function ImageUploadField({
         }`}
       >
         {previewValue ? (
-          <img
+          <CroppedImage
             src={previewValue}
             alt=""
+            crop={crop}
             className="absolute inset-0 h-full w-full object-cover object-center"
           />
         ) : null}
@@ -133,8 +190,19 @@ export function ImageUploadField({
         <input type="file" accept="image/*" className="sr-only" onChange={handleFile} />
       </label>
       <input type="hidden" name={name} value={value} />
+      <input type="hidden" name={resolvedCropName} value={JSON.stringify(crop)} />
       {helperText ? <p className="text-xs text-muted-foreground">{helperText}</p> : null}
       {message ? <p className="text-xs text-destructive">{message}</p> : null}
+      {editorOpen && pendingPreview ? (
+        <ImageCropEditor
+          aspectLabel={isRound ? "Profile crop" : "Image crop"}
+          crop={crop}
+          imageUrl={pendingPreview}
+          onCancel={cancelEditor}
+          onSave={saveEditedImage}
+          previewClassName={isRound ? "aspect-square max-w-[320px] rounded-full" : "aspect-[4/3]"}
+        />
+      ) : null}
     </div>
   );
 }
@@ -148,49 +216,27 @@ function loadImage(src: string) {
   });
 }
 
-async function resizeImageFile(file: File, maxSize: number, cropSquare: boolean) {
+async function resizeImageFile(file: File, maxSize: number) {
   const objectUrl = URL.createObjectURL(file);
   const sourceImage = await loadImage(objectUrl);
   const canvas = document.createElement("canvas");
 
   try {
-    if (cropSquare) {
-      canvas.width = maxSize;
-      canvas.height = maxSize;
-    } else {
-      const scale = Math.min(
-        1,
-        maxSize / Math.max(sourceImage.naturalWidth, sourceImage.naturalHeight)
-      );
-      canvas.width = Math.max(1, Math.round(sourceImage.naturalWidth * scale));
-      canvas.height = Math.max(1, Math.round(sourceImage.naturalHeight * scale));
-    }
+    const scale = Math.min(
+      1,
+      maxSize / Math.max(sourceImage.naturalWidth, sourceImage.naturalHeight)
+    );
+    canvas.width = Math.max(1, Math.round(sourceImage.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(sourceImage.naturalHeight * scale));
 
     const context = canvas.getContext("2d");
     if (!context) {
       throw new Error("Canvas is unavailable.");
     }
 
-    if (cropSquare) {
-      const sourceSize = Math.min(sourceImage.naturalWidth, sourceImage.naturalHeight);
-      const sourceX = Math.round((sourceImage.naturalWidth - sourceSize) / 2);
-      const sourceY = Math.round((sourceImage.naturalHeight - sourceSize) / 2);
-      context.drawImage(
-        sourceImage,
-        sourceX,
-        sourceY,
-        sourceSize,
-        sourceSize,
-        0,
-        0,
-        maxSize,
-        maxSize
-      );
-    } else {
-      context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
-    }
+    context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
 
-    return canvas.toDataURL("image/jpeg", cropSquare ? 0.72 : 0.8);
+    return canvas.toDataURL("image/jpeg", 0.82);
   } finally {
     URL.revokeObjectURL(objectUrl);
   }

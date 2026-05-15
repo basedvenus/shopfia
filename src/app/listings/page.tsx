@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ export default async function ListingsPage() {
       offering: {
         select: {
           id: true,
+          photoCrops: true,
           photos: true,
           active: true
         }
@@ -76,6 +78,10 @@ export default async function ListingsPage() {
               vendor.coverPhoto ??
               vendor.photos[0] ??
               fallbackListingImage;
+            const offeringPhotoCrops = Array.isArray(listing.offering?.photoCrops)
+              ? listing.offering.photoCrops
+              : [];
+            const crop = normalizeImageCrop(offeringPhotoCrops[0]);
 
             return (
               <Card key={listing.id} className="overflow-hidden border-white/50 bg-white/90">
@@ -86,6 +92,7 @@ export default async function ListingsPage() {
                     fill
                     sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
                     className="object-cover"
+                    style={imageCropToCss(crop)}
                   />
                   <div className="absolute left-3 top-3">
                     <Badge className="bg-white/85 backdrop-blur" variant="outline">

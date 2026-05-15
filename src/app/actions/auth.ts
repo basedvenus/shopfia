@@ -6,6 +6,7 @@ import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { parseImageCrop } from "@/lib/image-crop";
 import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 
 const signUpSchema = z.object({
@@ -104,7 +105,8 @@ export async function updateAccountProfileAction(formData: FormData) {
         bio: parsed.data.bio || null,
         instagramUrl: parsed.data.instagramUrl || null,
         tiktokUrl: parsed.data.tiktokUrl || null,
-        partyfulUrl: parsed.data.partyfulUrl || null
+        partyfulUrl: parsed.data.partyfulUrl || null,
+        imageCrop: parseImageCrop(formData.get("imageCrop")) ?? undefined
       },
       select: userProfileSelect
     });
@@ -127,6 +129,13 @@ export async function updateAccountProfileAction(formData: FormData) {
 
 const partyPhotoPayloadSchema = z.object({
   id: z.string().cuid(),
+  crop: z
+    .object({
+      x: z.coerce.number().min(0).max(100),
+      y: z.coerce.number().min(0).max(100),
+      zoom: z.coerce.number().min(1).max(3)
+    })
+    .default({ x: 50, y: 50, zoom: 1 }),
   vendorIds: z.array(z.string().cuid()).max(8).default([]),
   vendorRatings: z.record(z.string().cuid(), z.coerce.number().int().min(1).max(5)).default({})
 });
@@ -226,6 +235,7 @@ export async function createPartyEventAction(formData: FormData) {
           where: { id: photo.id },
           data: {
             eventId: partyEvent.id,
+            crop: photo.crop,
             sortOrder: index,
             taggedVendors: {
               set: photo.vendorIds
@@ -337,6 +347,7 @@ export async function updatePartyEventAction(formData: FormData) {
           where: { id: photo.id },
           data: {
             eventId: existingEvent.id,
+            crop: photo.crop,
             sortOrder: index,
             taggedVendors: {
               set: photo.vendorIds
@@ -519,7 +530,7 @@ function parsePartyPhotoPayload(value: FormDataEntryValue | null) {
       if (!photo || typeof photo !== "object") {
         return { id: "", vendorIds: [] };
       }
-      const record = photo as { id?: unknown; vendorIds?: unknown; vendorRatings?: unknown };
+      const record = photo as { crop?: unknown; id?: unknown; vendorIds?: unknown; vendorRatings?: unknown };
       const vendorRatings =
         record.vendorRatings && typeof record.vendorRatings === "object" && !Array.isArray(record.vendorRatings)
           ? Object.fromEntries(
@@ -534,6 +545,7 @@ function parsePartyPhotoPayload(value: FormDataEntryValue | null) {
             )
           : {};
       return {
+        crop: parsePhotoCrop(record.crop),
         id: typeof record.id === "string" ? record.id : "",
         vendorIds: Array.isArray(record.vendorIds)
           ? record.vendorIds.filter((vendorId): vendorId is string => typeof vendorId === "string")
@@ -544,6 +556,24 @@ function parsePartyPhotoPayload(value: FormDataEntryValue | null) {
   } catch {
     return [];
   }
+}
+
+function parsePhotoCrop(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { x: 50, y: 50, zoom: 1 };
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    x: clampCropNumber(record.x, 0, 100, 50),
+    y: clampCropNumber(record.y, 0, 100, 50),
+    zoom: clampCropNumber(record.zoom, 1, 3, 1)
+  };
+}
+
+function clampCropNumber(value: unknown, min: number, max: number, fallback: number) {
+  const numericValue = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numericValue)) return fallback;
+  return Math.min(max, Math.max(min, numericValue));
 }
 
 export async function toggleFollowAction(formData: FormData) {

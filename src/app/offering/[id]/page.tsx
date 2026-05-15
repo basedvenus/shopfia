@@ -15,6 +15,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { ListingInquiryForm } from "@/components/inquiries/listing-inquiry-form";
 import { Badge } from "@/components/ui/badge";
+import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +47,13 @@ export default async function OfferingPage({ params }: { params: { id: string } 
   if (!offering || !offering.active) return notFound();
 
   const photos = offering.photos.length > 0 ? offering.photos : [fallbackImage];
+  const photoCrops = getImageCrops(offering.photoCrops);
   const galleryPhotos = [photos[0], photos[1] ?? photos[0], photos[2] ?? photos[0]];
+  const galleryCrops = [
+    photoCrops[0] ?? normalizeImageCrop(null),
+    photoCrops[1] ?? photoCrops[0] ?? normalizeImageCrop(null),
+    photoCrops[2] ?? photoCrops[0] ?? normalizeImageCrop(null)
+  ];
   const priceLabel = formatOfferingPrice(offering);
   const packages = getPricedOptions(offering.variantsJson);
   const addons = getPricedOptions(offering.addonsJson);
@@ -83,6 +90,7 @@ export default async function OfferingPage({ params }: { params: { id: string } 
                 priority
                 sizes="(min-width: 1280px) 58vw, 100vw"
                 className="object-cover"
+                style={imageCropToCss(galleryCrops[0])}
               />
               <button
                 type="button"
@@ -104,6 +112,7 @@ export default async function OfferingPage({ params }: { params: { id: string } 
                     fill
                     sizes="(min-width: 1280px) 26vw, 100vw"
                     className="object-cover"
+                    style={imageCropToCss(galleryCrops[index + 1])}
                   />
                   {index === 1 ? (
                     <div className="absolute inset-x-0 bottom-5 flex justify-center">
@@ -243,6 +252,11 @@ export default async function OfferingPage({ params }: { params: { id: string } 
       </div>
     </div>
   );
+}
+
+function getImageCrops(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => normalizeImageCrop(item));
 }
 
 type PricedOption = {

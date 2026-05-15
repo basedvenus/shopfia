@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { CalendarHeart, MapPin, Sparkles, Tags } from "lucide-react";
+import { CroppedImage } from "@/components/ui/cropped-image";
 import { db } from "@/lib/db";
+import { normalizeImageCrop } from "@/lib/image-crop";
 import { getSafeProfileImage } from "@/lib/profile-image";
 
 export const dynamic = "force-dynamic";
@@ -86,7 +88,7 @@ export default async function PartiesPage() {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {parties.length > 0
           ? parties.map((party) => {
-              const image = getEventImage(party);
+              const { crop, image } = getEventImage(party);
               const vendors = getUniqueVendors(party);
               const hostImage = getSafeProfileImage(party.user.image);
               const hostName = party.user.name ?? party.user.username ?? "ShopFia host";
@@ -98,10 +100,7 @@ export default async function PartiesPage() {
                   className="group overflow-hidden rounded-[1.6rem] border border-white/75 bg-white/85 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"
                 >
                   <div className="relative aspect-[4/5] overflow-hidden bg-muted">
-                    <div
-                      className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.04]"
-                      style={{ backgroundImage: `url(${image})` }}
-                    />
+                    <CroppedImage src={image} alt="" crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                     <div className="absolute left-4 top-4 flex flex-wrap gap-1.5">
                       {(party.tags.length ? party.tags : [party.theme].filter(Boolean))
@@ -228,9 +227,15 @@ function getUniqueVendors(party: {
 function getEventImage(event: {
   coverImageUrl: string | null;
   imageUrls: string[];
-  photos: Array<{ id: string; updatedAt: Date }>;
+  photos: Array<{ crop: unknown; id: string; updatedAt: Date }>;
 }) {
   return event.photos[0]
-    ? `/api/party-photos/${event.photos[0].id}?v=${event.photos[0].updatedAt.getTime()}`
-    : event.coverImageUrl ?? event.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png";
+    ? {
+        crop: normalizeImageCrop(event.photos[0].crop),
+        image: `/api/party-photos/${event.photos[0].id}?v=${event.photos[0].updatedAt.getTime()}`
+      }
+    : {
+        crop: normalizeImageCrop(null),
+        image: event.coverImageUrl ?? event.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png"
+      };
 }

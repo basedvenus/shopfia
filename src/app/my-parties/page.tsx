@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MapPin, Pencil, Sparkles } from "lucide-react";
 import { PartyEventForm } from "@/components/parties/party-event-form";
+import { CroppedImage } from "@/components/ui/cropped-image";
+import { normalizeImageCrop } from "@/lib/image-crop";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +59,7 @@ export default async function MyPartiesPage() {
           {events.length > 0 ? (
             <div className="grid auto-rows-[180px] grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
               {events.map((event, index) => {
-                const image = getEventImage(event);
+                const { crop, image } = getEventImage(event);
                 const vendorCount = new Set(event.photos.flatMap((photo) => photo.taggedVendors.map((vendor) => vendor.id))).size;
                 const featured = index === 0 || index % 7 === 0;
                 return (
@@ -79,10 +81,7 @@ export default async function MyPartiesPage() {
                     >
                       <Pencil className="h-4 w-4" />
                     </Link>
-                    <div
-                      className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.04]"
-                      style={{ backgroundImage: `url(${image})` }}
-                    />
+                    <CroppedImage src={image} alt="" crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 p-4 text-white">
                       <div className="mb-2 flex flex-wrap gap-1.5">
@@ -160,9 +159,15 @@ export default async function MyPartiesPage() {
 function getEventImage(event: {
   coverImageUrl: string | null;
   imageUrls: string[];
-  photos: Array<{ id: string; updatedAt: Date }>;
+  photos: Array<{ crop: unknown; id: string; updatedAt: Date }>;
 }) {
   return event.photos[0]
-    ? `/api/party-photos/${event.photos[0].id}?v=${event.photos[0].updatedAt.getTime()}`
-    : event.coverImageUrl ?? event.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png";
+    ? {
+        crop: normalizeImageCrop(event.photos[0].crop),
+        image: `/api/party-photos/${event.photos[0].id}?v=${event.photos[0].updatedAt.getTime()}`
+      }
+    : {
+        crop: normalizeImageCrop(null),
+        image: event.coverImageUrl ?? event.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png"
+      };
 }

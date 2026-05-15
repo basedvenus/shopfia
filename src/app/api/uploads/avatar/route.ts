@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { parseImageCrop } from "@/lib/image-crop";
 import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 
 export const runtime = "nodejs";
@@ -17,6 +19,7 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const file = formData.get("file");
+  const crop = parseImageCrop(formData.get("crop"));
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Choose an image file." }, { status: 400 });
@@ -59,7 +62,7 @@ export async function POST(request: Request) {
     const url = `/api/users/${session.user.id}/avatar?v=${avatar.updatedAt.getTime()}`;
     const updatedUser = await tx.user.update({
       where: { id: session.user.id },
-      data: { image: url },
+      data: { image: url, imageCrop: crop ?? Prisma.JsonNull },
       select: userProfileSelect
     });
     const savedUser = await tx.user.findUnique({

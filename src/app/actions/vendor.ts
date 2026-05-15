@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { CategoryAudience, OffsiteAdsTier, Prisma, UserRole } from "@prisma/client";
 import { requireRole, requireSession, requireVerifiedVendorProfile } from "@/lib/auth/guards";
+import { parseImageCrop, parseImageCropArray } from "@/lib/image-crop";
 import { createListing, ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
 import { vendorOnboardingSchema, offeringSchema } from "@/lib/validators/vendor";
 
@@ -122,6 +123,9 @@ export async function upsertVendorProfileAction(formData: FormData) {
     );
   }
   const parsed = result.data;
+  const logoCrop = parseImageCrop(formData.get("logoUrlCrop"));
+  const photoCrops = parseImageCropArray(formData.getAll("photoUrlsCrop"));
+  const coverPhotoCrop = photoCrops[0] ?? logoCrop;
 
   let vendor;
   try {
@@ -147,8 +151,11 @@ export async function upsertVendorProfileAction(formData: FormData) {
         serviceAreaNotes: parsed.serviceAreaNotes || null,
         availabilityNotes: parsed.availabilityNotes || null,
         logoUrl: parsed.logoUrl || null,
+        logoCrop: logoCrop ?? Prisma.JsonNull,
         photos: parsed.photoUrls,
-        coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null
+        photoCrops,
+        coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null,
+        coverPhotoCrop: coverPhotoCrop ?? Prisma.JsonNull
       },
       create: {
         userId: session.user.id,
@@ -171,8 +178,11 @@ export async function upsertVendorProfileAction(formData: FormData) {
         serviceAreaNotes: parsed.serviceAreaNotes || null,
         availabilityNotes: parsed.availabilityNotes || null,
         logoUrl: parsed.logoUrl || null,
+        logoCrop: logoCrop ?? Prisma.JsonNull,
         photos: parsed.photoUrls,
-        coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null
+        photoCrops,
+        coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null,
+        coverPhotoCrop: coverPhotoCrop ?? Prisma.JsonNull
       }
     });
   } catch (error) {
@@ -264,6 +274,7 @@ export async function upsertOfferingAction(formData: FormData) {
     );
   }
   const parsed = result.data;
+  const photoCrops = parseImageCropArray(formData.getAll("photosCrop"));
 
   const offeringCategory = await db.category.findFirst({
     where: { id: parsed.categoryId, audience: CategoryAudience.VENDOR },
@@ -294,6 +305,7 @@ export async function upsertOfferingAction(formData: FormData) {
     categoryId: parsed.categoryId,
     tags: parsed.tags.map((t) => t.toLowerCase()),
     photos: parsed.photos,
+    photoCrops,
     variantsJson: parsed.packages,
     addonsJson: parsed.addons,
     durationMinutes: parsed.durationMinutes ?? null,
