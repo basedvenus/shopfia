@@ -53,13 +53,12 @@ export default async function ListingsPage() {
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-white/60 bg-white/50 p-6 shadow-soft backdrop-blur">
-        <Badge variant="accent">Marketplace Listings</Badge>
+        <Badge variant="accent">Vendor Services</Badge>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">
-          Browse active listings
+          Find the vendors behind every event
         </h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          Real listings published by vendors. Each inquiry is saved to the database and linked to
-          the correct vendor and listing.
+          Explore celebrations styled by local artisans and discover the services that bring each party together.
         </p>
       </section>
 

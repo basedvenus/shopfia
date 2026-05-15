@@ -372,7 +372,7 @@ export default async function EventPage({
         </section>
       ) : null}
 
-      <Link href="/parties" className="inline-flex">
+      <Link href="/my-parties" className="inline-flex">
         <Button variant="secondary">Back to My Parties</Button>
       </Link>
     </div>

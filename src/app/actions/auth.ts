@@ -116,6 +116,7 @@ export async function updateAccountProfileAction(formData: FormData) {
     });
 
     revalidatePath("/account");
+    revalidatePath("/my-parties");
     revalidatePath("/parties");
     revalidatePath("/");
     return { ok: true, profile };
@@ -246,6 +247,7 @@ export async function createPartyEventAction(formData: FormData) {
   });
 
   revalidatePath("/parties");
+  revalidatePath("/my-parties");
   revalidatePath(`/events/${event.slug}`);
   revalidatePath("/");
   return { ok: true, eventSlug: event.slug };
@@ -356,6 +358,7 @@ export async function updatePartyEventAction(formData: FormData) {
   });
 
   revalidatePath("/parties");
+  revalidatePath("/my-parties");
   revalidatePath(`/events/${event.slug}`);
   revalidatePath("/");
   return { ok: true, eventSlug: event.slug };
@@ -575,6 +578,7 @@ export async function toggleFollowAction(formData: FormData) {
   }
 
   revalidatePath("/account");
+  revalidatePath("/my-parties");
   revalidatePath("/parties");
   revalidatePath("/explore");
   revalidatePath("/");

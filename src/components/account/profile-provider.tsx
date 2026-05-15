@@ -30,11 +30,9 @@ export function ProfileProvider({
     () => ({
       profile,
       setProfile(nextProfile) {
-        console.log("[profile] setProfile", nextProfile);
         setProfile(nextProfile);
       },
       updateProfile(nextProfile) {
-        console.log("[profile] updateProfile", nextProfile);
         setProfile((current) => (current ? { ...current, ...nextProfile } : current));
       }
     }),

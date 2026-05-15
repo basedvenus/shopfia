@@ -11,7 +11,14 @@ export const userProfileSelect = {
   partyfulUrl: true,
   role: true,
   tiktokUrl: true,
-  username: true
+  username: true,
+  vendorProfile: {
+    select: {
+      id: true,
+      name: true,
+      slug: true
+    }
+  }
 } satisfies Prisma.UserSelect;
 
 export type SharedUserProfile = Prisma.UserGetPayload<{

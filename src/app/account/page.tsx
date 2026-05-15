@@ -112,7 +112,7 @@ export default async function AccountPage() {
       value: "Studio",
       href: "/vendor/dashboard",
       icon: Store,
-      detail: "Profiles, listings, and payouts"
+      detail: "Business profile, services, and payouts"
     },
     {
       label: "Favorites",
@@ -131,7 +131,7 @@ export default async function AccountPage() {
     {
       label: "My Parties",
       value: "Gallery",
-      href: "/parties",
+      href: "/my-parties",
       icon: CalendarHeart,
       detail: "Events, moodboards, and inspiration"
     }
@@ -264,7 +264,7 @@ export default async function AccountPage() {
               Party stories, tagged vendors, and visual inspiration now live on their own dedicated page.
             </p>
           </div>
-          <Link href="/parties">
+          <Link href="/my-parties">
             <Button>Open My Parties</Button>
           </Link>
         </div>

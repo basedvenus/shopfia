@@ -259,7 +259,7 @@ export default async function VendorDashboardPage() {
                   </Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/parties">
+                  <Link href="/my-parties">
                     <Upload className="h-4 w-4" />
                     Upload Party
                   </Link>
@@ -496,7 +496,7 @@ export default async function VendorDashboardPage() {
           body="Tagged customer parties, setup shots, behind-the-scenes moments, and vendor collaborations can all build social proof here."
           action={
             <Button asChild>
-              <Link href="/parties">
+              <Link href="/my-parties">
                 <ImagePlus className="h-4 w-4" />
                 Upload party
               </Link>
@@ -534,7 +534,7 @@ export default async function VendorDashboardPage() {
             icon={<Camera className="h-5 w-5" />}
             title="No party posts yet"
             body="When hosts tag this vendor in party photos, those real celebrations can show up here as proof of your work."
-            href="/parties"
+            href="/my-parties"
             action="Upload party"
           />
         )}

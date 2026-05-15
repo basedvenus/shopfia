@@ -170,7 +170,7 @@ export default function Page() {
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
                     Upload party photos, add tags, and share the vendors behind your celebration.
                   </p>
-                  <Link href="/parties" className="mt-4 inline-flex items-center gap-2 border-b border-primary/40 pb-1 text-sm font-medium text-primary">
+                  <Link href="/my-parties" className="mt-4 inline-flex items-center gap-2 border-b border-primary/40 pb-1 text-sm font-medium text-primary">
                     For hosts: real recommendations
                     <ArrowRight className="h-4 w-4" />
                   </Link>

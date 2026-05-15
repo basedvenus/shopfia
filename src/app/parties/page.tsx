@@ -1,162 +1,228 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { MapPin, Pencil, Sparkles } from "lucide-react";
-import { PartyEventForm } from "@/components/parties/party-event-form";
+import { CalendarHeart, MapPin, Sparkles, Tags } from "lucide-react";
+import { db } from "@/lib/db";
+import { getSafeProfileImage } from "@/lib/profile-image";
 
 export const dynamic = "force-dynamic";
 
-const fallbackEvents = [
+const demoParties = [
   {
     title: "Citrus Garden Brunch",
     theme: "Lemon tablescape inspiration",
+    tags: ["lemons", "floral", "brunch"],
+    location: "Fairfield, CA",
     coverImageUrl: "/demo/fairfield-lemon-tablescape.png",
-    slug: "citrus-garden-brunch"
+    slug: "citrus-garden-brunch",
+    vendorCount: 1,
+    photoCount: 1,
+    host: "ShopFia"
   },
   {
     title: "Tulip Cookie Shower",
-    theme: "Soft floral favors",
+    theme: "Pastel cookie favors",
+    tags: ["baby shower", "pastel", "cookies"],
+    location: "Vacaville, CA",
     coverImageUrl: "/demo/vacaville-cookie-tulips.png",
-    slug: "tulip-cookie-shower"
+    slug: "tulip-cookie-shower",
+    vendorCount: 1,
+    photoCount: 1,
+    host: "ShopFia"
   }
 ];
 
 export default async function PartiesPage() {
-  const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
-  const session = await auth();
-  if (!session?.user?.id) redirect("/account");
-
-  const [events, vendors] = await Promise.all([
-    db.partyEvent.findMany({
-      where: { userId: session.user.id },
-      include: {
-        photos: {
-          orderBy: { sortOrder: "asc" },
-          include: { taggedVendors: true }
+  const parties = await db.partyEvent.findMany({
+    include: {
+      user: {
+        select: {
+          image: true,
+          name: true,
+          username: true
         }
       },
-      orderBy: { createdAt: "desc" }
-    }),
-    db.vendorProfile.findMany({
-      select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true },
-      orderBy: { name: "asc" }
-    })
-  ]);
+      photos: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          taggedVendors: {
+            select: {
+              id: true,
+              name: true,
+              slug: true
+            }
+          }
+        }
+      },
+      taggedVendors: {
+        select: {
+          id: true,
+          name: true,
+          slug: true
+        }
+      }
+    },
+    orderBy: [{ createdAt: "desc" }],
+    take: 36
+  });
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(390px,0.85fr)]">
-        <div className="space-y-5">
-          <div>
-            <div>
-              <p className="text-sm text-muted-foreground">Social party portfolio</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight">My Parties</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Curate visual stories with real photos, searchable hashtags, and vendor credits tied to the images they helped create.
-              </p>
-            </div>
+      <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/60 p-6 shadow-soft md:p-8">
+        <div className="flex max-w-4xl flex-col gap-4">
+          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-white/75 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <Sparkles className="h-3.5 w-3.5" />
+            Real parties near you
           </div>
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
+              Discover real parties near you.
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+              Browse celebrations styled by local artisans, see tagged vendors in context, and save the details that feel like your next event.
+            </p>
+          </div>
+        </div>
+      </section>
 
-          {events.length > 0 ? (
-            <div className="grid auto-rows-[180px] grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-              {events.map((event, index) => {
-                const image = getEventImage(event);
-                const vendorCount = new Set(event.photos.flatMap((photo) => photo.taggedVendors.map((vendor) => vendor.id))).size;
-                const featured = index === 0 || index % 7 === 0;
-                return (
-                  <article
-                    key={event.id}
-                    className={`group relative overflow-hidden rounded-[1.5rem] border border-white/80 bg-muted shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${
-                      featured ? "col-span-2 row-span-2" : "col-span-2"
-                    }`}
-                  >
-                    <Link
-                      href={`/events/${event.slug}`}
-                      className="absolute inset-0 z-10"
-                      aria-label={`Open ${event.title}`}
-                    />
-                    <Link
-                      href={`/events/${event.slug}?edit=1`}
-                      aria-label={`Edit ${event.title}`}
-                      className="absolute right-3 top-3 z-30 grid h-9 w-9 place-items-center rounded-full border border-white/80 bg-white/90 text-foreground opacity-100 shadow-sm backdrop-blur transition hover:bg-white md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Link>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {parties.length > 0
+          ? parties.map((party) => {
+              const image = getEventImage(party);
+              const vendors = getUniqueVendors(party);
+              const hostImage = getSafeProfileImage(party.user.image);
+              const hostName = party.user.name ?? party.user.username ?? "ShopFia host";
+
+              return (
+                <Link
+                  key={party.id}
+                  href={`/events/${party.slug}`}
+                  className="group overflow-hidden rounded-[1.6rem] border border-white/75 bg-white/85 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"
+                >
+                  <div className="relative aspect-[4/5] overflow-hidden bg-muted">
                     <div
                       className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.04]"
                       style={{ backgroundImage: `url(${image})` }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 p-4 text-white">
-                      <div className="mb-2 flex flex-wrap gap-1.5">
-                        {event.tags.slice(0, featured ? 4 : 2).map((tag) => (
-                          <span key={tag} className="rounded-full bg-white/20 px-2.5 py-1 text-[11px] backdrop-blur">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                    <div className="absolute left-4 top-4 flex flex-wrap gap-1.5">
+                      {(party.tags.length ? party.tags : [party.theme].filter(Boolean))
+                        .slice(0, 3)
+                        .map((tag) => (
+                          <span key={tag} className="rounded-full bg-white/20 px-2.5 py-1 text-xs text-white backdrop-blur">
                             #{tag}
                           </span>
                         ))}
-                      </div>
-                      <h3 className="font-semibold">{event.title}</h3>
-                      {event.location ? (
-                        <p className="mt-1 inline-flex items-center gap-1 text-xs text-white/80">
-                          <MapPin className="h-3 w-3" />
-                          {event.location}
-                        </p>
-                      ) : event.theme ? (
-                        <p className="mt-1 text-xs text-white/80">{event.theme}</p>
-                      ) : null}
-                      <p className="mt-1 text-xs text-white/75">
-                        {event.photos.length || event.imageUrls.length || 1} photo{(event.photos.length || event.imageUrls.length || 1) === 1 ? "" : "s"}
-                        {vendorCount ? ` · ${vendorCount} vendor${vendorCount === 1 ? "" : "s"}` : ""}
-                      </p>
                     </div>
-                  </article>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="grid auto-rows-[220px] grid-cols-2 gap-3 md:grid-cols-4">
-              <div className="col-span-2 row-span-2 rounded-[1.7rem] border border-dashed border-primary/30 bg-white/80 p-5">
-                <div className="flex h-full flex-col justify-between">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                  <div>
-                    <h2 className="text-2xl font-semibold tracking-tight">Start your party portfolio</h2>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Your created parties will fill this space as visual cards you can reopen and edit.
+                    <div className="absolute inset-x-0 bottom-0 p-5 text-white">
+                      <h2 className="text-2xl font-semibold tracking-tight">{party.title}</h2>
+                      {party.location || party.city ? (
+                        <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-white/80">
+                          <MapPin className="h-4 w-4" />
+                          {party.location ?? [party.city, party.state].filter(Boolean).join(", ")}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="space-y-4 p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        {hostImage ? (
+                          <img src={hostImage} alt="" className="h-8 w-8 rounded-full object-cover" />
+                        ) : (
+                          <span className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                            {hostName.slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                        <span className="truncate text-sm text-muted-foreground">Posted by {hostName}</span>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-[#fff7f4] px-3 py-1 text-xs text-muted-foreground">
+                        {party.theme ?? "Party story"}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
+                        <CalendarHeart className="h-3.5 w-3.5" />
+                        {party.photos.length || party.imageUrls.length || 1} photos
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
+                        <Tags className="h-3.5 w-3.5" />
+                        {vendors.length} tagged vendor{vendors.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    {vendors.length > 0 ? (
+                      <p className="line-clamp-1 text-sm text-muted-foreground">
+                        Vendors: {vendors.slice(0, 3).map((vendor) => vendor.name).join(", ")}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Vendor tags will appear as hosts add them to party photos.
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              );
+            })
+          : demoParties.map((party) => (
+              <Link
+                key={party.title}
+                href={`/events/${party.slug}`}
+                className="group overflow-hidden rounded-[1.6rem] border border-white/75 bg-white/85 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"
+              >
+                <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.04]"
+                    style={{ backgroundImage: `url(${party.coverImageUrl})` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                  <div className="absolute left-4 top-4 flex flex-wrap gap-1.5">
+                    {party.tags.map((tag) => (
+                      <span key={tag} className="rounded-full bg-white/20 px-2.5 py-1 text-xs text-white backdrop-blur">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="absolute inset-x-0 bottom-0 p-5 text-white">
+                    <h2 className="text-2xl font-semibold tracking-tight">{party.title}</h2>
+                    <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-white/80">
+                      <MapPin className="h-4 w-4" />
+                      {party.location}
                     </p>
                   </div>
                 </div>
-              </div>
-              {fallbackEvents.map((event) => (
-                <Link
-                  key={event.title}
-                  href={`/events/${event.slug}`}
-                  className="relative col-span-2 overflow-hidden rounded-[1.5rem] border border-white/80 bg-muted shadow-sm"
-                >
-                  <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${event.coverImageUrl})` }} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-                    <h3 className="font-semibold">{event.title}</h3>
-                    <p className="text-xs text-white/80">{event.theme}</p>
+                <div className="space-y-4 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-muted-foreground">Posted by {party.host}</span>
+                    <span className="rounded-full bg-[#fff7f4] px-3 py-1 text-xs text-muted-foreground">
+                      {party.theme}
+                    </span>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <aside className="rounded-[1.8rem] border border-white/70 bg-white/90 p-4 shadow-soft lg:sticky lg:top-24 lg:self-start">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight">Add Party</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Start with photos, then add tags and vendor credits.
-              </p>
-            </div>
-          </div>
-          <PartyEventForm key="new-party" vendors={vendors} />
-        </aside>
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
+                      <CalendarHeart className="h-3.5 w-3.5" />
+                      {party.photoCount} photo
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
+                      <Tags className="h-3.5 w-3.5" />
+                      {party.vendorCount} tagged vendor
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
       </section>
     </div>
   );
+}
+
+function getUniqueVendors(party: {
+  taggedVendors: Array<{ id: string; name: string; slug: string }>;
+  photos: Array<{ taggedVendors: Array<{ id: string; name: string; slug: string }> }>;
+}) {
+  const vendorMap = new Map<string, { id: string; name: string; slug: string }>();
+  party.taggedVendors.forEach((vendor) => vendorMap.set(vendor.id, vendor));
+  party.photos.forEach((photo) => {
+    photo.taggedVendors.forEach((vendor) => vendorMap.set(vendor.id, vendor));
+  });
+  return Array.from(vendorMap.values());
 }
 
 function getEventImage(event: {

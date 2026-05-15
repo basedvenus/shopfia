@@ -50,14 +50,14 @@ export function AccountMenu({ initials, signOutAction }: AccountMenuProps) {
       ? profile.email.split("@")[0]?.replace(/[^a-zA-Z0-9._-]/g, "").toLowerCase()
       : null);
 
-  console.log("[profile] account menu render", profile);
-
   const links = [
-    { href: "/parties", label: "My Parties", icon: CalendarHeart },
     { href: "/account", label: "My Profile", icon: User },
+    { href: "/my-parties", label: "My Parties", icon: CalendarHeart },
     { href: "/favorites", label: "Favorites", icon: Heart },
     { href: "/messages", label: "Messages", icon: MessagesSquare },
-    { href: "/vendor/dashboard", label: "Vendor Dashboard", icon: Store },
+    ...(profile?.vendorProfile
+      ? [{ href: "/vendor/dashboard", label: "Vendor Dashboard", icon: Store }]
+      : []),
     { href: "/account#settings", label: "Settings", icon: Settings }
   ];
 

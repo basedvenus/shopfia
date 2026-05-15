@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  CalendarHeart,
   Heart,
   LayoutGrid,
   MapPinned,
@@ -13,8 +14,8 @@ import { Button } from "@/components/ui/button";
 import { useProfile } from "@/components/account/profile-provider";
 
 const navItems = [
-  { href: "/listings", label: "Listings", icon: LayoutGrid },
   { href: "/explore", label: "Explore", icon: MapPinned },
+  { href: "/parties", label: "Parties", icon: CalendarHeart },
   { href: "/categories", label: "Categories", icon: LayoutGrid },
   { href: "/favorites", label: "Favorites", icon: Heart },
   { href: "/messages", label: "Messages", icon: MessagesSquare }
@@ -38,8 +39,6 @@ export function SiteNavClient({
   const { profile } = useProfile();
   const signedIn = Boolean(profile?.id);
   const initials = getInitials(profile?.name, profile?.email);
-
-  console.log("[profile] navbar render", profile);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
@@ -65,9 +64,6 @@ export function SiteNavClient({
               </Link>
             );
           })}
-          <Link href="/vendor/dashboard" className="rounded-full px-4 py-2 text-sm hover:bg-muted">
-            Vendor Dashboard
-          </Link>
         </nav>
         <div className="flex items-center gap-2">
           {signedIn ? (
