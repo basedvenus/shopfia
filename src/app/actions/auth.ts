@@ -70,8 +70,7 @@ const profileSchema = z.object({
     .or(z.literal("")),
   bio: z.string().trim().max(280).optional(),
   instagramUrl: z.string().trim().url().optional().or(z.literal("")),
-  tiktokUrl: z.string().trim().url().optional().or(z.literal("")),
-  partyfulUrl: z.string().trim().url().optional().or(z.literal(""))
+  tiktokUrl: z.string().trim().url().optional().or(z.literal(""))
 });
 
 export async function updateAccountProfileAction(formData: FormData) {
@@ -85,8 +84,7 @@ export async function updateAccountProfileAction(formData: FormData) {
     username: formData.get("username") || undefined,
     bio: formData.get("bio") || undefined,
     instagramUrl: formData.get("instagramUrl") || undefined,
-    tiktokUrl: formData.get("tiktokUrl") || undefined,
-    partyfulUrl: formData.get("partyfulUrl") || undefined
+    tiktokUrl: formData.get("tiktokUrl") || undefined
   });
 
   if (!parsed.success) {
@@ -105,7 +103,6 @@ export async function updateAccountProfileAction(formData: FormData) {
         bio: parsed.data.bio || null,
         instagramUrl: parsed.data.instagramUrl || null,
         tiktokUrl: parsed.data.tiktokUrl || null,
-        partyfulUrl: parsed.data.partyfulUrl || null,
         imageCrop: parseImageCrop(formData.get("imageCrop")) ?? undefined
       },
       select: userProfileSelect
