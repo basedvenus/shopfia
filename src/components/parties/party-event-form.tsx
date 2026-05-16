@@ -11,6 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DEFAULT_IMAGE_CROP, type ImageCrop } from "@/lib/image-crop";
 
+const MAX_PARTY_UPLOAD_BYTES = 3.5 * 1024 * 1024;
+const MAX_PARTY_UPLOAD_DIMENSION = 2400;
+const SUPPORTED_PARTY_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
 type VendorOption = {
   id: string;
   name: string;
@@ -80,7 +84,10 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
     setMessage(null);
     setIsUploading(true);
     try {
-      const uploaded = await Promise.all(files.map(uploadPartyPhoto));
+      const uploaded: UploadedPartyPhoto[] = [];
+      for (const file of files) {
+        uploaded.push(await uploadPartyPhoto(file));
+      }
       setPhotos((current) => [...current, ...uploaded].slice(0, 16));
       setEditingCropPhoto(uploaded[0] ?? null);
     } catch (error) {
@@ -560,19 +567,22 @@ function VendorAvatar({ vendor }: { vendor: VendorOption }) {
 }
 
 async function uploadPartyPhoto(file: File) {
+  const uploadFile = await preparePartyPhotoFile(file);
   const formData = new FormData();
-  formData.set("file", file);
+  formData.set("file", uploadFile);
   const response = await fetch("/api/uploads/party-photo", {
     method: "POST",
     body: formData
   });
-  const result = (await response.json()) as {
+
+  const responseText = await response.text();
+  const result = parseUploadResponse(responseText) as {
     error?: string;
     photo?: { id: string; url: string };
   };
 
   if (!response.ok || !result.photo) {
-    throw new Error(result.error ?? "That photo could not be uploaded.");
+    throw new Error(result.error ?? getUploadErrorMessage(response, responseText));
   }
 
   return {
@@ -581,6 +591,111 @@ async function uploadPartyPhoto(file: File) {
     vendorIds: [],
     vendorRatings: {}
   };
+}
+
+function parseUploadResponse(responseText: string) {
+  if (!responseText) return {};
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    return {};
+  }
+}
+
+function getUploadErrorMessage(response: Response, responseText: string) {
+  if (response.status === 413 || /^request entity too large/i.test(responseText)) {
+    return "That photo is too large for upload. Try a smaller image or screenshot version.";
+  }
+
+  return "That photo could not be uploaded. Try a JPG, PNG, or WebP under 3.5MB.";
+}
+
+async function preparePartyPhotoFile(file: File) {
+  if (!SUPPORTED_PARTY_IMAGE_TYPES.has(file.type)) {
+    throw new Error("Use a JPG, PNG, WebP, or GIF image.");
+  }
+
+  if (file.type === "image/gif") {
+    if (file.size > MAX_PARTY_UPLOAD_BYTES) {
+      throw new Error("That GIF is too large. Choose a GIF under 3.5MB.");
+    }
+    return file;
+  }
+
+  if (file.size <= MAX_PARTY_UPLOAD_BYTES) {
+    return file;
+  }
+
+  return compressImageFile(file);
+}
+
+async function compressImageFile(file: File) {
+  const image = await loadImage(file);
+  const scale = Math.min(1, MAX_PARTY_UPLOAD_DIMENSION / Math.max(image.width, image.height));
+  let width = Math.max(1, Math.round(image.width * scale));
+  let height = Math.max(1, Math.round(image.height * scale));
+
+  for (const quality of [0.86, 0.78, 0.7, 0.62]) {
+    const blob = await renderImageBlob(image, width, height, quality);
+    if (blob.size <= MAX_PARTY_UPLOAD_BYTES) {
+      URL.revokeObjectURL(image.src);
+      return new File([blob], replaceExtension(file.name, "jpg"), { type: "image/jpeg" });
+    }
+  }
+
+  width = Math.max(1, Math.round(width * 0.75));
+  height = Math.max(1, Math.round(height * 0.75));
+  const blob = await renderImageBlob(image, width, height, 0.62);
+  URL.revokeObjectURL(image.src);
+
+  if (blob.size > MAX_PARTY_UPLOAD_BYTES) {
+    throw new Error("That photo is too large. Try a smaller image or screenshot version.");
+  }
+
+  return new File([blob], replaceExtension(file.name, "jpg"), { type: "image/jpeg" });
+}
+
+function loadImage(file: File) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("That image could not be read. Try a JPG, PNG, or WebP photo."));
+    };
+    image.src = url;
+  });
+}
+
+function renderImageBlob(image: HTMLImageElement, width: number, height: number, quality: number) {
+  return new Promise<Blob>((resolve, reject) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      reject(new Error("That image could not be prepared for upload."));
+      return;
+    }
+
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+    canvas.toBlob(
+      (blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("That image could not be prepared for upload."));
+      },
+      "image/jpeg",
+      quality
+    );
+  });
+}
+
+function replaceExtension(filename: string, extension: string) {
+  const safeName = filename.replace(/[\\/]/g, "-");
+  return safeName.replace(/\.[^.]+$/, "") + `.${extension}`;
 }
 
 function normalizeTag(value: string) {
