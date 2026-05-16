@@ -10,9 +10,18 @@ import { db } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 type PricedOption = {
+  componentIds?: string[];
   description?: string;
   name: string;
   priceCents?: number;
+};
+
+type ServiceComponent = {
+  category?: string;
+  description?: string;
+  id: string;
+  priceCents?: number;
+  title: string;
 };
 
 export default async function VendorOfferingEditPage({ params }: { params: Promise<{ id: string }> }) {
@@ -85,6 +94,7 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
               addons: getPricedOptions(offering.addonsJson),
               basePriceCents: offering.basePriceCents,
               categoryId: offering.categoryId,
+              components: getServiceComponents(offering.faqJson),
               description: offering.description,
               eventCategoryIds: offering.eventCategories.map((eventCategory) => eventCategory.categoryId),
               id: offering.id,
@@ -114,8 +124,33 @@ function getPricedOptions(value: unknown): PricedOption[] {
     if (!name) return options;
     const description = typeof record.description === "string" ? record.description.trim() : "";
     const priceCents = typeof record.priceCents === "number" ? record.priceCents : undefined;
-    options.push({ name, description, priceCents });
+    const componentIds = Array.isArray(record.componentIds)
+      ? record.componentIds.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      : [];
+    options.push({ name, description, priceCents, componentIds });
     return options;
+  }, []);
+}
+
+function getServiceComponents(value: unknown): ServiceComponent[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const components = (value as Record<string, unknown>).serviceComponents;
+  if (!Array.isArray(components)) return [];
+
+  return components.reduce<ServiceComponent[]>((items, item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return items;
+    const record = item as Record<string, unknown>;
+    const id = typeof record.id === "string" ? record.id.trim() : "";
+    const title = typeof record.title === "string" ? record.title.trim() : "";
+    if (!id || !title) return items;
+    items.push({
+      id,
+      title,
+      description: typeof record.description === "string" ? record.description.trim() : "",
+      priceCents: typeof record.priceCents === "number" ? record.priceCents : undefined,
+      category: typeof record.category === "string" ? record.category.trim() : ""
+    });
+    return items;
   }, []);
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { Check, Plus, Sparkles, X } from "lucide-react";
 import { upsertOfferingAction } from "@/app/actions/vendor";
 import { Button } from "@/components/ui/button";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
@@ -15,6 +15,7 @@ type CategoryOption = {
 };
 
 type PricedRow = {
+  componentIds?: string[];
   description?: string;
   id: string;
   name?: string;
@@ -26,15 +27,25 @@ function createRow(): PricedRow {
 }
 
 type PricedOption = {
+  componentIds?: string[];
   description?: string;
   name: string;
   priceCents?: number;
+};
+
+type ServiceComponent = {
+  category?: string;
+  description?: string;
+  id: string;
+  priceCents?: number;
+  title: string;
 };
 
 type ExistingOffering = {
   addons: PricedOption[];
   basePriceCents: number | null;
   categoryId: string;
+  components?: ServiceComponent[];
   description: string;
   eventCategoryIds: string[];
   id: string;
@@ -70,6 +81,11 @@ export function OfferingSetupForm({
   const [hasPackages, setHasPackages] = useState(Boolean(offering?.packages.length));
   const [packages, setPackages] = useState<PricedRow[]>(
     offering?.packages.length ? offering.packages.map(optionToRow) : [createRow()]
+  );
+  const [components, setComponents] = useState<ServiceComponent[]>(
+    offering?.components?.length
+      ? offering.components
+      : starterComponents.map((component) => ({ ...component, id: crypto.randomUUID() }))
   );
   const [addons, setAddons] = useState<PricedRow[]>(
     offering?.addons.length ? offering.addons.map(optionToRow) : [createRow()]
@@ -254,9 +270,51 @@ export function OfferingSetupForm({
       <section className="rounded-[1.5rem] border border-border/80 bg-white p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="font-semibold">Packages and options</h3>
+            <h3 className="font-semibold">Reusable service components</h3>
             <p className="text-sm text-muted-foreground">
-              Useful for tiers, bundles, rental durations, cake sizes, floral upgrades, and bounce house packages.
+              Create the pieces you use again and again, then bundle them into packages below.
+            </p>
+          </div>
+          <Button type="button" variant="secondary" onClick={() => setComponents((current) => [...current, createComponent()])}>
+            <Plus className="h-4 w-4" />
+            Add component
+          </Button>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {components.map((component) => (
+            <ComponentFields
+              key={component.id}
+              component={component}
+              onChange={(nextComponent) =>
+                setComponents((current) =>
+                  current.map((item) => (item.id === component.id ? nextComponent : item))
+                )
+              }
+              onRemove={
+                components.length > 1
+                  ? () => {
+                      setComponents((current) => current.filter((item) => item.id !== component.id));
+                      setPackages((current) =>
+                        current.map((row) => ({
+                          ...row,
+                          componentIds: row.componentIds?.filter((id) => id !== component.id)
+                        }))
+                      );
+                    }
+                  : undefined
+              }
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-[1.5rem] border border-border/80 bg-white p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="font-semibold">Package builder</h3>
+            <p className="text-sm text-muted-foreground">
+              Select components into polished bundles so hosts can compare packages at a glance.
             </p>
           </div>
           <label className="flex items-center gap-2 rounded-full bg-[#fbf7f5] px-3 py-2 text-sm">
@@ -272,14 +330,17 @@ export function OfferingSetupForm({
         {hasPackages ? (
           <div className="mt-4 space-y-3">
             {packages.map((row, index) => (
-              <PricedOptionFields
+              <PackageBuilderCard
                 key={row.id}
+                components={components}
                 descriptionName="packageDescriptions"
                 defaultDescription={row.description}
                 defaultName={row.name}
                 defaultPrice={formatCentsAsDollars(row.priceCents)}
                 nameName="packageNames"
                 priceName="packagePrices"
+                row={row}
+                setPackages={setPackages}
                 title={`Package ${index + 1}`}
                 onRemove={packages.length > 1 ? () => setPackages((current) => current.filter((item) => item.id !== row.id)) : undefined}
               />
@@ -375,8 +436,156 @@ function PricedOptionFields({
   );
 }
 
+function ComponentFields({
+  component,
+  onChange,
+  onRemove
+}: {
+  component: ServiceComponent;
+  onChange: (component: ServiceComponent) => void;
+  onRemove?: () => void;
+}) {
+  return (
+    <div className="rounded-[1.25rem] border bg-[#fbf7f5] p-3">
+      <input type="hidden" name="componentIds" value={component.id} />
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-2 text-sm font-semibold">
+          <Sparkles className="h-4 w-4 text-primary" />
+          Component
+        </div>
+        {onRemove ? (
+          <button type="button" className="rounded-full p-1 text-muted-foreground hover:bg-white hover:text-foreground" onClick={onRemove}>
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+      <div className="grid gap-2">
+        <Input
+          name="componentTitles"
+          placeholder="White fence gates"
+          value={component.title}
+          onChange={(event) => onChange({ ...component, title: event.target.value })}
+        />
+        <Input
+          name="componentDescriptions"
+          placeholder="Optional short note"
+          value={component.description ?? ""}
+          onChange={(event) => onChange({ ...component, description: event.target.value })}
+        />
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input
+            name="componentCategories"
+            placeholder="Rental, setup, decor..."
+            value={component.category ?? ""}
+            onChange={(event) => onChange({ ...component, category: event.target.value })}
+          />
+          <Input
+            name="componentPrices"
+            inputMode="decimal"
+            placeholder="+$50 optional"
+            value={formatCentsAsDollars(component.priceCents) ?? ""}
+            onChange={(event) =>
+              onChange({ ...component, priceCents: dollarsInputToCents(event.target.value) })
+            }
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PackageBuilderCard({
+  components,
+  defaultDescription,
+  defaultName,
+  defaultPrice,
+  descriptionName,
+  nameName,
+  onRemove,
+  priceName,
+  row,
+  setPackages,
+  title
+}: {
+  components: ServiceComponent[];
+  defaultDescription?: string;
+  defaultName?: string;
+  defaultPrice?: string;
+  descriptionName: string;
+  nameName: string;
+  onRemove?: () => void;
+  priceName: string;
+  row: PricedRow;
+  setPackages: Dispatch<SetStateAction<PricedRow[]>>;
+  title: string;
+}) {
+  const selectedIds = row.componentIds ?? [];
+
+  return (
+    <div className="rounded-[1.35rem] border bg-[#fbf7f5] p-4">
+      <input type="hidden" name="packageComponentIds" value={JSON.stringify(selectedIds)} />
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="text-sm font-semibold">{title}</div>
+        {onRemove ? (
+          <button type="button" className="rounded-full p-1 text-muted-foreground hover:bg-white hover:text-foreground" onClick={onRemove}>
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+      <div className="grid gap-2 md:grid-cols-[1fr_1.2fr_0.55fr]">
+        <Input name={nameName} placeholder="Ruby Package" defaultValue={defaultName} />
+        <Input
+          name={descriptionName}
+          placeholder="A sweet starter setup for intimate parties"
+          defaultValue={defaultDescription}
+        />
+        <Input name={priceName} inputMode="decimal" placeholder="$415" defaultValue={defaultPrice} />
+      </div>
+      <div className="mt-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Includes
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {components.filter((component) => component.title.trim()).map((component) => {
+            const active = selectedIds.includes(component.id);
+            return (
+              <button
+                key={component.id}
+                type="button"
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                  active
+                    ? "border-primary/40 bg-primary/15 text-primary"
+                    : "border-border bg-white text-muted-foreground hover:border-primary/30"
+                }`}
+                onClick={() =>
+                  setPackages((current) =>
+                    current.map((item) =>
+                      item.id === row.id
+                        ? {
+                            ...item,
+                            componentIds: active
+                              ? selectedIds.filter((id) => id !== component.id)
+                              : [...selectedIds, component.id]
+                          }
+                        : item
+                    )
+                  )
+                }
+              >
+                {active ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                {component.title}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function optionToRow(option: PricedOption): PricedRow {
   return {
+    componentIds: option.componentIds ?? [],
     description: option.description,
     id: crypto.randomUUID(),
     name: option.name,
@@ -384,7 +593,25 @@ function optionToRow(option: PricedOption): PricedRow {
   };
 }
 
+function createComponent(): ServiceComponent {
+  return { id: crypto.randomUUID(), title: "" };
+}
+
+const starterComponents: Omit<ServiceComponent, "id">[] = [
+  { category: "Time", title: "4-hour rental" },
+  { category: "Setup", title: "Delivery" },
+  { category: "Setup", title: "Setup" },
+  { category: "Decor", title: "Balloon arch" }
+];
+
 function formatCentsAsDollars(value?: number | null) {
   if (value == null) return undefined;
   return String(value / 100);
+}
+
+function dollarsInputToCents(value: string) {
+  const normalized = value.replace(/[$,]/g, "").trim();
+  if (!normalized) return undefined;
+  const numericValue = Number(normalized);
+  return Number.isFinite(numericValue) ? Math.round(numericValue * 100) : undefined;
 }

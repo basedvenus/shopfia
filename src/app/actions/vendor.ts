@@ -41,16 +41,51 @@ function dollarsToCents(value: FormDataEntryValue | null) {
   return Number.isFinite(amount) ? Math.round(amount * 100) : undefined;
 }
 
+function parseJsonStringArray(value: FormDataEntryValue | null) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+          .map((item) => item.trim())
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 function formDataToPricedOptions(formData: FormData, prefix: "package" | "addon") {
-  const names = formDataToArray(formData, `${prefix}Names`);
+  const names = formData.getAll(`${prefix}Names`).map((value) => String(value).trim());
   const descriptions = formData.getAll(`${prefix}Descriptions`).map((value) => String(value).trim());
   const prices = formData.getAll(`${prefix}Prices`);
+  const componentIdGroups = formData.getAll(`${prefix}ComponentIds`);
 
-  return names.map((name, index) => ({
-    name,
-    description: descriptions[index] ?? "",
-    priceCents: dollarsToCents(prices[index] ?? null)
-  }));
+  return names
+    .map((name, index) => ({
+      name,
+      description: descriptions[index] ?? "",
+      priceCents: dollarsToCents(prices[index] ?? null),
+      componentIds: parseJsonStringArray(componentIdGroups[index] ?? null)
+    }))
+    .filter((option) => option.name);
+}
+
+function formDataToServiceComponents(formData: FormData) {
+  const titles = formData.getAll("componentTitles").map((value) => String(value).trim());
+  const ids = formData.getAll("componentIds").map((value) => String(value).trim());
+  const descriptions = formData.getAll("componentDescriptions").map((value) => String(value).trim());
+  const prices = formData.getAll("componentPrices");
+  const categories = formData.getAll("componentCategories").map((value) => String(value).trim());
+
+  return titles
+    .map((title, index) => ({
+      id: ids[index] || slugify(title) || `component-${index + 1}`,
+      title,
+      description: descriptions[index] ?? "",
+      priceCents: dollarsToCents(prices[index] ?? null),
+      category: categories[index] ?? ""
+    }))
+    .filter((component) => component.title);
 }
 
 function redirectWithVendorProfileError(message: string): never {
@@ -266,6 +301,7 @@ export async function upsertOfferingAction(formData: FormData) {
     eventCategoryIds: formDataToArray(formData, "eventCategoryIds"),
     tags: formDataToArray(formData, "tags"),
     photos: formDataToArray(formData, "photos"),
+    serviceComponents: formDataToServiceComponents(formData),
     packages: formDataToPricedOptions(formData, "package"),
     addons: formDataToPricedOptions(formData, "addon"),
     durationMinutes: formData.get("durationMinutes") || undefined,
@@ -322,6 +358,9 @@ export async function upsertOfferingAction(formData: FormData) {
     photoCrops,
     variantsJson: parsed.packages,
     addonsJson: parsed.addons,
+    faqJson: {
+      serviceComponents: parsed.serviceComponents
+    },
     durationMinutes: parsed.durationMinutes ?? null,
     turnaroundDays: parsed.turnaroundDays ?? null,
     inventoryCount: parsed.type === "PRODUCT" ? (parsed.inventoryCount ?? null) : null,

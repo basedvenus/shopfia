@@ -70,6 +70,8 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
   const priceLabel = formatOfferingPrice(offering);
   const packages = getPricedOptions(offering.variantsJson);
   const addons = getPricedOptions(offering.addonsJson);
+  const serviceComponents = getServiceComponents(offering.faqJson);
+  const componentMap = new Map(serviceComponents.map((component) => [component.id, component]));
   const rating = (
     offering.vendor.sellerRatingAggregate?.weightedAverageRating ??
     offering.vendor.averageRating
@@ -223,15 +225,29 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
             </div>
 
             {packages.length > 0 || addons.length > 0 ? (
-              <div className="rounded-[1.4rem] border border-[#eadbd7] bg-white/70 p-5">
+              <div className="rounded-[1.4rem] border border-[#eadbd7] bg-white/70 p-5 md:col-span-2">
                 <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-3xl font-normal">
-                  Options
+                  Packages
                 </h2>
-                <div className="mt-4 space-y-3">
-                  {[...packages, ...addons].slice(0, 4).map((item) => (
-                    <PricedOptionCard key={item.name} option={item} />
-                  ))}
-                </div>
+                {packages.length > 0 ? (
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    {packages.map((item) => (
+                      <PricedOptionCard key={item.name} componentMap={componentMap} option={item} />
+                    ))}
+                  </div>
+                ) : null}
+                {addons.length > 0 ? (
+                  <div className={packages.length > 0 ? "mt-6" : "mt-4"}>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Add-ons
+                    </p>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      {addons.map((item) => (
+                        <PricedOptionCard key={item.name} componentMap={componentMap} option={item} compact />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -277,9 +293,18 @@ function getImageCrops(value: unknown) {
 }
 
 type PricedOption = {
+  componentIds?: string[];
   name: string;
   description?: string;
   priceCents?: number;
+};
+
+type ServiceComponent = {
+  category?: string;
+  description?: string;
+  id: string;
+  priceCents?: number;
+  title: string;
 };
 
 function InfoPanel({
@@ -321,18 +346,56 @@ function getPricedOptions(value: unknown): PricedOption[] {
     if (!name) return options;
     const description = typeof record.description === "string" ? record.description.trim() : "";
     const priceCents = typeof record.priceCents === "number" ? record.priceCents : undefined;
-    options.push({ name, description, priceCents });
+    const componentIds = Array.isArray(record.componentIds)
+      ? record.componentIds.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      : [];
+    options.push({ name, description, priceCents, componentIds });
     return options;
   }, []);
 }
 
-function PricedOptionCard({ option }: { option: PricedOption }) {
+function getServiceComponents(value: unknown): ServiceComponent[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const components = (value as Record<string, unknown>).serviceComponents;
+  if (!Array.isArray(components)) return [];
+
+  return components.reduce<ServiceComponent[]>((items, item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return items;
+    const record = item as Record<string, unknown>;
+    const id = typeof record.id === "string" ? record.id.trim() : "";
+    const title = typeof record.title === "string" ? record.title.trim() : "";
+    if (!id || !title) return items;
+    items.push({
+      id,
+      title,
+      description: typeof record.description === "string" ? record.description.trim() : "",
+      priceCents: typeof record.priceCents === "number" ? record.priceCents : undefined,
+      category: typeof record.category === "string" ? record.category.trim() : ""
+    });
+    return items;
+  }, []);
+}
+
+function PricedOptionCard({
+  compact = false,
+  componentMap,
+  option
+}: {
+  compact?: boolean;
+  componentMap: Map<string, ServiceComponent>;
+  option: PricedOption;
+}) {
+  const includedComponents =
+    option.componentIds
+      ?.map((id) => componentMap.get(id))
+      .filter((component): component is ServiceComponent => Boolean(component)) ?? [];
+
   return (
     <div className="rounded-[1rem] bg-[#fffaf8] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="font-semibold">{option.name}</div>
-          {option.description ? (
+          {option.description && !compact ? (
             <p className="mt-1 text-sm leading-6 text-muted-foreground">{option.description}</p>
           ) : null}
         </div>
@@ -340,6 +403,22 @@ function PricedOptionCard({ option }: { option: PricedOption }) {
           {option.priceCents != null ? formatCurrency(option.priceCents) : "Custom"}
         </div>
       </div>
+      {option.description && compact ? (
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">{option.description}</p>
+      ) : null}
+      {includedComponents.length > 0 ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {includedComponents.map((component) => (
+            <span
+              key={component.id}
+              className="inline-flex rounded-full border border-[#eadbd7] bg-white/80 px-3 py-1 text-xs font-medium text-[#6a5d58]"
+              title={component.description || component.category || undefined}
+            >
+              {component.title}
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -49,7 +49,16 @@ export const vendorOnboardingSchema = z.object({
 const pricedOptionSchema = z.object({
   name: z.string().min(1, "Add a package or add-on name.").max(80, "Package name is a little too long."),
   description: z.string().max(240, "Description is a little too long.").optional().or(z.literal("")),
-  priceCents: z.coerce.number().int().min(0).optional()
+  priceCents: z.coerce.number().int().min(0).optional(),
+  componentIds: z.array(z.string().min(1)).max(32, "Choose fewer package components.").default([])
+});
+
+const serviceComponentSchema = z.object({
+  id: z.string().min(1).max(80),
+  title: z.string().min(1, "Add a component title.").max(80, "Component title is a little too long."),
+  description: z.string().max(180, "Component description is a little too long.").optional().or(z.literal("")),
+  priceCents: z.coerce.number().int().min(0).optional(),
+  category: z.string().max(40, "Component category is a little too long.").optional().or(z.literal(""))
 });
 
 export const offeringSchema = z.object({
@@ -64,6 +73,7 @@ export const offeringSchema = z.object({
   eventCategoryIds: z.array(z.string().min(1)).max(12, "Choose up to 12 event types.").default([]),
   tags: z.array(z.string().min(1).max(30, "Keep tags short and sweet.")).max(12, "Use up to 12 tags.").default([]),
   photos: z.array(imageValueSchema).max(10, "Add up to 10 photos.").default([]),
+  serviceComponents: z.array(serviceComponentSchema).max(32, "Add up to 32 reusable components.").default([]),
   packages: z.array(pricedOptionSchema).max(8, "Add up to 8 packages.").default([]),
   addons: z.array(pricedOptionSchema).max(12, "Add up to 12 add-ons.").default([]),
   durationMinutes: z.coerce.number().int().min(15).max(1440).optional(),
