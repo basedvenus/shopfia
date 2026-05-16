@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const imageValueSchema = z
   .string()
-  .max(5_000_000)
+  .max(5_000_000, "That image is too large. Try a smaller file.")
   .refine(
     (value) =>
       value === "" ||
@@ -19,53 +19,53 @@ const optionalCoordinate = (min: number, max: number) =>
   );
 
 export const vendorOnboardingSchema = z.object({
-  name: z.string().min(2).max(80),
-  slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/),
+  name: z.string().min(2, "Business name is required.").max(80, "Business name is a little too long."),
+  slug: z.string().min(2, "Vendor username is required.").max(80, "Vendor username is a little too long.").regex(/^[a-z0-9-]+$/, "Use letters, numbers, and dashes only."),
   username: z
     .string()
-    .min(3)
-    .max(40)
-    .regex(/^[a-z0-9._-]+$/),
-  website: z.string().url().optional().or(z.literal("")),
-  instagramUrl: z.string().url().optional().or(z.literal("")),
-  tiktokUrl: z.string().url().optional().or(z.literal("")),
-  bio: z.string().max(600).optional().or(z.literal("")),
-  formattedAddress: z.string().max(240).optional().or(z.literal("")),
-  city: z.string().min(2).max(80),
-  state: z.string().max(40).optional().or(z.literal("")),
-  zipCode: z.string().max(12).optional().or(z.literal("")),
+    .min(3, "Vendor username is required.")
+    .max(40, "Vendor username is a little too long.")
+    .regex(/^[a-z0-9._-]+$/, "Use letters, numbers, dots, dashes, or underscores."),
+  website: z.string().url("Enter a valid website link.").optional().or(z.literal("")),
+  instagramUrl: z.string().url("Enter a valid Instagram link.").optional().or(z.literal("")),
+  tiktokUrl: z.string().url("Enter a valid TikTok link.").optional().or(z.literal("")),
+  bio: z.string().max(600, "Business description is a little too long.").optional().or(z.literal("")),
+  formattedAddress: z.string().max(240, "Business location is a little too long.").optional().or(z.literal("")),
+  city: z.string().min(2, "City is required.").max(80, "City is a little too long."),
+  state: z.string().max(40, "State is a little too long.").optional().or(z.literal("")),
+  zipCode: z.string().max(12, "Zip code is a little too long.").optional().or(z.literal("")),
   locationLat: optionalCoordinate(-90, 90),
   locationLng: optionalCoordinate(-180, 180),
-  googlePlaceId: z.string().max(180).optional().or(z.literal("")),
+  googlePlaceId: z.string().max(180, "Location details are a little too long.").optional().or(z.literal("")),
   serviceRadiusMiles: z.coerce.number().int().min(1).max(200).optional().default(25),
   weekendAvailable: z.coerce.boolean().optional().default(true),
-  serviceAreaNotes: z.string().max(500).optional().or(z.literal("")),
-  availabilityNotes: z.string().max(300).optional().or(z.literal("")),
+  serviceAreaNotes: z.string().max(500, "Service area notes are a little too long.").optional().or(z.literal("")),
+  availabilityNotes: z.string().max(300, "Availability notes are a little too long.").optional().or(z.literal("")),
   logoUrl: imageValueSchema.optional().or(z.literal("")),
-  categoryIds: z.array(z.string().cuid()).max(12).default([]),
-  photoUrls: z.array(imageValueSchema).max(8).default([])
+  categoryIds: z.array(z.string().cuid()).max(12, "Choose up to 12 categories.").default([]),
+  photoUrls: z.array(imageValueSchema).max(8, "Add up to 8 photos.").default([])
 });
 
 const pricedOptionSchema = z.object({
-  name: z.string().min(1).max(80),
-  description: z.string().max(240).optional().or(z.literal("")),
+  name: z.string().min(1, "Add a package or add-on name.").max(80, "Package name is a little too long."),
+  description: z.string().max(240, "Description is a little too long.").optional().or(z.literal("")),
   priceCents: z.coerce.number().int().min(0).optional()
 });
 
 export const offeringSchema = z.object({
   id: z.string().cuid().optional(),
   type: z.enum(["SERVICE", "PRODUCT", "CUSTOM_ORDER"]),
-  title: z.string().min(2).max(120),
-  slug: z.string().min(2).max(120).regex(/^[a-z0-9-]+$/),
-  description: z.string().min(20).max(4000),
+  title: z.string().min(2, "Offering title is required.").max(120, "Offering title is a little too long."),
+  slug: z.string().min(2, "Offering link is required.").max(120, "Offering link is a little too long.").regex(/^[a-z0-9-]+$/, "Use letters, numbers, and dashes only."),
+  description: z.string().min(20, "Add a little more detail about this offering.").max(4000, "Offering description is a little too long."),
   basePriceCents: z.coerce.number().int().min(0).optional(),
   messageForPricing: z.coerce.boolean().optional().default(false),
   categoryId: z.string().cuid(),
-  eventCategoryIds: z.array(z.string().min(1)).max(12).default([]),
-  tags: z.array(z.string().min(1).max(30)).max(12).default([]),
-  photos: z.array(imageValueSchema).max(10).default([]),
-  packages: z.array(pricedOptionSchema).max(8).default([]),
-  addons: z.array(pricedOptionSchema).max(12).default([]),
+  eventCategoryIds: z.array(z.string().min(1)).max(12, "Choose up to 12 event types.").default([]),
+  tags: z.array(z.string().min(1).max(30, "Keep tags short and sweet.")).max(12, "Use up to 12 tags.").default([]),
+  photos: z.array(imageValueSchema).max(10, "Add up to 10 photos.").default([]),
+  packages: z.array(pricedOptionSchema).max(8, "Add up to 8 packages.").default([]),
+  addons: z.array(pricedOptionSchema).max(12, "Add up to 12 add-ons.").default([]),
   durationMinutes: z.coerce.number().int().min(15).max(1440).optional(),
   turnaroundDays: z.coerce.number().int().min(0).max(365).optional(),
   inventoryCount: z.coerce.number().int().min(0).max(100000).optional(),

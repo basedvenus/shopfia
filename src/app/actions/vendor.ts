@@ -9,6 +9,7 @@ import { securityLog } from "@/lib/security/audit-log";
 import { checkServerActionRateLimit } from "@/lib/security/request";
 import { createListing, ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
 import { vendorOnboardingSchema, offeringSchema } from "@/lib/validators/vendor";
+import { friendlyValidationMessage } from "@/lib/validators/messages";
 
 function formDataToArray(formData: FormData, key: string) {
   return formData
@@ -68,15 +69,7 @@ function firstValidationMessage(
   error: { issues: Array<{ path: Array<string | number>; message: string }> },
   labels: Record<string, string>
 ) {
-  const issue = error.issues[0];
-  const field = String(issue?.path[0] ?? "");
-  const label = labels[field];
-
-  if (label && /required|expected|received|too_small|required/i.test(issue?.message ?? "")) {
-    return `${label} is required`;
-  }
-
-  return label ? `${label}: ${issue.message}` : issue?.message ?? "Check the required fields and try again.";
+  return friendlyValidationMessage(error.issues, labels);
 }
 
 export async function upsertVendorProfileAction(formData: FormData) {

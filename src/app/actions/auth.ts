@@ -10,10 +10,11 @@ import { parseImageCrop } from "@/lib/image-crop";
 import { securityLog } from "@/lib/security/audit-log";
 import { checkServerActionRateLimit } from "@/lib/security/request";
 import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
+import { friendlyValidationMessage } from "@/lib/validators/messages";
 
 const signUpSchema = z.object({
-  name: z.string().trim().max(80).optional(),
-  email: z.string().trim().email().max(255),
+  name: z.string().trim().max(80, "Name is a little too long.").optional(),
+  email: z.string().trim().email("Enter a valid email address.").max(255, "Email is a little too long."),
   password: z.string().min(8, "Password must be at least 8 characters.")
 });
 
@@ -27,7 +28,11 @@ export async function createPasswordAccountAction(formData: FormData) {
   if (!parsed.success) {
     return {
       ok: false,
-      error: parsed.error.issues[0]?.message ?? "Check your account details."
+      error: friendlyValidationMessage(parsed.error.issues, {
+        email: "Email",
+        name: "Name",
+        password: "Password"
+      }, "Check your account details.")
     };
   }
 
@@ -71,7 +76,7 @@ export async function createPasswordAccountAction(formData: FormData) {
 }
 
 const profileSchema = z.object({
-  name: z.string().trim().max(80).optional(),
+  name: z.string().trim().max(80, "Name is a little too long.").optional(),
   username: z
     .string()
     .trim()
@@ -79,9 +84,9 @@ const profileSchema = z.object({
     .regex(/^[a-z0-9._-]{3,30}$/, "Use 3-30 letters, numbers, dots, dashes, or underscores.")
     .optional()
     .or(z.literal("")),
-  bio: z.string().trim().max(280).optional(),
-  instagramUrl: z.string().trim().url().optional().or(z.literal("")),
-  tiktokUrl: z.string().trim().url().optional().or(z.literal(""))
+  bio: z.string().trim().max(280, "Bio is a little too long. Keep it under 280 characters.").optional(),
+  instagramUrl: z.string().trim().url("Enter a valid Instagram link.").optional().or(z.literal("")),
+  tiktokUrl: z.string().trim().url("Enter a valid TikTok link.").optional().or(z.literal(""))
 });
 
 export async function updateAccountProfileAction(formData: FormData) {
@@ -109,7 +114,13 @@ export async function updateAccountProfileAction(formData: FormData) {
   if (!parsed.success) {
     return {
       ok: false,
-      error: parsed.error.issues[0]?.message ?? "Check your profile details."
+      error: friendlyValidationMessage(parsed.error.issues, {
+        bio: "Bio",
+        instagramUrl: "Instagram link",
+        name: "Name",
+        tiktokUrl: "TikTok link",
+        username: "Username"
+      }, "Check your profile details.")
     };
   }
 
@@ -159,18 +170,18 @@ const optionalCoordinate = (min: number, max: number) =>
   );
 
 const partyEventFieldsSchema = z.object({
-  title: z.string().trim().min(2, "Add an event title.").max(100),
-  theme: z.string().trim().max(100).optional().or(z.literal("")),
-  tags: z.array(z.string().trim().min(1).max(30)).max(12).default([]),
-  description: z.string().trim().max(500).optional().or(z.literal("")),
-  location: z.string().trim().max(240).optional().or(z.literal("")),
-  formattedAddress: z.string().trim().max(240).optional().or(z.literal("")),
-  city: z.string().trim().max(80).optional().or(z.literal("")),
-  state: z.string().trim().max(40).optional().or(z.literal("")),
-  zipCode: z.string().trim().max(12).optional().or(z.literal("")),
+  title: z.string().trim().min(2, "Add an event title.").max(100, "Party name is a little too long."),
+  theme: z.string().trim().max(100, "Theme is a little too long.").optional().or(z.literal("")),
+  tags: z.array(z.string().trim().min(1).max(30, "Keep tags short and sweet.")).max(12, "Use up to 12 tags.").default([]),
+  description: z.string().trim().max(500, "Party story is a little too long.").optional().or(z.literal("")),
+  location: z.string().trim().max(240, "Location is a little too long.").optional().or(z.literal("")),
+  formattedAddress: z.string().trim().max(240, "Location is a little too long.").optional().or(z.literal("")),
+  city: z.string().trim().max(80, "City is a little too long.").optional().or(z.literal("")),
+  state: z.string().trim().max(40, "State is a little too long.").optional().or(z.literal("")),
+  zipCode: z.string().trim().max(12, "Zip code is a little too long.").optional().or(z.literal("")),
   locationLat: optionalCoordinate(-90, 90),
   locationLng: optionalCoordinate(-180, 180),
-  googlePlaceId: z.string().trim().max(180).optional().or(z.literal("")),
+  googlePlaceId: z.string().trim().max(180, "Location details are a little too long.").optional().or(z.literal("")),
   mainHostId: z.string().cuid().optional().or(z.literal("")),
   coHostIds: z.array(z.string().cuid()).max(12).default([])
 });
@@ -213,7 +224,7 @@ export async function createPartyEventAction(formData: FormData) {
   const parsed = createPartyEventSchema.safeParse(parsePartyEventFormData(formData));
 
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check your event details." };
+    return { ok: false, error: getPartyValidationMessage(parsed.error.issues) };
   }
 
   const prepared = await preparePartyPhotoPersistence({
@@ -314,7 +325,7 @@ export async function updatePartyEventAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check your event details." };
+    return { ok: false, error: getPartyValidationMessage(parsed.error.issues) };
   }
 
   const existingEvent = await db.partyEvent.findFirst({
@@ -468,6 +479,23 @@ export async function updatePartyCollaborationAction(formData: FormData) {
   revalidatePath("/parties");
   revalidatePath("/");
   return { ok: true };
+}
+
+function getPartyValidationMessage(issues: z.ZodIssue[]) {
+  return friendlyValidationMessage(issues, {
+    city: "City",
+    coHostIds: "Co-hosts",
+    description: "Party story",
+    formattedAddress: "Location",
+    location: "Location",
+    mainHostId: "Main host",
+    photos: "Party photos",
+    state: "State",
+    tags: "Tags",
+    theme: "Theme",
+    title: "Party name",
+    zipCode: "Zip code"
+  }, "Check your party details.");
 }
 
 function parsePartyEventFormData(formData: FormData) {

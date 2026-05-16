@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { securityLog } from "@/lib/security/audit-log";
 import { checkServerActionRateLimit } from "@/lib/security/request";
 import { publicInquirySchema } from "@/lib/validators/inquiry";
+import { friendlyValidationMessage } from "@/lib/validators/messages";
 
 export async function createPublicInquiryAction(formData: FormData) {
   const { db } = await import("@/lib/db");
@@ -212,12 +213,9 @@ function optionalFormValue(value: FormDataEntryValue | null) {
 }
 
 function getInquiryValidationMessage(issues: { path: (string | number)[]; message: string }[]) {
-  const issue = issues[0];
-  if (!issue) return "Check your inquiry details.";
-
-  const field = String(issue.path[0] ?? "");
-  const fieldLabels: Record<string, string> = {
+  return friendlyValidationMessage(issues, {
     budgetDollars: "Budget",
+    email: "Email",
     eventDate: "Event date",
     eventLocation: "Event location",
     guestCount: "Guest count",
@@ -225,14 +223,9 @@ function getInquiryValidationMessage(issues: { path: (string | number)[]; messag
     message: "Inquiry message",
     name: "Your name",
     offeringId: "Listing",
+    phone: "Phone number",
     vendorProfileId: "Vendor"
-  };
-
-  if (issue.message === "Invalid input" || issue.message === "Required") {
-    return fieldLabels[field] ? `${fieldLabels[field]} is required.` : "Check your inquiry details.";
-  }
-
-  return issue.message;
+  }, "Check your inquiry details.");
 }
 
 function buildInquiryMessage({
