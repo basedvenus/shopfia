@@ -4,14 +4,14 @@ import { notFound } from "next/navigation";
 import { Heart, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
-import { ProfileBadge } from "@/components/badges/profile-badge";
+import { ProfileBadges } from "@/components/badges/profile-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { db } from "@/lib/db";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { getSafeProfileImage } from "@/lib/profile-image";
-import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
+import { getOriginalMemberCutoffDate, getProfileBadges } from "@/lib/profile-badges";
 
 export const dynamic = "force-dynamic";
 
@@ -95,7 +95,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
       : false;
   const initials = getInitials(profile.name ?? profile.username);
   const profileImage = getSafeProfileImage(profile.image);
-  const profileBadge = getProfileBadge(profile, originalMemberCutoff);
+  const profileBadges = getProfileBadges(profile, originalMemberCutoff);
 
   async function toggleFollow(formData: FormData) {
     "use server";
@@ -130,7 +130,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                 <p className="text-sm text-muted-foreground">Party host profile</p>
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-3xl font-semibold tracking-tight">{profile.name ?? "ShopFia host"}</h1>
-                  <ProfileBadge badge={profileBadge} />
+                  <ProfileBadges badges={profileBadges} />
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">@{profile.username}</p>
                 {profile.bio ? (

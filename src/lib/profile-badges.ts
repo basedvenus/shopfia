@@ -32,31 +32,43 @@ export function getProfileBadge(
   originalMemberCutoff: Date | string | null | undefined,
   options: { vendorContext?: boolean } = {}
 ): ProfileBadge | null {
-  if (!user) return null;
+  return getProfileBadges(user, originalMemberCutoff, options)[0] ?? null;
+}
+
+export function getProfileBadges(
+  user: BadgeUser | null | undefined,
+  originalMemberCutoff: Date | string | null | undefined,
+  options: { vendorContext?: boolean } = {}
+): ProfileBadge[] {
+  if (!user) return [];
+
+  const badges: ProfileBadge[] = [];
 
   if (isFounder(user)) {
-    return {
+    badges.push({
       kind: "founder",
       label: "Founder",
       title: "Founder of ShopFia."
-    };
+    });
   }
 
   if (isOriginalMember(user, originalMemberCutoff)) {
-    return options.vendorContext
-      ? {
-          kind: "original-vendor",
-          label: "Original Vendor",
-          title: "One of the first vendors on ShopFia."
-        }
-      : {
-          kind: "original-member",
-          label: "Original Member",
-          title: "One of the first 100 members on ShopFia."
-        };
+    badges.push(
+      options.vendorContext
+        ? {
+            kind: "original-vendor",
+            label: "Original Vendor",
+            title: "One of the first vendors on ShopFia."
+          }
+        : {
+            kind: "original-member",
+            label: "Original Member",
+            title: "One of the first 100 members on ShopFia."
+          }
+    );
   }
 
-  return null;
+  return badges;
 }
 
 function isFounder(user: BadgeUser) {
