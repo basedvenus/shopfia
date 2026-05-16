@@ -8,7 +8,6 @@ import {
   LayoutGrid,
   MapPinned,
   MessagesSquare,
-  PlusCircle,
   User
 } from "lucide-react";
 import { AccountMenu } from "@/components/layout/account-menu";
@@ -26,7 +25,6 @@ const navItems = [
 const mobileNavItems = [
   { href: "/explore", label: "Explore", icon: MapPinned },
   { href: "/parties", label: "Parties", icon: CalendarHeart },
-  { href: "/my-parties", label: "Create", icon: PlusCircle, featured: true },
   { href: "/categories", label: "Categories", icon: LayoutGrid },
   { href: "/favorites", label: "Favorites", icon: Heart },
   { href: "/messages", label: "Messages", icon: MessagesSquare }
@@ -98,7 +96,7 @@ export function SiteNavClient({
         </div>
       </header>
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-primary/12 bg-background/96 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2.5 shadow-[0_-8px_26px_rgba(82,55,55,0.07)] backdrop-blur md:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-6 items-center gap-1">
+        <div className="mx-auto grid max-w-lg grid-cols-5 items-center gap-1">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -107,23 +105,19 @@ export function SiteNavClient({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex min-h-[3.35rem] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-semibold transition ${
+                className={`group flex min-h-[3.45rem] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-semibold transition ${
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
                 aria-current={active ? "page" : undefined}
               >
                 <span
                   className={`grid place-items-center rounded-full transition ${
-                    item.featured
-                      ? active
-                        ? "h-8 w-8 border border-primary/35 bg-primary/10 text-primary"
-                        : "h-8 w-8 border border-primary/25 bg-white/85 text-muted-foreground group-hover:border-primary/35 group-hover:text-primary"
-                      : active
+                    active
                       ? "h-8 w-8 bg-primary/10"
                       : "h-8 w-8 group-hover:bg-muted"
                   }`}
                 >
-                  <Icon className="h-[18px] w-[18px]" />
+                  <Icon className="h-[19px] w-[19px]" />
                 </span>
                 <span>{item.label}</span>
               </Link>

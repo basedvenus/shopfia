@@ -164,7 +164,7 @@ export default async function PartiesPage({
               Scroll real celebrations, see the vendors tagged in the moment, and save the details that feel like your next gathering.
             </p>
           </div>
-          <Link href="/my-parties" className="hidden rounded-full border border-primary/20 bg-white/75 px-4 py-2 text-sm font-medium text-primary shadow-sm transition hover:bg-white md:inline-flex">
+          <Link href="/my-parties" className="inline-flex rounded-full border border-primary/20 bg-white/80 px-4 py-2 text-sm font-medium text-primary shadow-sm transition hover:bg-white">
             Share your party
           </Link>
         </div>
