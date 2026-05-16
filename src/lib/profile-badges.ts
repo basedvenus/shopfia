@@ -14,8 +14,8 @@ type BadgeUser = {
   username?: string | null;
 };
 
-const fallbackFounderUsernames = ["basedvenus"];
-const fallbackFounderEmails = ["basedvenus@gmail.com"];
+const founderUsername = "basedvenus";
+const founderEmail = "basedvenus@gmail.com";
 
 export async function getOriginalMemberCutoffDate(db: Pick<PrismaClient, "user">) {
   const users = await db.user.findMany({
@@ -72,28 +72,14 @@ export function getProfileBadges(
 }
 
 function isFounder(user: BadgeUser) {
-  const founderUsernames = getConfiguredList(process.env.SHOPFIA_FOUNDER_USERNAMES, fallbackFounderUsernames);
-  const founderEmails = getConfiguredList(process.env.SHOPFIA_FOUNDER_EMAILS, fallbackFounderEmails);
   const username = user.username?.toLowerCase();
   const email = user.email?.toLowerCase();
 
-  return Boolean(
-    (username && founderUsernames.includes(username)) ||
-      (email && founderEmails.includes(email))
-  );
+  return username === founderUsername || email === founderEmail;
 }
 
 function isOriginalMember(user: BadgeUser, cutoff: Date | string | null | undefined) {
   if (!user.createdAt || !cutoff) return false;
 
   return new Date(user.createdAt).getTime() <= new Date(cutoff).getTime();
-}
-
-function getConfiguredList(value: string | undefined, fallback: string[]) {
-  const configured = value
-    ?.split(",")
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
-
-  return configured?.length ? configured : fallback;
 }
