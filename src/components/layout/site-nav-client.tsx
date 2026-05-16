@@ -97,8 +97,8 @@ export function SiteNavClient({
           </div>
         </div>
       </header>
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-primary/15 bg-background/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 shadow-[0_-10px_30px_rgba(82,55,55,0.08)] backdrop-blur md:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-6 items-end gap-1">
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-primary/12 bg-background/96 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2.5 shadow-[0_-8px_26px_rgba(82,55,55,0.07)] backdrop-blur md:hidden">
+        <div className="mx-auto grid max-w-lg grid-cols-6 items-center gap-1">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -107,7 +107,7 @@ export function SiteNavClient({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-semibold transition ${
+                className={`group flex min-h-[3.35rem] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-semibold transition ${
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
                 aria-current={active ? "page" : undefined}
@@ -115,15 +115,17 @@ export function SiteNavClient({
                 <span
                   className={`grid place-items-center rounded-full transition ${
                     item.featured
-                      ? "h-10 w-10 -translate-y-1 bg-primary text-primary-foreground shadow-[0_10px_22px_rgba(224,155,161,0.34)] group-hover:-translate-y-1.5"
+                      ? active
+                        ? "h-8 w-8 border border-primary/35 bg-primary/10 text-primary"
+                        : "h-8 w-8 border border-primary/25 bg-white/85 text-muted-foreground group-hover:border-primary/35 group-hover:text-primary"
                       : active
                       ? "h-8 w-8 bg-primary/10"
                       : "h-8 w-8 group-hover:bg-muted"
                   }`}
                 >
-                  <Icon className={item.featured ? "h-5 w-5" : "h-[18px] w-[18px]"} />
+                  <Icon className="h-[18px] w-[18px]" />
                 </span>
-                <span className={item.featured ? "-mt-1 text-primary" : ""}>{item.label}</span>
+                <span>{item.label}</span>
               </Link>
             );
           })}

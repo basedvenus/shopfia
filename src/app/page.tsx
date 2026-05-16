@@ -86,7 +86,7 @@ export default function Page() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/explore">
               <Button size="lg" className="h-12 rounded-md px-8">
-                Explore
+                Explore Vendors
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -96,7 +96,7 @@ export default function Page() {
               </Button>
             </Link>
             <Link href="/account">
-              <Button size="lg" variant="secondary" className="h-12 rounded-md px-8">
+              <Button size="lg" variant="ghost" className="h-12 rounded-md px-6 text-muted-foreground hover:text-foreground">
                 Sign Up
               </Button>
             </Link>
