@@ -86,7 +86,7 @@ export default function Page() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/explore">
               <Button size="lg" className="h-12 rounded-md px-8">
-                Explore Vendors
+                Explore
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>

@@ -76,7 +76,7 @@ export default async function RootLayout({
       <body>
         <ProfileProvider initialProfile={initialProfile}>
           <SiteNav />
-          <main className="container py-6">{children}</main>
+          <main className="container py-6 pb-28 md:pb-6">{children}</main>
         </ProfileProvider>
       </body>
     </html>

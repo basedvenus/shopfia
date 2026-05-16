@@ -59,7 +59,7 @@ export default async function ExplorePage({
 
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Explore Vendors</h2>
+          <h2 className="text-lg font-semibold">Explore</h2>
           <p className="text-sm text-muted-foreground">{data.vendors.length} results</p>
         </div>
         {data.vendors.length === 0 ? (
