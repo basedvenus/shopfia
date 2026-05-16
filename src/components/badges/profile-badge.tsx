@@ -17,14 +17,14 @@ export function ProfileBadge({ badge, className, light = false }: ProfileBadgePr
     return (
       <span
         className={cn(
-          "inline-flex w-fit items-center gap-2 rounded-full border border-[#ffb2bf]/80 bg-[linear-gradient(90deg,#ff7f9c_0%,#f56789_48%,#d94874_100%)] py-1 pr-4 text-[10px] font-semibold uppercase leading-none tracking-[0.34em] text-white shadow-[0_10px_28px_rgba(214,72,116,0.34),inset_0_1px_0_rgba(255,255,255,0.62)] ring-1 ring-white/50",
+          "inline-flex w-fit items-center gap-1.5 rounded-full border border-[#f2a1b0]/70 bg-[linear-gradient(92deg,#f9a8b8_0%,#ee7f99_55%,#de6f8d_100%)] py-1 pl-1 pr-3 text-[9.5px] font-semibold uppercase leading-none tracking-[0.22em] text-white shadow-[0_6px_18px_rgba(214,72,116,0.18),inset_0_1px_0_rgba(255,255,255,0.55)] ring-1 ring-white/45",
           light && "border-white/40 bg-white/25 shadow-sm backdrop-blur",
           className
         )}
         title={badge.title}
       >
-        <span className="ml-1 grid h-7 w-7 place-items-center rounded-full border border-white/55 bg-white/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
-          <CandleIcon className="h-[18px] w-[18px]" />
+        <span className="grid h-5 w-5 place-items-center rounded-full border border-white/45 bg-white/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
+          <CandleIcon className="h-[13px] w-[13px]" />
         </span>
         {badge.label}
       </span>

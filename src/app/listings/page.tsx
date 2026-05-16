@@ -97,7 +97,10 @@ export default async function ListingsPage() {
           {listings.map((listing) => {
             const vendor = listing.shop?.vendorProfile;
             if (!vendor) return null;
-            const vendorBadge = getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true });
+            const vendorBadge = getProfileBadge(vendor.user, originalMemberCutoff, {
+              includeFounder: false,
+              vendorContext: true
+            });
             const image =
               listing.offering?.photos[0] ??
               vendor.coverPhoto ??

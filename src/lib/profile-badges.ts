@@ -30,7 +30,7 @@ export async function getOriginalMemberCutoffDate(db: Pick<PrismaClient, "user">
 export function getProfileBadge(
   user: BadgeUser | null | undefined,
   originalMemberCutoff: Date | string | null | undefined,
-  options: { vendorContext?: boolean } = {}
+  options: { includeFounder?: boolean; vendorContext?: boolean } = {}
 ): ProfileBadge | null {
   return getProfileBadges(user, originalMemberCutoff, options)[0] ?? null;
 }
@@ -38,13 +38,13 @@ export function getProfileBadge(
 export function getProfileBadges(
   user: BadgeUser | null | undefined,
   originalMemberCutoff: Date | string | null | undefined,
-  options: { vendorContext?: boolean } = {}
+  options: { includeFounder?: boolean; vendorContext?: boolean } = {}
 ): ProfileBadge[] {
   if (!user) return [];
 
   const badges: ProfileBadge[] = [];
 
-  if (isFounder(user)) {
+  if (options.includeFounder !== false && isFounder(user)) {
     badges.push({
       kind: "founder",
       label: "Founder",

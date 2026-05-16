@@ -406,7 +406,12 @@ export default async function EventPage({
                     />
                     <div>
                       <p className="text-sm font-semibold">Vendor contribution by {vendor.name}</p>
-                      <ProfileBadge badge={getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true })} />
+                      <ProfileBadge
+                        badge={getProfileBadge(vendor.user, originalMemberCutoff, {
+                          includeFounder: false,
+                          vendorContext: true
+                        })}
+                      />
                       <p className="mt-1 text-xs text-muted-foreground">
                         {vendor.city}{vendor.state ? `, ${vendor.state}` : ""}
                       </p>
@@ -458,7 +463,13 @@ export default async function EventPage({
                     <h3 className="font-semibold">
                       {vendorIndex === 0 ? "Featured styling" : "Event detail"} by {vendor.name}
                     </h3>
-                    <ProfileBadge badge={getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true })} className="mt-2" />
+                    <ProfileBadge
+                      badge={getProfileBadge(vendor.user, originalMemberCutoff, {
+                        includeFounder: false,
+                        vendorContext: true
+                      })}
+                      className="mt-2"
+                    />
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       Tagged photos give this vendor real context from a celebration, not just a static portfolio upload.
                     </p>

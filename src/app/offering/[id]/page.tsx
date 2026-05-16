@@ -78,7 +78,10 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
   ).toFixed(1);
   const reviewCount =
     offering.vendor.sellerRatingAggregate?.totalReviews ?? offering.vendor.reviewCount;
-  const vendorBadge = getProfileBadge(offering.vendor.user, originalMemberCutoff, { vendorContext: true });
+  const vendorBadge = getProfileBadge(offering.vendor.user, originalMemberCutoff, {
+    includeFounder: false,
+    vendorContext: true
+  });
   const eventTags = [
     ...[
       offering.category.name,
