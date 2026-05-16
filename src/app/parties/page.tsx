@@ -76,6 +76,13 @@ export default async function PartiesPage({
           slug: true,
           userId: true
         }
+      },
+      collaborators: {
+        where: { status: "ACCEPTED" },
+        select: {
+          userId: true,
+          user: { select: { id: true, image: true, name: true, username: true } }
+        }
       }
     },
     orderBy: [{ createdAt: "desc" }],
@@ -197,7 +204,10 @@ export default async function PartiesPage({
                             {hostName.slice(0, 2).toUpperCase()}
                           </span>
                         )}
-                        <span className="truncate text-sm text-muted-foreground">{hostName}</span>
+                      <span className="truncate text-sm text-muted-foreground">{hostName}</span>
+                        {party.collaborators.length > 1 ? (
+                          <span className="text-xs text-muted-foreground">+{party.collaborators.length - 1}</span>
+                        ) : null}
                         <ProfileBadge badge={hostBadge} />
                       </div>
                       <span className="shrink-0 rounded-full bg-[#fff7f4] px-3 py-1 text-xs text-muted-foreground">
@@ -292,6 +302,7 @@ function getPartiesForFeed<T extends {
   state: string | null;
   createdAt: Date;
   user: { id: string };
+  collaborators: Array<{ userId: string }>;
   taggedVendors: Array<{ id: string; userId: string }>;
   photos: Array<{ taggedVendors: Array<{ id: string; userId: string }> }>;
   tags: string[];
@@ -300,6 +311,7 @@ function getPartiesForFeed<T extends {
   if (feed === "Following") {
     const followed = parties.filter((party) => {
       if (followingIds.has(party.user.id)) return true;
+      if (party.collaborators.some((collaborator) => followingIds.has(collaborator.userId))) return true;
       if (party.taggedVendors.some((vendor) => followingIds.has(vendor.userId))) return true;
       return party.photos.some((photo) =>
         photo.taggedVendors.some((vendor) => followingIds.has(vendor.userId))

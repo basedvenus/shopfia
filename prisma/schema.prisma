@@ -116,6 +116,18 @@ enum InquiryStatus {
   CLOSED
 }
 
+enum PartyCollaboratorRole {
+  MAIN_HOST
+  CO_HOST
+}
+
+enum PartyCollaborationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REMOVED
+}
+
 model User {
   id                     String            @id @default(cuid())
   name                   String?
@@ -137,6 +149,7 @@ model User {
   avatar                 UserAvatar?
   partyPhotos            PartyPhoto[]
   partyEvents            PartyEvent[]
+  partyCollaborations    PartyCollaborator[]
   partyPhotoVendorRatings PartyPhotoVendorRating[]
   following              Follow[]          @relation("Follower")
   followers              Follow[]          @relation("Following")
@@ -291,11 +304,30 @@ model PartyEvent {
 
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   photos        PartyPhoto[]
+  collaborators PartyCollaborator[]
   taggedVendors VendorProfile[] @relation("PartyEventTaggedVendors")
   favorites     Favorite[] @relation("PartyEventFavorites")
 
   @@index([locationLat, locationLng])
   @@index([googlePlaceId])
+}
+
+model PartyCollaborator {
+  id          String                   @id @default(cuid())
+  eventId     String
+  userId      String
+  role        PartyCollaboratorRole
+  status      PartyCollaborationStatus @default(PENDING)
+  invitedById String?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  event       PartyEvent               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user        User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId, status])
+  @@index([eventId, status])
 }
 
 model PartyPhoto {

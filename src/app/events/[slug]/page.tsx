@@ -76,6 +76,13 @@ export default async function EventPage({
             },
             vendorRatings: true
           }
+        },
+        collaborators: {
+          where: { status: { in: ["ACCEPTED", "PENDING"] } },
+          orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+          include: {
+            user: { select: { id: true, image: true, name: true, username: true } }
+          }
         }
       }
     })
@@ -138,9 +145,29 @@ export default async function EventPage({
     ).values()
   );
   const host = event?.user ?? null;
+  const acceptedCollaborators =
+    event?.collaborators.filter((collaborator) => collaborator.status === "ACCEPTED") ?? [];
+  const visibleCollaborators = acceptedCollaborators.length
+    ? acceptedCollaborators
+    : host
+    ? [
+        {
+          id: "host",
+          role: "MAIN_HOST" as const,
+          status: "ACCEPTED" as const,
+          user: {
+            id: host.id,
+            image: host.image,
+            name: host.name,
+            username: host.username
+          }
+        }
+      ]
+    : [];
   const hostBadge = getProfileBadge(host, originalMemberCutoff);
   const hostHandle = host?.username ? `@${host.username}` : host?.name ?? "ShopFia host";
-  const isOwner = Boolean(session?.user?.id && host?.id && session.user.id === host.id);
+  const currentUserId = session?.user?.id ?? null;
+  const isOwner = Boolean(currentUserId && host?.id && currentUserId === host.id);
   const editRequested = resolvedSearchParams.edit === "1" || resolvedSearchParams.edit === "true";
   const isEditing = Boolean(editRequested && isOwner && event);
   const formParty = event
@@ -167,7 +194,13 @@ export default async function EventPage({
           vendorRatings: Object.fromEntries(
             photo.vendorRatings.map((rating) => [rating.vendorId, rating.rating])
           )
-        }))
+        })),
+        mainHostId:
+          event.collaborators.find((collaborator) => collaborator.role === "MAIN_HOST")?.userId ??
+          event.userId,
+        coHostIds: event.collaborators
+          .filter((collaborator) => collaborator.role === "CO_HOST" && collaborator.status !== "REMOVED")
+          .map((collaborator) => collaborator.userId)
       } satisfies EditablePartyEvent)
     : null;
   const isFollowingHost =
@@ -183,12 +216,20 @@ export default async function EventPage({
           })
         )
       : false;
-  const editVendors = isEditing
-    ? await db.vendorProfile.findMany({
-        select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true },
-        orderBy: { name: "asc" }
-      })
-    : [];
+  const [editVendors, editUsers] = isEditing
+    ? await Promise.all([
+        db.vendorProfile.findMany({
+          select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true },
+          orderBy: { name: "asc" }
+        }),
+        db.user.findMany({
+          where: { OR: [{ username: { not: null } }, { id: currentUserId ?? "" }] },
+          select: { id: true, image: true, name: true, username: true },
+          orderBy: [{ name: "asc" }, { username: "asc" }],
+          take: 100
+        })
+      ])
+    : [[], []];
 
   async function toggleFollow(formData: FormData) {
     "use server";
@@ -219,7 +260,12 @@ export default async function EventPage({
             </Link>
           </div>
           <div className="rounded-[1.6rem] border bg-white p-4">
-            <PartyEventForm initialParty={formParty} vendors={editVendors} />
+            <PartyEventForm
+              currentUserId={currentUserId ?? ""}
+              initialParty={formParty}
+              users={editUsers}
+              vendors={editVendors}
+            />
           </div>
         </section>
       ) : null}
@@ -276,6 +322,42 @@ export default async function EventPage({
                     </Button>
                   </form>
                 ) : null}
+              </div>
+            ) : null}
+            {visibleCollaborators.length > 0 ? (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <div className="flex -space-x-2">
+                  {visibleCollaborators.slice(0, 5).map((collaborator) => (
+                    <Link
+                      key={collaborator.id}
+                      href={collaborator.user.username ? `/profiles/${collaborator.user.username}` : "#"}
+                      className="grid h-9 w-9 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/20 text-xs font-semibold text-white shadow-sm"
+                      title={collaborator.user.name ?? collaborator.user.username ?? "ShopFia host"}
+                    >
+                      {collaborator.user.image ? (
+                        <img src={collaborator.user.image} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        (collaborator.user.name ?? collaborator.user.username ?? "SF").slice(0, 2).toUpperCase()
+                      )}
+                    </Link>
+                  ))}
+                </div>
+                <p className="text-sm text-white/85">
+                  Hosted by{" "}
+                  {visibleCollaborators.slice(0, 2).map((collaborator, index) => (
+                    <span key={collaborator.id}>
+                      {index ? " + " : ""}
+                      {collaborator.user.username ? (
+                        <Link href={`/profiles/${collaborator.user.username}`} className="font-semibold text-white underline-offset-4 hover:underline">
+                          {collaborator.user.name ?? collaborator.user.username}
+                        </Link>
+                      ) : (
+                        <span className="font-semibold text-white">{collaborator.user.name ?? "ShopFia host"}</span>
+                      )}
+                    </span>
+                  ))}
+                  {visibleCollaborators.length > 2 ? ` + ${visibleCollaborators.length - 2} others` : ""}
+                </p>
               </div>
             ) : null}
             <div className="mt-4 flex flex-wrap gap-2">

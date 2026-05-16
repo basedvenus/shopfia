@@ -2,7 +2,7 @@
 
 import { hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
-import type { Prisma } from "@prisma/client";
+import { PartyCollaborationStatus, PartyCollaboratorRole, type Prisma } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
@@ -170,7 +170,9 @@ const partyEventFieldsSchema = z.object({
   zipCode: z.string().trim().max(12).optional().or(z.literal("")),
   locationLat: optionalCoordinate(-90, 90),
   locationLng: optionalCoordinate(-180, 180),
-  googlePlaceId: z.string().trim().max(180).optional().or(z.literal(""))
+  googlePlaceId: z.string().trim().max(180).optional().or(z.literal("")),
+  mainHostId: z.string().cuid().optional().or(z.literal("")),
+  coHostIds: z.array(z.string().cuid()).max(12).default([])
 });
 
 const createPartyEventSchema = partyEventFieldsSchema.extend({
@@ -246,6 +248,15 @@ export async function createPartyEventAction(formData: FormData) {
           connect: prepared.eventVendorIds.map((id) => ({ id }))
         }
       }
+    });
+
+    await persistPartyCollaborators({
+      eventId: partyEvent.id,
+      invitedById: session.user.id,
+      mainHostId: parsed.data.mainHostId || session.user.id,
+      coHostIds: parsed.data.coHostIds,
+      ownerId: session.user.id,
+      tx
     });
 
     await Promise.all(
@@ -368,6 +379,15 @@ export async function updatePartyEventAction(formData: FormData) {
       }
     });
 
+    await persistPartyCollaborators({
+      eventId: existingEvent.id,
+      invitedById: session.user.id,
+      mainHostId: parsed.data.mainHostId || session.user.id,
+      coHostIds: parsed.data.coHostIds,
+      ownerId: session.user.id,
+      tx
+    });
+
     await Promise.all(
       prepared.orderedPhotos.map(async (photo, index) => {
         const ratedVendorIds = getRatedVendorIds(photo, prepared.validVendorIds);
@@ -403,6 +423,53 @@ export async function updatePartyEventAction(formData: FormData) {
   return { ok: true, eventSlug: event.slug };
 }
 
+export async function updatePartyCollaborationAction(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, error: "Sign in to update this collaboration." };
+  }
+
+  const rate = await checkServerActionRateLimit([
+    { key: "party-collab:ip:{ip}", limit: 60, intervalMs: 60_000 },
+    { key: `party-collab:user:${session.user.id}`, limit: 30, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    return { ok: false, error: "Please wait a minute before updating collaborations again." };
+  }
+
+  const collaborationId = String(formData.get("collaborationId") ?? "");
+  const action = String(formData.get("action") ?? "");
+  const nextStatus =
+    action === "accept"
+      ? PartyCollaborationStatus.ACCEPTED
+      : action === "decline"
+      ? PartyCollaborationStatus.DECLINED
+      : action === "remove"
+      ? PartyCollaborationStatus.REMOVED
+      : null;
+
+  if (!collaborationId || !nextStatus) {
+    return { ok: false, error: "Choose a valid collaboration action." };
+  }
+
+  const collaboration = await db.partyCollaborator.updateMany({
+    where: {
+      id: collaborationId,
+      userId: session.user.id
+    },
+    data: { status: nextStatus }
+  });
+
+  if (collaboration.count === 0) {
+    return { ok: false, error: "That collaboration could not be found." };
+  }
+
+  revalidatePath("/my-parties");
+  revalidatePath("/parties");
+  revalidatePath("/");
+  return { ok: true };
+}
+
 function parsePartyEventFormData(formData: FormData) {
   const tags = formData
     .getAll("tags")
@@ -424,8 +491,82 @@ function parsePartyEventFormData(formData: FormData) {
     locationLat: formData.get("locationLat") || undefined,
     locationLng: formData.get("locationLng") || undefined,
     googlePlaceId: formData.get("locationPlaceId") || undefined,
+    mainHostId: formData.get("mainHostId") || undefined,
+    coHostIds: formData
+      .getAll("coHostIds")
+      .map(String)
+      .filter(Boolean),
     photos
   };
+}
+
+async function persistPartyCollaborators({
+  coHostIds,
+  eventId,
+  invitedById,
+  mainHostId,
+  ownerId,
+  tx
+}: {
+  coHostIds: string[];
+  eventId: string;
+  invitedById: string;
+  mainHostId: string;
+  ownerId: string;
+  tx: Prisma.TransactionClient;
+}) {
+  const requestedIds = Array.from(new Set([mainHostId, ...coHostIds, ownerId].filter(Boolean)));
+  const users = await tx.user.findMany({
+    where: { id: { in: requestedIds } },
+    select: { id: true }
+  });
+  const validUserIds = new Set(users.map((user) => user.id));
+  const safeMainHostId = validUserIds.has(mainHostId) ? mainHostId : ownerId;
+  const safeCoHostIds = coHostIds.filter((id) => id !== safeMainHostId && validUserIds.has(id));
+  const activeUserIds = new Set([safeMainHostId, ...safeCoHostIds]);
+
+  await tx.partyCollaborator.updateMany({
+    where: {
+      eventId,
+      userId: { notIn: Array.from(activeUserIds) }
+    },
+    data: { status: PartyCollaborationStatus.REMOVED }
+  });
+
+  const collaborators = [
+    { role: PartyCollaboratorRole.MAIN_HOST, userId: safeMainHostId },
+    ...safeCoHostIds.map((userId) => ({ role: PartyCollaboratorRole.CO_HOST, userId }))
+  ];
+
+  await Promise.all(
+    collaborators.map((collaborator) =>
+      tx.partyCollaborator.upsert({
+        where: {
+          eventId_userId: {
+            eventId,
+            userId: collaborator.userId
+          }
+        },
+        update: {
+          role: collaborator.role,
+          status:
+            collaborator.userId === ownerId
+              ? PartyCollaborationStatus.ACCEPTED
+              : PartyCollaborationStatus.PENDING
+        },
+        create: {
+          eventId,
+          invitedById,
+          role: collaborator.role,
+          status:
+            collaborator.userId === ownerId
+              ? PartyCollaborationStatus.ACCEPTED
+              : PartyCollaborationStatus.PENDING,
+          userId: collaborator.userId
+        }
+      })
+    )
+  );
 }
 
 async function preparePartyPhotoPersistence({

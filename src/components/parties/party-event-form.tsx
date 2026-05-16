@@ -24,6 +24,13 @@ type VendorOption = {
   logoUrl: string | null;
 };
 
+type UserOption = {
+  id: string;
+  image: string | null;
+  name: string | null;
+  username: string | null;
+};
+
 type UploadedPartyPhoto = {
   crop: ImageCrop;
   id: string;
@@ -47,20 +54,26 @@ export type EditablePartyEvent = {
   locationLat?: number | null;
   locationLng?: number | null;
   googlePlaceId?: string | null;
+  mainHostId?: string | null;
+  coHostIds?: string[];
   photos: UploadedPartyPhoto[];
 };
 
 type PartyEventFormProps = {
+  currentUserId: string;
   initialParty?: EditablePartyEvent | null;
+  users: UserOption[];
   vendors: VendorOption[];
 };
 
-export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
+export function PartyEventForm({ currentUserId, initialParty, users, vendors }: PartyEventFormProps) {
   const isEditing = Boolean(initialParty);
   const [message, setMessage] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>(() => initialParty?.tags ?? []);
   const [photos, setPhotos] = useState<UploadedPartyPhoto[]>(() => initialParty?.photos ?? []);
+  const [mainHostId, setMainHostId] = useState(initialParty?.mainHostId ?? currentUserId);
+  const [coHostIds, setCoHostIds] = useState<string[]>(() => initialParty?.coHostIds ?? []);
   const [editingCropPhoto, setEditingCropPhoto] = useState<UploadedPartyPhoto | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -185,6 +198,8 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
           formData.set("eventId", initialParty.id);
         }
         tags.forEach((tag) => formData.append("tags", tag));
+        formData.set("mainHostId", mainHostId);
+        coHostIds.forEach((id) => formData.append("coHostIds", id));
         formData.set(
           "photos",
           JSON.stringify(photos.map(({ crop, id, vendorIds, vendorRatings }) => ({ crop, id, vendorIds, vendorRatings })))
@@ -248,6 +263,22 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
         placeholder="Tell the party story: the mood, inspiration, favorite details, or what made it special..."
         className="min-h-[110px]"
         defaultValue={initialParty?.description ?? ""}
+      />
+
+      <PartyCollaboratorPicker
+        coHostIds={coHostIds}
+        currentUserId={currentUserId}
+        mainHostId={mainHostId}
+        onAddCoHost={(userId) => {
+          if (userId === mainHostId) return;
+          setCoHostIds((current) => (current.includes(userId) ? current : [...current, userId].slice(0, 12)));
+        }}
+        onMainHostChange={(userId) => {
+          setMainHostId(userId);
+          setCoHostIds((current) => current.filter((id) => id !== userId));
+        }}
+        onRemoveCoHost={(userId) => setCoHostIds((current) => current.filter((id) => id !== userId))}
+        users={users}
       />
 
       <div className="grid gap-2">
@@ -412,6 +443,153 @@ function IconButton({
       {children}
     </button>
   );
+}
+
+function PartyCollaboratorPicker({
+  coHostIds,
+  currentUserId,
+  mainHostId,
+  onAddCoHost,
+  onMainHostChange,
+  onRemoveCoHost,
+  users
+}: {
+  coHostIds: string[];
+  currentUserId: string;
+  mainHostId: string;
+  onAddCoHost: (userId: string) => void;
+  onMainHostChange: (userId: string) => void;
+  onRemoveCoHost: (userId: string) => void;
+  users: UserOption[];
+}) {
+  const [query, setQuery] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
+  const userMap = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
+  const mainHost = userMap.get(mainHostId) ?? userMap.get(currentUserId) ?? users[0];
+  const selectedIds = new Set([mainHostId, ...coHostIds]);
+  const matches = users
+    .filter((user) => {
+      if (selectedIds.has(user.id)) return false;
+      const haystack = `${user.name ?? ""} ${user.username ?? ""}`.toLowerCase();
+      return query.trim() ? haystack.includes(query.trim().toLowerCase()) : user.id !== currentUserId;
+    })
+    .slice(0, 6);
+
+  return (
+    <section className="grid gap-3 rounded-[1.5rem] border bg-white p-4">
+      <div>
+        <p className="text-sm font-semibold">Party hosts</p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          Add friends or creators who helped host this party. Co-hosts appear after they accept.
+        </p>
+      </div>
+
+      <div className="grid gap-2">
+        <label className="text-xs font-medium text-muted-foreground">Main Host</label>
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <div className="flex items-center gap-3 rounded-2xl border bg-[#fffaf8] px-3 py-2">
+            {mainHost ? <UserAvatar user={mainHost} /> : null}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{getUserDisplayName(mainHost)}</p>
+              <p className="truncate text-xs text-muted-foreground">{getUserHandle(mainHost)}</p>
+            </div>
+          </div>
+          <select
+            value={mainHostId}
+            onChange={(event) => onMainHostChange(event.target.value)}
+            className="h-12 rounded-2xl border bg-white px-3 text-sm outline-none transition focus:border-primary"
+          >
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {getUserDisplayName(user)} {user.username ? `(@${user.username})` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid gap-2">
+        <label className="text-xs font-medium text-muted-foreground">Supporting Hosts / Co-Hosts</label>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => window.setTimeout(() => setIsFocused(false), 120)}
+            placeholder="Search friends or usernames"
+            className="h-12 w-full rounded-2xl border bg-white pl-10 pr-4 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary"
+          />
+          {isFocused && matches.length > 0 ? (
+            <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-30 overflow-hidden rounded-[1.2rem] border bg-white shadow-soft">
+              {matches.map((user) => (
+                <button
+                  key={user.id}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    onAddCoHost(user.id);
+                    setQuery("");
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-primary/5"
+                >
+                  <UserAvatar user={user} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{getUserDisplayName(user)}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{getUserHandle(user)}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        {coHostIds.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {coHostIds.map((userId) => {
+              const user = userMap.get(userId);
+              if (!user) return null;
+              return (
+                <button
+                  key={userId}
+                  type="button"
+                  onClick={() => onRemoveCoHost(userId)}
+                  className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs font-medium transition hover:border-primary/30 hover:bg-primary/5"
+                  aria-label={`Remove ${getUserDisplayName(user)}`}
+                >
+                  <UserAvatar user={user} size="sm" />
+                  {getUserDisplayName(user)}
+                  <X className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">Optional. Co-hosts can accept before appearing publicly.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function UserAvatar({ size = "md", user }: { size?: "sm" | "md"; user?: UserOption }) {
+  const className = size === "sm" ? "h-5 w-5 text-[10px]" : "h-9 w-9 text-xs";
+  if (user?.image) {
+    return <img src={user.image} alt="" className={`${className} shrink-0 rounded-full object-cover`} />;
+  }
+  return (
+    <span className={`${className} grid shrink-0 place-items-center rounded-full bg-primary/10 font-semibold text-primary`}>
+      {getUserDisplayName(user).slice(0, 2).toUpperCase()}
+    </span>
+  );
+}
+
+function getUserDisplayName(user?: UserOption) {
+  return user?.name ?? user?.username ?? "ShopFia host";
+}
+
+function getUserHandle(user?: UserOption) {
+  return user?.username ? `@${user.username}` : "Creator profile";
 }
 
 function PhotoVendorTagger({

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Heart, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
-import { toggleFollowAction } from "@/app/actions/auth";
+import { toggleFollowAction, updatePartyCollaborationAction } from "@/app/actions/auth";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +29,15 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         image: true,
         partyEvents: {
           include: { taggedVendors: true },
+          orderBy: { createdAt: "desc" }
+        },
+        partyCollaborations: {
+          where: { status: { in: ["ACCEPTED", "PENDING"] } },
+          include: {
+            event: {
+              include: { taggedVendors: true }
+            }
+          },
           orderBy: { createdAt: "desc" }
         },
         _count: {
@@ -66,6 +75,25 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     await toggleFollowAction(formData);
   }
 
+  async function updateCollaboration(formData: FormData) {
+    "use server";
+
+    await updatePartyCollaborationAction(formData);
+  }
+
+  const acceptedCollaborations = profile.partyCollaborations.filter(
+    (collaboration) => collaboration.status === "ACCEPTED"
+  );
+  const pendingCollaborations = currentUserId === profile.id
+    ? profile.partyCollaborations.filter((collaboration) => collaboration.status === "PENDING")
+    : [];
+  const profilePartyEvents = [
+    ...profile.partyEvents,
+    ...acceptedCollaborations
+      .map((collaboration) => collaboration.event)
+      .filter((event) => !profile.partyEvents.some((ownedEvent) => ownedEvent.id === event.id))
+  ].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+
   return (
     <div className="space-y-8">
       <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
@@ -92,7 +120,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                 <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted-foreground">
                   <span>{profile._count.followers} followers</span>
                   <span>{profile._count.following} following</span>
-                  <span>{profile.partyEvents.length} party stories</span>
+                  <span>{profilePartyEvents.length} party stories</span>
                 </div>
               </div>
             </div>
@@ -109,6 +137,39 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         </div>
       </section>
 
+      {pendingCollaborations.length > 0 ? (
+        <section className="rounded-[1.75rem] border border-primary/15 bg-white/90 p-4 shadow-sm">
+          <h2 className="text-xl font-semibold tracking-tight">Collaboration Invites</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Accept to let these party stories appear on your profile.
+          </p>
+          <div className="mt-4 grid gap-3">
+            {pendingCollaborations.map((collaboration) => (
+              <div key={collaboration.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] border bg-white p-3">
+                <div>
+                  <p className="text-sm font-semibold">{collaboration.event.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {collaboration.role === "MAIN_HOST" ? "Main host invite" : "Co-host invite"}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <form action={updateCollaboration}>
+                    <input type="hidden" name="collaborationId" value={collaboration.id} />
+                    <input type="hidden" name="action" value="accept" />
+                    <Button type="submit" size="sm">Accept</Button>
+                  </form>
+                  <form action={updateCollaboration}>
+                    <input type="hidden" name="collaborationId" value={collaboration.id} />
+                    <input type="hidden" name="action" value="decline" />
+                    <Button type="submit" size="sm" variant="secondary">Decline</Button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="space-y-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Party Stories</h2>
@@ -117,9 +178,9 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           </p>
         </div>
 
-        {profile.partyEvents.length > 0 ? (
+        {profilePartyEvents.length > 0 ? (
           <div className="grid auto-rows-[230px] gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {profile.partyEvents.map((event, index) => {
+            {profilePartyEvents.map((event, index) => {
               const image = event.coverImageUrl ?? event.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png";
               return (
                 <Link key={event.id} href={`/events/${event.slug}`} className={index === 0 ? "md:row-span-2" : ""}>

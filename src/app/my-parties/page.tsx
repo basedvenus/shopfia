@@ -27,7 +27,7 @@ export default async function MyPartiesPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/account");
 
-  const [events, vendors] = await Promise.all([
+  const [events, vendors, users] = await Promise.all([
     db.partyEvent.findMany({
       where: { userId: session.user.id },
       include: {
@@ -41,6 +41,14 @@ export default async function MyPartiesPage() {
     db.vendorProfile.findMany({
       select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true },
       orderBy: { name: "asc" }
+    }),
+    db.user.findMany({
+      where: {
+        OR: [{ username: { not: null } }, { id: session.user.id }]
+      },
+      select: { id: true, image: true, name: true, username: true },
+      orderBy: [{ name: "asc" }, { username: "asc" }],
+      take: 100
     })
   ]);
 
@@ -149,7 +157,7 @@ export default async function MyPartiesPage() {
               </p>
             </div>
           </div>
-          <PartyEventForm key="new-party" vendors={vendors} />
+          <PartyEventForm key="new-party" currentUserId={session.user.id} users={users} vendors={vendors} />
         </aside>
       </section>
     </div>
