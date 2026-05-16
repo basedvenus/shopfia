@@ -18,12 +18,12 @@ export function ConnectStripeButton({ connected }: { connected: boolean }) {
           if (data.url) {
             window.location.href = data.url;
           } else {
-            alert(data.error ?? "Failed to start Stripe onboarding");
+            alert(data.error ?? "We could not open your payout setup. Please try again.");
           }
         });
       }}
     >
-      {pending ? "Loading..." : connected ? "Manage Stripe" : "Connect Stripe"}
+      {pending ? "Opening..." : connected ? "Manage payouts" : "Connect bank account"}
     </Button>
   );
 }

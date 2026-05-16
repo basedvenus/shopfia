@@ -72,25 +72,63 @@ See `.env.example` for the full list:
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - `CLOUDINARY_URL`
 
-## Stripe Connect + payments setup
+## Stripe Connect marketplace payments setup
 
-1. Create a Stripe account and enable Connect.
-2. Create a Connect platform and use Express accounts.
-3. Add API keys to `.env`.
-4. Run Stripe CLI for local webhooks:
+ShopFia uses Stripe Connect Express for marketplace payouts. Vendors connect a
+Stripe Express account from the Vendor Dashboard, buyers eventually pay ShopFia,
+and Stripe transfers the vendor share to the connected vendor account.
+
+### Environment variables
+
+Set these locally and in Vercel:
+
+- `STRIPE_SECRET_KEY`: server-only secret key. Never expose this in client code.
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: publishable browser key for future Stripe Elements checkout UI.
+- `STRIPE_WEBHOOK_SECRET`: webhook signing secret for `/api/stripe/webhook`.
+
+Use separate Stripe test and live keys for preview/development versus production.
+
+### Stripe dashboard steps
+
+1. Create or open the Stripe account that will own the ShopFia platform.
+2. Enable Connect and choose Express connected accounts.
+3. Enable the payment methods you want for checkout, starting with cards.
+4. Add a webhook endpoint:
+   - Local: use the Stripe CLI command below.
+   - Production: `https://www.shopfia.app/api/stripe/webhook`
+5. Subscribe the webhook endpoint to:
+   - `account.updated`
+   - `payment_intent.succeeded`
+   - `payment_intent.payment_failed`
+6. Copy the webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
+7. In Vercel, add the same Stripe env vars for Production and Preview, then redeploy.
+
+### Local webhook testing
+
+Run Stripe CLI for local webhooks:
 
 ```bash
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
-5. Copy the generated webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
-6. In the app, sign in as a vendor and open `/vendor/dashboard`, then click `Connect Stripe`.
+Copy the generated `whsec_...` signing secret into `STRIPE_WEBHOOK_SECRET`.
 
-Notes:
+### App behavior
 
-- The MVP creates Stripe PaymentIntents when a buyer accepts a quote from `/account`.
-- Webhook handling updates `Order` status to `paid` on `payment_intent.succeeded`.
-- A production-ready Stripe Elements checkout UI can be added on top of the existing PaymentIntent action/metadata flow.
+- Vendors open `/vendor/dashboard` and click `Connect bank account`.
+- The app creates a Stripe Express connected account with card payments and
+  transfers requested.
+- Stripe webhook events update `stripeOnboardingComplete`,
+  `stripeChargesEnabled`, and `stripePayoutsEnabled` on the vendor profile.
+- Buyers cannot create quote payment intents until the vendor account is ready
+  for both charges and payouts.
+- Quote payment intents use destination charges with `application_fee_amount`,
+  so ShopFia can collect marketplace/payment fees while the vendor receives the
+  connected-account payout path.
+
+The production-ready Stripe Elements confirmation UI can be added on top of the
+existing PaymentIntent/client-secret action when the booking checkout screen is
+ready.
 
 ## Auth setup (Google + magic link)
 

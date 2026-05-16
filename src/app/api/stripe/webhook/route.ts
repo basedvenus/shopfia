@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getStripeServer } from "@/lib/stripe";
+import { getConnectReadiness, getStripeServer } from "@/lib/stripe";
 import { enforceRequestRateLimit } from "@/lib/security/request";
 import { securityLog } from "@/lib/security/audit-log";
 
@@ -66,9 +66,14 @@ export async function POST(req: Request) {
 
   if (event.type === "account.updated") {
     const account = event.data.object as Stripe.Account;
+    const readiness = getConnectReadiness(account);
     await db.vendorProfile.updateMany({
       where: { stripeAccountId: account.id },
-      data: { stripeOnboardingComplete: !!account.details_submitted }
+      data: {
+        stripeOnboardingComplete: readiness.onboardingComplete,
+        stripeChargesEnabled: readiness.chargesEnabled,
+        stripePayoutsEnabled: readiness.payoutsEnabled
+      }
     });
   }
 

@@ -332,7 +332,8 @@ export default async function VendorDashboardPage() {
             <ReadinessRow complete={Boolean(vendor.coverPhoto || vendor.photos.length)} label="Cover and portfolio imagery" />
             <ReadinessRow complete={Boolean(vendor.bio)} label="Business description" />
             <ReadinessRow complete={vendor.offerings.length > 0} label="At least one service" />
-            <ReadinessRow complete={vendor.stripeOnboardingComplete} label="Stripe booking payout connected" />
+            <ReadinessRow complete={vendor.stripeOnboardingComplete} label="Payout profile started" />
+            <ReadinessRow complete={vendor.stripeChargesEnabled && vendor.stripePayoutsEnabled} label="Ready to accept payments and payouts" />
           </div>
           <div className="mt-6 rounded-[1.4rem] border border-[#eadbd8] bg-white p-4">
             <div className="flex items-center gap-3">
@@ -562,13 +563,23 @@ export default async function VendorDashboardPage() {
 
       <section id="availability" className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
         <Panel className="p-6 sm:p-7">
-          <SectionKicker icon={<CalendarDays className="h-4 w-4" />} label="Availability" />
-          <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em]">Booking identity and service details</h2>
+          <SectionKicker icon={<CalendarDays className="h-4 w-4" />} label="Get paid" />
+          <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em]">Payouts and booking readiness</h2>
           <div className="mt-5 grid gap-3">
             <InfoRow label="Booking availability" value={vendor.availabilityNotes || (vendor.weekendAvailable ? "Weekend availability open" : "Limited weekend availability")} />
             <InfoRow label="Contact preference" value={vendor.website || vendor.instagramUrl || vendor.tiktokUrl ? "Website or social inquiry available" : "ShopFia inquiry preferred"} />
             <InfoRow label="Pricing range" value={vendor.startingPriceCents ? `Starts at ${formatCurrency(vendor.startingPriceCents)}` : "Message for pricing"} />
             <InfoRow label="Travel radius" value={`${vendor.serviceRadiusMiles} miles`} />
+            <InfoRow
+              label="Payout status"
+              value={
+                vendor.stripeChargesEnabled && vendor.stripePayoutsEnabled
+                  ? "Ready for payments"
+                  : vendor.stripeOnboardingComplete
+                    ? "Finishing Stripe review"
+                    : "Connect bank account"
+              }
+            />
           </div>
           <div className="mt-6">
             <ConnectStripeButton connected={vendor.stripeOnboardingComplete} />

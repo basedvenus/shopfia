@@ -5,7 +5,7 @@ import { QuoteRequestStatus, QuoteStatus, UserRole } from "@prisma/client";
 import { requireRole, requireVerifiedVendorProfile } from "@/lib/auth/guards";
 import { checkServerActionRateLimit } from "@/lib/security/request";
 import { canAcceptQuote, quotePayableAmount } from "@/lib/payments";
-import { ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
+import { calculateOrderFees, ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
 import { getStripeServer } from "@/lib/stripe";
 import { acceptQuoteSchema, quoteRequestSchema, quoteResponseSchema } from "@/lib/validators/quote";
 
@@ -198,6 +198,14 @@ export async function acceptQuoteAndCreatePaymentIntentAction(formData: FormData
   }
 
   const amountCents = quotePayableAmount(quote, parsed.payMode);
+  if (
+    !quote.quoteRequest.vendor.stripeAccountId ||
+    !quote.quoteRequest.vendor.stripeOnboardingComplete ||
+    !quote.quoteRequest.vendor.stripeChargesEnabled ||
+    !quote.quoteRequest.vendor.stripePayoutsEnabled
+  ) {
+    throw new Error("This vendor has not finished payout setup yet.");
+  }
 
   const vendorUser = await db.user.findUnique({
     where: { id: quote.quoteRequest.vendor.userId },
@@ -211,24 +219,40 @@ export async function acceptQuoteAndCreatePaymentIntentAction(formData: FormData
         where: { offeringId: quote.quoteRequest.offeringId }
       })
     : null;
+  const fees = await calculateOrderFees(
+    {
+      itemSubtotalCents: amountCents,
+      shippingAmountCents: 0,
+      taxAmountCents: 0,
+      giftWrapAmountCents: 0,
+      buyerTotalCents: amountCents,
+      taxRemittedByMarketplace: false,
+      listingFeeCents: 0,
+      offsiteAdsAttributed: false,
+      offsiteAdsTier: seller.offsiteAdsTier
+    },
+    seller
+  );
 
   const stripe = getStripeServer();
+  const applicationFeeAmount = Math.min(amountCents, Math.max(0, fees.totalFeesCents));
   const paymentIntent = await stripe.paymentIntents.create({
     amount: amountCents,
     currency: "usd",
     automatic_payment_methods: { enabled: true },
-    ...(quote.quoteRequest.vendor.stripeAccountId
-      ? {
-          transfer_data: {
-            destination: quote.quoteRequest.vendor.stripeAccountId
-          }
-        }
-      : {}),
+    application_fee_amount: applicationFeeAmount,
+    transfer_data: {
+      destination: quote.quoteRequest.vendor.stripeAccountId
+    },
     metadata: {
       orderContext: "quote_acceptance",
       quoteId: quote.id,
       buyerId: session.user.id,
-      vendorProfileId: quote.quoteRequest.vendorId
+      vendorProfileId: quote.quoteRequest.vendorId,
+      sellerId: seller.id,
+      shopId: shop.id,
+      payableMode: parsed.payMode,
+      platformFeeCents: String(applicationFeeAmount)
     }
   });
 

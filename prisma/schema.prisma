@@ -248,6 +248,8 @@ model VendorProfile {
   verified                  Boolean               @default(false)
   stripeAccountId           String?
   stripeOnboardingComplete  Boolean               @default(false)
+  stripeChargesEnabled      Boolean               @default(false)
+  stripePayoutsEnabled      Boolean               @default(false)
   averageRating             Float                 @default(0)
   reviewCount               Int                   @default(0)
   startingPriceCents        Int?
