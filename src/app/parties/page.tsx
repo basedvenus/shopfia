@@ -161,6 +161,11 @@ export default async function PartiesPage({
               const hostImage = getSafeProfileImage(party.user.image);
               const hostName = party.user.name ?? party.user.username ?? "ShopFia host";
               const hostBadge = getProfileBadge(party.user, originalMemberCutoff);
+              const hostSummary = formatHostedBy(
+                party.collaborators.length
+                  ? party.collaborators.map((collaborator) => collaborator.user)
+                  : [party.user]
+              );
               const tall = index % 5 === 0 || index % 7 === 3;
 
               return (
@@ -204,10 +209,7 @@ export default async function PartiesPage({
                             {hostName.slice(0, 2).toUpperCase()}
                           </span>
                         )}
-                      <span className="truncate text-sm text-muted-foreground">{hostName}</span>
-                        {party.collaborators.length > 1 ? (
-                          <span className="text-xs text-muted-foreground">+{party.collaborators.length - 1}</span>
-                        ) : null}
+                        <span className="truncate text-sm text-muted-foreground">{hostSummary}</span>
                         <ProfileBadge badge={hostBadge} />
                       </div>
                       <span className="shrink-0 rounded-full bg-[#fff7f4] px-3 py-1 text-xs text-muted-foreground">
@@ -367,6 +369,17 @@ function getUniqueVendors(party: {
     photo.taggedVendors.forEach((vendor) => vendorMap.set(vendor.id, vendor));
   });
   return Array.from(vendorMap.values());
+}
+
+function formatHostedBy(users: Array<{ name: string | null; username: string | null }>) {
+  const names = users
+    .map((user) => user.name ?? user.username)
+    .filter(Boolean) as string[];
+
+  if (names.length === 0) return "Hosted by ShopFia";
+  if (names.length === 1) return `Hosted by ${names[0]}`;
+  if (names.length === 2) return `Hosted by ${names[0]} and ${names[1]}`;
+  return `Hosted by ${names[0]}, ${names[1]} + ${names.length - 2} others`;
 }
 
 function getEventImage(event: {

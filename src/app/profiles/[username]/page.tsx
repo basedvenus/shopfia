@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Heart, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
-import { toggleFollowAction, updatePartyCollaborationAction } from "@/app/actions/auth";
+import { toggleFollowAction } from "@/app/actions/auth";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,14 +28,32 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         bio: true,
         image: true,
         partyEvents: {
-          include: { taggedVendors: true },
+          include: {
+            taggedVendors: true,
+            collaborators: {
+              where: { status: "ACCEPTED" },
+              include: {
+                user: { select: { id: true, image: true, name: true, username: true } }
+              },
+              orderBy: [{ role: "asc" }, { createdAt: "asc" }]
+            }
+          },
           orderBy: { createdAt: "desc" }
         },
         partyCollaborations: {
-          where: { status: { in: ["ACCEPTED", "PENDING"] } },
+          where: { status: "ACCEPTED" },
           include: {
             event: {
-              include: { taggedVendors: true }
+              include: {
+                taggedVendors: true,
+                collaborators: {
+                  where: { status: "ACCEPTED" },
+                  include: {
+                    user: { select: { id: true, image: true, name: true, username: true } }
+                  },
+                  orderBy: [{ role: "asc" }, { createdAt: "asc" }]
+                }
+              }
             }
           },
           orderBy: { createdAt: "desc" }
@@ -75,18 +93,9 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     await toggleFollowAction(formData);
   }
 
-  async function updateCollaboration(formData: FormData) {
-    "use server";
-
-    await updatePartyCollaborationAction(formData);
-  }
-
   const acceptedCollaborations = profile.partyCollaborations.filter(
     (collaboration) => collaboration.status === "ACCEPTED"
   );
-  const pendingCollaborations = currentUserId === profile.id
-    ? profile.partyCollaborations.filter((collaboration) => collaboration.status === "PENDING")
-    : [];
   const profilePartyEvents = [
     ...profile.partyEvents,
     ...acceptedCollaborations
@@ -137,39 +146,6 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         </div>
       </section>
 
-      {pendingCollaborations.length > 0 ? (
-        <section className="rounded-[1.75rem] border border-primary/15 bg-white/90 p-4 shadow-sm">
-          <h2 className="text-xl font-semibold tracking-tight">Collaboration Invites</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Accept to let these party stories appear on your profile.
-          </p>
-          <div className="mt-4 grid gap-3">
-            {pendingCollaborations.map((collaboration) => (
-              <div key={collaboration.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] border bg-white p-3">
-                <div>
-                  <p className="text-sm font-semibold">{collaboration.event.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {collaboration.role === "MAIN_HOST" ? "Main host invite" : "Co-host invite"}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <form action={updateCollaboration}>
-                    <input type="hidden" name="collaborationId" value={collaboration.id} />
-                    <input type="hidden" name="action" value="accept" />
-                    <Button type="submit" size="sm">Accept</Button>
-                  </form>
-                  <form action={updateCollaboration}>
-                    <input type="hidden" name="collaborationId" value={collaboration.id} />
-                    <input type="hidden" name="action" value="decline" />
-                    <Button type="submit" size="sm" variant="secondary">Decline</Button>
-                  </form>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       <section className="space-y-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Party Stories</h2>
@@ -193,6 +169,11 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                       <p className="mt-2 text-xs text-white/75">
                         {event.taggedVendors.length} tagged vendor{event.taggedVendors.length === 1 ? "" : "s"}
                       </p>
+                      {"collaborators" in event && event.collaborators?.length ? (
+                        <p className="mt-1 text-xs text-white/75">
+                          {formatHostedBy(event.collaborators.map((collaborator) => collaborator.user))}
+                        </p>
+                      ) : null}
                     </div>
                   </article>
                 </Link>
@@ -209,6 +190,17 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
       </section>
     </div>
   );
+}
+
+function formatHostedBy(users: Array<{ name: string | null; username: string | null }>) {
+  const names = users
+    .map((user) => user.name ?? user.username)
+    .filter(Boolean) as string[];
+
+  if (names.length === 0) return "Hosted by ShopFia";
+  if (names.length === 1) return `Hosted by ${names[0]}`;
+  if (names.length === 2) return `Hosted by ${names[0]} and ${names[1]}`;
+  return `Hosted by ${names[0]}, ${names[1]} + ${names.length - 2} others`;
 }
 
 function getInitials(value?: string | null) {

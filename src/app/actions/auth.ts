@@ -549,19 +549,13 @@ async function persistPartyCollaborators({
         },
         update: {
           role: collaborator.role,
-          status:
-            collaborator.userId === ownerId
-              ? PartyCollaborationStatus.ACCEPTED
-              : PartyCollaborationStatus.PENDING
+          status: PartyCollaborationStatus.ACCEPTED
         },
         create: {
           eventId,
           invitedById,
           role: collaborator.role,
-          status:
-            collaborator.userId === ownerId
-              ? PartyCollaborationStatus.ACCEPTED
-              : PartyCollaborationStatus.PENDING,
+          status: PartyCollaborationStatus.ACCEPTED,
           userId: collaborator.userId
         }
       })

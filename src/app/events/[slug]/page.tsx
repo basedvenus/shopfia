@@ -78,7 +78,7 @@ export default async function EventPage({
           }
         },
         collaborators: {
-          where: { status: { in: ["ACCEPTED", "PENDING"] } },
+          where: { status: "ACCEPTED" },
           orderBy: [{ role: "asc" }, { createdAt: "asc" }],
           include: {
             user: { select: { id: true, image: true, name: true, username: true } }
@@ -145,10 +145,8 @@ export default async function EventPage({
     ).values()
   );
   const host = event?.user ?? null;
-  const acceptedCollaborators =
-    event?.collaborators.filter((collaborator) => collaborator.status === "ACCEPTED") ?? [];
-  const visibleCollaborators = acceptedCollaborators.length
-    ? acceptedCollaborators
+  const visibleCollaborators = event?.collaborators.length
+    ? event.collaborators
     : host
     ? [
         {
@@ -343,20 +341,7 @@ export default async function EventPage({
                   ))}
                 </div>
                 <p className="text-sm text-white/85">
-                  Hosted by{" "}
-                  {visibleCollaborators.slice(0, 2).map((collaborator, index) => (
-                    <span key={collaborator.id}>
-                      {index ? " + " : ""}
-                      {collaborator.user.username ? (
-                        <Link href={`/profiles/${collaborator.user.username}`} className="font-semibold text-white underline-offset-4 hover:underline">
-                          {collaborator.user.name ?? collaborator.user.username}
-                        </Link>
-                      ) : (
-                        <span className="font-semibold text-white">{collaborator.user.name ?? "ShopFia host"}</span>
-                      )}
-                    </span>
-                  ))}
-                  {visibleCollaborators.length > 2 ? ` + ${visibleCollaborators.length - 2} others` : ""}
+                  Hosted by {renderHostedBy(visibleCollaborators)}
                 </p>
               </div>
             ) : null}
@@ -492,5 +477,34 @@ export default async function EventPage({
         <Button variant="secondary">Back to My Parties</Button>
       </Link>
     </div>
+  );
+}
+
+function renderHostedBy(
+  collaborators: Array<{ user: { name: string | null; username: string | null } }>
+) {
+  const visible = collaborators.slice(0, 2);
+
+  if (visible.length === 0) return "ShopFia";
+
+  return (
+    <>
+      {visible.map((collaborator, index) => {
+        const name = collaborator.user.name ?? collaborator.user.username ?? "ShopFia host";
+        return (
+          <span key={collaborator.user.username ?? `${name}-${index}`}>
+            {index === 1 ? (collaborators.length === 2 ? " and " : ", ") : ""}
+            {collaborator.user.username ? (
+              <Link href={`/profiles/${collaborator.user.username}`} className="font-semibold text-white underline-offset-4 hover:underline">
+                {name}
+              </Link>
+            ) : (
+              <span className="font-semibold text-white">{name}</span>
+            )}
+          </span>
+        );
+      })}
+      {collaborators.length > 2 ? ` + ${collaborators.length - 2} others` : ""}
+    </>
   );
 }
