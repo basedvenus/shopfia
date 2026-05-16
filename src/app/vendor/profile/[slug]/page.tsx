@@ -337,7 +337,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Tagged In Real Events</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Customer-tagged party stories create authentic proof of how this vendor shows up in celebrations.
+              Customer-tagged parties create authentic proof of how this vendor shows up in celebrations.
             </p>
           </div>
           <Badge variant="outline">{taggedEvents.length} party credits</Badge>
@@ -378,7 +378,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         ) : (
           <Card className="border-white/70 bg-white/90">
             <CardContent className="p-4 text-sm text-muted-foreground">
-              Real event credits will appear here when hosts tag this vendor in party stories.
+              Real event credits will appear here when hosts tag this vendor in parties.
             </CardContent>
           </Card>
         )}

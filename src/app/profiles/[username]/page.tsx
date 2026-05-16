@@ -139,7 +139,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                 <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted-foreground">
                   <span>{profile._count.followers} followers</span>
                   <span>{profile._count.following} following</span>
-                  <span>{profilePartyEvents.length} party stories</span>
+                  <span>{profilePartyEvents.length} parties</span>
                 </div>
               </div>
             </div>
@@ -158,7 +158,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Party Stories</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Parties</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Real celebrations, tags, and vendor credits from this host.
           </p>
@@ -193,7 +193,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         ) : (
           <Card className="border-white/70 bg-white/90">
             <CardContent className="p-4 text-sm text-muted-foreground">
-              Party stories will appear here when this host publishes events.
+              Parties will appear here when this host publishes celebrations.
             </CardContent>
           </Card>
         )}

@@ -205,7 +205,7 @@ export default function Page() {
           </h2>
           <p className="mt-4 text-sm leading-7 text-muted-foreground">
             ShopFia is built around the way people actually plan events: a friend posts a beautiful
-            shower, you tap into the party story, see the florist and baker tagged, then save the
+            shower, you tap into the party, see the florist and baker tagged, then save the
             vendor for your own celebration.
           </p>
           <Link href="/explore" className="mt-6 inline-flex">

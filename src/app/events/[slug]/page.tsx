@@ -106,10 +106,10 @@ export default async function EventPage({
 
   if (!event && !fallback) return notFound();
 
-  const title = event?.title ?? fallback?.title ?? "Party Story";
+  const title = event?.title ?? fallback?.title ?? "Party";
   const theme = event?.theme ?? fallback?.theme ?? null;
   const tags = event?.tags?.length ? event.tags : fallback?.tags ?? [];
-  const description = event?.description ?? fallback?.description ?? "This party story is still being filled in.";
+  const description = event?.description ?? fallback?.description ?? "This party is still being filled in.";
   const legacyImages = event?.imageUrls?.length ? event.imageUrls : fallback?.imageUrls ?? [];
   const photos = event?.photos?.length
     ? event.photos.map((photo) => ({
@@ -241,10 +241,10 @@ export default async function EventPage({
         <section className="grid gap-5 rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft lg:grid-cols-[0.72fr_1.28fr]">
           <div className="flex flex-col justify-between gap-6 rounded-[1.6rem] bg-muted/60 p-5">
             <div>
-              <p className="text-sm text-muted-foreground">Editing party story</p>
+              <p className="text-sm text-muted-foreground">Editing party</p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight">Edit {formParty.title}</h1>
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                Update the story, location, hashtag bubbles, gallery order, cover photo, and vendor tags attached to each image.
+                Update the notes, location, hashtag bubbles, gallery order, cover photo, and vendor tags attached to each image.
               </p>
             </div>
             <div className="relative min-h-[260px] overflow-hidden rounded-[1.4rem] bg-muted shadow-sm">
@@ -253,7 +253,7 @@ export default async function EventPage({
             <Link href={`/events/${formParty.slug}`} className="inline-flex">
               <Button type="button" variant="secondary">
                 <ArrowLeft className="h-4 w-4" />
-                View public story
+                View public party
               </Button>
             </Link>
           </div>
@@ -274,7 +274,7 @@ export default async function EventPage({
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="relative flex min-h-[480px] flex-col justify-end p-6 text-white md:p-8">
             <div className="mb-3 flex flex-wrap gap-2">
-              <Badge className="bg-white/15 text-white backdrop-blur" variant="default">Party Story</Badge>
+              <Badge className="bg-white/15 text-white backdrop-blur" variant="default">Party</Badge>
               {theme ? <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{theme}</Badge> : null}
             </div>
             <h1 className="max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">{title}</h1>
@@ -412,8 +412,8 @@ export default async function EventPage({
                       </p>
                       <p className="mt-2 text-xs text-muted-foreground">
                         {taggedPhotoCount > 0
-                          ? `Tagged in ${taggedPhotoCount} photo${taggedPhotoCount === 1 ? "" : "s"} from this party story.`
-                          : "Tagged on this party story."}
+                          ? `Tagged in ${taggedPhotoCount} photo${taggedPhotoCount === 1 ? "" : "s"} from this party.`
+                          : "Tagged on this party."}
                       </p>
                     </div>
                   </Link>
@@ -421,7 +421,7 @@ export default async function EventPage({
               })
             ) : (
               <div className="rounded-[1.4rem] bg-muted/60 p-4 text-sm text-muted-foreground">
-                Vendor tags will appear here as this party story grows.
+                Vendor tags will appear here as this party grows.
               </div>
             )}
           </div>

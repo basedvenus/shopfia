@@ -60,7 +60,7 @@ export default async function MyPartiesPage() {
             <p className="text-sm text-muted-foreground">Social party portfolio</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">My Parties</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Curate visual stories with real photos, searchable hashtags, and vendor credits tied to the images they helped create.
+              Curate parties with real photos, searchable hashtags, and vendor credits tied to the images they helped create.
             </p>
           </div>
 

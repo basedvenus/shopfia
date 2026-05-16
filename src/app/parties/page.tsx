@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/auth";
-import { Heart, MapPin, Tags } from "lucide-react";
+import { Heart, MapPin, Search, Tags, UserPlus } from "lucide-react";
+import { toggleFollowAction } from "@/app/actions/auth";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
@@ -40,10 +41,12 @@ type FeedTab = (typeof feedTabs)[number];
 export default async function PartiesPage({
   searchParams
 }: {
-  searchParams?: { feed?: string };
+  searchParams?: Promise<{ feed?: string; friend?: string }> | { feed?: string; friend?: string };
 }) {
+  const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
   const [session, originalMemberCutoff] = await Promise.all([auth(), getOriginalMemberCutoffDate(db)]);
-  const selectedFeed = getSelectedFeed(searchParams?.feed);
+  const selectedFeed = getSelectedFeed(resolvedSearchParams.feed);
+  const friendQuery = normalizeFriendQuery(resolvedSearchParams.friend);
   const parties = await db.partyEvent.findMany({
     include: {
       user: {
@@ -98,6 +101,35 @@ export default async function PartiesPage({
         ).map((follow) => follow.followingId)
       )
     : new Set<string>();
+  const friendResults = friendQuery
+    ? await db.user.findMany({
+        where: {
+          AND: [
+            { id: { not: session?.user?.id ?? "" } },
+            { username: { not: null } },
+            {
+              OR: [
+                { username: { contains: friendQuery, mode: "insensitive" } },
+                { name: { contains: friendQuery, mode: "insensitive" } }
+              ]
+            }
+          ]
+        },
+        select: {
+          id: true,
+          image: true,
+          name: true,
+          username: true,
+          partyEvents: { select: { id: true } },
+          partyCollaborations: {
+            where: { status: "ACCEPTED" },
+            select: { eventId: true }
+          }
+        },
+        orderBy: [{ name: "asc" }, { username: "asc" }],
+        take: 8
+      })
+    : [];
   const savedPartyIds = session?.user?.id
     ? new Set(
         (
@@ -109,6 +141,12 @@ export default async function PartiesPage({
       )
     : new Set<string>();
   const visibleParties = getPartiesForFeed(parties, selectedFeed, followingIds);
+
+  async function toggleFollow(formData: FormData) {
+    "use server";
+
+    await toggleFollowAction(formData);
+  }
 
   return (
     <div className="space-y-5">
@@ -130,6 +168,86 @@ export default async function PartiesPage({
             Share your party
           </Link>
         </div>
+      </section>
+
+      <section className="rounded-[1.75rem] border border-white/75 bg-white/80 p-4 shadow-sm md:p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/70">Find friends</p>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight">Follow hosts whose style you love.</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Search people by name or username, then browse the parties and vendors they share.
+            </p>
+          </div>
+        </div>
+        <form action="/parties" className="mt-4 flex flex-col gap-2 sm:flex-row">
+          {selectedFeed !== "For You" ? (
+            <input type="hidden" name="feed" value={selectedFeed.toLowerCase()} />
+          ) : null}
+          <label className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              name="friend"
+              defaultValue={friendQuery}
+              placeholder="Search username or display name"
+              className="h-12 w-full rounded-full border border-border bg-white px-11 text-sm outline-none transition focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
+            />
+          </label>
+          <button className="h-12 rounded-full bg-foreground px-6 text-sm font-semibold text-background transition hover:bg-foreground/90">
+            Search
+          </button>
+        </form>
+        {friendQuery ? (
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {friendResults.length ? (
+              friendResults.map((friend) => {
+                const image = getSafeProfileImage(friend.image);
+                const name = friend.name ?? friend.username ?? "ShopFia host";
+                const username = friend.username ?? "";
+                const partyCount = getSharedPartyCount(friend);
+                const isFollowing = followingIds.has(friend.id);
+
+                return (
+                  <article key={friend.id} className="rounded-2xl border border-border/70 bg-white p-3 shadow-sm">
+                    <Link href={`/profiles/${username}`} className="flex items-center gap-3">
+                      {image ? (
+                        <img src={image} alt="" className="h-12 w-12 rounded-full object-cover" />
+                      ) : (
+                        <span className="grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                          {getInitials(name)}
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-semibold">{name}</h3>
+                        <p className="truncate text-xs text-muted-foreground">@{username}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {partyCount} part{partyCount === 1 ? "y" : "ies"}
+                        </p>
+                      </div>
+                    </Link>
+                    {session?.user?.id ? (
+                      <form action={toggleFollow} className="mt-3">
+                        <input type="hidden" name="followingId" value={friend.id} />
+                        <button className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 text-xs font-semibold text-primary transition hover:bg-primary/15">
+                          {isFollowing ? <Heart className="h-3.5 w-3.5 fill-current" /> : <UserPlus className="h-3.5 w-3.5" />}
+                          {isFollowing ? "Following" : "Follow"}
+                        </button>
+                      </form>
+                    ) : (
+                      <Link href="/account" className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-full border border-primary/20 bg-primary/10 px-3 text-xs font-semibold text-primary">
+                        Sign in to follow
+                      </Link>
+                    )}
+                  </article>
+                );
+              })
+            ) : (
+              <div className="rounded-2xl border border-dashed border-primary/20 bg-white/70 p-5 text-sm text-muted-foreground md:col-span-2 xl:col-span-4">
+                No hosts matched that search yet. Try a display name or handle.
+              </div>
+            )}
+          </div>
+        ) : null}
       </section>
 
       <nav className="sticky top-20 z-20 -mx-4 border-b border-border/50 bg-background/90 px-4 py-3 backdrop-blur md:top-20">
@@ -213,7 +331,7 @@ export default async function PartiesPage({
                         <ProfileBadge badge={hostBadge} />
                       </div>
                       <span className="shrink-0 rounded-full bg-[#fff7f4] px-3 py-1 text-xs text-muted-foreground">
-                        {party.theme ?? "Party story"}
+                        {party.theme ?? "Party"}
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -289,6 +407,30 @@ export default async function PartiesPage({
       </section>
     </div>
   );
+}
+
+function normalizeFriendQuery(value?: string) {
+  return (value ?? "").trim().replace(/^@/, "").slice(0, 60);
+}
+
+function getSharedPartyCount(user: {
+  partyEvents: Array<{ id: string }>;
+  partyCollaborations: Array<{ eventId: string }>;
+}) {
+  return new Set([
+    ...user.partyEvents.map((event) => event.id),
+    ...user.partyCollaborations.map((collaboration) => collaboration.eventId)
+  ]).size;
+}
+
+function getInitials(value?: string | null) {
+  if (!value) return "SF";
+  return value
+    .split(/[ @._-]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 }
 
 function getSelectedFeed(value?: string): FeedTab {

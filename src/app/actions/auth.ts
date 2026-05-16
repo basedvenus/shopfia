@@ -173,7 +173,7 @@ const partyEventFieldsSchema = z.object({
   title: z.string().trim().min(2, "Add an event title.").max(100, "Party name is a little too long."),
   theme: z.string().trim().max(100, "Theme is a little too long.").optional().or(z.literal("")),
   tags: z.array(z.string().trim().min(1).max(30, "Keep tags short and sweet.")).max(12, "Use up to 12 tags.").default([]),
-  description: z.string().trim().max(500, "Party story is a little too long.").optional().or(z.literal("")),
+  description: z.string().trim().max(500, "Party notes are a little too long.").optional().or(z.literal("")),
   location: z.string().trim().max(240, "Location is a little too long.").optional().or(z.literal("")),
   formattedAddress: z.string().trim().max(240, "Location is a little too long.").optional().or(z.literal("")),
   city: z.string().trim().max(80, "City is a little too long.").optional().or(z.literal("")),
@@ -190,12 +190,12 @@ const createPartyEventSchema = partyEventFieldsSchema.extend({
   photos: z
     .array(partyPhotoPayloadSchema)
     .min(1, "Upload at least one party photo.")
-    .max(16, "Keep party stories to 16 photos or fewer.")
+    .max(16, "Keep parties to 16 photos or fewer.")
 });
 
 const updatePartyEventSchema = partyEventFieldsSchema.extend({
   eventId: z.string().cuid(),
-  photos: z.array(partyPhotoPayloadSchema).max(16, "Keep party stories to 16 photos or fewer.")
+  photos: z.array(partyPhotoPayloadSchema).max(16, "Keep parties to 16 photos or fewer.")
 });
 
 function slugify(value: string) {
@@ -308,7 +308,7 @@ export async function createPartyEventAction(formData: FormData) {
 export async function updatePartyEventAction(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) {
-    return { ok: false, error: "Sign in to edit party stories." };
+    return { ok: false, error: "Sign in to edit parties." };
   }
 
   const rate = await checkServerActionRateLimit([
@@ -345,7 +345,7 @@ export async function updatePartyEventAction(formData: FormData) {
   });
 
   if (!existingEvent) {
-    return { ok: false, error: "That party story could not be found." };
+    return { ok: false, error: "That party could not be found." };
   }
 
   const prepared = await preparePartyPhotoPersistence({
@@ -485,7 +485,7 @@ function getPartyValidationMessage(issues: z.ZodIssue[]) {
   return friendlyValidationMessage(issues, {
     city: "City",
     coHostIds: "Co-hosts",
-    description: "Party story",
+    description: "Party notes",
     formattedAddress: "Location",
     location: "Location",
     mainHostId: "Main host",

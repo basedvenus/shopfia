@@ -129,7 +129,7 @@ export default async function FavoritesPage() {
           <Bookmark className="mx-auto h-8 w-8 text-primary" />
           <h2 className="mt-4 text-2xl font-semibold tracking-tight">Nothing saved yet.</h2>
           <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-            Tap the hearts on vendors, party stories, and services to build your planning board.
+            Tap the hearts on vendors, parties, and services to build your planning board.
           </p>
           <div className="mt-5 flex justify-center gap-2">
             <Link href="/parties"><Button>Browse parties</Button></Link>
@@ -152,7 +152,7 @@ export default async function FavoritesPage() {
                   image={image}
                   crop={photo?.crop}
                   title={favorite.partyEvent.title}
-                  eyebrow="Party story"
+                  eyebrow="Party"
                   meta={favorite.partyEvent.location ?? favorite.partyEvent.theme ?? "Saved inspiration"}
                   targetType="party"
                   targetId={favorite.partyEvent.id}

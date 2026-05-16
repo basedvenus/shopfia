@@ -211,12 +211,12 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
               ? await updatePartyEventAction(formData)
               : await createPartyEventAction(formData);
             if (!result.ok) {
-              setMessage(result.error ?? "Could not save party story.");
+              setMessage(result.error ?? "Could not save party.");
               return;
             }
             window.location.href = `/events/${result.eventSlug}`;
           } catch (error) {
-            setMessage(error instanceof Error ? error.message : "Could not save party story. Please try again.");
+            setMessage(error instanceof Error ? error.message : "Could not save party. Please try again.");
           }
         });
       }}
@@ -260,7 +260,7 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
       />
       <Textarea
         name="description"
-        placeholder="Tell the party story: the mood, inspiration, favorite details, or what made it special..."
+        placeholder="Tell the party details: the mood, inspiration, favorite moments, or what made it special..."
         className="min-h-[110px]"
         defaultValue={initialParty?.description ?? ""}
       />

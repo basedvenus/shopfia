@@ -260,7 +260,7 @@ export default async function AccountPage() {
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">My Parties</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Party stories, tagged vendors, and visual inspiration now live on their own dedicated page.
+              Parties, tagged vendors, and visual inspiration now live on their own dedicated page.
             </p>
           </div>
           <Link href="/my-parties">
