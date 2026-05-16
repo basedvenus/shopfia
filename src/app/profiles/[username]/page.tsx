@@ -7,7 +7,9 @@ import { toggleFollowAction } from "@/app/actions/auth";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CroppedImage } from "@/components/ui/cropped-image";
 import { db } from "@/lib/db";
+import { normalizeImageCrop } from "@/lib/image-crop";
 import { getSafeProfileImage } from "@/lib/profile-image";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 
@@ -36,6 +38,10 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                 user: { select: { id: true, image: true, name: true, username: true } }
               },
               orderBy: [{ role: "asc" }, { createdAt: "asc" }]
+            },
+            photos: {
+              orderBy: { sortOrder: "asc" },
+              select: { crop: true, id: true, updatedAt: true }
             }
           },
           orderBy: { createdAt: "desc" }
@@ -52,6 +58,10 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                     user: { select: { id: true, image: true, name: true, username: true } }
                   },
                   orderBy: [{ role: "asc" }, { createdAt: "asc" }]
+                },
+                photos: {
+                  orderBy: { sortOrder: "asc" },
+                  select: { crop: true, id: true, updatedAt: true }
                 }
               }
             }
@@ -157,11 +167,11 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         {profilePartyEvents.length > 0 ? (
           <div className="grid auto-rows-[230px] gap-4 md:grid-cols-2 xl:grid-cols-3">
             {profilePartyEvents.map((event, index) => {
-              const image = event.coverImageUrl ?? event.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png";
+              const { crop, image } = getPartyCardImage(event);
               return (
                 <Link key={event.id} href={`/events/${event.slug}`} className={index === 0 ? "md:row-span-2" : ""}>
                   <article className="group relative h-full overflow-hidden rounded-[1.75rem] border border-white/80 bg-muted shadow-sm">
-                    <Image src={image} alt={event.title} fill className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+                    <CroppedImage src={image} alt={event.title} crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                       <h3 className="text-xl font-semibold">{event.title}</h3>
@@ -201,6 +211,26 @@ function formatHostedBy(users: Array<{ name: string | null; username: string | n
   if (names.length === 1) return `Hosted by ${names[0]}`;
   if (names.length === 2) return `Hosted by ${names[0]} and ${names[1]}`;
   return `Hosted by ${names[0]}, ${names[1]} + ${names.length - 2} others`;
+}
+
+function getPartyCardImage(event: {
+  coverImageUrl: string | null;
+  imageUrls: string[];
+  photos?: Array<{ crop: unknown; id: string; updatedAt: Date }>;
+}) {
+  const photo = event.photos?.[0];
+
+  if (photo) {
+    return {
+      crop: normalizeImageCrop(photo.crop),
+      image: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`
+    };
+  }
+
+  return {
+    crop: normalizeImageCrop(null),
+    image: event.coverImageUrl ?? event.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png"
+  };
 }
 
 function getInitials(value?: string | null) {
