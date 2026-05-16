@@ -191,14 +191,18 @@ export function PartyEventForm({ initialParty, vendors }: PartyEventFormProps) {
         );
 
         startTransition(async () => {
-          const result = initialParty
-            ? await updatePartyEventAction(formData)
-            : await createPartyEventAction(formData);
-          if (!result.ok) {
-            setMessage(result.error ?? "Could not save party story.");
-            return;
+          try {
+            const result = initialParty
+              ? await updatePartyEventAction(formData)
+              : await createPartyEventAction(formData);
+            if (!result.ok) {
+              setMessage(result.error ?? "Could not save party story.");
+              return;
+            }
+            window.location.href = `/events/${result.eventSlug}`;
+          } catch (error) {
+            setMessage(error instanceof Error ? error.message : "Could not save party story. Please try again.");
           }
-          window.location.href = `/events/${result.eventSlug}`;
         });
       }}
       className="grid gap-5"
