@@ -50,7 +50,8 @@ const pricedOptionSchema = z.object({
   name: z.string().min(1, "Add a package or add-on name.").max(80, "Package name is a little too long."),
   description: z.string().max(240, "Description is a little too long.").optional().or(z.literal("")),
   priceCents: z.coerce.number().int().min(0).optional(),
-  componentIds: z.array(z.string().min(1)).max(32, "Choose fewer package components.").default([])
+  componentIds: z.array(z.string().min(1)).max(32, "Choose fewer package components.").default([]),
+  addonComponentIds: z.array(z.string().min(1)).max(32, "Choose fewer add-ons.").default([])
 });
 
 const serviceComponentSchema = z.object({
@@ -63,13 +64,14 @@ const serviceComponentSchema = z.object({
 
 export const offeringSchema = z.object({
   id: z.string().cuid().optional(),
-  type: z.enum(["SERVICE", "PRODUCT", "CUSTOM_ORDER"]),
+  type: z.enum(["PRODUCT", "SERVICE", "RENTAL", "CUSTOM_ORDER"]),
   title: z.string().min(2, "Offering title is required.").max(120, "Offering title is a little too long."),
   slug: z.string().min(2, "Offering link is required.").max(120, "Offering link is a little too long.").regex(/^[a-z0-9-]+$/, "Use letters, numbers, and dashes only."),
   description: z.string().min(20, "Add a little more detail about this offering.").max(4000, "Offering description is a little too long."),
   basePriceCents: z.coerce.number().int().min(0).optional(),
   messageForPricing: z.coerce.boolean().optional().default(false),
-  categoryId: z.string().cuid(),
+  categoryId: z.string().cuid().optional(),
+  categoryIds: z.array(z.string().cuid()).min(1, "Choose at least one category.").max(8, "Choose up to 8 categories."),
   eventCategoryIds: z.array(z.string().min(1)).max(12, "Choose up to 12 event types.").default([]),
   tags: z.array(z.string().min(1).max(30, "Keep tags short and sweet.")).max(12, "Use up to 12 tags.").default([]),
   photos: z.array(imageValueSchema).max(10, "Add up to 10 photos.").default([]),

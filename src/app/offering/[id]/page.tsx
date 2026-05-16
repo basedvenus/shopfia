@@ -46,6 +46,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
           }
         },
         category: true,
+        categories: { include: { category: true } },
         eventCategories: { include: { category: true } },
         listing: {
           select: {
@@ -69,7 +70,6 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
   ];
   const priceLabel = formatOfferingPrice(offering);
   const packages = getPricedOptions(offering.variantsJson);
-  const addons = getPricedOptions(offering.addonsJson);
   const serviceComponents = getServiceComponents(offering.faqJson);
   const componentMap = new Map(serviceComponents.map((component) => [component.id, component]));
   const rating = (
@@ -80,9 +80,11 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
     offering.vendor.sellerRatingAggregate?.totalReviews ?? offering.vendor.reviewCount;
   const vendorBadge = getProfileBadge(offering.vendor.user, originalMemberCutoff, { vendorContext: true });
   const eventTags = [
-    offering.category.name,
+    ...[
+      offering.category.name,
+      ...offering.categories.map((category) => category.category.name)
+    ].filter((tag, index, tags) => tags.indexOf(tag) === index),
     ...offering.eventCategories.map((eventCategory) => eventCategory.category.name),
-    ...offering.tags.map((tag) => (tag.startsWith("#") ? tag : `#${tag}`))
   ];
 
   return (
@@ -224,30 +226,16 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
               </div>
             </div>
 
-            {packages.length > 0 || addons.length > 0 ? (
+            {packages.length > 0 ? (
               <div className="rounded-[1.4rem] border border-[#eadbd7] bg-white/70 p-5 md:col-span-2">
                 <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-3xl font-normal">
                   Packages
                 </h2>
-                {packages.length > 0 ? (
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {packages.map((item) => (
-                      <PricedOptionCard key={item.name} componentMap={componentMap} option={item} />
-                    ))}
-                  </div>
-                ) : null}
-                {addons.length > 0 ? (
-                  <div className={packages.length > 0 ? "mt-6" : "mt-4"}>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      Add-ons
-                    </p>
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
-                      {addons.map((item) => (
-                        <PricedOptionCard key={item.name} componentMap={componentMap} option={item} compact />
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  {packages.map((item) => (
+                    <PricedOptionCard key={item.name} componentMap={componentMap} option={item} />
+                  ))}
+                </div>
               </div>
             ) : null}
           </div>
@@ -293,6 +281,7 @@ function getImageCrops(value: unknown) {
 }
 
 type PricedOption = {
+  addonComponentIds?: string[];
   componentIds?: string[];
   name: string;
   description?: string;
@@ -349,7 +338,10 @@ function getPricedOptions(value: unknown): PricedOption[] {
     const componentIds = Array.isArray(record.componentIds)
       ? record.componentIds.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
       : [];
-    options.push({ name, description, priceCents, componentIds });
+    const addonComponentIds = Array.isArray(record.addonComponentIds)
+      ? record.addonComponentIds.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      : [];
+    options.push({ name, description, priceCents, componentIds, addonComponentIds });
     return options;
   }, []);
 }
@@ -389,6 +381,12 @@ function PricedOptionCard({
     option.componentIds
       ?.map((id) => componentMap.get(id))
       .filter((component): component is ServiceComponent => Boolean(component)) ?? [];
+  const addonComponents =
+    option.addonComponentIds
+      ?.map((id) => componentMap.get(id))
+      .filter((component): component is ServiceComponent => Boolean(component)) ?? [];
+  const calculatedPrice = includedComponents.reduce((total, component) => total + (component.priceCents ?? 0), 0);
+  const priceCents = option.priceCents ?? (calculatedPrice > 0 ? calculatedPrice : undefined);
 
   return (
     <div className="rounded-[1rem] bg-[#fffaf8] p-4">
@@ -400,7 +398,7 @@ function PricedOptionCard({
           ) : null}
         </div>
         <div className="whitespace-nowrap text-sm font-semibold">
-          {option.priceCents != null ? formatCurrency(option.priceCents) : "Custom"}
+          {priceCents != null ? formatCurrency(priceCents) : "Custom"}
         </div>
       </div>
       {option.description && compact ? (
@@ -417,6 +415,25 @@ function PricedOptionCard({
               {component.title}
             </span>
           ))}
+        </div>
+      ) : null}
+      {addonComponents.length > 0 ? (
+        <div className="mt-4 border-t border-[#eadbd7] pt-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Optional add-ons
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {addonComponents.map((component) => (
+              <span
+                key={component.id}
+                className="inline-flex rounded-full border border-[#eadbd7] bg-white/80 px-3 py-1 text-xs font-medium text-[#6a5d58]"
+                title={component.description || component.category || undefined}
+              >
+                {component.title}
+                {component.priceCents ? ` +${formatCurrency(component.priceCents)}` : ""}
+              </span>
+            ))}
+          </div>
         </div>
       ) : null}
     </div>

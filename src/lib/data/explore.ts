@@ -162,7 +162,17 @@ export async function getExploreData(input: Record<string, string | string[] | u
     andFilters.push({
       OR: [
         { categories: { some: { categoryId: parsed.categoryId } } },
-        { offerings: { some: { active: true, categoryId: parsed.categoryId } } }
+        {
+          offerings: {
+            some: {
+              active: true,
+              OR: [
+                { categoryId: parsed.categoryId },
+                { categories: { some: { categoryId: parsed.categoryId } } }
+              ]
+            }
+          }
+        }
       ]
     });
   }

@@ -15,6 +15,7 @@ type CategoryOption = {
 };
 
 type PricedRow = {
+  addonComponentIds?: string[];
   componentIds?: string[];
   description?: string;
   id: string;
@@ -27,6 +28,7 @@ function createRow(): PricedRow {
 }
 
 type PricedOption = {
+  addonComponentIds?: string[];
   componentIds?: string[];
   description?: string;
   name: string;
@@ -45,6 +47,7 @@ type ExistingOffering = {
   addons: PricedOption[];
   basePriceCents: number | null;
   categoryId: string;
+  categoryIds?: string[];
   components?: ServiceComponent[];
   description: string;
   eventCategoryIds: string[];
@@ -54,9 +57,8 @@ type ExistingOffering = {
   photos: string[];
   photoCrops?: Array<{ x: number; y: number; zoom: number }>;
   slug: string;
-  tags: string[];
   title: string;
-  type: "SERVICE" | "PRODUCT" | "CUSTOM_ORDER";
+  type: "PRODUCT" | "SERVICE" | "RENTAL" | "CUSTOM_ORDER";
 };
 
 function slugify(value: string) {
@@ -79,6 +81,7 @@ export function OfferingSetupForm({
   const [title, setTitle] = useState(offering?.title ?? "");
   const [messageForPricing, setMessageForPricing] = useState(offering?.messageForPricing ?? false);
   const [hasPackages, setHasPackages] = useState(Boolean(offering?.packages.length));
+  const [showMenuExample, setShowMenuExample] = useState(true);
   const [packages, setPackages] = useState<PricedRow[]>(
     offering?.packages.length ? offering.packages.map(optionToRow) : [createRow()]
   );
@@ -87,11 +90,12 @@ export function OfferingSetupForm({
       ? offering.components
       : starterComponents.map((component) => ({ ...component, id: crypto.randomUUID() }))
   );
-  const [addons, setAddons] = useState<PricedRow[]>(
-    offering?.addons.length ? offering.addons.map(optionToRow) : [createRow()]
-  );
   const generatedSlug = useMemo(() => slugify(title), [title]);
-  const tagValues = [...(offering?.tags ?? []), "", "", "", ""].slice(0, 4);
+  const selectedCategoryIds = offering?.categoryIds?.length
+    ? offering.categoryIds
+    : offering?.categoryId
+      ? [offering.categoryId]
+      : [];
 
   return (
     <ValidatedForm
@@ -117,7 +121,7 @@ export function OfferingSetupForm({
         </div>
 
         <div className="grid gap-3">
-          <FieldShell label="Offering Type" required helperText="Choose the closest fit for what hosts are booking or buying.">
+          <FieldShell label="Offering Type" required helperText="Choose the closest format for how clients book this offering.">
             <select
               name="type"
               className="h-11 rounded-2xl border bg-white px-3 text-sm"
@@ -125,9 +129,10 @@ export function OfferingSetupForm({
               defaultValue={offering?.type ?? "SERVICE"}
               required
             >
+              <option value="PRODUCT">Product</option>
               <option value="SERVICE">Service</option>
-              <option value="PRODUCT">Physical Product</option>
-              <option value="CUSTOM_ORDER">Custom Order</option>
+              <option value="RENTAL">Rental</option>
+              <option value="CUSTOM_ORDER">Custom Experience</option>
             </select>
           </FieldShell>
 
@@ -142,22 +147,32 @@ export function OfferingSetupForm({
             />
           </FieldShell>
 
-          <FieldShell label="Service Category" required helperText="This controls where your listing appears under Shop by Category.">
-            <select
-              name="categoryId"
-              className="h-11 rounded-2xl border bg-white px-3 text-sm"
-              data-required-label="Service Category"
-              defaultValue={offering?.categoryId ?? ""}
-              required
-            >
-              <option value="">Choose the closest category</option>
+          <div className="rounded-[1.4rem] border bg-white p-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium">
+                Service categories <span className="text-primary">*</span>
+              </label>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Choose every category this belongs in. This helps your offering appear in the right discovery feeds.
+              </p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2" data-required-label="Service Categories">
               {categories.map((category) => (
-                <option key={category.id} value={category.id}>
+                <label
+                  key={category.id}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border bg-[#fbf7f5] px-3 py-2 text-sm transition hover:border-primary/45"
+                >
+                  <input
+                    type="checkbox"
+                    name="categoryIds"
+                    value={category.id}
+                    defaultChecked={selectedCategoryIds.includes(category.id)}
+                  />
                   {category.name}
-                </option>
+                </label>
               ))}
-            </select>
-          </FieldShell>
+            </div>
+          </div>
 
           <div className="rounded-[1.4rem] border bg-white p-4">
             <div className="flex flex-col gap-1">
@@ -254,25 +269,9 @@ export function OfferingSetupForm({
       <section className="rounded-[1.5rem] border border-border/80 bg-white p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="font-semibold">Hashtags</h3>
+            <h3 className="font-semibold">Build the items included in your offerings</h3>
             <p className="text-sm text-muted-foreground">
-              Add words hosts might search for: pastel, garden party, baby shower, florals.
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-4">
-          {tagValues.map((tag, index) => (
-            <Input key={index} name="tags" placeholder={`Tag ${index + 1}`} defaultValue={tag} />
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-[1.5rem] border border-border/80 bg-white p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="font-semibold">Reusable service components</h3>
-            <p className="text-sm text-muted-foreground">
-              Create the pieces you use again and again, then bundle them into packages below.
+              Add the pieces clients can choose from once, then bundle them into polished packages.
             </p>
           </div>
           <Button type="button" variant="secondary" onClick={() => setComponents((current) => [...current, createComponent()])}>
@@ -280,6 +279,10 @@ export function OfferingSetupForm({
             Add component
           </Button>
         </div>
+
+        {showMenuExample ? (
+          <MenuBuilderExample onDismiss={() => setShowMenuExample(false)} />
+        ) : null}
 
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {components.map((component) => (
@@ -298,6 +301,7 @@ export function OfferingSetupForm({
                       setPackages((current) =>
                         current.map((row) => ({
                           ...row,
+                          addonComponentIds: row.addonComponentIds?.filter((id) => id !== component.id),
                           componentIds: row.componentIds?.filter((id) => id !== component.id)
                         }))
                       );
@@ -312,9 +316,9 @@ export function OfferingSetupForm({
       <section className="rounded-[1.5rem] border border-border/80 bg-white p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="font-semibold">Package builder</h3>
+            <h3 className="font-semibold">Create your service menu</h3>
             <p className="text-sm text-muted-foreground">
-              Select components into polished bundles so hosts can compare packages at a glance.
+              Select included items, then choose which remaining items can be added on for that package.
             </p>
           </div>
           <label className="flex items-center gap-2 rounded-full bg-[#fbf7f5] px-3 py-2 text-sm">
@@ -353,86 +357,10 @@ export function OfferingSetupForm({
         ) : null}
       </section>
 
-      <section className="rounded-[1.5rem] border border-border/80 bg-white p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="font-semibold">Optional add-ons</h3>
-            <p className="text-sm text-muted-foreground">
-              Add upsells like delivery, setup, candles, extra florals, rush orders, or balloon upgrades.
-            </p>
-          </div>
-          <Button type="button" variant="secondary" onClick={() => setAddons((current) => [...current, createRow()])}>
-            <Plus className="h-4 w-4" />
-            Add add-on
-          </Button>
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {addons.map((row, index) => (
-            <PricedOptionFields
-              key={row.id}
-              descriptionName="addonDescriptions"
-              defaultDescription={row.description}
-              defaultName={row.name}
-              defaultPrice={formatCentsAsDollars(row.priceCents)}
-              nameName="addonNames"
-              priceName="addonPrices"
-              title={`Add-on ${index + 1}`}
-              optional
-              onRemove={addons.length > 1 ? () => setAddons((current) => current.filter((item) => item.id !== row.id)) : undefined}
-            />
-          ))}
-        </div>
-      </section>
-
       <SubmitButton type="submit" size="lg" pendingText="Saving offering...">
         {offering ? "Update offering" : "Save offering"}
       </SubmitButton>
     </ValidatedForm>
-  );
-}
-
-function PricedOptionFields({
-  defaultDescription,
-  defaultName,
-  defaultPrice,
-  descriptionName,
-  nameName,
-  onRemove,
-  optional = false,
-  priceName,
-  title
-}: {
-  defaultDescription?: string;
-  defaultName?: string;
-  defaultPrice?: string;
-  descriptionName: string;
-  nameName: string;
-  onRemove?: () => void;
-  optional?: boolean;
-  priceName: string;
-  title: string;
-}) {
-  return (
-    <div className="rounded-[1.2rem] border bg-[#fbf7f5] p-3">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="text-sm font-semibold">{title}</div>
-        {onRemove ? (
-          <button type="button" className="rounded-full p-1 text-muted-foreground hover:bg-white hover:text-foreground" onClick={onRemove}>
-            <X className="h-4 w-4" />
-          </button>
-        ) : null}
-      </div>
-      <div className="grid gap-2 md:grid-cols-[1fr_1.2fr_0.55fr]">
-        <Input name={nameName} placeholder={optional ? "Delivery" : "Deluxe Package"} defaultValue={defaultName} />
-        <Input
-          name={descriptionName}
-          placeholder={optional ? "Local delivery and setup" : "5 hours, balloons included"}
-          defaultValue={defaultDescription}
-        />
-        <Input name={priceName} inputMode="decimal" placeholder="$150" defaultValue={defaultPrice} />
-      </div>
-    </div>
   );
 }
 
@@ -451,7 +379,7 @@ function ComponentFields({
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="inline-flex items-center gap-2 text-sm font-semibold">
           <Sparkles className="h-4 w-4 text-primary" />
-          Component
+          Menu item
         </div>
         {onRemove ? (
           <button type="button" className="rounded-full p-1 text-muted-foreground hover:bg-white hover:text-foreground" onClick={onRemove}>
@@ -482,7 +410,7 @@ function ComponentFields({
           <Input
             name="componentPrices"
             inputMode="decimal"
-            placeholder="+$50 optional"
+            placeholder="$50 optional"
             value={formatCentsAsDollars(component.priceCents) ?? ""}
             onChange={(event) =>
               onChange({ ...component, priceCents: dollarsInputToCents(event.target.value) })
@@ -520,12 +448,26 @@ function PackageBuilderCard({
   title: string;
 }) {
   const selectedIds = row.componentIds ?? [];
+  const addonIds = row.addonComponentIds ?? [];
+  const calculatedTotal = components
+    .filter((component) => selectedIds.includes(component.id))
+    .reduce((total, component) => total + (component.priceCents ?? 0), 0);
+  const availableAddons = components.filter(
+    (component) => component.title.trim() && !selectedIds.includes(component.id)
+  );
 
   return (
     <div className="rounded-[1.35rem] border bg-[#fbf7f5] p-4">
       <input type="hidden" name="packageComponentIds" value={JSON.stringify(selectedIds)} />
+      <input type="hidden" name="packageAddonComponentIds" value={JSON.stringify(addonIds)} />
       <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="text-sm font-semibold">{title}</div>
+        <div>
+          <div className="text-sm font-semibold">{title}</div>
+          <div className="text-xs text-muted-foreground">
+            Included items total: {calculatedTotal ? formatCurrency(calculatedTotal) : "$0"}.
+            Override the package price if you want a custom bundle rate.
+          </div>
+        </div>
         {onRemove ? (
           <button type="button" className="rounded-full p-1 text-muted-foreground hover:bg-white hover:text-foreground" onClick={onRemove}>
             <X className="h-4 w-4" />
@@ -539,7 +481,12 @@ function PackageBuilderCard({
           placeholder="A sweet starter setup for intimate parties"
           defaultValue={defaultDescription}
         />
-        <Input name={priceName} inputMode="decimal" placeholder="$415" defaultValue={defaultPrice} />
+        <Input
+          name={priceName}
+          inputMode="decimal"
+          placeholder={calculatedTotal ? formatCentsAsDollars(calculatedTotal) : "$415"}
+          defaultValue={defaultPrice}
+        />
       </div>
       <div className="mt-4">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -563,6 +510,7 @@ function PackageBuilderCard({
                       item.id === row.id
                         ? {
                             ...item,
+                            addonComponentIds: item.addonComponentIds?.filter((id) => id !== component.id),
                             componentIds: active
                               ? selectedIds.filter((id) => id !== component.id)
                               : [...selectedIds, component.id]
@@ -579,12 +527,187 @@ function PackageBuilderCard({
           })}
         </div>
       </div>
+      {availableAddons.length > 0 ? (
+        <div className="mt-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Optional add-ons for this package
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {availableAddons.map((component) => {
+              const active = addonIds.includes(component.id);
+              return (
+                <button
+                  key={component.id}
+                  type="button"
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                    active
+                      ? "border-primary/40 bg-white text-primary"
+                      : "border-border bg-white/70 text-muted-foreground hover:border-primary/30"
+                  }`}
+                  onClick={() =>
+                    setPackages((current) =>
+                      current.map((item) =>
+                        item.id === row.id
+                          ? {
+                              ...item,
+                              addonComponentIds: active
+                                ? addonIds.filter((id) => id !== component.id)
+                                : [...addonIds, component.id]
+                            }
+                          : item
+                      )
+                    )
+                  }
+                >
+                  {active ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                  {component.title}
+                  {component.priceCents ? <span className="text-muted-foreground">+{formatCurrency(component.priceCents)}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MenuBuilderExample({ onDismiss }: { onDismiss: () => void }) {
+  const availableItems = [
+    "White bounce house",
+    "Soft foam mats",
+    "Ball pit",
+    "Neutral balls",
+    "Colored balls",
+    "Slide attachment",
+    "White fencing",
+    "Balloon garland",
+    "Setup",
+    "Delivery",
+    "Extra rental hour",
+    "Bubble machine",
+    "LED numbers",
+    "Chandeliers",
+    "Draped tent ceiling",
+    "Fairy lights"
+  ];
+  const packages = [
+    {
+      name: "Mini Party Package",
+      price: "$450",
+      items: ["Soft foam mats", "Ball pit", "Neutral balls", "White fencing", "Setup"]
+    },
+    {
+      name: "Luxe Party Package",
+      price: "$850",
+      items: [
+        "White bounce house",
+        "Soft foam mats",
+        "Ball pit",
+        "Colored balls",
+        "Slide attachment",
+        "White fencing",
+        "Balloon garland",
+        "Delivery",
+        "Setup"
+      ]
+    },
+    {
+      name: "Signature Event Package",
+      price: "$1,500",
+      items: [
+        "White bounce house",
+        "Draped tent ceiling",
+        "Chandeliers",
+        "Fairy lights",
+        "Balloon garland",
+        "LED numbers",
+        "Delivery",
+        "Setup"
+      ]
+    }
+  ];
+  const addons = [
+    "Bubble machine (+$75)",
+    "Extra rental hour (+$100)",
+    "Additional balloon garland (+$150)",
+    "Colored balls upgrade (+$50)"
+  ];
+
+  return (
+    <div className="mt-4 rounded-[1.35rem] border border-primary/20 bg-gradient-to-br from-[#fff8f6] via-white to-[#f8ece9] p-4 shadow-[0_18px_55px_rgba(80,55,45,0.06)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Example service menu
+          </p>
+          <h4 className="mt-1 text-lg font-semibold tracking-[-0.02em]">
+            How soft play vendors can build packages from one item list
+          </h4>
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="rounded-full p-1 text-muted-foreground transition hover:bg-white hover:text-foreground"
+          aria-label="Dismiss example"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Available items
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {availableItems.map((item) => (
+              <span key={item} className="rounded-full border border-[#eadbd7] bg-white/85 px-3 py-1.5 text-xs font-medium">
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-3">
+          {packages.map((pkg) => (
+            <div key={pkg.name} className="rounded-[1rem] border border-white/80 bg-white/82 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="text-sm font-semibold">{pkg.name}</div>
+                <div className="rounded-full bg-primary/12 px-3 py-1 text-xs font-semibold text-primary">
+                  {pkg.price}
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {pkg.items.map((item) => (
+                  <span key={item} className="rounded-full bg-[#fbf7f5] px-2.5 py-1 text-[11px] text-[#6a5d58]">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className="rounded-[1rem] border border-dashed border-primary/25 bg-white/60 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Optional add-ons
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {addons.map((item) => (
+                <span key={item} className="rounded-full border border-[#eadbd7] bg-white px-3 py-1.5 text-xs font-medium">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 function optionToRow(option: PricedOption): PricedRow {
   return {
+    addonComponentIds: option.addonComponentIds ?? [],
     componentIds: option.componentIds ?? [],
     description: option.description,
     id: crypto.randomUUID(),
@@ -598,10 +721,12 @@ function createComponent(): ServiceComponent {
 }
 
 const starterComponents: Omit<ServiceComponent, "id">[] = [
-  { category: "Time", title: "4-hour rental" },
-  { category: "Setup", title: "Delivery" },
-  { category: "Setup", title: "Setup" },
-  { category: "Decor", title: "Balloon arch" }
+  { category: "Rental", priceCents: 25000, title: "White bounce house" },
+  { category: "Rental", priceCents: 9000, title: "Soft foam mats" },
+  { category: "Rental", priceCents: 12500, title: "Ball pit" },
+  { category: "Setup", priceCents: 7500, title: "Delivery" },
+  { category: "Setup", priceCents: 7500, title: "Setup" },
+  { category: "Decor", priceCents: 15000, title: "Balloon garland" }
 ];
 
 function formatCentsAsDollars(value?: number | null) {
@@ -614,4 +739,12 @@ function dollarsInputToCents(value: string) {
   if (!normalized) return undefined;
   const numericValue = Number(normalized);
   return Number.isFinite(numericValue) ? Math.round(numericValue * 100) : undefined;
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    currency: "USD",
+    maximumFractionDigits: 0,
+    style: "currency"
+  }).format(value / 100);
 }

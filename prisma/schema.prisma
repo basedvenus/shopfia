@@ -16,6 +16,7 @@ enum UserRole {
 enum OfferingType {
   SERVICE
   PRODUCT
+  RENTAL
   CUSTOM_ORDER
 }
 
@@ -392,6 +393,7 @@ model Category {
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
   offerings  Offering[]
+  offeringCategories OfferingCategory[]
   eventOfferings OfferingEventCategory[]
   vendors    VendorCategory[]
 }
@@ -433,6 +435,7 @@ model Offering {
 
   vendor           VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   category         Category      @relation(fields: [categoryId], references: [id])
+  categories       OfferingCategory[]
   eventCategories  OfferingEventCategory[]
   listing          Listing?
   quoteRequests    QuoteRequest[]
@@ -442,6 +445,18 @@ model Offering {
   favorites        Favorite[] @relation("OfferingFavorites")
 
   @@unique([vendorId, slug])
+}
+
+model OfferingCategory {
+  offeringId  String
+  categoryId  String
+  createdAt   DateTime  @default(now())
+
+  offering    Offering  @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([offeringId, categoryId])
+  @@index([categoryId])
 }
 
 model OfferingEventCategory {

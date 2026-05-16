@@ -70,6 +70,7 @@ export default async function VendorDashboardPage() {
         offerings: {
           include: {
             category: true,
+            categories: { include: { category: true } },
             eventCategories: { include: { category: true } }
           },
           orderBy: { createdAt: "desc" }
@@ -165,7 +166,7 @@ export default async function VendorDashboardPage() {
     : saves * 10 + reviewCount * 12 + partyPostCount * 8;
   const specialties = unique([
     ...categoryNames,
-    ...vendor.offerings.flatMap((offering) => offering.tags),
+    ...vendor.offerings.flatMap((offering) => offering.eventCategories.map((eventCategory) => eventCategory.category.name)),
     ...(vendor.serviceAreaNotes ? [vendor.serviceAreaNotes] : [])
   ]).slice(0, 10);
   const portfolioImages = unique([
@@ -376,8 +377,18 @@ export default async function VendorDashboardPage() {
                     fill
                     className="object-cover"
                   />
-                  <div className="absolute left-3 top-3 rounded-full bg-white/88 px-3 py-1 text-xs font-medium backdrop-blur">
-                    {offering.category.name}
+                  <div className="absolute left-3 top-3 flex flex-wrap gap-1">
+                    {[
+                      offering.category,
+                      ...offering.categories.map((category) => category.category)
+                    ]
+                      .filter((category, index, categories) => categories.findIndex((item) => item.id === category.id) === index)
+                      .slice(0, 2)
+                      .map((category) => (
+                        <span key={category.id} className="rounded-full bg-white/88 px-3 py-1 text-xs font-medium backdrop-blur">
+                          {category.name}
+                        </span>
+                      ))}
                   </div>
                 </div>
                 <div className="space-y-3 p-5">
@@ -397,9 +408,6 @@ export default async function VendorDashboardPage() {
                   <div className="flex flex-wrap gap-2">
                     {offering.eventCategories.slice(0, 3).map((eventCategory) => (
                       <SoftChip key={eventCategory.id}>{eventCategory.category.name}</SoftChip>
-                    ))}
-                    {offering.tags.slice(0, 4).map((tag) => (
-                      <SoftChip key={tag}>#{tag}</SoftChip>
                     ))}
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">

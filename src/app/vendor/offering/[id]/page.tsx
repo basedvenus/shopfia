@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 type PricedOption = {
+  addonComponentIds?: string[];
   componentIds?: string[];
   description?: string;
   name: string;
@@ -35,6 +36,7 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
     db.offering.findUnique({
       where: { id },
       include: {
+        categories: { select: { categoryId: true } },
         eventCategories: { select: { categoryId: true } },
         vendor: { select: { id: true, name: true, slug: true, userId: true } }
       }
@@ -94,6 +96,10 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
               addons: getPricedOptions(offering.addonsJson),
               basePriceCents: offering.basePriceCents,
               categoryId: offering.categoryId,
+              categoryIds: [
+                offering.categoryId,
+                ...offering.categories.map((category) => category.categoryId)
+              ].filter((categoryId, index, categoryIds) => categoryIds.indexOf(categoryId) === index),
               components: getServiceComponents(offering.faqJson),
               description: offering.description,
               eventCategoryIds: offering.eventCategories.map((eventCategory) => eventCategory.categoryId),
@@ -103,7 +109,6 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
               photos: offering.photos,
               photoCrops: getImageCrops(offering.photoCrops),
               slug: offering.slug,
-              tags: offering.tags,
               title: offering.title,
               type: offering.type
             }}
@@ -127,7 +132,10 @@ function getPricedOptions(value: unknown): PricedOption[] {
     const componentIds = Array.isArray(record.componentIds)
       ? record.componentIds.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
       : [];
-    options.push({ name, description, priceCents, componentIds });
+    const addonComponentIds = Array.isArray(record.addonComponentIds)
+      ? record.addonComponentIds.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      : [];
+    options.push({ name, description, priceCents, componentIds, addonComponentIds });
     return options;
   }, []);
 }

@@ -59,13 +59,15 @@ function formDataToPricedOptions(formData: FormData, prefix: "package" | "addon"
   const descriptions = formData.getAll(`${prefix}Descriptions`).map((value) => String(value).trim());
   const prices = formData.getAll(`${prefix}Prices`);
   const componentIdGroups = formData.getAll(`${prefix}ComponentIds`);
+  const addonComponentIdGroups = formData.getAll(`${prefix}AddonComponentIds`);
 
   return names
     .map((name, index) => ({
       name,
       description: descriptions[index] ?? "",
       priceCents: dollarsToCents(prices[index] ?? null),
-      componentIds: parseJsonStringArray(componentIdGroups[index] ?? null)
+      componentIds: parseJsonStringArray(componentIdGroups[index] ?? null),
+      addonComponentIds: parseJsonStringArray(addonComponentIdGroups[index] ?? null)
     }))
     .filter((option) => option.name);
 }
@@ -298,12 +300,13 @@ export async function upsertOfferingAction(formData: FormData) {
     basePriceCents: formData.get("basePriceCents") || dollarsToCents(formData.get("startingPrice")) || undefined,
     messageForPricing: formData.get("messageForPricing") === "on",
     categoryId: formData.get("categoryId"),
+    categoryIds: formDataToArray(formData, "categoryIds"),
     eventCategoryIds: formDataToArray(formData, "eventCategoryIds"),
-    tags: formDataToArray(formData, "tags"),
+    tags: [],
     photos: formDataToArray(formData, "photos"),
     serviceComponents: formDataToServiceComponents(formData),
     packages: formDataToPricedOptions(formData, "package"),
-    addons: formDataToPricedOptions(formData, "addon"),
+    addons: [],
     durationMinutes: formData.get("durationMinutes") || undefined,
     turnaroundDays: formData.get("turnaroundDays") || undefined,
     inventoryCount: formData.get("inventoryCount") || undefined,
@@ -317,7 +320,7 @@ export async function upsertOfferingAction(formData: FormData) {
         type: "Offering Type",
         title: "Offering Title",
         description: "Description",
-        categoryId: "Service Category",
+        categoryIds: "Service Categories",
         photos: "Offering photo",
         basePriceCents: "Starting price"
       })
@@ -325,14 +328,19 @@ export async function upsertOfferingAction(formData: FormData) {
   }
   const parsed = result.data;
   const photoCrops = parseImageCropArray(formData.getAll("photosCrop"));
+  const uniqueCategoryIds = [...new Set(parsed.categoryIds)];
+  const primaryCategoryId = parsed.categoryId && uniqueCategoryIds.includes(parsed.categoryId)
+    ? parsed.categoryId
+    : uniqueCategoryIds[0];
 
-  const offeringCategory = await db.category.findFirst({
-    where: { id: parsed.categoryId, audience: CategoryAudience.VENDOR },
+  const offeringCategories = await db.category.findMany({
+    where: { id: { in: uniqueCategoryIds }, audience: CategoryAudience.VENDOR },
     select: { id: true, name: true }
   });
-  if (!offeringCategory) {
-    redirectWithOfferingError("Service Category is required");
+  if (!primaryCategoryId || offeringCategories.length !== uniqueCategoryIds.length) {
+    redirectWithOfferingError("Choose at least one valid service category.");
   }
+  const offeringCategory = offeringCategories.find((category) => category.id === primaryCategoryId) ?? offeringCategories[0];
 
   const uniqueEventCategoryIds = [...new Set(parsed.eventCategoryIds)];
   const validEventCategoryCount = uniqueEventCategoryIds.length
@@ -352,8 +360,8 @@ export async function upsertOfferingAction(formData: FormData) {
     description: parsed.description,
     basePriceCents: parsed.messageForPricing ? null : parsed.basePriceCents ?? null,
     messageForPricing: parsed.messageForPricing,
-    categoryId: parsed.categoryId,
-    tags: parsed.tags.map((t) => t.toLowerCase()),
+    categoryId: primaryCategoryId,
+    tags: [],
     photos: parsed.photos,
     photoCrops,
     variantsJson: parsed.packages,
@@ -381,6 +389,12 @@ export async function upsertOfferingAction(formData: FormData) {
   if (!offeringId) {
     throw new Error("Offering could not be saved");
   }
+
+  await db.offeringCategory.deleteMany({ where: { offeringId } });
+  await db.offeringCategory.createMany({
+    data: uniqueCategoryIds.map((categoryId) => ({ offeringId, categoryId })),
+    skipDuplicates: true
+  });
 
   await db.offeringEventCategory.deleteMany({ where: { offeringId } });
   if (uniqueEventCategoryIds.length > 0) {
