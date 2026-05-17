@@ -13,13 +13,11 @@ import {
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
-import { createPublicInquiryAction } from "@/app/actions/inquiries";
+import { ListingInquiryPanel } from "@/components/inquiries/listing-inquiry-form";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { db } from "@/lib/db";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
@@ -126,12 +124,6 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           })
         )
       : false;
-
-  async function submitInquiry(formData: FormData) {
-    "use server";
-
-    await createPublicInquiryAction(formData);
-  }
 
   async function toggleFollow(formData: FormData) {
     "use server";
@@ -280,35 +272,11 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         </div>
 
         <div className="space-y-4">
-          <Card id="inquiry" className="border-white/70 bg-white/95">
-            <CardHeader>
-              <CardTitle>Send an inquiry</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <form action={submitInquiry} className="space-y-3">
-                <input type="hidden" name="vendorProfileId" value={vendor.id} />
-                <Input name="name" placeholder="Your name" required />
-                <Input name="email" type="email" placeholder="Your email" required />
-                <Input name="phone" placeholder="Phone (optional)" />
-                <Input name="eventDate" type="date" />
-                <Input name="eventLocation" placeholder="Event location" required />
-                <Input
-                  name="budgetDollars"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  placeholder="Budget in dollars (optional)"
-                />
-                <Textarea
-                  name="message"
-                  placeholder="Tell the vendor what you want made, booked, or styled..."
-                />
-                <Button type="submit" className="w-full">
-                  Send inquiry
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+          <ListingInquiryPanel
+            defaultName={session?.user?.name}
+            description="Share what you are planning and this vendor can reply inside ShopFia messages."
+            vendorProfileId={vendor.id}
+          />
 
           <Card className="border-white/70 bg-white/90">
             <CardHeader>

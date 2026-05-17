@@ -14,7 +14,7 @@ import {
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { ProfileBadge } from "@/components/badges/profile-badge";
-import { ListingInquiryForm } from "@/components/inquiries/listing-inquiry-form";
+import { ListingInquiryPanel } from "@/components/inquiries/listing-inquiry-form";
 import { Badge } from "@/components/ui/badge";
 import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
@@ -245,33 +245,12 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
         </section>
 
         <aside className="xl:sticky xl:top-24">
-          <div
-            id="inquiry"
-            className="rounded-[1.6rem] border border-white/80 bg-white/90 p-6 shadow-[0_22px_70px_rgba(80,55,45,0.11)] backdrop-blur"
-          >
-            <div className="space-y-3">
-              <p className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-xl italic text-primary">
-                Let&apos;s connect
-              </p>
-              <div className="flex items-center gap-3">
-                <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-4xl font-normal tracking-normal">
-                  Send Inquiry
-                </h2>
-                <Heart className="h-5 w-5 text-primary" />
-              </div>
-              <p className="max-w-sm text-sm leading-6 text-muted-foreground">
-                Share a few details about your event and the vendor will personally get back to you.
-              </p>
-            </div>
-            <div className="mt-6">
-              <ListingInquiryForm
-                defaultName={session?.user?.name}
-                listingId={offering.listing?.id}
-                offeringId={offering.id}
-                vendorProfileId={offering.vendorId}
-              />
-            </div>
-          </div>
+          <ListingInquiryPanel
+            defaultName={session?.user?.name}
+            listingId={offering.listing?.id}
+            offeringId={offering.id}
+            vendorProfileId={offering.vendorId}
+          />
         </aside>
       </div>
     </div>

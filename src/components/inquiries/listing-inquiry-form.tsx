@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Lock, Send } from "lucide-react";
+import { Heart, Lock, Send } from "lucide-react";
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { createPublicInquiryAction } from "@/app/actions/inquiries";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
@@ -9,16 +9,66 @@ import { Button } from "@/components/ui/button";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 type ListingInquiryFormProps = {
   defaultName?: string | null;
   listingId?: string | null;
-  offeringId: string;
+  offeringId?: string | null;
   vendorProfileId: string;
 };
 
 const softInputClassName =
-  "h-12 rounded-[1rem] border-[#eadbd7] bg-white/85 px-4 shadow-none focus-visible:ring-1 focus-visible:ring-primary/50";
+  "h-12 rounded-[1rem] border-[#eadbd7] bg-white/90 px-4 shadow-none transition placeholder:text-[#9a8d88] focus-visible:border-primary/45 focus-visible:ring-2 focus-visible:ring-primary/15";
+
+export function ListingInquiryPanel({
+  className,
+  defaultName,
+  description = "Share a few details about your event and the vendor will personally get back to you.",
+  eyebrow = "Let's connect",
+  listingId,
+  offeringId,
+  title = "Send Inquiry",
+  vendorProfileId
+}: ListingInquiryFormProps & {
+  className?: string;
+  description?: string;
+  eyebrow?: string;
+  title?: string;
+}) {
+  return (
+    <section
+      id="inquiry"
+      className={cn(
+        "relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/95 p-6 shadow-[0_22px_70px_rgba(80,55,45,0.10)] backdrop-blur",
+        className
+      )}
+    >
+      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 left-8 h-32 w-32 rounded-full bg-[#fde4d5]/70 blur-3xl" />
+      <div className="relative space-y-3">
+        <p className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-xl italic text-primary">
+          {eyebrow}
+        </p>
+        <div className="flex items-center gap-3">
+          <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-4xl font-normal tracking-normal">
+            {title}
+          </h2>
+          <Heart className="h-5 w-5 text-primary" />
+        </div>
+        <p className="max-w-sm text-sm leading-6 text-muted-foreground">{description}</p>
+      </div>
+      <div className="relative mt-6">
+        <ListingInquiryForm
+          defaultName={defaultName}
+          listingId={listingId}
+          offeringId={offeringId}
+          vendorProfileId={vendorProfileId}
+        />
+      </div>
+    </section>
+  );
+}
 
 export function ListingInquiryForm({
   defaultName,
@@ -59,7 +109,7 @@ export function ListingInquiryForm({
       }}
     >
       <input type="hidden" name="vendorProfileId" value={vendorProfileId} />
-      <input type="hidden" name="offeringId" value={offeringId} />
+      <input type="hidden" name="offeringId" value={offeringId ?? ""} />
       <input type="hidden" name="listingId" value={listingId ?? ""} />
 
       <div className="grid gap-4">
