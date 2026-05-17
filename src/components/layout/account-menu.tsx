@@ -76,10 +76,11 @@ export function AccountMenu({ initials, signOutAction }: AccountMenuProps) {
         >
           {profile?.image ? (
             <CroppedImage
+              key={profile.image}
               src={profile.image}
               alt=""
               crop={profile.imageCrop as { x: number; y: number; zoom: number } | null}
-              className="h-full w-full object-cover object-center"
+              className="block h-full w-full object-cover object-center"
             />
           ) : (
             initials

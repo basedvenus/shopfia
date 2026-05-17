@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Heart, UserPlus } from "lucide-react";
@@ -121,7 +120,13 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
             <div className="flex flex-wrap items-center gap-4">
               <div className="relative grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white bg-accent text-2xl font-semibold shadow-soft">
                 {profileImage ? (
-                  <Image src={profileImage} alt={profile.name ?? profile.username ?? "Profile"} fill className="object-cover" />
+                  <CroppedImage
+                    key={profileImage}
+                    src={profileImage}
+                    alt={profile.name ?? profile.username ?? "Profile"}
+                    crop={null}
+                    className="block h-full w-full object-cover object-center"
+                  />
                 ) : (
                   initials
                 )}
@@ -181,7 +186,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                       </p>
                       {"collaborators" in event && event.collaborators?.length ? (
                         <p className="mt-1 text-xs text-white/75">
-                          {formatHostedBy(event.collaborators.map((collaborator) => collaborator.user))}
+                          Hosted by {getPrimaryHostName(event)}
                         </p>
                       ) : null}
                     </div>
@@ -202,15 +207,15 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   );
 }
 
-function formatHostedBy(users: Array<{ name: string | null; username: string | null }>) {
-  const names = users
-    .map((user) => user.name ?? user.username)
-    .filter(Boolean) as string[];
-
-  if (names.length === 0) return "Hosted by ShopFia";
-  if (names.length === 1) return `Hosted by ${names[0]}`;
-  if (names.length === 2) return `Hosted by ${names[0]} and ${names[1]}`;
-  return `Hosted by ${names[0]}, ${names[1]} + ${names.length - 2} others`;
+function getPrimaryHostName(event: {
+  user?: { name: string | null; username: string | null } | null;
+  collaborators?: Array<{
+    role?: string;
+    user: { name: string | null; username: string | null };
+  }>;
+}) {
+  const primaryHost = event.collaborators?.find((collaborator) => collaborator.role === "MAIN_HOST")?.user ?? event.user;
+  return primaryHost?.name ?? primaryHost?.username ?? "ShopFia";
 }
 
 function getPartyCardImage(event: {

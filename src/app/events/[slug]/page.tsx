@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
+import { getSafeProfileImage } from "@/lib/profile-image";
 
 export const dynamic = "force-dynamic";
 
@@ -145,23 +146,7 @@ export default async function EventPage({
     ).values()
   );
   const host = event?.user ?? null;
-  const visibleCollaborators = event?.collaborators.length
-    ? event.collaborators
-    : host
-    ? [
-        {
-          id: "host",
-          role: "MAIN_HOST" as const,
-          status: "ACCEPTED" as const,
-          user: {
-            id: host.id,
-            image: host.image,
-            name: host.name,
-            username: host.username
-          }
-        }
-      ]
-    : [];
+  const visibleCollaborators = getVisibleCollaborators(event?.collaborators ?? [], host);
   const hostBadge = getProfileBadge(host, originalMemberCutoff);
   const hostHandle = host?.username ? `@${host.username}` : host?.name ?? "ShopFia host";
   const currentUserId = session?.user?.id ?? null;
@@ -332,8 +317,13 @@ export default async function EventPage({
                       className="grid h-9 w-9 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/20 text-xs font-semibold text-white shadow-sm"
                       title={collaborator.user.name ?? collaborator.user.username ?? "ShopFia host"}
                     >
-                      {collaborator.user.image ? (
-                        <img src={collaborator.user.image} alt="" className="h-full w-full object-cover" />
+                      {getSafeProfileImage(collaborator.user.image) ? (
+                        <img
+                          key={collaborator.user.image}
+                          src={getSafeProfileImage(collaborator.user.image) ?? ""}
+                          alt=""
+                          className="block h-full w-full object-cover object-center"
+                        />
                       ) : (
                         (collaborator.user.name ?? collaborator.user.username ?? "SF").slice(0, 2).toUpperCase()
                       )}
@@ -518,4 +508,40 @@ function renderHostedBy(
       {collaborators.length > 2 ? ` + ${collaborators.length - 2} others` : ""}
     </>
   );
+}
+
+function getVisibleCollaborators(
+  collaborators: Array<{
+    id: string;
+    role: string;
+    status: string;
+    user: { id: string; image: string | null; name: string | null; username: string | null };
+  }>,
+  host: { id: string; image: string | null; name: string | null; username: string | null } | null
+) {
+  const accepted = collaborators.filter((collaborator) => collaborator.status !== "REMOVED");
+
+  if (accepted.length > 0) {
+    return [...accepted].sort((left, right) => {
+      if (left.role === "MAIN_HOST" && right.role !== "MAIN_HOST") return -1;
+      if (right.role === "MAIN_HOST" && left.role !== "MAIN_HOST") return 1;
+      return 0;
+    });
+  }
+
+  return host
+    ? [
+        {
+          id: "host",
+          role: "MAIN_HOST",
+          status: "ACCEPTED",
+          user: {
+            id: host.id,
+            image: host.image,
+            name: host.name,
+            username: host.username
+          }
+        }
+      ]
+    : [];
 }

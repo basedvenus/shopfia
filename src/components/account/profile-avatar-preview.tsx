@@ -18,10 +18,11 @@ export function ProfileAvatarPreview({
     <div className="grid aspect-square h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white bg-accent text-2xl font-semibold shadow-soft">
       {image ? (
         <CroppedImage
+          key={image}
           src={image}
           alt={displayName}
           crop={crop}
-          className="h-full w-full object-cover object-center"
+          className="block h-full w-full object-cover object-center"
         />
       ) : (
         initials

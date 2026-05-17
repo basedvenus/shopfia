@@ -83,8 +83,9 @@ export default async function PartiesPage({
       collaborators: {
         where: { status: "ACCEPTED" },
         select: {
+          role: true,
           userId: true,
-          user: { select: { id: true, image: true, name: true, username: true } }
+          user: { select: { id: true, createdAt: true, email: true, image: true, name: true, username: true } }
         }
       }
     },
@@ -276,14 +277,11 @@ export default async function PartiesPage({
           ? visibleParties.map((party, index) => {
               const { crop, image } = getEventImage(party);
               const vendors = getUniqueVendors(party);
-              const hostImage = getSafeProfileImage(party.user.image);
-              const hostName = party.user.name ?? party.user.username ?? "ShopFia host";
-              const hostBadge = getProfileBadge(party.user, originalMemberCutoff);
-              const hostSummary = formatHostedBy(
-                party.collaborators.length
-                  ? party.collaborators.map((collaborator) => collaborator.user)
-                  : [party.user]
-              );
+              const primaryHost = getPrimaryHost(party);
+              const hostImage = getSafeProfileImage(primaryHost.image);
+              const hostName = primaryHost.name ?? primaryHost.username ?? "ShopFia host";
+              const hostBadge = getProfileBadge(primaryHost, originalMemberCutoff);
+              const hostSummary = `Hosted by ${hostName}`;
               const tall = index % 5 === 0 || index % 7 === 3;
 
               return (
@@ -513,15 +511,28 @@ function getUniqueVendors(party: {
   return Array.from(vendorMap.values());
 }
 
-function formatHostedBy(users: Array<{ name: string | null; username: string | null }>) {
-  const names = users
-    .map((user) => user.name ?? user.username)
-    .filter(Boolean) as string[];
-
-  if (names.length === 0) return "Hosted by ShopFia";
-  if (names.length === 1) return `Hosted by ${names[0]}`;
-  if (names.length === 2) return `Hosted by ${names[0]} and ${names[1]}`;
-  return `Hosted by ${names[0]}, ${names[1]} + ${names.length - 2} others`;
+function getPrimaryHost(party: {
+  user: {
+    createdAt?: Date | string | null;
+    email?: string | null;
+    id: string;
+    image: string | null;
+    name: string | null;
+    username: string | null;
+  };
+  collaborators: Array<{
+    role?: string;
+    user: {
+      createdAt?: Date | string | null;
+      email?: string | null;
+      id: string;
+      image: string | null;
+      name: string | null;
+      username: string | null;
+    };
+  }>;
+}) {
+  return party.collaborators.find((collaborator) => collaborator.role === "MAIN_HOST")?.user ?? party.user;
 }
 
 function getEventImage(event: {
