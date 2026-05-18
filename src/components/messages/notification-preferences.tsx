@@ -62,10 +62,10 @@ export function NotificationPreferences() {
         label: "Browser push"
       },
       {
-        description: "A soft chime for new messages while ShopFia is open.",
+        description: "A gentle pop for new messages while ShopFia is open.",
         icon: Volume2,
         key: "sound" as const,
-        label: "Soft sound"
+        label: "Soft pop"
       }
     ],
     [browserStatus]
@@ -107,7 +107,7 @@ export function NotificationPreferences() {
               key={row.key}
               type="button"
               onClick={() => void togglePreference(row.key)}
-              className="flex items-start gap-3 rounded-[1.25rem] border border-[#f0dfda] bg-[#fffaf8] p-3 text-left transition hover:bg-white"
+              className="flex items-start gap-3 rounded-[1.25rem] border border-[#eadbd3] bg-[#fffdfa] p-3 text-left transition hover:bg-white"
             >
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-[#c5837f] shadow-sm">
                 <Icon className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function NotificationPreferences() {
               </span>
               <span
                 className={`mt-1 h-6 w-11 rounded-full p-1 transition ${
-                  enabled ? "bg-[#e3a7a7]" : "bg-[#eadbd7]"
+                  enabled ? "bg-[#d8a39c]" : "bg-[#e4d9d2]"
                 }`}
               >
                 <span
@@ -143,19 +143,26 @@ function playSoftChime() {
     if (!AudioContextCtor) return;
     const context = new AudioContextCtor();
     const oscillator = context.createOscillator();
+    const secondOscillator = context.createOscillator();
     const gain = context.createGain();
 
     oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(660, context.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(880, context.currentTime + 0.16);
+    secondOscillator.type = "triangle";
+    oscillator.frequency.setValueAtTime(520, context.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(760, context.currentTime + 0.08);
+    secondOscillator.frequency.setValueAtTime(880, context.currentTime + 0.025);
+    secondOscillator.frequency.exponentialRampToValueAtTime(1180, context.currentTime + 0.12);
     gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.28);
+    gain.gain.exponentialRampToValueAtTime(0.045, context.currentTime + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.18);
 
     oscillator.connect(gain);
+    secondOscillator.connect(gain);
     gain.connect(context.destination);
     oscillator.start();
-    oscillator.stop(context.currentTime + 0.3);
+    secondOscillator.start(context.currentTime + 0.025);
+    oscillator.stop(context.currentTime + 0.18);
+    secondOscillator.stop(context.currentTime + 0.16);
   } catch {
     // Notification sounds are a progressive enhancement.
   }

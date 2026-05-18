@@ -12,9 +12,9 @@ import {
   Mail,
   MapPin,
   Package,
+  Paperclip,
   Send,
   Sparkles,
-  Store,
   UsersRound
 } from "lucide-react";
 import { sendMessageAction } from "@/app/actions/messaging";
@@ -206,7 +206,7 @@ export default async function MessagesPage({
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-[2rem] border border-white/75 bg-white/88 shadow-soft">
-        <div className="bg-[radial-gradient(circle_at_12%_8%,rgba(244,207,202,0.8),transparent_28%),linear-gradient(135deg,#fff8f5,#ffffff_52%,#f7e6dc)] p-6 md:p-8">
+        <div className="bg-[radial-gradient(circle_at_12%_8%,rgba(244,207,202,0.38),transparent_24%),linear-gradient(135deg,#fffaf6,#ffffff_58%,#f6efe7)] p-6 md:p-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-white/76 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#9b6b65]">
@@ -220,7 +220,7 @@ export default async function MessagesPage({
                 Event inquiries, vendor replies, and marketplace context in one warm thread.
               </p>
             </div>
-            <div className="rounded-[1.25rem] border border-white/80 bg-white/78 px-4 py-3 text-sm shadow-sm">
+            <div className="rounded-[1.25rem] border border-white/80 bg-white/82 px-4 py-3 text-sm shadow-sm">
               <div className="flex items-center gap-2 font-semibold text-[#2f2626]">
                 <Bell className="h-4 w-4 text-[#c5837f]" />
                 {unreadTotal > 0 ? `${unreadTotal} unread` : "All caught up"}
@@ -288,7 +288,7 @@ function InboxHeader({
         </p>
       </div>
       {selectedConversation ? (
-        <Link href="/messages" className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-2 text-sm font-medium hover:bg-[#fff8f5]">
+        <Link href="/messages" className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-2 text-sm font-medium hover:bg-[#fffaf6]">
           <ArrowLeft className="h-4 w-4" />
           Inbox
         </Link>
@@ -325,9 +325,9 @@ function InboxCard({
       href={`/messages?conversationId=${conversation.id}`}
       className={`group relative block overflow-hidden rounded-[1.75rem] border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${
         isSelected
-          ? "border-[#e3aaa5] bg-white"
+          ? "border-[#d8b9ae] bg-[linear-gradient(135deg,#ffffff,#fffaf6)] ring-2 ring-[#eadbd3]"
           : unreadCount > 0
-            ? "border-[#efc9c4] bg-[#fff8f5]"
+            ? "border-[#ead2cc] bg-[#fffaf6]"
             : "border-white/80 bg-white/86"
       }`}
     >
@@ -386,19 +386,16 @@ function ConversationThread({
 
   return (
     <section className="overflow-hidden rounded-[2rem] border border-white/75 bg-white/92 shadow-soft">
-      <div className="border-b border-[#f0dfda] bg-[linear-gradient(135deg,#fff8f5,#ffffff_58%,#f9e8dd)] p-5">
+      <div className="border-b border-[#eadbd3] bg-[linear-gradient(135deg,#fffaf6,#ffffff_62%,#f6efe7)] p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
+          <Link
+            href={viewerIsVendor ? `/profiles/${conversation.buyer.username ?? ""}` : `/vendor/profile/${conversation.vendorProfile.slug}`}
+            className={`flex min-w-0 items-center gap-3 rounded-[1.5rem] pr-3 transition hover:bg-white/68 ${viewerIsVendor && !conversation.buyer.username ? "pointer-events-none" : ""}`}
+          >
             <IdentityAvatar image={identity.image} label={identity.name} size="xl" />
-            <div className="min-w-0">
+            <div className="min-w-0 py-2">
               <div className="flex flex-wrap items-center gap-2">
-                {viewerIsVendor ? (
-                  <h2 className="truncate text-2xl font-semibold text-[#2f2626]">{identity.name}</h2>
-                ) : (
-                  <Link href={`/vendor/profile/${conversation.vendorProfile.slug}`} className="truncate text-2xl font-semibold text-[#2f2626] hover:underline">
-                    {identity.name}
-                  </Link>
-                )}
+                <h2 className="truncate text-2xl font-semibold text-[#2f2626]">{identity.name}</h2>
                 <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-[#9b6b65]">
                   {identity.kind}
                 </span>
@@ -409,18 +406,12 @@ function ConversationThread({
                   : "Marketplace conversation with a verified storefront"}
               </p>
             </div>
-          </div>
-          <Link href={`/vendor/profile/${conversation.vendorProfile.slug}`}>
-            <Button type="button" variant="secondary" size="sm">
-              <Store className="h-4 w-4" />
-              View Storefront
-            </Button>
           </Link>
         </div>
         <ContextCard conversation={conversation} />
       </div>
 
-      <div className="max-h-[36rem] space-y-4 overflow-auto bg-[linear-gradient(180deg,#fffaf8,#fff)] p-4 md:p-5">
+      <div className="max-h-[36rem] space-y-4 overflow-auto bg-[linear-gradient(180deg,#fffdfa,#fff)] p-4 md:p-5">
         {conversation.messages.map((message) => {
           const markerInquiryId = getInquiryMarkerId(message.body);
           const inquiry =
@@ -453,7 +444,7 @@ function ConversationThread({
 
       <form action={sendMessageAction} className="border-t border-[#f0dfda] bg-white p-4">
         <input type="hidden" name="conversationId" value={conversation.id} />
-        <div className="rounded-[1.5rem] border border-[#eadbd7] bg-[#fffaf8] p-3">
+        <div className="rounded-[1.5rem] border border-[#eadbd7] bg-[#fffdfa] p-3">
           <Textarea
             name="body"
             placeholder={viewerIsVendor ? "Reply with availability, pricing, or next steps..." : "Reply to the vendor..."}
@@ -530,14 +521,12 @@ function InquiryBriefCard({
   const title = inquiry.listing?.title ?? inquiry.offering?.title ?? "Event Brief";
   const date = inquiry.eventDate ? formatEventDate(inquiry.eventDate) : "Date to be decided";
   const location = formatInquiryLocation(inquiry);
-  const inspirationUrl = inquiry.inspirationUrls.find(isHttpUrl);
-  const isPinterest = inspirationUrl
-    ? /pinterest\./i.test(inspirationUrl) || /pin\.it/i.test(inspirationUrl)
-    : false;
+  const inspirationLinks = inquiry.inspirationUrls.filter(isHttpUrl);
+  const inspirationImages = inquiry.inspirationUrls.filter(isVisualAttachment);
 
   return (
     <article className="overflow-hidden rounded-[1.75rem] border border-[#eed7d1] bg-white shadow-[0_18px_45px_rgba(82,55,55,0.09)]">
-      <div className="bg-[radial-gradient(circle_at_top_left,rgba(244,207,202,0.7),transparent_34%),linear-gradient(135deg,#fff8f5,#ffffff_58%,#f9e8dd)] p-5">
+      <div className="bg-[radial-gradient(circle_at_top_left,rgba(244,207,202,0.36),transparent_32%),linear-gradient(135deg,#fffaf6,#ffffff_60%,#f6efe7)] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-semibold text-[#9b6b65]">{inquiry.name} sent an inquiry</p>
           <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-medium text-muted-foreground">
@@ -566,21 +555,52 @@ function InquiryBriefCard({
         </div>
 
         {inquiry.message ? (
-          <blockquote className="rounded-[1.35rem] border border-[#f0ded9] bg-[#fffaf8] px-4 py-3 font-serif text-lg leading-8 text-[#4b403c]">
+          <blockquote className="rounded-[1.35rem] border border-[#f0ded9] bg-[#fffdfa] px-4 py-3 font-serif text-lg leading-8 text-[#4b403c]">
             &ldquo;{inquiry.message}&rdquo;
           </blockquote>
         ) : null}
 
-        {inspirationUrl ? (
-          <a
-            href={inspirationUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex w-fit items-center gap-2 rounded-full border border-[#e8c8c2] bg-white px-4 py-2 text-sm font-semibold text-[#9b6b65] transition hover:bg-[#fff8f5]"
-          >
-            {isPinterest ? "View Inspiration Board" : "View Inspiration"}
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+        {inspirationImages.length > 0 || inspirationLinks.length > 0 ? (
+          <div className="grid gap-3 rounded-[1.35rem] border border-[#eadbd3] bg-[#fffdfa] p-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#9b6b65]">
+              <Paperclip className="h-3.5 w-3.5" />
+              Inspiration
+            </div>
+            {inspirationImages.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {inspirationImages.slice(0, 4).map((url, index) => (
+                  <a
+                    key={`${url}-${index}`}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group relative aspect-[4/3] overflow-hidden rounded-[1.15rem] bg-[#f6efe7]"
+                  >
+                    <div className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.03]" style={{ backgroundImage: `url(${url})` }} />
+                  </a>
+                ))}
+              </div>
+            ) : null}
+            {inspirationLinks.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {inspirationLinks.map((url) => {
+                  const isPinterest = /pinterest\./i.test(url) || /pin\.it/i.test(url);
+                  return (
+                    <a
+                      key={url}
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex w-fit items-center gap-2 rounded-full border border-[#e8c8c2] bg-white px-4 py-2 text-sm font-semibold text-[#9b6b65] transition hover:bg-[#fffaf6]"
+                    >
+                      {isPinterest ? "View Inspiration Board" : "View Inspiration"}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </article>
@@ -624,7 +644,7 @@ function ChatBubble({
     <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[82%] rounded-[1.35rem] border p-3 text-sm shadow-sm ${
-          isMine ? "border-[#e7c2bd] bg-[#fff8f5]" : "border-white/80 bg-white"
+          isMine ? "border-[#e7cfc8] bg-[#fffdfa]" : "border-white/80 bg-white"
         }`}
       >
         <div className="mb-1 text-xs text-muted-foreground">
@@ -675,7 +695,7 @@ function MarketplaceTrustPanel() {
   return (
     <div className="rounded-[1.75rem] border border-white/80 bg-white/86 p-5 shadow-sm">
       <div className="flex items-center gap-2 font-semibold text-[#2f2626]">
-        <Store className="h-4 w-4 text-[#c5837f]" />
+        <Sparkles className="h-4 w-4 text-[#c5837f]" />
         Marketplace connected
       </div>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -797,4 +817,8 @@ function getInitials(label: string) {
 
 function isHttpUrl(value: string) {
   return /^https?:\/\//i.test(value);
+}
+
+function isVisualAttachment(value: string) {
+  return value.startsWith("data:image/") || /\.(png|jpe?g|gif|webp|avif)(\?.*)?$/i.test(value);
 }

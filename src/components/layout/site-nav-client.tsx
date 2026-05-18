@@ -76,7 +76,7 @@ export function SiteNavClient({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm hover:bg-muted"
+                  className="relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d8b9ae]"
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}
@@ -118,7 +118,7 @@ export function SiteNavClient({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group relative flex min-h-[3.45rem] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-semibold transition ${
+                className={`group relative flex min-h-[3.45rem] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d8b9ae] ${
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
                 aria-current={active ? "page" : undefined}
