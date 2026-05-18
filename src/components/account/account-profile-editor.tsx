@@ -114,8 +114,8 @@ export function AccountProfileEditor({
             Edit profile
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input name="name" defaultValue={profile?.name ?? ""} placeholder="Display name" />
-            <Input name="username" defaultValue={profile?.username ?? ""} placeholder="username" />
+            <Input name="name" defaultValue={profile?.name ?? ""} placeholder="Display name" required />
+            <Input name="username" defaultValue={profile?.username ?? ""} placeholder="username" required />
           </div>
           <Textarea name="bio" defaultValue={profile?.bio ?? ""} placeholder="About your party style, favorite themes, or what you are planning..." className="min-h-[90px]" />
           <ImageUploadField

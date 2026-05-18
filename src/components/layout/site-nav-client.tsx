@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import {
   CalendarHeart,
   Heart,
@@ -41,14 +42,21 @@ function getInitials(name?: string | null, email?: string | null) {
 }
 
 export function SiteNavClient({
-  signOutAction
+  signOutAction,
+  unreadMessagesCount = 0
 }: {
   signOutAction: () => Promise<void>;
+  unreadMessagesCount?: number;
 }) {
   const { profile } = useProfile();
   const pathname = usePathname();
   const signedIn = Boolean(profile?.id);
   const initials = getInitials(profile?.name, profile?.email);
+
+  useEffect(() => {
+    const baseTitle = document.title.replace(/^\(\d+\)\s*/, "");
+    document.title = unreadMessagesCount > 0 ? `(${unreadMessagesCount}) ${baseTitle}` : baseTitle;
+  }, [unreadMessagesCount]);
 
   return (
     <>
@@ -68,10 +76,15 @@ export function SiteNavClient({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm hover:bg-muted"
+                  className="relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm hover:bg-muted"
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}
+                  {item.href === "/messages" && unreadMessagesCount > 0 ? (
+                    <span className="ml-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-[#e3a7a7] px-1.5 py-0.5 text-[11px] font-bold text-white">
+                      {unreadMessagesCount}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}
@@ -105,7 +118,7 @@ export function SiteNavClient({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex min-h-[3.45rem] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-semibold transition ${
+                className={`group relative flex min-h-[3.45rem] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-semibold transition ${
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
                 aria-current={active ? "page" : undefined}
@@ -117,6 +130,11 @@ export function SiteNavClient({
                       : "h-8 w-8 group-hover:bg-muted"
                   }`}
                 >
+                  {item.href === "/messages" && unreadMessagesCount > 0 ? (
+                    <span className="absolute right-4 top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#e3a7a7] px-1 text-[10px] font-bold text-white shadow-sm">
+                      {unreadMessagesCount}
+                    </span>
+                  ) : null}
                   <Icon className="h-[19px] w-[19px]" />
                 </span>
                 <span>{item.label}</span>

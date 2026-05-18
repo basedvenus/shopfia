@@ -1,11 +1,13 @@
 "use server";
 
+import { createHash, randomBytes } from "crypto";
 import { hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { PartyCollaborationStatus, PartyCollaboratorRole, type Prisma } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email";
 import { parseImageCrop } from "@/lib/image-crop";
 import { securityLog } from "@/lib/security/audit-log";
 import { checkServerActionRateLimit } from "@/lib/security/request";
@@ -13,14 +15,12 @@ import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 import { friendlyValidationMessage } from "@/lib/validators/messages";
 
 const signUpSchema = z.object({
-  name: z.string().trim().max(80, "Name is a little too long.").optional(),
   email: z.string().trim().email("Enter a valid email address.").max(255, "Email is a little too long."),
   password: z.string().min(8, "Password must be at least 8 characters.")
 });
 
 export async function createPasswordAccountAction(formData: FormData) {
   const parsed = signUpSchema.safeParse({
-    name: formData.get("name") || undefined,
     email: formData.get("email"),
     password: formData.get("password")
   });
@@ -30,7 +30,6 @@ export async function createPasswordAccountAction(formData: FormData) {
       ok: false,
       error: friendlyValidationMessage(parsed.error.issues, {
         email: "Email",
-        name: "Name",
         password: "Password"
       }, "Check your account details.")
     };
@@ -67,23 +66,208 @@ export async function createPasswordAccountAction(formData: FormData) {
   await db.user.create({
     data: {
       email,
-      name: parsed.data.name || null,
       passwordHash
     }
   });
 
+  await sendWelcomeEmail(email);
+
   return { ok: true, email };
 }
 
-const profileSchema = z.object({
-  name: z.string().trim().max(80, "Name is a little too long.").optional(),
+const requiredOnboardingProfileSchema = z.object({
+  name: z.string().trim().min(1, "Display name is required.").max(80, "Display name is a little too long."),
   username: z
     .string()
     .trim()
     .toLowerCase()
-    .regex(/^[a-z0-9._-]{3,30}$/, "Use 3-30 letters, numbers, dots, dashes, or underscores.")
-    .optional()
-    .or(z.literal("")),
+    .transform((value) => value.replace(/^@+/, ""))
+    .pipe(
+      z
+        .string()
+        .min(3, "Username must be at least 3 characters.")
+        .max(30, "Username is a little too long.")
+        .regex(/^[a-z0-9._-]+$/, "Use letters, numbers, dots, dashes, or underscores.")
+    )
+});
+
+export async function completeRequiredProfileAction(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, error: "Sign in to create your ShopFia username." };
+  }
+
+  const rate = await checkServerActionRateLimit([
+    { key: "required-profile:ip:{ip}", limit: 30, intervalMs: 60_000 },
+    { key: `required-profile:user:${session.user.id}`, limit: 12, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    return { ok: false, error: "Please wait a minute before updating your profile again." };
+  }
+
+  const parsed = requiredOnboardingProfileSchema.safeParse({
+    name: formData.get("name"),
+    username: formData.get("username")
+  });
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: friendlyValidationMessage(parsed.error.issues, {
+        name: "Display name",
+        username: "Username"
+      }, "Check your profile details.")
+    };
+  }
+
+  try {
+    const updatedUser = await db.user.update({
+      where: { id: session.user.id },
+      data: {
+        name: parsed.data.name,
+        username: parsed.data.username,
+        imageCrop: parseImageCrop(formData.get("imageCrop")) ?? undefined
+      },
+      select: userProfileSelect
+    });
+
+    const profile = serializeUserProfile(updatedUser);
+    revalidatePath("/", "layout");
+    revalidatePath("/account");
+    revalidatePath(`/profiles/${profile.username}`);
+    return { ok: true, profile };
+  } catch {
+    return { ok: false, error: "That username is already taken. Try another one." };
+  }
+}
+
+const passwordResetRequestSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address.").max(255, "Email is a little too long.")
+});
+
+const passwordResetSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address.").max(255),
+  token: z.string().min(24, "Reset link is invalid."),
+  password: z.string().min(8, "Password must be at least 8 characters.")
+});
+
+function getBaseUrl() {
+  const configured =
+    process.env.NEXTAUTH_URL?.trim() ||
+    process.env.AUTH_URL?.trim() ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+
+  return configured || "http://localhost:3000";
+}
+
+function hashToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export async function requestPasswordResetAction(formData: FormData) {
+  const parsed = passwordResetRequestSchema.safeParse({
+    email: formData.get("email")
+  });
+
+  if (!parsed.success) {
+    return { ok: false, error: "Enter the email on your ShopFia account." };
+  }
+
+  const email = parsed.data.email.toLowerCase();
+  const rate = await checkServerActionRateLimit([
+    { key: "password-reset:ip:{ip}", limit: 8, intervalMs: 60_000 },
+    { key: `password-reset:email:${email}`, limit: 3, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    return { ok: false, error: "Please wait a minute before requesting another reset link." };
+  }
+
+  const user = await db.user.findUnique({
+    where: { email },
+    select: { id: true, email: true, passwordHash: true }
+  });
+
+  if (user?.email && user.passwordHash) {
+    const rawToken = randomBytes(32).toString("base64url");
+    const identifier = `password-reset:${email}`;
+    const token = hashToken(rawToken);
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
+
+    await db.verificationToken.deleteMany({ where: { identifier } });
+    await db.verificationToken.create({
+      data: { expires, identifier, token }
+    });
+
+    const resetUrl = `${getBaseUrl()}/account/reset-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(rawToken)}`;
+    await sendPasswordResetEmail(email, resetUrl);
+    securityLog("password_reset_requested", { userId: user.id });
+  }
+
+  return {
+    ok: true,
+    message: "If an account exists for that email, a reset link is on its way."
+  };
+}
+
+export async function resetPasswordAction(formData: FormData) {
+  const parsed = passwordResetSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+    token: formData.get("token")
+  });
+
+  if (!parsed.success) {
+    return { ok: false, error: "That reset link or password is invalid." };
+  }
+
+  const email = parsed.data.email.toLowerCase();
+  const identifier = `password-reset:${email}`;
+  const token = hashToken(parsed.data.token);
+  const resetRecord = await db.verificationToken.findUnique({
+    where: {
+      identifier_token: {
+        identifier,
+        token
+      }
+    }
+  });
+
+  if (!resetRecord || resetRecord.expires < new Date()) {
+    if (resetRecord) {
+      await db.verificationToken.delete({ where: { identifier_token: { identifier, token } } });
+    }
+    return { ok: false, error: "This reset link has expired. Request a fresh one." };
+  }
+
+  const passwordHash = await hash(parsed.data.password, 12);
+  await db.$transaction([
+    db.user.update({
+      where: { email },
+      data: { passwordHash }
+    }),
+    db.verificationToken.delete({
+      where: { identifier_token: { identifier, token } }
+    })
+  ]);
+
+  securityLog("password_reset_completed", { email });
+  return { ok: true, message: "Password updated. You can sign in with your new password." };
+}
+
+const profileSchema = z.object({
+  name: z.string().trim().min(1, "Display name is required.").max(80, "Name is a little too long."),
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .transform((value) => value.replace(/^@+/, ""))
+    .pipe(
+      z
+        .string()
+        .min(3, "Username must be at least 3 characters.")
+        .max(30, "Username is a little too long.")
+        .regex(/^[a-z0-9._-]+$/, "Use letters, numbers, dots, dashes, or underscores.")
+    ),
   bio: z.string().trim().max(280, "Bio is a little too long. Keep it under 280 characters.").optional(),
   instagramUrl: z.string().trim().url("Enter a valid Instagram link.").optional().or(z.literal("")),
   tiktokUrl: z.string().trim().url("Enter a valid TikTok link.").optional().or(z.literal(""))
@@ -105,7 +289,7 @@ export async function updateAccountProfileAction(formData: FormData) {
 
   const parsed = profileSchema.safeParse({
     name: formData.get("name") || undefined,
-    username: formData.get("username") || undefined,
+    username: formData.get("username"),
     bio: formData.get("bio") || undefined,
     instagramUrl: formData.get("instagramUrl") || undefined,
     tiktokUrl: formData.get("tiktokUrl") || undefined
@@ -129,7 +313,7 @@ export async function updateAccountProfileAction(formData: FormData) {
       where: { id: session.user.id },
       data: {
         name: parsed.data.name || null,
-        username: parsed.data.username || null,
+        username: parsed.data.username,
         bio: parsed.data.bio || null,
         instagramUrl: parsed.data.instagramUrl || null,
         tiktokUrl: parsed.data.tiktokUrl || null,

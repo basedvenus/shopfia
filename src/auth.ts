@@ -9,6 +9,7 @@ import { compare } from "bcryptjs";
 import { db } from "@/lib/db";
 import { authProviderConfig } from "@/lib/auth/provider-config";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { sendWelcomeEmail } from "@/lib/email";
 import { securityLog } from "@/lib/security/audit-log";
 import { getSafeProfileImage } from "@/lib/profile-image";
 
@@ -128,6 +129,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.username = freshUser?.username ?? token.username ?? null;
       }
       return session;
+    }
+  },
+  events: {
+    async createUser({ user }) {
+      if (user.email) {
+        await sendWelcomeEmail(user.email);
+      }
     }
   },
   pages: {

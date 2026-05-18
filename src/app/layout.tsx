@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { auth } from "@/auth";
 import { ProfileProvider } from "@/components/account/profile-provider";
+import { RequiredProfileGate } from "@/components/account/required-profile-gate";
 import { SiteNav } from "@/components/layout/site-nav";
 import { db } from "@/lib/db";
 import {
@@ -75,6 +76,7 @@ export default async function RootLayout({
     <html lang="en">
       <body>
         <ProfileProvider initialProfile={initialProfile}>
+          <RequiredProfileGate />
           <SiteNav />
           <main className="container py-6 pb-28 md:pb-6">{children}</main>
         </ProfileProvider>

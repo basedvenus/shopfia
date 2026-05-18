@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { auth } from "@/auth";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { sendNewInquiryEmail } from "@/lib/email";
 import { securityLog } from "@/lib/security/audit-log";
 import { checkServerActionRateLimit } from "@/lib/security/request";
 import { publicInquirySchema } from "@/lib/validators/inquiry";
@@ -63,7 +64,7 @@ export async function createPublicInquiryAction(formData: FormData) {
 
   const vendor = await db.vendorProfile.findUnique({
     where: { id: parsed.vendorProfileId },
-    select: { id: true, slug: true, name: true, userId: true }
+    select: { id: true, slug: true, name: true, userId: true, user: { select: { email: true } } }
   });
   if (!vendor) {
     return { success: false, error: "Vendor not found." };
@@ -114,18 +115,6 @@ export async function createPublicInquiryAction(formData: FormData) {
 
   const now = new Date();
   const eventLocation = parsed.formattedAddress || parsed.eventLocation || null;
-  const firstMessage = buildInquiryMessage({
-    budgetDollars: parsed.budgetDollars,
-    eventDate: parsed.eventDate,
-    eventLocation,
-    guestCount: parsed.guestCount,
-    listingTitle,
-    message: parsed.message,
-    name: parsed.name,
-    phone: parsed.phone,
-    email: parsed.email
-  });
-
   const result = await db.$transaction(async (tx) => {
     const conversation = await tx.conversation.upsert({
       where: {
@@ -180,7 +169,7 @@ export async function createPublicInquiryAction(formData: FormData) {
       data: {
         conversationId: conversation.id,
         senderId: session.user.id,
-        body: firstMessage,
+        body: `INQUIRY_CARD:${inquiry.id}`,
         attachments: parsed.inspirationUrls,
         readAt: null
       }
@@ -199,11 +188,33 @@ export async function createPublicInquiryAction(formData: FormData) {
     revalidatePath(`/offering/${offeringId}`);
   }
 
+  if (vendor.user.email) {
+    await sendNewInquiryEmail({
+      budgetCents: parsed.budgetDollars != null ? Math.round(parsed.budgetDollars * 100) : null,
+      buyerName: parsed.name,
+      eventDate: parsed.eventDate ? new Date(parsed.eventDate) : null,
+      eventLocation: parsed.locationCity && parsed.locationState
+        ? `${parsed.locationCity}, ${parsed.locationState}`
+        : parsed.eventLocation,
+      inquiryUrl: `${getBaseUrl()}/messages?conversationId=${result.conversationId}`,
+      to: vendor.user.email
+    });
+  }
+
   return {
     success: true,
     conversationId: result.conversationId,
     inquiryId: result.inquiryId
   };
+}
+
+function getBaseUrl() {
+  const configured =
+    process.env.NEXTAUTH_URL?.trim() ||
+    process.env.AUTH_URL?.trim() ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+
+  return configured || "http://localhost:3000";
 }
 
 function optionalFormValue(value: FormDataEntryValue | null) {
@@ -226,41 +237,4 @@ function getInquiryValidationMessage(issues: { path: (string | number)[]; messag
     phone: "Phone number",
     vendorProfileId: "Vendor"
   }, "Check your inquiry details.");
-}
-
-function buildInquiryMessage({
-  budgetDollars,
-  email,
-  eventDate,
-  eventLocation,
-  guestCount,
-  listingTitle,
-  message,
-  name,
-  phone
-}: {
-  budgetDollars?: number;
-  email?: string;
-  eventDate?: string;
-  eventLocation: string | null;
-  guestCount?: number;
-  listingTitle: string | null;
-  message: string;
-  name: string;
-  phone?: string;
-}) {
-  return [
-    listingTitle ? `Inquiry for ${listingTitle}` : "New inquiry",
-    `From: ${name}`,
-    email ? `Email: ${email}` : null,
-    phone ? `Phone: ${phone}` : null,
-    eventDate ? `Event date: ${eventDate}` : null,
-    eventLocation ? `Event location: ${eventLocation}` : null,
-    guestCount ? `Guest count: ${guestCount}` : null,
-    budgetDollars != null ? `Budget: $${budgetDollars}` : null,
-    "",
-    message
-  ]
-    .filter((line): line is string => line != null)
-    .join("\n");
 }

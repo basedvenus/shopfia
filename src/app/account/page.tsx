@@ -75,6 +75,10 @@ export default async function AccountPage() {
     })
   ]);
 
+  if (!accountUser?.username || !accountUser.name) {
+    redirect("/account/setup");
+  }
+
   if (isUnsafeProfileImage(accountUser?.image)) {
     await db.user.update({
       where: { id: session.user.id },
