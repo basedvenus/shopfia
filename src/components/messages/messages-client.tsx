@@ -167,6 +167,8 @@ export function MessagesClient({
     }
   }, [currentUserId, payload, selectConversation]);
 
+  const selectedViewerIsVendor = selectedConversation?.vendorId === currentUserId;
+
   return (
     <div className="mx-auto flex h-[calc(100dvh-5.25rem)] max-w-[1500px] flex-col overflow-hidden rounded-[1.25rem] border border-white/75 bg-[#fffaf6] shadow-[0_24px_72px_rgba(82,55,55,0.10)] md:h-[calc(100vh-7.25rem)] md:min-h-[620px] md:rounded-[1.5rem]">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#eadbd3] bg-[linear-gradient(135deg,#fffdf9,#ffffff_54%,#f6efe7)] px-3 py-2.5 md:px-5 md:py-3">
@@ -189,10 +191,20 @@ export function MessagesClient({
             </h1>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2 rounded-full bg-white px-2.5 py-1.5 text-xs font-semibold text-[#2f2626] shadow-sm md:px-3 md:py-2 md:text-sm">
-          <Bell className="h-4 w-4 text-[#c5837f]" />
-          {payload.unreadTotal > 0 ? `${payload.unreadTotal} unread` : "Caught up"}
-        </div>
+        {selectedConversation && selectedViewerIsVendor ? (
+          <Link
+            href="/vendor/dashboard#requests"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#2f2626] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#4b403c] md:px-4 md:text-sm"
+          >
+            <ReceiptText className="h-3.5 w-3.5" />
+            Build Quote
+          </Link>
+        ) : (
+          <div className="flex shrink-0 items-center gap-2 rounded-full bg-white px-2.5 py-1.5 text-xs font-semibold text-[#2f2626] shadow-sm md:px-3 md:py-2 md:text-sm">
+            <Bell className="h-4 w-4 text-[#c5837f]" />
+            {payload.unreadTotal > 0 ? `${payload.unreadTotal} unread` : "Caught up"}
+          </div>
+        )}
       </header>
 
       <div className="relative grid min-h-0 flex-1 md:grid-cols-[minmax(270px,23%)_1fr]">
@@ -322,7 +334,6 @@ function InboxRow({
   const viewerIsVendor = conversation.vendorId === currentUserId;
   const identity = getConversationIdentity(conversation, viewerIsVendor);
   const latestInquiry = conversation.inquiries.at(-1) ?? null;
-  const latestQuote = conversation.quoteRequests.find((quoteRequest) => quoteRequest.quote)?.quote ?? null;
   const latestMessage = [...conversation.messages]
     .reverse()
     .find((message) => !getInquiryMarkerId(message.body) && !isLegacyInquiryMessage(message.body));
@@ -397,9 +408,6 @@ function ConversationThread({
   onOpenInbox: () => void;
 }) {
   const viewerIsVendor = conversation.vendorId === currentUserId;
-  const identity = getConversationIdentity(conversation, viewerIsVendor);
-  const latestInquiry = conversation.inquiries.at(-1) ?? null;
-  const latestQuote = conversation.quoteRequests.find((quoteRequest) => quoteRequest.quote)?.quote ?? null;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -441,62 +449,23 @@ function ConversationThread({
 
   return (
     <section className="flex min-h-0 flex-col bg-white">
-      <div className="shrink-0 border-b border-[#eadbd3] bg-[linear-gradient(135deg,#fffdf9,#ffffff_62%,#f6efe7)] px-3 py-2 md:px-5 md:py-3">
-        <div className="flex items-center gap-3">
+      <div className="shrink-0 border-b border-[#eadbd3] bg-[linear-gradient(135deg,#fffdf9,#ffffff_62%,#f6efe7)] px-2.5 py-2 md:px-4">
+        <div className="flex items-stretch gap-2">
           <button
             type="button"
             onClick={onOpenInbox}
-            className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#8a5c58] shadow-sm md:hidden"
+            className="grid w-9 shrink-0 place-items-center rounded-[1rem] bg-white text-[#8a5c58] shadow-sm md:hidden"
             aria-label="Open inbox"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <Link
-            href={viewerIsVendor ? `/profiles/${conversation.buyer.username ?? ""}` : `/vendor/profile/${conversation.vendorProfile.slug}`}
-            className={`flex min-w-0 flex-1 items-center gap-3 rounded-[1.25rem] transition hover:bg-white/70 ${viewerIsVendor && !conversation.buyer.username ? "pointer-events-none" : ""}`}
-          >
-            <IdentityAvatar image={identity.image} label={identity.name} size="lg" />
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <h2 className="truncate text-base font-bold text-[#2f2626] md:text-xl">
-                  {identity.name}
-                </h2>
-                <span className="hidden rounded-full bg-white/80 px-2.5 py-1 text-xs font-semibold text-[#9b6b65] sm:inline-flex">
-                  {identity.kind}
-                </span>
-              </div>
-              <p className="truncate text-[11px] text-muted-foreground md:text-sm">
-                {viewerIsVendor
-                  ? "Replying through your vendor shop"
-                  : "Marketplace conversation with this storefront"}
-              </p>
-            </div>
-          </Link>
-          {viewerIsVendor ? (
-            <Link
-              href="/vendor/dashboard#requests"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#2f2626] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#4b403c]"
-            >
-              <ReceiptText className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Build Quote</span>
-              <span className="sm:hidden">Quote</span>
-            </Link>
-          ) : null}
+          <ContextCard conversation={conversation} />
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-[#8f5f5b] md:text-xs">
-          <span className="rounded-full bg-white/85 px-2.5 py-1 shadow-sm">
-            {latestInquiry ? "Inquiry received" : "Conversation"}
-          </span>
-          <span className="rounded-full bg-white/85 px-2.5 py-1 shadow-sm">
-            {latestQuote ? `Quote ${formatBudget(latestQuote.amountCents)}` : `Quote ${viewerIsVendor ? "ready to build" : "pending"}`}
-          </span>
-        </div>
-        <ContextCard conversation={conversation} />
       </div>
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-[linear-gradient(180deg,#fffaf6,#ffffff_34%)] px-2.5 py-3 md:space-y-3 md:px-5 md:py-4"
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[linear-gradient(180deg,#fffaf6,#ffffff_34%)] px-2.5 py-2.5 md:space-y-2.5 md:px-4 md:py-3"
       >
         <ConversationItems
           conversation={conversation}
@@ -505,7 +474,7 @@ function ConversationThread({
         />
       </div>
 
-      <div className="shrink-0 border-t border-[#f0dfda] bg-white px-2.5 py-2 md:px-5 md:py-3">
+      <div className="shrink-0 border-t border-[#f0dfda] bg-white px-2.5 py-2 md:px-4">
         <div className="rounded-[1.1rem] border border-[#eadbd7] bg-[#fffdfa] p-1.5 shadow-sm md:rounded-[1.35rem] md:p-2">
           <Textarea
             name="body"
@@ -577,6 +546,11 @@ function ConversationItems({
             key={message.id}
             body={message.body}
             createdAt={message.createdAt}
+            image={
+              message.senderId === conversation.buyerId
+                ? conversation.buyer.image
+                : conversation.vendorProfile.logoUrl ?? conversation.vendorProfile.coverPhoto
+            }
             isMine={message.senderId === currentUserId}
             label={message.senderId === conversation.buyerId ? conversation.buyer.name ?? "Buyer" : conversation.vendorProfile.name}
           />
@@ -622,9 +596,9 @@ function ContextCard({ conversation }: { conversation: SerializedMessageConversa
   return (
     <Link
       href={href}
-      className="mt-3 hidden gap-2 rounded-[1.1rem] border border-white/80 bg-white/85 p-2 shadow-sm transition hover:shadow-[0_12px_28px_rgba(82,55,55,0.10)] sm:grid sm:grid-cols-[58px_1fr_auto]"
+      className="grid min-w-0 flex-1 gap-2 rounded-[1rem] border border-white/80 bg-white/85 p-2 shadow-sm transition hover:shadow-[0_12px_28px_rgba(82,55,55,0.10)] sm:grid-cols-[48px_1fr_auto]"
     >
-      <div className="relative hidden h-14 overflow-hidden rounded-[0.9rem] bg-[#f7e6dc] sm:block">
+      <div className="relative hidden h-12 overflow-hidden rounded-[0.8rem] bg-[#f7e6dc] sm:block">
         {image ? (
           <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${image})` }} />
         ) : (
@@ -635,8 +609,8 @@ function ContextCard({ conversation }: { conversation: SerializedMessageConversa
       </div>
       <div className="min-w-0">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9b6b65]">Regarding</p>
-        <h3 className="truncate text-sm font-bold text-[#2f2626] md:text-base">{title}</h3>
-        <p className="hidden truncate text-xs text-muted-foreground sm:block">{description}</p>
+        <h3 className="truncate text-sm font-bold text-[#2f2626]">{title}</h3>
+        <p className="hidden truncate text-[11px] text-muted-foreground sm:block">{description}</p>
         {price ? <p className="mt-0.5 text-xs font-semibold text-[#9b6b65]">From {formatBudget(price)}</p> : null}
       </div>
       <div className="hidden items-center text-muted-foreground sm:flex">
@@ -946,18 +920,21 @@ function BriefDetail({
 function ChatBubble({
   body,
   createdAt,
+  image,
   isMine,
   label
 }: {
   body: string;
   createdAt: string;
+  image?: string | null;
   isMine: boolean;
   label: string;
 }) {
   return (
-    <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+    <div className={`flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"}`}>
+      {!isMine ? <IdentityAvatar image={image} label={label} size="sm" /> : null}
       <div
-        className={`max-w-[76%] rounded-[1.25rem] border px-3 py-2 text-sm shadow-sm md:max-w-[64%] ${
+        className={`max-w-[76%] rounded-[1.15rem] border px-3 py-2 text-sm shadow-sm md:max-w-[64%] ${
           isMine ? "border-[#e7cfc8] bg-[#fff5f2]" : "border-white/80 bg-white"
         }`}
       >
@@ -966,6 +943,7 @@ function ChatBubble({
         </div>
         <div className="whitespace-pre-wrap leading-6 text-[#3d3331]">{body}</div>
       </div>
+      {isMine ? <IdentityAvatar image={image} label={label} size="sm" /> : null}
     </div>
   );
 }
@@ -977,10 +955,15 @@ function IdentityAvatar({
 }: {
   image?: string | null;
   label: string;
-  size: "md" | "lg";
+  size: "sm" | "md" | "lg";
 }) {
   const initials = getInitials(label);
-  const dimensions = size === "lg" ? "h-12 w-12 text-base" : "h-11 w-11 text-sm";
+  const dimensions =
+    size === "lg"
+      ? "h-12 w-12 text-base"
+      : size === "md"
+        ? "h-11 w-11 text-sm"
+        : "h-7 w-7 text-[10px]";
 
   return (
     <div className={`${dimensions} relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-[linear-gradient(135deg,#f4cfca,#f9e8dd,#e4efe8)] font-serif font-semibold text-[#8a5c58] shadow-sm ring-2 ring-white`}>
