@@ -1184,56 +1184,91 @@ function QuotePaymentForm({
   const [ready, setReady] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+  const [loaderStarted, setLoaderStarted] = useState(false);
 
   useEffect(() => {
     let mounted = true;
     let paymentElement: StripePaymentElement | null = null;
+    const timeout = window.setTimeout(() => {
+      if (mounted) {
+        setError("Stripe is taking longer than expected to load. Please retry the secure payment form.");
+      }
+    }, 12000);
 
     async function mountPaymentElement() {
       setError(null);
       setReady(false);
+      setLoaderStarted(false);
 
       if (!stripePromise) {
         setError("Stripe publishable key is missing.");
+        window.clearTimeout(timeout);
+        return;
+      }
+      if (!clientSecret.includes("_secret_")) {
+        setError("Stripe payment details are incomplete. Please reopen this quote and try again.");
+        window.clearTimeout(timeout);
         return;
       }
 
-      const stripe = await stripePromise;
-      if (!stripe || !paymentElementRef.current || !mounted) {
-        setError("Stripe could not load. Please refresh and try again.");
-        return;
-      }
+      try {
+        const stripe = await stripePromise;
+        if (!stripe || !paymentElementRef.current || !mounted) {
+          setError("Stripe could not load. Please refresh and try again.");
+          window.clearTimeout(timeout);
+          return;
+        }
 
-      const elements = stripe.elements({
-        appearance: {
-          theme: "stripe",
-          variables: {
-            borderRadius: "16px",
-            colorPrimary: "#8fb384",
-            colorText: "#2f2626",
-            fontFamily: "Inter, system-ui, sans-serif"
-          }
-        },
-        clientSecret
-      });
-      paymentElement = elements.create("payment", {
-        layout: "tabs"
-      });
-      paymentElement.on("ready", () => mounted && setReady(true));
-      paymentElement.mount(paymentElementRef.current);
-      stripeRef.current = stripe;
-      elementsRef.current = elements;
+        const elements = stripe.elements({
+          appearance: {
+            theme: "stripe",
+            variables: {
+              borderRadius: "14px",
+              colorPrimary: "#8fb384",
+              colorText: "#2f2626",
+              fontFamily: "Inter, system-ui, sans-serif"
+            }
+          },
+          clientSecret
+        });
+        paymentElement = elements.create("payment", {
+          business: { name: "ShopFia" },
+          terms: { card: "never" }
+        });
+        paymentElement.on("loaderstart", () => mounted && setLoaderStarted(true));
+        paymentElement.on("ready", () => {
+          if (!mounted) return;
+          window.clearTimeout(timeout);
+          setReady(true);
+          setError(null);
+        });
+        paymentElement.on("loaderror", (event) => {
+          if (!mounted) return;
+          window.clearTimeout(timeout);
+          setError(event.error.message ?? "Stripe could not load the payment form. Please retry.");
+        });
+        paymentElement.mount(paymentElementRef.current);
+        stripeRef.current = stripe;
+        elementsRef.current = elements;
+      } catch (mountError) {
+        window.clearTimeout(timeout);
+        if (mounted) {
+          setError(mountError instanceof Error ? mountError.message : "Stripe could not load the payment form.");
+        }
+      }
     }
 
     void mountPaymentElement();
 
     return () => {
       mounted = false;
+      window.clearTimeout(timeout);
       paymentElement?.unmount();
       stripeRef.current = null;
       elementsRef.current = null;
     };
-  }, [clientSecret]);
+  }, [clientSecret, retryKey]);
 
   async function submitPayment() {
     const stripe = stripeRef.current;
@@ -1270,8 +1305,24 @@ function QuotePaymentForm({
           Order {orderId.slice(-6).toUpperCase()}
         </span>
       </div>
-      <div ref={paymentElementRef} className="mt-3 rounded-[1rem] bg-white p-3 shadow-sm" />
+      <div className="relative mt-3 min-h-[150px] overflow-hidden rounded-[1rem] bg-white p-3 shadow-sm">
+        {!ready ? (
+          <div className="absolute inset-3 grid place-items-center rounded-[0.85rem] bg-[#fffdfa] text-center text-sm font-semibold text-[#6f8469]">
+            {loaderStarted ? "Preparing payment fields..." : "Connecting to Stripe..."}
+          </div>
+        ) : null}
+        <div ref={paymentElementRef} className={ready ? "opacity-100" : "opacity-0"} />
+      </div>
       {error ? <p className="mt-2 text-sm font-semibold text-red-600">{error}</p> : null}
+      {error && !ready ? (
+        <button
+          type="button"
+          onClick={() => setRetryKey((current) => current + 1)}
+          className="mt-2 rounded-full border border-[#d7e5d0] bg-white px-3 py-1.5 text-xs font-bold text-[#6f8469] transition hover:bg-[#f7fbf4]"
+        >
+          Retry secure payment form
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={() => void submitPayment()}
