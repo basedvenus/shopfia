@@ -183,7 +183,6 @@ export async function acceptQuoteAndCreatePaymentIntentAction(formData: FormData
   if (quote.quoteRequest.buyerId !== session.user.id && session.user.role !== UserRole.ADMIN) {
     throw new Error("Forbidden");
   }
-  if (!canAcceptQuote(quote)) throw new Error("Quote is not payable");
 
   const existingOrder = await db.order.findFirst({
     where: {
@@ -204,6 +203,8 @@ export async function acceptQuoteAndCreatePaymentIntentAction(formData: FormData
     }
     throw new Error("Quote already has an active order");
   }
+
+  if (!canAcceptQuote(quote)) throw new Error("Quote is not payable");
 
   const amountCents = quotePayableAmount(quote, parsed.payMode);
   if (
