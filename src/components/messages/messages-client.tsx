@@ -348,6 +348,7 @@ function ConversationThread({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState("");
   const [quoteBuilderOpen, setQuoteBuilderOpen] = useState(false);
+  const [reviewQuoteRequest, setReviewQuoteRequest] = useState<QuoteRequestItem | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messageCount = conversation.messages.length + conversation.inquiries.length;
@@ -420,6 +421,7 @@ function ConversationThread({
           conversation={conversation}
           currentUserId={currentUserId}
           onBuildQuote={() => setQuoteBuilderOpen(true)}
+          onReviewQuote={setReviewQuoteRequest}
           viewerIsVendor={viewerIsVendor}
         />
       </div>
@@ -468,6 +470,17 @@ function ConversationThread({
           }}
         />
       ) : null}
+      {reviewQuoteRequest?.quote ? (
+        <QuoteReviewModal
+          conversation={conversation}
+          onClose={() => setReviewQuoteRequest(null)}
+          onRequestedChanges={() => {
+            setReviewQuoteRequest(null);
+            onAfterSend();
+          }}
+          quoteRequest={reviewQuoteRequest}
+        />
+      ) : null}
     </section>
   );
 }
@@ -476,11 +489,13 @@ function ConversationItems({
   conversation,
   currentUserId,
   onBuildQuote,
+  onReviewQuote,
   viewerIsVendor
 }: {
   conversation: SerializedMessageConversation;
   currentUserId: string;
   onBuildQuote: () => void;
+  onReviewQuote: (quoteRequest: QuoteRequestItem) => void;
   viewerIsVendor: boolean;
 }) {
   const inquiriesById = new Map(conversation.inquiries.map((inquiry) => [inquiry.id, inquiry]));
@@ -528,6 +543,7 @@ function ConversationItems({
           key={quoteRequest.id}
           quoteRequest={quoteRequest}
           onBuildQuote={onBuildQuote}
+          onReviewQuote={onReviewQuote}
           viewerIsVendor={viewerIsVendor}
         />
       ))}
@@ -786,10 +802,12 @@ function FullInquiryBrief({
 
 function QuoteWorkflowCard({
   onBuildQuote,
+  onReviewQuote,
   quoteRequest,
   viewerIsVendor
 }: {
   onBuildQuote: () => void;
+  onReviewQuote: (quoteRequest: QuoteRequestItem) => void;
   quoteRequest: QuoteRequestItem;
   viewerIsVendor: boolean;
 }) {
@@ -836,14 +854,23 @@ function QuoteWorkflowCard({
               ))}
             </div>
           ) : null}
-          {quote ? (
+          {quote && viewerIsVendor ? (
             <Link
               href={href}
               className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
             >
-              {viewerIsVendor ? "Manage Quote" : "Review Quote"}
+              Manage Quote
               <ChevronRight className="h-3.5 w-3.5" />
             </Link>
+          ) : quote ? (
+            <button
+              type="button"
+              onClick={() => onReviewQuote(quoteRequest)}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
+            >
+              Review Quote
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
           ) : viewerIsVendor ? (
             <button
               type="button"
@@ -861,6 +888,235 @@ function QuoteWorkflowCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function QuoteReviewModal({
+  conversation,
+  onClose,
+  onRequestedChanges,
+  quoteRequest
+}: {
+  conversation: SerializedMessageConversation;
+  onClose: () => void;
+  onRequestedChanges: () => void;
+  quoteRequest: QuoteRequestItem;
+}) {
+  const quote = quoteRequest.quote;
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isRequestingChanges, setIsRequestingChanges] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [paymentPrepared, setPaymentPrepared] = useState<{ orderId: string } | null>(null);
+
+  if (!quote) return null;
+
+  const reviewedQuote = quote;
+  const quoteDetails = parseQuoteDetails(reviewedQuote.lineItemsJson);
+  const title = quoteDetails.title ?? quoteRequest.offering?.title ?? "Custom Event Quote";
+  const eventDate = quoteRequest.eventDate ? formatEventDate(quoteRequest.eventDate) : "Date TBD";
+  const eventLocation = formatQuoteRequestLocation(quoteRequest.eventLocation);
+  const subtotalCents = quoteDetails.lineItems.reduce(
+    (sum, item) => sum + Math.round(item.quantity * item.unitAmountCents),
+    0
+  );
+  const requiredDepositCents = reviewedQuote.depositAmountCents ?? reviewedQuote.amountCents;
+  const paymentTerms =
+    reviewedQuote.depositAmountCents && reviewedQuote.depositAmountCents < reviewedQuote.amountCents
+      ? `${formatDepositPercent(reviewedQuote.depositAmountCents, reviewedQuote.amountCents)} deposit required to secure booking`
+      : "Full payment required to secure booking";
+  const image =
+    conversation.offering?.photos[0] ??
+    conversation.listing?.offering?.photos[0] ??
+    conversation.vendorProfile.coverPhoto ??
+    conversation.vendorProfile.logoUrl;
+
+  async function acceptQuote() {
+    if (isAccepting) return;
+    setError(null);
+    setIsAccepting(true);
+    const response = await fetch("/api/messages/quotes/accept", {
+      body: JSON.stringify({ quoteId: reviewedQuote.id }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST"
+    });
+    setIsAccepting(false);
+
+    const result = (await response.json().catch(() => null)) as
+      | { error?: string; orderId?: string }
+      | null;
+    if (!response.ok || !result?.orderId) {
+      setError(result?.error ?? "Could not prepare payment yet.");
+      return;
+    }
+
+    setPaymentPrepared({ orderId: result.orderId });
+  }
+
+  async function requestChanges() {
+    if (isRequestingChanges) return;
+    setError(null);
+    setIsRequestingChanges(true);
+    const response = await fetch("/api/messages/quotes/request-changes", {
+      body: JSON.stringify({ conversationId: conversation.id, quoteId: reviewedQuote.id }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST"
+    });
+    setIsRequestingChanges(false);
+
+    if (!response.ok) {
+      const result = (await response.json().catch(() => null)) as { error?: string } | null;
+      setError(result?.error ?? "Could not send the revision request.");
+      return;
+    }
+
+    onRequestedChanges();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-[#2f2626]/25 p-3 backdrop-blur-sm">
+      <div className="mx-auto flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_70px_rgba(47,38,38,0.24)] md:h-auto md:max-h-[90vh]">
+        <div className="relative shrink-0 overflow-hidden border-b border-[#eadbd3] bg-[#fffaf6]">
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,#fffaf6,#ffffff_58%,#eef5eb)]" />
+          <div className="relative flex items-start gap-3 p-4">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[1.1rem] bg-[#f7e6dc] shadow-sm">
+              {image ? (
+                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${image})` }} />
+              ) : (
+                <div className="grid h-full place-items-center text-[#9b6b65]">
+                  <ReceiptText className="h-6 w-6" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#9b6b65]">
+                Proposal from {conversation.vendorProfile.name}
+              </p>
+              <h2 className="mt-1 text-xl font-bold leading-tight text-[#2f2626]">{title}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {eventDate} • {eventLocation}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-[#8a5c58] shadow-sm"
+              aria-label="Close quote review"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <div className="grid gap-3">
+            <div className="rounded-[1.15rem] border border-[#eadbd3] bg-[#fffdfa] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#9b6b65]">Payment terms</p>
+                  <p className="mt-1 text-sm font-bold text-[#2f2626]">{paymentTerms}</p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#6f8469] shadow-sm">
+                  {formatBudget(requiredDepositCents)}
+                </span>
+              </div>
+            </div>
+
+            {quoteDetails.lineItems.length > 0 ? (
+              <div className="rounded-[1.15rem] border border-[#eadbd3] bg-white p-3">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#9b6b65]">Included</p>
+                <div className="mt-2 grid gap-2">
+                  {quoteDetails.lineItems.map((item, index) => (
+                    <div key={`${item.description}-${index}`} className="flex items-start justify-between gap-3 text-sm">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-[#2f2626]">{item.description}</p>
+                        <p className="text-xs text-muted-foreground">Qty {item.quantity}</p>
+                      </div>
+                      <span className="shrink-0 font-bold text-[#2f2626]">
+                        {formatBudget(Math.round(item.quantity * item.unitAmountCents))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="rounded-[1.15rem] border border-[#eadbd3] bg-white p-3">
+              <div className="grid gap-2 text-sm">
+                {subtotalCents > 0 ? (
+                  <QuoteReviewTotalRow label="Subtotal" value={formatBudget(subtotalCents)} />
+                ) : null}
+                {quoteDetails.setupFeeCents > 0 ? (
+                  <QuoteReviewTotalRow label="Setup fee" value={formatBudget(quoteDetails.setupFeeCents)} />
+                ) : null}
+                {quoteDetails.deliveryFeeCents > 0 ? (
+                  <QuoteReviewTotalRow label="Delivery fee" value={formatBudget(quoteDetails.deliveryFeeCents)} />
+                ) : null}
+                {quoteDetails.taxCents > 0 ? (
+                  <QuoteReviewTotalRow label="Taxes" value={formatBudget(quoteDetails.taxCents)} />
+                ) : null}
+                <div className="border-t border-[#f0dfda] pt-2">
+                  <QuoteReviewTotalRow label="Proposal total" value={formatBudget(reviewedQuote.amountCents)} strong />
+                </div>
+              </div>
+            </div>
+
+            {reviewedQuote.notes ? (
+              <div className="rounded-[1.15rem] border border-[#eadbd3] bg-[#fffdfa] p-3">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#9b6b65]">Note from vendor</p>
+                <p className="mt-2 text-sm leading-6 text-[#4b403c]">{reviewedQuote.notes}</p>
+              </div>
+            ) : null}
+
+            <p className="text-xs text-muted-foreground">
+              Expires {formatEventDate(reviewedQuote.expiresAt)}. Approval comes first; payment is the next secure step.
+            </p>
+
+            {paymentPrepared ? (
+              <div className="rounded-[1.15rem] border border-[#d7e5d0] bg-[#f5faf2] p-3 text-sm text-[#4f6548]">
+                Your proposal is approved and the secure payment step is ready. Order {paymentPrepared.orderId.slice(-6).toUpperCase()} has been created.
+              </div>
+            ) : null}
+            {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
+          </div>
+        </div>
+
+        <div className="grid shrink-0 gap-2 border-t border-[#eadbd3] bg-white p-3 sm:grid-cols-[1fr_auto]">
+          <button
+            type="button"
+            onClick={() => void requestChanges()}
+            disabled={isRequestingChanges || isAccepting || Boolean(paymentPrepared)}
+            className="rounded-full border border-[#eadbd3] bg-white px-4 py-2 text-sm font-bold text-[#8a5c58] transition hover:bg-[#fffaf6] disabled:opacity-50"
+          >
+            {isRequestingChanges ? "Sending..." : "Request Changes"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void acceptQuote()}
+            disabled={isAccepting || isRequestingChanges || Boolean(paymentPrepared)}
+            className="rounded-full bg-[#D7E5D0] px-4 py-2 text-sm font-bold text-[#fffaf6] shadow-[0_10px_22px_rgba(110,130,104,0.18)] transition hover:bg-[#C4D6BC] disabled:opacity-50"
+          >
+            {isAccepting ? "Preparing Payment..." : "Accept & Continue to Payment"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuoteReviewTotalRow({
+  label,
+  strong = false,
+  value
+}: {
+  label: string;
+  strong?: boolean;
+  value: string;
+}) {
+  return (
+    <div className={`flex items-center justify-between gap-3 ${strong ? "font-bold text-[#2f2626]" : "text-[#5f514e]"}`}>
+      <span>{label}</span>
+      <span>{value}</span>
+    </div>
   );
 }
 
@@ -1357,6 +1613,22 @@ function formatInboxLocation(location: string | null) {
   const state = parts[1]?.match(/[A-Z]{2}/)?.[0] ?? parts[1];
   if (/^san francisco$/i.test(city)) return "SF";
   return state ? `${city}, ${state}` : city;
+}
+
+function formatQuoteRequestLocation(location: string) {
+  const parts = location.split(",").map((part) => part.trim()).filter(Boolean);
+  if (parts.length >= 3) {
+    const city = parts[parts.length - 3];
+    const state = parts[parts.length - 2].match(/[A-Z]{2}/)?.[0];
+    if (city && state) return `${city}, ${state}`;
+  }
+  return formatInboxLocation(location) ?? location;
+}
+
+function formatDepositPercent(depositCents: number, totalCents: number) {
+  if (totalCents <= 0) return "Deposit";
+  const percent = Math.round((depositCents / totalCents) * 100);
+  return `${percent}%`;
 }
 
 function getInitials(label: string) {
