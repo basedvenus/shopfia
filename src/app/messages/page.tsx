@@ -323,12 +323,12 @@ function InboxCard({
   return (
     <Link
       href={`/messages?conversationId=${conversation.id}`}
-      className={`group relative block overflow-hidden rounded-[1.75rem] border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${
+      className={`group relative block overflow-hidden rounded-[1.75rem] border p-4 transition duration-200 before:absolute before:inset-x-6 before:bottom-0 before:h-6 before:rounded-full before:bg-[#8a5c58]/10 before:blur-2xl before:content-[''] hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(82,55,55,0.13)] ${
         isSelected
-          ? "border-[#d8b9ae] bg-[linear-gradient(135deg,#ffffff,#fffaf6)] ring-2 ring-[#eadbd3]"
+          ? "border-[#cfaa9e] bg-[linear-gradient(135deg,#ffffff_0%,#fffdf9_52%,#f8eee8_100%)] shadow-[0_22px_54px_rgba(82,55,55,0.15),inset_5px_0_0_#d8a39c]"
           : unreadCount > 0
-            ? "border-[#ead2cc] bg-[#fffaf6]"
-            : "border-white/80 bg-white/86"
+            ? "border-[#e3beb5] bg-[linear-gradient(135deg,#ffffff_0%,#fffaf6_100%)] shadow-[0_18px_44px_rgba(82,55,55,0.12)]"
+            : "border-[#eadfd8] bg-[linear-gradient(135deg,#ffffff_0%,#fffdf9_100%)] shadow-[0_16px_38px_rgba(82,55,55,0.09)]"
       }`}
     >
       {unreadCount > 0 ? (
@@ -337,7 +337,7 @@ function InboxCard({
           NEW
         </span>
       ) : null}
-      <div className="flex gap-4 pr-14">
+      <div className="relative flex gap-4 pr-14">
         <IdentityAvatar image={identity.image} label={identity.name} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -364,7 +364,9 @@ function InboxCard({
             {budget ? <span className="rounded-full bg-white px-2.5 py-1 font-semibold text-[#9b6b65]">{budget}</span> : null}
           </div>
         </div>
-        <ChevronRight className="mt-8 h-5 w-5 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5" />
+        <span className="mt-7 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#fffaf6] text-[#9b6b65] shadow-sm transition group-hover:translate-x-0.5 group-hover:bg-white">
+          <ChevronRight className="h-5 w-5" />
+        </span>
       </div>
     </Link>
   );
