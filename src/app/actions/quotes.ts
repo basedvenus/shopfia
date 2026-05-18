@@ -191,9 +191,17 @@ export async function acceptQuoteAndCreatePaymentIntentAction(formData: FormData
       buyerId: session.user.id,
       status: { in: ["awaiting_payment", "paid", "in_progress", "completed"] }
     },
-    select: { id: true, stripePaymentIntentId: true }
+    select: { id: true, status: true, stripePaymentIntentId: true }
   });
   if (existingOrder) {
+    if (existingOrder.status === "awaiting_payment" && existingOrder.stripePaymentIntentId) {
+      const stripe = getStripeServer();
+      const paymentIntent = await stripe.paymentIntents.retrieve(existingOrder.stripePaymentIntentId);
+      if (!paymentIntent.client_secret) {
+        throw new Error("Payment is not ready yet. Please try again.");
+      }
+      return { clientSecret: paymentIntent.client_secret, orderId: existingOrder.id };
+    }
     throw new Error("Quote already has an active order");
   }
 

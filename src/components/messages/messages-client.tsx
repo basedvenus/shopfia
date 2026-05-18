@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { loadStripe, type Stripe, type StripeElements, type StripePaymentElement } from "@stripe/stripe-js";
 import {
   ArrowLeft,
   Banknote,
@@ -43,6 +44,10 @@ type InquiryItem = SerializedMessageConversation["inquiries"][number];
 type QuoteRequestItem = SerializedMessageConversation["quoteRequests"][number];
 type QuoteLineForm = { description: string; quantity: number | string; unitAmount: string };
 type QuoteLineItem = { description: string; quantity: number; unitAmountCents: number };
+type PreparedPayment = { clientSecret: string; orderId: string };
+
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 export function MessagesClient({
   currentUserId,
@@ -941,7 +946,8 @@ function QuoteReviewModal({
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRequestingChanges, setIsRequestingChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentPrepared, setPaymentPrepared] = useState<{ orderId: string } | null>(null);
+  const [paymentPrepared, setPaymentPrepared] = useState<PreparedPayment | null>(null);
+  const [paymentComplete, setPaymentComplete] = useState(false);
 
   if (!quote) return null;
 
@@ -977,14 +983,14 @@ function QuoteReviewModal({
     setIsAccepting(false);
 
     const result = (await response.json().catch(() => null)) as
-      | { error?: string; orderId?: string }
+      | { clientSecret?: string; error?: string; orderId?: string }
       | null;
-    if (!response.ok || !result?.orderId) {
+    if (!response.ok || !result?.orderId || !result.clientSecret) {
       setError(result?.error ?? "Could not prepare payment yet.");
       return;
     }
 
-    setPaymentPrepared({ orderId: result.orderId });
+    setPaymentPrepared({ clientSecret: result.clientSecret, orderId: result.orderId });
   }
 
   async function requestChanges() {
@@ -1107,8 +1113,17 @@ function QuoteReviewModal({
             </p>
 
             {paymentPrepared ? (
-              <div className="rounded-[1.15rem] border border-[#d7e5d0] bg-[#f5faf2] p-3 text-sm text-[#4f6548]">
-                Your proposal is approved and the secure payment step is ready. Order {paymentPrepared.orderId.slice(-6).toUpperCase()} has been created.
+              <QuotePaymentForm
+                amountLabel={formatBudget(requiredDepositCents)}
+                clientSecret={paymentPrepared.clientSecret}
+                conversationId={conversation.id}
+                onPaymentComplete={() => setPaymentComplete(true)}
+                orderId={paymentPrepared.orderId}
+              />
+            ) : null}
+            {paymentComplete ? (
+              <div className="rounded-[1.15rem] border border-[#d7e5d0] bg-[#f5faf2] p-3 text-sm font-semibold text-[#4f6548]">
+                Payment received. Your booking is moving forward with {conversation.vendorProfile.name}.
               </div>
             ) : null}
             {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
@@ -1116,24 +1131,155 @@ function QuoteReviewModal({
         </div>
 
         <div className="grid shrink-0 gap-2 border-t border-[#eadbd3] bg-white p-3 sm:grid-cols-[1fr_auto]">
-          <button
-            type="button"
-            onClick={() => void requestChanges()}
-            disabled={isRequestingChanges || isAccepting || Boolean(paymentPrepared)}
-            className="rounded-full border border-[#eadbd3] bg-white px-4 py-2 text-sm font-bold text-[#8a5c58] transition hover:bg-[#fffaf6] disabled:opacity-50"
-          >
-            {isRequestingChanges ? "Sending..." : "Request Changes"}
-          </button>
-          <button
-            type="button"
-            onClick={() => void acceptQuote()}
-            disabled={isAccepting || isRequestingChanges || Boolean(paymentPrepared)}
-            className="rounded-full bg-[#D7E5D0] px-4 py-2 text-sm font-bold text-[#fffaf6] shadow-[0_10px_22px_rgba(110,130,104,0.18)] transition hover:bg-[#C4D6BC] disabled:opacity-50"
-          >
-            {isAccepting ? "Preparing Payment..." : "Accept & Continue to Payment"}
-          </button>
+          {paymentPrepared ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-[#eadbd3] bg-white px-4 py-2 text-sm font-bold text-[#8a5c58] transition hover:bg-[#fffaf6] sm:col-start-2"
+            >
+              Back to Conversation
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => void requestChanges()}
+                disabled={isRequestingChanges || isAccepting}
+                className="rounded-full border border-[#eadbd3] bg-white px-4 py-2 text-sm font-bold text-[#8a5c58] transition hover:bg-[#fffaf6] disabled:opacity-50"
+              >
+                {isRequestingChanges ? "Sending..." : "Request Changes"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void acceptQuote()}
+                disabled={isAccepting || isRequestingChanges}
+                className="rounded-full border border-[#aec8a8] bg-[linear-gradient(135deg,#b8d3ae,#8fb384)] px-4 py-2 text-sm font-extrabold text-[#fffaf6] shadow-[0_12px_26px_rgba(87,119,78,0.24)] transition hover:-translate-y-0.5 hover:border-[#98b78f] hover:bg-[linear-gradient(135deg,#a9c99d,#7fa672)] disabled:translate-y-0 disabled:border-[#d7e5d0] disabled:bg-[#d7e5d0] disabled:opacity-60"
+              >
+                {isAccepting ? "Preparing Payment..." : "Accept & Continue to Payment"}
+              </button>
+            </>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function QuotePaymentForm({
+  amountLabel,
+  clientSecret,
+  conversationId,
+  onPaymentComplete,
+  orderId
+}: {
+  amountLabel: string;
+  clientSecret: string;
+  conversationId: string;
+  onPaymentComplete: () => void;
+  orderId: string;
+}) {
+  const paymentElementRef = useRef<HTMLDivElement>(null);
+  const stripeRef = useRef<Stripe | null>(null);
+  const elementsRef = useRef<StripeElements | null>(null);
+  const [ready, setReady] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    let paymentElement: StripePaymentElement | null = null;
+
+    async function mountPaymentElement() {
+      setError(null);
+      setReady(false);
+
+      if (!stripePromise) {
+        setError("Stripe publishable key is missing.");
+        return;
+      }
+
+      const stripe = await stripePromise;
+      if (!stripe || !paymentElementRef.current || !mounted) {
+        setError("Stripe could not load. Please refresh and try again.");
+        return;
+      }
+
+      const elements = stripe.elements({
+        appearance: {
+          theme: "stripe",
+          variables: {
+            borderRadius: "16px",
+            colorPrimary: "#8fb384",
+            colorText: "#2f2626",
+            fontFamily: "Inter, system-ui, sans-serif"
+          }
+        },
+        clientSecret
+      });
+      paymentElement = elements.create("payment", {
+        layout: "tabs"
+      });
+      paymentElement.on("ready", () => mounted && setReady(true));
+      paymentElement.mount(paymentElementRef.current);
+      stripeRef.current = stripe;
+      elementsRef.current = elements;
+    }
+
+    void mountPaymentElement();
+
+    return () => {
+      mounted = false;
+      paymentElement?.unmount();
+      stripeRef.current = null;
+      elementsRef.current = null;
+    };
+  }, [clientSecret]);
+
+  async function submitPayment() {
+    const stripe = stripeRef.current;
+    const elements = elementsRef.current;
+    if (!stripe || !elements || processing) return;
+
+    setProcessing(true);
+    setError(null);
+    const result = await stripe.confirmPayment({
+      confirmParams: {
+        return_url: `${window.location.origin}/messages?conversationId=${conversationId}&payment=complete`
+      },
+      elements,
+      redirect: "if_required"
+    });
+    setProcessing(false);
+
+    if (result.error) {
+      setError(result.error.message ?? "Payment could not be completed.");
+      return;
+    }
+
+    onPaymentComplete();
+  }
+
+  return (
+    <div className="rounded-[1.15rem] border border-[#d7e5d0] bg-[#f7fbf4] p-3 shadow-[0_10px_24px_rgba(87,119,78,0.08)]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#6f8469]">Secure payment</p>
+          <p className="mt-1 text-sm font-bold text-[#2f2626]">Pay {amountLabel} to continue booking</p>
+        </div>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#6f8469] shadow-sm">
+          Order {orderId.slice(-6).toUpperCase()}
+        </span>
+      </div>
+      <div ref={paymentElementRef} className="mt-3 rounded-[1rem] bg-white p-3 shadow-sm" />
+      {error ? <p className="mt-2 text-sm font-semibold text-red-600">{error}</p> : null}
+      <button
+        type="button"
+        onClick={() => void submitPayment()}
+        disabled={!ready || processing}
+        className="mt-3 w-full rounded-full border border-[#aec8a8] bg-[linear-gradient(135deg,#b8d3ae,#8fb384)] px-4 py-2.5 text-sm font-extrabold text-[#fffaf6] shadow-[0_12px_26px_rgba(87,119,78,0.24)] transition hover:-translate-y-0.5 hover:border-[#98b78f] hover:bg-[linear-gradient(135deg,#a9c99d,#7fa672)] disabled:translate-y-0 disabled:opacity-60"
+      >
+        {processing ? "Processing..." : ready ? `Pay ${amountLabel}` : "Loading secure payment..."}
+      </button>
     </div>
   );
 }
