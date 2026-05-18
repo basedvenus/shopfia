@@ -13,10 +13,12 @@ function getBaseUrl() {
 
 function getTransport() {
   if (!authProviderConfig.emailEnabled) return null;
+  const port = Number(authProviderConfig.email.port);
 
   return createTransport({
     host: authProviderConfig.email.host,
-    port: Number(authProviderConfig.email.port),
+    port,
+    secure: port === 465,
     auth: {
       user: authProviderConfig.email.user,
       pass: authProviderConfig.email.password

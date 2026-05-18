@@ -165,48 +165,78 @@ function hashToken(token: string) {
 }
 
 export async function requestPasswordResetAction(formData: FormData) {
-  const parsed = passwordResetRequestSchema.safeParse({
-    email: formData.get("email")
-  });
-
-  if (!parsed.success) {
-    return { ok: false, error: "Enter the email on your ShopFia account." };
-  }
-
-  const email = parsed.data.email.toLowerCase();
-  const rate = await checkServerActionRateLimit([
-    { key: "password-reset:ip:{ip}", limit: 8, intervalMs: 60_000 },
-    { key: `password-reset:email:${email}`, limit: 3, intervalMs: 60_000 }
-  ]);
-  if (!rate.ok) {
-    return { ok: false, error: "Please wait a minute before requesting another reset link." };
-  }
-
-  const user = await db.user.findUnique({
-    where: { email },
-    select: { id: true, email: true, passwordHash: true }
-  });
-
-  if (user?.email && user.passwordHash) {
-    const rawToken = randomBytes(32).toString("base64url");
-    const identifier = `password-reset:${email}`;
-    const token = hashToken(rawToken);
-    const expires = new Date(Date.now() + 60 * 60 * 1000);
-
-    await db.verificationToken.deleteMany({ where: { identifier } });
-    await db.verificationToken.create({
-      data: { expires, identifier, token }
+  try {
+    const parsed = passwordResetRequestSchema.safeParse({
+      email: formData.get("email")
     });
 
-    const resetUrl = `${getBaseUrl()}/account/reset-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(rawToken)}`;
-    await sendPasswordResetEmail(email, resetUrl);
-    securityLog("password_reset_requested", { userId: user.id });
-  }
+    if (!parsed.success) {
+      return { ok: false, error: "Enter the email on your ShopFia account." };
+    }
 
-  return {
-    ok: true,
-    message: "If an account exists for that email, a reset link is on its way."
-  };
+    const email = parsed.data.email.toLowerCase();
+    const rate = await checkServerActionRateLimit([
+      { key: "password-reset:ip:{ip}", limit: 8, intervalMs: 60_000 },
+      { key: `password-reset:email:${email}`, limit: 3, intervalMs: 60_000 }
+    ]);
+    if (!rate.ok) {
+      return { ok: false, error: "Please wait a minute before requesting another reset link." };
+    }
+
+    const user = await db.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, passwordHash: true }
+    });
+
+    if (user?.email && !user.passwordHash) {
+      return {
+        ok: false,
+        error: "This email uses Google sign-in. Continue with Google for now, then add a password from account settings later."
+      };
+    }
+
+    if (user?.email && user.passwordHash) {
+      const rawToken = randomBytes(32).toString("base64url");
+      const identifier = `password-reset:${email}`;
+      const token = hashToken(rawToken);
+      const expires = new Date(Date.now() + 60 * 60 * 1000);
+
+      await db.verificationToken.deleteMany({ where: { identifier } });
+      await db.verificationToken.create({
+        data: { expires, identifier, token }
+      });
+
+      const resetUrl = `${getBaseUrl()}/account/reset-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(rawToken)}`;
+      const delivery = await sendPasswordResetEmail(email, resetUrl);
+      if (!delivery.ok) {
+        await db.verificationToken.deleteMany({ where: { identifier } });
+        securityLog("password_reset_email_not_sent", {
+          skipped: delivery.skipped,
+          userId: user.id
+        });
+        return {
+          ok: false,
+          error: delivery.skipped
+            ? "Password reset email is not configured yet. Add SMTP email settings in Vercel, then try again."
+            : "We could not send the reset email right now. Please try again in a minute."
+        };
+      }
+      securityLog("password_reset_requested", { userId: user.id });
+    }
+
+    return {
+      ok: true,
+      message: "If an account exists for that email, a reset link is on its way."
+    };
+  } catch (error) {
+    securityLog("password_reset_request_failed", {
+      error: error instanceof Error ? error.message : "Unknown password reset error"
+    });
+    return {
+      ok: false,
+      error: "We could not start the password reset right now. Please try again in a minute."
+    };
+  }
 }
 
 export async function resetPasswordAction(formData: FormData) {
