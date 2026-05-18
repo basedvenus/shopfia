@@ -42,6 +42,7 @@ type MessagesPayload = {
 };
 
 type InquiryItem = SerializedMessageConversation["inquiries"][number];
+type QuoteRequestItem = SerializedMessageConversation["quoteRequests"][number];
 
 export function MessagesClient({
   currentUserId,
@@ -321,6 +322,7 @@ function InboxRow({
   const viewerIsVendor = conversation.vendorId === currentUserId;
   const identity = getConversationIdentity(conversation, viewerIsVendor);
   const latestInquiry = conversation.inquiries.at(-1) ?? null;
+  const latestQuote = conversation.quoteRequests.find((quoteRequest) => quoteRequest.quote)?.quote ?? null;
   const latestMessage = [...conversation.messages]
     .reverse()
     .find((message) => !getInquiryMarkerId(message.body) && !isLegacyInquiryMessage(message.body));
@@ -397,6 +399,7 @@ function ConversationThread({
   const viewerIsVendor = conversation.vendorId === currentUserId;
   const identity = getConversationIdentity(conversation, viewerIsVendor);
   const latestInquiry = conversation.inquiries.at(-1) ?? null;
+  const latestQuote = conversation.quoteRequests.find((quoteRequest) => quoteRequest.quote)?.quote ?? null;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -485,7 +488,7 @@ function ConversationThread({
             {latestInquiry ? "Inquiry received" : "Conversation"}
           </span>
           <span className="rounded-full bg-white/85 px-2.5 py-1 shadow-sm">
-            Quote {viewerIsVendor ? "ready to build" : "pending"}
+            {latestQuote ? `Quote ${formatBudget(latestQuote.amountCents)}` : `Quote ${viewerIsVendor ? "ready to build" : "pending"}`}
           </span>
         </div>
         <ContextCard conversation={conversation} />
@@ -495,7 +498,11 @@ function ConversationThread({
         ref={scrollRef}
         className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-[linear-gradient(180deg,#fffaf6,#ffffff_34%)] px-2.5 py-3 md:space-y-3 md:px-5 md:py-4"
       >
-        <ConversationItems conversation={conversation} currentUserId={currentUserId} />
+        <ConversationItems
+          conversation={conversation}
+          currentUserId={currentUserId}
+          viewerIsVendor={viewerIsVendor}
+        />
       </div>
 
       <div className="shrink-0 border-t border-[#f0dfda] bg-white px-2.5 py-2 md:px-5 md:py-3">
@@ -538,10 +545,12 @@ function ConversationThread({
 
 function ConversationItems({
   conversation,
-  currentUserId
+  currentUserId,
+  viewerIsVendor
 }: {
   conversation: SerializedMessageConversation;
   currentUserId: string;
+  viewerIsVendor: boolean;
 }) {
   const inquiriesById = new Map(conversation.inquiries.map((inquiry) => [inquiry.id, inquiry]));
   const renderedInquiryIds = new Set<string>();
@@ -578,6 +587,16 @@ function ConversationItems({
         .map((inquiry) => (
           <InquiryBriefCard key={inquiry.id} inquiry={inquiry} createdAt={inquiry.createdAt} />
         ))}
+      {conversation.quoteRequests.map((quoteRequest) => (
+        <QuoteWorkflowCard
+          key={quoteRequest.id}
+          quoteRequest={quoteRequest}
+          viewerIsVendor={viewerIsVendor}
+        />
+      ))}
+      {viewerIsVendor && conversation.inquiries.length > 0 && conversation.quoteRequests.length === 0 ? (
+        <BuildQuotePromptCard />
+      ) : null}
     </>
   );
 }
@@ -823,6 +842,80 @@ function FullInquiryBrief({
             ) : null}
           </div>
         ) : null}
+      </div>
+    </article>
+  );
+}
+
+function QuoteWorkflowCard({
+  quoteRequest,
+  viewerIsVendor
+}: {
+  quoteRequest: QuoteRequestItem;
+  viewerIsVendor: boolean;
+}) {
+  const quote = quoteRequest.quote;
+  const href = viewerIsVendor ? "/vendor/dashboard#requests" : "/account#quotes";
+  const title = quoteRequest.offering?.title ?? "Custom Event Quote";
+
+  return (
+    <article className="mx-auto w-full max-w-[92%] rounded-[1.1rem] border border-[#e7d3c9] bg-white px-3 py-2.5 shadow-[0_10px_26px_rgba(82,55,55,0.08)] md:max-w-2xl md:px-4 md:py-3">
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[0.9rem] bg-[#fff4f0] text-[#9b6b65]">
+          <ReceiptText className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-[11px] font-bold uppercase tracking-[0.12em] text-[#9b6b65]">
+              {quote ? "Quote Sent" : "Quote Request"}
+            </p>
+            <span className="rounded-full bg-[#fbf1ed] px-2 py-0.5 text-[11px] font-bold text-[#8f5f5b]">
+              {quoteRequest.status.toLowerCase()}
+            </span>
+          </div>
+          <h3 className="mt-0.5 truncate text-sm font-bold text-[#2f2626] md:text-base">{title}</h3>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            {quote
+              ? `${formatBudget(quote.amountCents)}${quote.depositAmountCents ? ` • ${formatBudget(quote.depositAmountCents)} deposit` : ""}`
+              : viewerIsVendor
+                ? "Build a custom quote from this inquiry."
+                : "The vendor can send pricing here once details are confirmed."}
+          </p>
+          {quote?.notes ? (
+            <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#6a5b56]">{quote.notes}</p>
+          ) : null}
+          <Link
+            href={href}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#2f2626] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#4b403c]"
+          >
+            {quote ? (viewerIsVendor ? "Manage Quote" : "View Quote") : viewerIsVendor ? "Build Quote" : "Waiting on Quote"}
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function BuildQuotePromptCard() {
+  return (
+    <article className="mx-auto w-full max-w-[92%] rounded-[1.1rem] border border-[#eadbd3] bg-[#fffdfa] px-3 py-2.5 shadow-[0_10px_26px_rgba(82,55,55,0.07)] md:max-w-2xl md:px-4 md:py-3">
+      <div className="flex items-center gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[0.9rem] bg-white text-[#9b6b65] shadow-sm">
+          <ReceiptText className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-[#2f2626]">Ready to price this event?</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            Send a custom quote once the details feel clear.
+          </p>
+        </div>
+        <Link
+          href="/vendor/dashboard#requests"
+          className="shrink-0 rounded-full bg-[#2f2626] px-3 py-1.5 text-xs font-bold text-white"
+        >
+          Build Quote
+        </Link>
       </div>
     </article>
   );

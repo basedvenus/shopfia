@@ -58,6 +58,12 @@ export type MessageConversation = Prisma.ConversationGetPayload<{
 }>;
 
 export type SerializedMessageConversation = ReturnType<typeof serializeConversation>;
+type MessageQuoteRequest = Prisma.QuoteRequestGetPayload<{
+  include: {
+    offering: { select: { photos: true; title: true } };
+    quote: true;
+  };
+}>;
 
 const conversationInclude = {
   buyer: {
@@ -175,7 +181,34 @@ export async function getMessagesPayload({
     unreadByConversation[selectedConversationId] = 0;
   }
 
-  const serializedConversations = conversations.map(serializeConversation);
+  const quoteRequests =
+    conversations.length > 0
+      ? await db.quoteRequest.findMany({
+          where: {
+            OR: conversations.map((conversation) => ({
+              buyerId: conversation.buyerId,
+              vendorId: conversation.vendorProfileId
+            }))
+          },
+          include: {
+            offering: { select: { photos: true, title: true } },
+            quote: true
+          },
+          orderBy: { createdAt: "asc" }
+        })
+      : [];
+
+  const serializedConversations = conversations.map((conversation) =>
+    serializeConversation(
+      conversation,
+      quoteRequests.filter(
+        (quoteRequest) =>
+          quoteRequest.buyerId === conversation.buyerId &&
+          quoteRequest.vendorId === conversation.vendorProfileId &&
+          (!quoteRequest.offeringId || !conversation.offeringId || quoteRequest.offeringId === conversation.offeringId)
+      )
+    )
+  );
 
   return {
     conversations: serializedConversations,
@@ -191,7 +224,10 @@ export async function getMessagesPayload({
   };
 }
 
-export function serializeConversation(conversation: MessageConversation) {
+export function serializeConversation(
+  conversation: MessageConversation,
+  quoteRequests: MessageQuoteRequest[] = []
+) {
   return {
     ...conversation,
     createdAt: conversation.createdAt.toISOString(),
@@ -207,6 +243,20 @@ export function serializeConversation(conversation: MessageConversation) {
       ...message,
       createdAt: message.createdAt.toISOString(),
       readAt: message.readAt?.toISOString() ?? null
+    })),
+    quoteRequests: quoteRequests.map((quoteRequest) => ({
+      ...quoteRequest,
+      createdAt: quoteRequest.createdAt.toISOString(),
+      eventDate: quoteRequest.eventDate?.toISOString() ?? null,
+      quote: quoteRequest.quote
+        ? {
+            ...quoteRequest.quote,
+            createdAt: quoteRequest.quote.createdAt.toISOString(),
+            expiresAt: quoteRequest.quote.expiresAt.toISOString(),
+            updatedAt: quoteRequest.quote.updatedAt.toISOString()
+          }
+        : null,
+      updatedAt: quoteRequest.updatedAt.toISOString()
     }))
   };
 }
