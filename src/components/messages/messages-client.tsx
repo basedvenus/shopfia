@@ -8,7 +8,6 @@ import { createClient } from "@supabase/supabase-js";
 import {
   ArrowLeft,
   Banknote,
-  Bell,
   CalendarHeart,
   ChevronRight,
   ExternalLink,
@@ -16,7 +15,6 @@ import {
   Inbox,
   Mail,
   MapPin,
-  Menu,
   Package,
   Paperclip,
   ReceiptText,
@@ -167,46 +165,8 @@ export function MessagesClient({
     }
   }, [currentUserId, payload, selectConversation]);
 
-  const selectedViewerIsVendor = selectedConversation?.vendorId === currentUserId;
-
   return (
     <div className="mx-auto flex h-[calc(100dvh-5.25rem)] max-w-[1500px] flex-col overflow-hidden rounded-[1.25rem] border border-white/75 bg-[#fffaf6] shadow-[0_24px_72px_rgba(82,55,55,0.10)] md:h-[calc(100vh-7.25rem)] md:min-h-[620px] md:rounded-[1.5rem]">
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#eadbd3] bg-[linear-gradient(135deg,#fffdf9,#ffffff_54%,#f6efe7)] px-3 py-2.5 md:px-5 md:py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#8a5c58] shadow-sm md:hidden"
-            aria-label="Open inbox"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <div>
-            <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#9b6b65]">
-              <Sparkles className="h-3.5 w-3.5" />
-              ShopFia Inbox
-            </div>
-            <h1 className="text-xl font-semibold tracking-tight text-[#2f2626] md:text-3xl">
-              Messages
-            </h1>
-          </div>
-        </div>
-        {selectedConversation && selectedViewerIsVendor ? (
-          <Link
-            href="/vendor/dashboard#requests"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#2f2626] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#4b403c] md:px-4 md:text-sm"
-          >
-            <ReceiptText className="h-3.5 w-3.5" />
-            Build Quote
-          </Link>
-        ) : (
-          <div className="flex shrink-0 items-center gap-2 rounded-full bg-white px-2.5 py-1.5 text-xs font-semibold text-[#2f2626] shadow-sm md:px-3 md:py-2 md:text-sm">
-            <Bell className="h-4 w-4 text-[#c5837f]" />
-            {payload.unreadTotal > 0 ? `${payload.unreadTotal} unread` : "Caught up"}
-          </div>
-        )}
-      </header>
-
       <div className="relative grid min-h-0 flex-1 md:grid-cols-[minmax(270px,23%)_1fr]">
         <InboxPanel
           conversations={payload.conversations}
@@ -460,6 +420,16 @@ function ConversationThread({
             <ArrowLeft className="h-5 w-5" />
           </button>
           <ContextCard conversation={conversation} />
+          {viewerIsVendor ? (
+            <Link
+              href="/vendor/dashboard#requests"
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[1rem] bg-[#2f2626] px-3 text-xs font-bold text-white shadow-sm transition hover:bg-[#4b403c]"
+            >
+              <ReceiptText className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Build Quote</span>
+              <span className="sm:hidden">Quote</span>
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -487,7 +457,7 @@ function ConversationThread({
             }}
             placeholder={viewerIsVendor ? "Reply with availability, pricing, or next steps..." : "Reply to the vendor..."}
             value={body}
-            className="min-h-[42px] resize-none border-0 bg-transparent px-2 py-1.5 text-sm shadow-none focus-visible:ring-0 md:min-h-[70px] md:py-2"
+            className="min-h-[40px] resize-none border-0 bg-transparent px-2 py-1.5 text-sm shadow-none focus-visible:ring-0 md:min-h-[54px] md:py-2"
             required
           />
           <div className="flex items-center justify-between gap-3 px-1 pb-1">
