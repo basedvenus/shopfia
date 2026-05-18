@@ -348,10 +348,18 @@ function ConversationThread({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState("");
   const [quoteBuilderOpen, setQuoteBuilderOpen] = useState(false);
+  const [quoteBuilderQuoteRequest, setQuoteBuilderQuoteRequest] = useState<QuoteRequestItem | null>(null);
   const [reviewQuoteRequest, setReviewQuoteRequest] = useState<QuoteRequestItem | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messageCount = conversation.messages.length + conversation.inquiries.length;
+  const latestQuoteRequest =
+    [...conversation.quoteRequests].reverse().find((quoteRequest) => quoteRequest.quote) ?? null;
+
+  function openQuoteBuilder(quoteRequest: QuoteRequestItem | null = latestQuoteRequest) {
+    setQuoteBuilderQuoteRequest(quoteRequest);
+    setQuoteBuilderOpen(true);
+  }
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -402,7 +410,7 @@ function ConversationThread({
           {viewerIsVendor ? (
             <button
               type="button"
-              onClick={() => setQuoteBuilderOpen(true)}
+              onClick={() => openQuoteBuilder()}
               className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[1rem] bg-[#D7E5D0] px-3 text-xs font-bold text-[#fffaf6] shadow-[0_10px_22px_rgba(110,130,104,0.18)] transition hover:bg-[#C4D6BC]"
             >
               <ReceiptText className="h-3.5 w-3.5" />
@@ -420,7 +428,7 @@ function ConversationThread({
         <ConversationItems
           conversation={conversation}
           currentUserId={currentUserId}
-          onBuildQuote={() => setQuoteBuilderOpen(true)}
+          onBuildQuote={openQuoteBuilder}
           onReviewQuote={setReviewQuoteRequest}
           viewerIsVendor={viewerIsVendor}
         />
@@ -463,9 +471,14 @@ function ConversationThread({
       {quoteBuilderOpen ? (
         <QuoteBuilderModal
           conversation={conversation}
-          onClose={() => setQuoteBuilderOpen(false)}
+          existingQuoteRequest={quoteBuilderQuoteRequest}
+          onClose={() => {
+            setQuoteBuilderOpen(false);
+            setQuoteBuilderQuoteRequest(null);
+          }}
           onSent={() => {
             setQuoteBuilderOpen(false);
+            setQuoteBuilderQuoteRequest(null);
             onAfterSend();
           }}
         />
@@ -494,7 +507,7 @@ function ConversationItems({
 }: {
   conversation: SerializedMessageConversation;
   currentUserId: string;
-  onBuildQuote: () => void;
+  onBuildQuote: (quoteRequest?: QuoteRequestItem | null) => void;
   onReviewQuote: (quoteRequest: QuoteRequestItem) => void;
   viewerIsVendor: boolean;
 }) {
@@ -806,35 +819,55 @@ function QuoteWorkflowCard({
   quoteRequest,
   viewerIsVendor
 }: {
-  onBuildQuote: () => void;
+  onBuildQuote: (quoteRequest?: QuoteRequestItem | null) => void;
   onReviewQuote: (quoteRequest: QuoteRequestItem) => void;
   quoteRequest: QuoteRequestItem;
   viewerIsVendor: boolean;
 }) {
   const quote = quoteRequest.quote;
-  const href = viewerIsVendor ? "/vendor/dashboard#requests" : "/account#quotes";
   const quoteDetails = parseQuoteDetails(quote?.lineItemsJson);
   const title = quoteDetails.title ?? quoteRequest.offering?.title ?? "Custom Event Quote";
+  const totalLabel = quote ? formatBudget(quote.amountCents) : null;
+  const depositLabel = quote?.depositAmountCents ? formatBudget(quote.depositAmountCents) : null;
 
   return (
-    <article className="mx-auto w-full max-w-[92%] rounded-[1.1rem] border border-[#e7d3c9] bg-white px-3 py-2.5 shadow-[0_10px_26px_rgba(82,55,55,0.08)] md:max-w-2xl md:px-4 md:py-3">
+    <article className="mx-auto w-full max-w-[92%] overflow-hidden rounded-[1.2rem] border border-[#e7d3c9] bg-white shadow-[0_12px_30px_rgba(82,55,55,0.09)] md:max-w-2xl">
+      <div className="h-1 bg-[linear-gradient(90deg,#f4cfca,#f9e8dd,#d7e5d0)]" />
+      <div className="p-3 md:p-4">
       <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[0.9rem] bg-[#fff4f0] text-[#9b6b65]">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[0.9rem] bg-[#fff4f0] text-[#9b6b65] shadow-sm">
           <ReceiptText className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <p className="truncate text-[11px] font-bold uppercase tracking-[0.12em] text-[#9b6b65]">
-              {quote ? "Quote Sent" : "Quote Request"}
+              {quote ? "Custom Proposal" : "Quote Request"}
             </p>
             <span className="rounded-full bg-[#fbf1ed] px-2 py-0.5 text-[11px] font-bold text-[#8f5f5b]">
               {quoteRequest.status.toLowerCase()}
             </span>
           </div>
-          <h3 className="mt-0.5 truncate text-sm font-bold text-[#2f2626] md:text-base">{title}</h3>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="truncate text-base font-bold leading-tight text-[#2f2626] md:text-lg">{title}</h3>
+              {quote && depositLabel ? (
+                <p className="mt-1 text-xs font-semibold text-[#6f8469]">
+                  {formatDepositPercent(quote.depositAmountCents!, quote.amountCents)} deposit required
+                </p>
+              ) : null}
+            </div>
+            {totalLabel ? (
+              <div className="rounded-[0.9rem] bg-[#fffdfa] px-3 py-1.5 text-right shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9b6b65]">Total</p>
+                <p className="text-sm font-bold text-[#2f2626]">{totalLabel}</p>
+              </div>
+            ) : null}
+          </div>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
             {quote
-              ? `${formatBudget(quote.amountCents)}${quote.depositAmountCents ? ` • ${formatBudget(quote.depositAmountCents)} deposit` : ""}`
+              ? depositLabel
+                ? `${depositLabel} due after approval`
+                : "Full payment due after approval"
               : viewerIsVendor
                 ? "Build a custom quote from this inquiry."
                 : "The vendor can send pricing here once details are confirmed."}
@@ -855,18 +888,19 @@ function QuoteWorkflowCard({
             </div>
           ) : null}
           {quote && viewerIsVendor ? (
-            <Link
-              href={href}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
+            <button
+              type="button"
+              onClick={() => onBuildQuote(quoteRequest)}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#eadbd3] bg-[#fffaf6] px-3 py-1.5 text-xs font-bold text-[#8f5f5b] shadow-sm transition hover:bg-[#fbf1ed]"
             >
               Manage Quote
               <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
+            </button>
           ) : quote ? (
             <button
               type="button"
               onClick={() => onReviewQuote(quoteRequest)}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
             >
               Review Quote
               <ChevronRight className="h-3.5 w-3.5" />
@@ -874,8 +908,8 @@ function QuoteWorkflowCard({
           ) : viewerIsVendor ? (
             <button
               type="button"
-              onClick={onBuildQuote}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
+              onClick={() => onBuildQuote(null)}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
             >
               Build Quote
               <ChevronRight className="h-3.5 w-3.5" />
@@ -886,6 +920,7 @@ function QuoteWorkflowCard({
             </span>
           )}
         </div>
+      </div>
       </div>
     </article>
   );
@@ -1120,7 +1155,7 @@ function QuoteReviewTotalRow({
   );
 }
 
-function BuildQuotePromptCard({ onBuildQuote }: { onBuildQuote: () => void }) {
+function BuildQuotePromptCard({ onBuildQuote }: { onBuildQuote: (quoteRequest?: QuoteRequestItem | null) => void }) {
   return (
     <article className="mx-auto w-full max-w-[92%] rounded-[1.1rem] border border-[#eadbd3] bg-[#fffdfa] px-3 py-2.5 shadow-[0_10px_26px_rgba(82,55,55,0.07)] md:max-w-2xl md:px-4 md:py-3">
       <div className="flex items-center gap-3">
@@ -1135,7 +1170,7 @@ function BuildQuotePromptCard({ onBuildQuote }: { onBuildQuote: () => void }) {
         </div>
         <button
           type="button"
-          onClick={onBuildQuote}
+          onClick={() => onBuildQuote(null)}
           className="shrink-0 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
         >
           Build Quote
@@ -1147,26 +1182,50 @@ function BuildQuotePromptCard({ onBuildQuote }: { onBuildQuote: () => void }) {
 
 function QuoteBuilderModal({
   conversation,
+  existingQuoteRequest,
   onClose,
   onSent
 }: {
   conversation: SerializedMessageConversation;
+  existingQuoteRequest?: QuoteRequestItem | null;
   onClose: () => void;
   onSent: () => void;
 }) {
   const latestInquiry = conversation.inquiries.at(-1);
-  const defaultTitle = conversation.offering?.title ?? latestInquiry?.offering?.title ?? latestInquiry?.listing?.title ?? "Custom Event Quote";
+  const existingQuote = existingQuoteRequest?.quote ?? null;
+  const existingQuoteDetails = parseQuoteDetails(existingQuote?.lineItemsJson);
+  const defaultTitle =
+    existingQuoteDetails.title ??
+    conversation.offering?.title ??
+    latestInquiry?.offering?.title ??
+    latestInquiry?.listing?.title ??
+    "Custom Event Quote";
+  const isRevision = Boolean(existingQuote);
   const [title, setTitle] = useState(defaultTitle);
-  const [lineItems, setLineItems] = useState<QuoteLineForm[]>([
-    { description: defaultTitle, quantity: 1, unitAmount: "" }
-  ]);
-  const [setupFee, setSetupFee] = useState("");
-  const [deliveryFee, setDeliveryFee] = useState("");
-  const [tax, setTax] = useState("");
-  const [depositPercent, setDepositPercent] = useState("50");
-  const [paymentPreference, setPaymentPreference] = useState<"DEPOSIT" | "FULL">("DEPOSIT");
-  const [expiresAt, setExpiresAt] = useState(() => getDefaultExpirationDate());
-  const [notes, setNotes] = useState("");
+  const [lineItems, setLineItems] = useState<QuoteLineForm[]>(() =>
+    existingQuoteDetails.lineItems.length > 0
+      ? existingQuoteDetails.lineItems.map((item) => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitAmount: centsToDollars(item.unitAmountCents)
+        }))
+      : [{ description: defaultTitle, quantity: 1, unitAmount: "" }]
+  );
+  const [setupFee, setSetupFee] = useState(() => centsToDollars(existingQuoteDetails.setupFeeCents));
+  const [deliveryFee, setDeliveryFee] = useState(() => centsToDollars(existingQuoteDetails.deliveryFeeCents));
+  const [tax, setTax] = useState(() => centsToDollars(existingQuoteDetails.taxCents));
+  const [depositPercent, setDepositPercent] = useState(() =>
+    existingQuote?.depositAmountCents
+      ? String(Math.round((existingQuote.depositAmountCents / existingQuote.amountCents) * 100))
+      : "50"
+  );
+  const [paymentPreference, setPaymentPreference] = useState<"DEPOSIT" | "FULL">(
+    existingQuote?.paymentPreference ?? "DEPOSIT"
+  );
+  const [expiresAt, setExpiresAt] = useState(() =>
+    existingQuote?.expiresAt ? existingQuote.expiresAt.slice(0, 10) : getDefaultExpirationDate()
+  );
+  const [notes, setNotes] = useState(existingQuote?.notes ?? "");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1231,9 +1290,11 @@ function QuoteBuilderModal({
         <div className="flex shrink-0 items-center justify-between border-b border-[#eadbd3] bg-[#fffaf6] px-4 py-3">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#9b6b65]">
-              Build Quote
+              {isRevision ? "Revise Quote" : "Build Quote"}
             </p>
-            <h2 className="text-lg font-bold text-[#2f2626]">Custom proposal for this inquiry</h2>
+            <h2 className="text-lg font-bold text-[#2f2626]">
+              {isRevision ? "Update this proposal in the conversation" : "Custom proposal for this inquiry"}
+            </h2>
           </div>
           <button
             type="button"
@@ -1373,7 +1434,7 @@ function QuoteBuilderModal({
             disabled={isSending || totalCents <= 0}
             className="rounded-full bg-[#D7E5D0] px-4 py-2 text-sm font-bold text-[#fffaf6] shadow-[0_10px_22px_rgba(110,130,104,0.18)] transition hover:bg-[#C4D6BC] disabled:opacity-50"
           >
-            {isSending ? "Sending..." : "Send Quote"}
+            {isSending ? "Sending..." : isRevision ? "Resend Proposal" : "Send Quote"}
           </button>
         </div>
       </div>
@@ -1653,6 +1714,11 @@ function dollarsToCents(value: string) {
   const amount = Number(normalized);
   if (!Number.isFinite(amount) || amount <= 0) return 0;
   return Math.round(amount * 100);
+}
+
+function centsToDollars(cents: number) {
+  if (!cents) return "";
+  return (cents / 100).toFixed(cents % 100 === 0 ? 0 : 2);
 }
 
 function getDefaultExpirationDate() {

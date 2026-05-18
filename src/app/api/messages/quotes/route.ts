@@ -110,6 +110,11 @@ export async function POST(request: Request) {
         }
       }));
 
+    const existingQuote = await tx.quote.findUnique({
+      where: { quoteRequestId: quoteRequest.id },
+      select: { id: true }
+    });
+
     const quote = await tx.quote.upsert({
       where: { quoteRequestId: quoteRequest.id },
       update: {
@@ -153,7 +158,9 @@ export async function POST(request: Request) {
     await tx.message.create({
       data: {
         attachments: [],
-        body: `${conversation.vendorProfile.name} sent a custom quote: ${parsed.data.title}`,
+        body: existingQuote
+          ? `${conversation.vendorProfile.name} revised the proposal: ${parsed.data.title}`
+          : `${conversation.vendorProfile.name} sent a custom quote: ${parsed.data.title}`,
         conversationId: conversation.id,
         senderId: conversation.vendorId
       }
