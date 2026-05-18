@@ -28,6 +28,15 @@ function button(label: string, href: string) {
   return `<a href="${href}" style="display:inline-block;border-radius:999px;background:#E3A7A7;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;">${label}</a>`;
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function shell({ body, preview, title }: { body: string; preview: string; title: string }) {
   return `<!doctype html>
 <html>
@@ -187,6 +196,44 @@ export async function sendNewInquiryEmail({
     html,
     subject: "New inquiry on ShopFia ✨",
     text: `${buyerName} sent you a new inquiry for ${dateText}${locationText}.\n${budgetText ? `\nBudget: ${budgetText}\n` : ""}\nView Inquiry: ${inquiryUrl}`,
+    to
+  });
+}
+
+export async function sendNewMessageEmail({
+  contextTitle,
+  conversationUrl,
+  messagePreview,
+  senderName,
+  to
+}: {
+  contextTitle: string;
+  conversationUrl: string;
+  messagePreview: string;
+  senderName: string;
+  to: string;
+}) {
+  const preview =
+    messagePreview.length > 140 ? `${messagePreview.slice(0, 137).trim()}...` : messagePreview;
+  const safeContextTitle = escapeHtml(contextTitle);
+  const safePreview = escapeHtml(preview);
+  const safeSenderName = escapeHtml(senderName);
+  const html = shell({
+    title: "New ShopFia message",
+    preview: `${senderName} replied about ${contextTitle}.`,
+    body: `
+      <p style="margin:0 0 18px;"><strong>${safeSenderName}</strong> sent you a new message about <strong>${safeContextTitle}</strong>.</p>
+      <div style="margin:0 0 24px;border-radius:20px;background:#fff8f5;border:1px solid #f1d8d2;padding:16px 18px;color:#4f4141;">${safePreview}</div>
+      <p style="margin:0 0 24px;">Open the conversation to keep planning through ShopFia.</p>
+      <p style="margin:0 0 24px;">${button("View Message", conversationUrl)}</p>
+      <p style="margin:0;color:#8a6a67;">A thoughtful reply keeps the celebration moving.</p>
+    `
+  });
+
+  return sendEmail({
+    html,
+    subject: "New message on ShopFia ✨",
+    text: `${senderName} sent you a new message about ${contextTitle}.\n\n${preview}\n\nView Message: ${conversationUrl}`,
     to
   });
 }

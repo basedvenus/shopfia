@@ -14,7 +14,7 @@ const defaultPreferences: Preferences = {
   sound: false
 };
 
-export function NotificationPreferences() {
+export function NotificationPreferences({ compact = false }: { compact?: boolean }) {
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
   const [browserStatus, setBrowserStatus] = useState<string>("Browser alerts are off.");
 
@@ -83,22 +83,22 @@ export function NotificationPreferences() {
     }
 
     if (key === "sound" && !preferences.sound) {
-      playSoftChime();
+      playSoftPop();
     }
 
     setPreferences((current) => ({ ...current, [key]: !current[key] }));
   }
 
   return (
-    <div className="rounded-[1.75rem] border border-white/80 bg-white/86 p-5 shadow-sm">
+    <div className={`rounded-[1.25rem] border border-white/80 bg-white/86 shadow-sm ${compact ? "p-3" : "p-5"}`}>
       <div className="flex items-center gap-2 font-semibold text-[#2f2626]">
         <Bell className="h-4 w-4 text-[#c5837f]" />
-        Notification preferences
+        {compact ? "Notifications" : "Notification preferences"}
       </div>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+      <p className={`${compact ? "mt-1 text-xs leading-5" : "mt-2 text-sm leading-6"} text-muted-foreground`}>
         Choose how ShopFia should nudge you when a new inquiry or reply arrives.
       </p>
-      <div className="mt-4 grid gap-3">
+      <div className={`${compact ? "mt-3 grid-cols-2 gap-2" : "mt-4 gap-3"} grid`}>
         {rows.map((row) => {
           const Icon = row.icon;
           const enabled = preferences[row.key];
@@ -107,19 +107,19 @@ export function NotificationPreferences() {
               key={row.key}
               type="button"
               onClick={() => void togglePreference(row.key)}
-              className="flex items-start gap-3 rounded-[1.25rem] border border-[#eadbd3] bg-[#fffdfa] p-3 text-left transition hover:bg-white"
+              className={`${compact ? "items-center gap-2 rounded-[1rem] p-2" : "items-start gap-3 rounded-[1.25rem] p-3"} flex border border-[#eadbd3] bg-[#fffdfa] text-left transition hover:bg-white`}
             >
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-[#c5837f] shadow-sm">
+              <span className={`${compact ? "h-8 w-8" : "h-9 w-9"} grid shrink-0 place-items-center rounded-full bg-white text-[#c5837f] shadow-sm`}>
                 <Icon className="h-4 w-4" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-[#2f2626]">{row.label}</span>
-                <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                <span className={`${compact ? "text-xs" : "text-sm"} block font-semibold text-[#2f2626]`}>{row.label}</span>
+                <span className={`${compact ? "hidden" : "mt-1 block"} text-xs leading-5 text-muted-foreground`}>
                   {row.description}
                 </span>
               </span>
               <span
-                className={`mt-1 h-6 w-11 rounded-full p-1 transition ${
+                className={`${compact ? "hidden" : "mt-1"} h-6 w-11 rounded-full p-1 transition ${
                   enabled ? "bg-[#d8a39c]" : "bg-[#e4d9d2]"
                 }`}
               >
@@ -137,32 +137,25 @@ export function NotificationPreferences() {
   );
 }
 
-function playSoftChime() {
+function playSoftPop() {
   try {
     const AudioContextCtor = window.AudioContext ?? window.webkitAudioContext;
     if (!AudioContextCtor) return;
     const context = new AudioContextCtor();
     const oscillator = context.createOscillator();
-    const secondOscillator = context.createOscillator();
     const gain = context.createGain();
 
     oscillator.type = "sine";
-    secondOscillator.type = "triangle";
     oscillator.frequency.setValueAtTime(520, context.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(760, context.currentTime + 0.08);
-    secondOscillator.frequency.setValueAtTime(880, context.currentTime + 0.025);
-    secondOscillator.frequency.exponentialRampToValueAtTime(1180, context.currentTime + 0.12);
+    oscillator.frequency.exponentialRampToValueAtTime(760, context.currentTime + 0.055);
     gain.gain.setValueAtTime(0.0001, context.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.045, context.currentTime + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.18);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.13);
 
     oscillator.connect(gain);
-    secondOscillator.connect(gain);
     gain.connect(context.destination);
     oscillator.start();
-    secondOscillator.start(context.currentTime + 0.025);
-    oscillator.stop(context.currentTime + 0.18);
-    secondOscillator.stop(context.currentTime + 0.16);
+    oscillator.stop(context.currentTime + 0.14);
   } catch {
     // Notification sounds are a progressive enhancement.
   }

@@ -25,7 +25,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://images.unsplash.com https://res.cloudinary.com",
-              "connect-src 'self' https://api.stripe.com",
+              "connect-src 'self' https://api.stripe.com https://*.supabase.co wss://*.supabase.co",
               "frame-src https://js.stripe.com https://hooks.stripe.com",
               "object-src 'none'",
               "base-uri 'self'",
