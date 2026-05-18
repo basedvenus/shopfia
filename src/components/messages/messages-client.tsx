@@ -296,60 +296,35 @@ function InboxRow({
   const viewerIsVendor = conversation.vendorId === currentUserId;
   const identity = getConversationIdentity(conversation, viewerIsVendor);
   const latestInquiry = conversation.inquiries.at(-1) ?? null;
-  const latestMessage = [...conversation.messages]
-    .reverse()
-    .find((message) => !getInquiryMarkerId(message.body) && !isLegacyInquiryMessage(message.body));
-  const contextTitle = getContextTitle(conversation, latestInquiry);
-  const preview = latestInquiry?.message ?? latestMessage?.body ?? "A new ShopFia conversation is ready.";
-  const dateLabel = latestInquiry?.eventDate ? shortEventDate(latestInquiry.eventDate) : null;
-  const location = latestInquiry ? formatInquiryLocation(latestInquiry) : formatConversationLocation(conversation);
-  const budget = latestInquiry?.budgetCents != null ? formatBudget(latestInquiry.budgetCents) : null;
+  const location = formatInboxLocation(
+    latestInquiry ? formatInquiryLocation(latestInquiry) : formatConversationLocation(conversation)
+  );
 
   return (
     <button
       type="button"
       onClick={() => onSelect(conversation.id)}
-      className={`group relative w-full rounded-[1.25rem] border p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(82,55,55,0.13)] ${
+      className={`group relative w-full rounded-[1rem] border px-2.5 py-2 text-left transition duration-200 hover:-translate-y-0.5 hover:border-[#dec4ba] hover:bg-white hover:shadow-[0_12px_26px_rgba(82,55,55,0.11)] ${
         isSelected
-          ? "border-[#d8b3a9] bg-white shadow-[0_16px_38px_rgba(82,55,55,0.16),inset_4px_0_0_#d8a39c]"
+          ? "border-[#d8b3a9] bg-white shadow-[0_14px_30px_rgba(82,55,55,0.14),inset_3px_0_0_#d8a39c]"
           : unreadCount > 0
-            ? "border-[#e1bbb2] bg-white shadow-[0_12px_28px_rgba(82,55,55,0.12)]"
-            : "border-[#eadfd8] bg-[#fffdfa] shadow-[0_8px_18px_rgba(82,55,55,0.07)]"
+            ? "border-[#e1bbb2] bg-white shadow-[0_10px_24px_rgba(82,55,55,0.10)]"
+            : "border-[#eadfd8] bg-[#fffdfa] shadow-[0_5px_14px_rgba(82,55,55,0.05)]"
       }`}
     >
       {unreadCount > 0 ? (
-        <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#dd9c9b] shadow-[0_0_0_5px_rgba(221,156,155,0.16)]" />
+        <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#dd9c9b] shadow-[0_0_0_4px_rgba(221,156,155,0.14)]" />
       ) : null}
-      <div className="flex gap-3">
-        <IdentityAvatar image={identity.image} label={identity.name} size="md" />
+      <div className="flex items-center gap-2.5">
+        <IdentityAvatar image={identity.image} label={identity.name} size="inbox" />
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2 pr-4">
-            <h3 className="truncate text-sm font-bold text-[#2f2626]">{identity.name}</h3>
-            <span className="shrink-0 rounded-full bg-[#fbf1ed] px-2 py-0.5 text-[11px] font-semibold text-[#9b6b65]">
-              {identity.kind}
-            </span>
-          </div>
-          <p className="mt-1 truncate text-xs font-semibold text-[#5f514e]">
-            {contextTitle}
-            {dateLabel ? ` • ${dateLabel}` : ""}
+          <h3 className="truncate pr-4 text-sm font-bold leading-5 text-[#2f2626]">{identity.name}</h3>
+          <p className="truncate text-xs font-semibold leading-5 text-[#5f514e]">
+            Event Inquiry{location ? ` • ${location}` : ""}
           </p>
-          {location ? (
-            <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
-              <MapPin className="h-3 w-3" />
-              <span className="truncate">{location}</span>
-            </p>
-          ) : null}
-          <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
-            {preview}
+          <p className="truncate text-[11px] leading-4 text-muted-foreground">
+            {formatMessageDate(conversation.lastMessageAt)}
           </p>
-          <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-            <span>{formatMessageDate(conversation.lastMessageAt)}</span>
-            {budget ? (
-              <span className="rounded-full bg-white px-2 py-0.5 font-bold text-[#9b6b65]">
-                {budget}
-              </span>
-            ) : null}
-          </div>
         </div>
       </div>
     </button>
@@ -427,7 +402,7 @@ function ConversationThread({
             <button
               type="button"
               onClick={() => setQuoteBuilderOpen(true)}
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[1rem] bg-[#2f2626] px-3 text-xs font-bold text-white shadow-sm transition hover:bg-[#4b403c]"
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[1rem] bg-[#D7E5D0] px-3 text-xs font-bold text-[#fffaf6] shadow-[0_10px_22px_rgba(110,130,104,0.18)] transition hover:bg-[#C4D6BC]"
             >
               <ReceiptText className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Build Quote</span>
@@ -864,7 +839,7 @@ function QuoteWorkflowCard({
           {quote ? (
             <Link
               href={href}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#2f2626] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#4b403c]"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
             >
               {viewerIsVendor ? "Manage Quote" : "Review Quote"}
               <ChevronRight className="h-3.5 w-3.5" />
@@ -873,7 +848,7 @@ function QuoteWorkflowCard({
             <button
               type="button"
               onClick={onBuildQuote}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#2f2626] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#4b403c]"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
             >
               Build Quote
               <ChevronRight className="h-3.5 w-3.5" />
@@ -905,7 +880,7 @@ function BuildQuotePromptCard({ onBuildQuote }: { onBuildQuote: () => void }) {
         <button
           type="button"
           onClick={onBuildQuote}
-          className="shrink-0 rounded-full bg-[#2f2626] px-3 py-1.5 text-xs font-bold text-white"
+          className="shrink-0 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
         >
           Build Quote
         </button>
@@ -1140,7 +1115,7 @@ function QuoteBuilderModal({
             type="button"
             onClick={() => void sendQuote()}
             disabled={isSending || totalCents <= 0}
-            className="rounded-full bg-[#2f2626] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+            className="rounded-full bg-[#D7E5D0] px-4 py-2 text-sm font-bold text-[#fffaf6] shadow-[0_10px_22px_rgba(110,130,104,0.18)] transition hover:bg-[#C4D6BC] disabled:opacity-50"
           >
             {isSending ? "Sending..." : "Send Quote"}
           </button>
@@ -1233,7 +1208,7 @@ function IdentityAvatar({
 }: {
   image?: string | null;
   label: string;
-  size: "sm" | "md" | "lg";
+  size: "sm" | "inbox" | "md" | "lg";
 }) {
   const initials = getInitials(label);
   const dimensions =
@@ -1241,7 +1216,9 @@ function IdentityAvatar({
       ? "h-12 w-12 text-base"
       : size === "md"
         ? "h-11 w-11 text-sm"
-        : "h-7 w-7 text-[10px]";
+        : size === "inbox"
+          ? "h-9 w-9 text-xs"
+          : "h-7 w-7 text-[10px]";
 
   return (
     <div className={`${dimensions} relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-[linear-gradient(135deg,#f4cfca,#f9e8dd,#e4efe8)] font-serif font-semibold text-[#8a5c58] shadow-sm ring-2 ring-white`}>
@@ -1297,19 +1274,6 @@ function getConversationIdentity(
     kind: "Vendor Shop",
     name: conversation.vendorProfile.name
   };
-}
-
-function getContextTitle(
-  conversation: SerializedMessageConversation,
-  inquiry: InquiryItem | null
-) {
-  return (
-    inquiry?.listing?.title ??
-    inquiry?.offering?.title ??
-    conversation.listing?.title ??
-    conversation.offering?.title ??
-    "Event Inquiry"
-  );
 }
 
 function getInquiryMarkerId(body: string) {
@@ -1384,6 +1348,15 @@ function formatConversationLocation(conversation: SerializedMessageConversation)
   const state = conversation.listing?.state ?? conversation.vendorProfile.state;
   if (city && state) return `${city}, ${state}`;
   return city ?? state ?? null;
+}
+
+function formatInboxLocation(location: string | null) {
+  if (!location) return null;
+  const parts = location.split(",").map((part) => part.trim()).filter(Boolean);
+  const city = parts[0] ?? location;
+  const state = parts[1]?.match(/[A-Z]{2}/)?.[0] ?? parts[1];
+  if (/^san francisco$/i.test(city)) return "SF";
+  return state ? `${city}, ${state}` : city;
 }
 
 function getInitials(label: string) {
