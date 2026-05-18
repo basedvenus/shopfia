@@ -12,13 +12,14 @@ import {
   CalendarHeart,
   ChevronRight,
   ExternalLink,
-  Heart,
+  FileText,
   Inbox,
   Mail,
   MapPin,
   Menu,
   Package,
   Paperclip,
+  ReceiptText,
   Send,
   Sparkles,
   UsersRound,
@@ -40,7 +41,6 @@ type MessagesPayload = {
   unreadTotal: number;
 };
 
-type MessageItem = SerializedMessageConversation["messages"][number];
 type InquiryItem = SerializedMessageConversation["inquiries"][number];
 
 export function MessagesClient({
@@ -167,8 +167,8 @@ export function MessagesClient({
   }, [currentUserId, payload, selectConversation]);
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-6.25rem)] min-h-[620px] max-w-[1500px] flex-col overflow-hidden rounded-[1.5rem] border border-white/75 bg-[#fffaf6] shadow-[0_24px_72px_rgba(82,55,55,0.10)] md:h-[calc(100vh-7.25rem)]">
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#eadbd3] bg-[linear-gradient(135deg,#fffdf9,#ffffff_54%,#f6efe7)] px-4 py-3 md:px-5">
+    <div className="mx-auto flex h-[calc(100dvh-5.25rem)] max-w-[1500px] flex-col overflow-hidden rounded-[1.25rem] border border-white/75 bg-[#fffaf6] shadow-[0_24px_72px_rgba(82,55,55,0.10)] md:h-[calc(100vh-7.25rem)] md:min-h-[620px] md:rounded-[1.5rem]">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#eadbd3] bg-[linear-gradient(135deg,#fffdf9,#ffffff_54%,#f6efe7)] px-3 py-2.5 md:px-5 md:py-3">
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
@@ -183,12 +183,12 @@ export function MessagesClient({
               <Sparkles className="h-3.5 w-3.5" />
               ShopFia Inbox
             </div>
-            <h1 className="text-2xl font-semibold tracking-tight text-[#2f2626] md:text-3xl">
+            <h1 className="text-xl font-semibold tracking-tight text-[#2f2626] md:text-3xl">
               Messages
             </h1>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-[#2f2626] shadow-sm">
+        <div className="flex shrink-0 items-center gap-2 rounded-full bg-white px-2.5 py-1.5 text-xs font-semibold text-[#2f2626] shadow-sm md:px-3 md:py-2 md:text-sm">
           <Bell className="h-4 w-4 text-[#c5837f]" />
           {payload.unreadTotal > 0 ? `${payload.unreadTotal} unread` : "Caught up"}
         </div>
@@ -396,6 +396,7 @@ function ConversationThread({
 }) {
   const viewerIsVendor = conversation.vendorId === currentUserId;
   const identity = getConversationIdentity(conversation, viewerIsVendor);
+  const latestInquiry = conversation.inquiries.at(-1) ?? null;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -437,12 +438,12 @@ function ConversationThread({
 
   return (
     <section className="flex min-h-0 flex-col bg-white">
-      <div className="shrink-0 border-b border-[#eadbd3] bg-[linear-gradient(135deg,#fffdf9,#ffffff_62%,#f6efe7)] px-3 py-3 md:px-5">
+      <div className="shrink-0 border-b border-[#eadbd3] bg-[linear-gradient(135deg,#fffdf9,#ffffff_62%,#f6efe7)] px-3 py-2 md:px-5 md:py-3">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onOpenInbox}
-            className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#8a5c58] shadow-sm md:hidden"
+            className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#8a5c58] shadow-sm md:hidden"
             aria-label="Open inbox"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -454,33 +455,51 @@ function ConversationThread({
             <IdentityAvatar image={identity.image} label={identity.name} size="lg" />
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
-                <h2 className="truncate text-lg font-bold text-[#2f2626] md:text-xl">
+                <h2 className="truncate text-base font-bold text-[#2f2626] md:text-xl">
                   {identity.name}
                 </h2>
                 <span className="hidden rounded-full bg-white/80 px-2.5 py-1 text-xs font-semibold text-[#9b6b65] sm:inline-flex">
                   {identity.kind}
                 </span>
               </div>
-              <p className="truncate text-xs text-muted-foreground md:text-sm">
+              <p className="truncate text-[11px] text-muted-foreground md:text-sm">
                 {viewerIsVendor
                   ? "Replying through your vendor shop"
                   : "Marketplace conversation with this storefront"}
               </p>
             </div>
           </Link>
+          {viewerIsVendor ? (
+            <Link
+              href="/vendor/dashboard#requests"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#2f2626] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#4b403c]"
+            >
+              <ReceiptText className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Build Quote</span>
+              <span className="sm:hidden">Quote</span>
+            </Link>
+          ) : null}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-[#8f5f5b] md:text-xs">
+          <span className="rounded-full bg-white/85 px-2.5 py-1 shadow-sm">
+            {latestInquiry ? "Inquiry received" : "Conversation"}
+          </span>
+          <span className="rounded-full bg-white/85 px-2.5 py-1 shadow-sm">
+            Quote {viewerIsVendor ? "ready to build" : "pending"}
+          </span>
         </div>
         <ContextCard conversation={conversation} />
       </div>
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[linear-gradient(180deg,#fffaf6,#ffffff_34%)] px-3 py-4 md:px-5"
+        className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-[linear-gradient(180deg,#fffaf6,#ffffff_34%)] px-2.5 py-3 md:space-y-3 md:px-5 md:py-4"
       >
         <ConversationItems conversation={conversation} currentUserId={currentUserId} />
       </div>
 
-      <div className="shrink-0 border-t border-[#f0dfda] bg-white px-3 py-3 md:px-5">
-        <div className="rounded-[1.35rem] border border-[#eadbd7] bg-[#fffdfa] p-2 shadow-sm">
+      <div className="shrink-0 border-t border-[#f0dfda] bg-white px-2.5 py-2 md:px-5 md:py-3">
+        <div className="rounded-[1.1rem] border border-[#eadbd7] bg-[#fffdfa] p-1.5 shadow-sm md:rounded-[1.35rem] md:p-2">
           <Textarea
             name="body"
             onChange={(event) => setBody(event.target.value)}
@@ -492,11 +511,11 @@ function ConversationThread({
             }}
             placeholder={viewerIsVendor ? "Reply with availability, pricing, or next steps..." : "Reply to the vendor..."}
             value={body}
-            className="min-h-[54px] resize-none border-0 bg-transparent px-2 py-2 text-sm shadow-none focus-visible:ring-0 md:min-h-[70px]"
+            className="min-h-[42px] resize-none border-0 bg-transparent px-2 py-1.5 text-sm shadow-none focus-visible:ring-0 md:min-h-[70px] md:py-2"
             required
           />
           <div className="flex items-center justify-between gap-3 px-1 pb-1">
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="hidden truncate text-xs text-muted-foreground sm:block">
               {isPending || isSending ? "Sending through ShopFia..." : "Replies stay connected to this inquiry."}
             </p>
             <Button
@@ -584,7 +603,7 @@ function ContextCard({ conversation }: { conversation: SerializedMessageConversa
   return (
     <Link
       href={href}
-      className="mt-3 grid gap-2 rounded-[1.1rem] border border-white/80 bg-white/85 p-2 shadow-sm transition hover:shadow-[0_12px_28px_rgba(82,55,55,0.10)] sm:grid-cols-[58px_1fr_auto]"
+      className="mt-3 hidden gap-2 rounded-[1.1rem] border border-white/80 bg-white/85 p-2 shadow-sm transition hover:shadow-[0_12px_28px_rgba(82,55,55,0.10)] sm:grid sm:grid-cols-[58px_1fr_auto]"
     >
       <div className="relative hidden h-14 overflow-hidden rounded-[0.9rem] bg-[#f7e6dc] sm:block">
         {image ? (
@@ -620,9 +639,114 @@ function InquiryBriefCard({
   const location = formatInquiryLocation(inquiry);
   const inspirationLinks = inquiry.inspirationUrls.filter(isHttpUrl);
   const inspirationImages = inquiry.inspirationUrls.filter(isVisualAttachment);
+  const compactMeta = [
+    inquiry.eventDate ? shortEventDate(inquiry.eventDate) : "Date TBD",
+    location,
+    inquiry.budgetCents != null ? formatBudget(inquiry.budgetCents) : "Budget TBD"
+  ];
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <article className="mx-auto w-full max-w-3xl overflow-hidden rounded-[1.35rem] border border-[#eed7d1] bg-white shadow-[0_14px_34px_rgba(82,55,55,0.08)]">
+    <>
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="mx-auto flex w-full max-w-[92%] items-center gap-3 rounded-[1.1rem] border border-[#eadbd3] bg-white px-3 py-2 text-left shadow-[0_10px_26px_rgba(82,55,55,0.08)] md:hidden"
+      >
+        <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[0.9rem] bg-[linear-gradient(135deg,#f4cfca,#f9e8dd,#e4efe8)] text-[#9b6b65]">
+          {inspirationImages[0] ? (
+            <span
+              className="h-full w-full bg-cover bg-center"
+              style={{ backgroundImage: `url(${inspirationImages[0]})` }}
+            />
+          ) : (
+            <FileText className="h-5 w-5" />
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#9b6b65]">
+            Event Brief Attached
+          </span>
+          <span className="mt-0.5 block truncate text-sm font-bold text-[#2f2626]">{title}</span>
+          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+            {compactMeta.join(" • ")}
+          </span>
+          {inquiry.message ? (
+            <span className="mt-1 block truncate text-xs text-[#6a5b56]">{inquiry.message}</span>
+          ) : null}
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-[#9b6b65]" />
+      </button>
+
+      {isOpen ? (
+        <div className="fixed inset-0 z-50 bg-[#2f2626]/30 p-3 backdrop-blur-sm md:hidden">
+          <div className="flex h-full flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_70px_rgba(47,38,38,0.22)]">
+            <div className="flex shrink-0 items-center justify-between border-b border-[#eadbd3] bg-[#fffaf6] px-4 py-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#9b6b65]">
+                  Event Brief
+                </p>
+                <h3 className="truncate text-base font-bold text-[#2f2626]">{title}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#8a5c58] shadow-sm"
+                aria-label="Close event brief"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              <FullInquiryBrief
+                compact
+                createdAt={createdAt}
+                date={date}
+                inquiry={inquiry}
+                inspirationImages={inspirationImages}
+                inspirationLinks={inspirationLinks}
+                location={location}
+                title={title}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <FullInquiryBrief
+        createdAt={createdAt}
+        date={date}
+        inquiry={inquiry}
+        inspirationImages={inspirationImages}
+        inspirationLinks={inspirationLinks}
+        location={location}
+        title={title}
+      />
+    </>
+  );
+}
+
+function FullInquiryBrief({
+  compact = false,
+  createdAt,
+  date,
+  inquiry,
+  inspirationImages,
+  inspirationLinks,
+  location,
+  title
+}: {
+  compact?: boolean;
+  createdAt: string;
+  date: string;
+  inquiry: InquiryItem;
+  inspirationImages: string[];
+  inspirationLinks: string[];
+  location: string;
+  title: string;
+}) {
+  return (
+    <article className={`${compact ? "block" : "mx-auto hidden md:block"} w-full max-w-3xl overflow-hidden rounded-[1.35rem] border border-[#eed7d1] bg-white shadow-[0_14px_34px_rgba(82,55,55,0.08)]`}>
       <div className="bg-[linear-gradient(135deg,#fffaf6,#ffffff_64%,#f6efe7)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-bold text-[#9b6b65]">{inquiry.name} sent an inquiry</p>
