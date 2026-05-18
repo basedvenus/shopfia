@@ -41,6 +41,8 @@ type MessagesPayload = {
 
 type InquiryItem = SerializedMessageConversation["inquiries"][number];
 type QuoteRequestItem = SerializedMessageConversation["quoteRequests"][number];
+type QuoteLineForm = { description: string; quantity: number | string; unitAmount: string };
+type QuoteLineItem = { description: string; quantity: number; unitAmountCents: number };
 
 export function MessagesClient({
   currentUserId,
@@ -370,6 +372,7 @@ function ConversationThread({
   const viewerIsVendor = conversation.vendorId === currentUserId;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState("");
+  const [quoteBuilderOpen, setQuoteBuilderOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messageCount = conversation.messages.length + conversation.inquiries.length;
@@ -421,14 +424,15 @@ function ConversationThread({
           </button>
           <ContextCard conversation={conversation} />
           {viewerIsVendor ? (
-            <Link
-              href="/vendor/dashboard#requests"
+            <button
+              type="button"
+              onClick={() => setQuoteBuilderOpen(true)}
               className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[1rem] bg-[#2f2626] px-3 text-xs font-bold text-white shadow-sm transition hover:bg-[#4b403c]"
             >
               <ReceiptText className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Build Quote</span>
               <span className="sm:hidden">Quote</span>
-            </Link>
+            </button>
           ) : null}
         </div>
       </div>
@@ -440,6 +444,7 @@ function ConversationThread({
         <ConversationItems
           conversation={conversation}
           currentUserId={currentUserId}
+          onBuildQuote={() => setQuoteBuilderOpen(true)}
           viewerIsVendor={viewerIsVendor}
         />
       </div>
@@ -478,6 +483,16 @@ function ConversationThread({
           {error ? <p className="px-2 pb-1 text-xs font-medium text-red-600">{error}</p> : null}
         </div>
       </div>
+      {quoteBuilderOpen ? (
+        <QuoteBuilderModal
+          conversation={conversation}
+          onClose={() => setQuoteBuilderOpen(false)}
+          onSent={() => {
+            setQuoteBuilderOpen(false);
+            onAfterSend();
+          }}
+        />
+      ) : null}
     </section>
   );
 }
@@ -485,10 +500,12 @@ function ConversationThread({
 function ConversationItems({
   conversation,
   currentUserId,
+  onBuildQuote,
   viewerIsVendor
 }: {
   conversation: SerializedMessageConversation;
   currentUserId: string;
+  onBuildQuote: () => void;
   viewerIsVendor: boolean;
 }) {
   const inquiriesById = new Map(conversation.inquiries.map((inquiry) => [inquiry.id, inquiry]));
@@ -535,11 +552,12 @@ function ConversationItems({
         <QuoteWorkflowCard
           key={quoteRequest.id}
           quoteRequest={quoteRequest}
+          onBuildQuote={onBuildQuote}
           viewerIsVendor={viewerIsVendor}
         />
       ))}
       {viewerIsVendor && conversation.inquiries.length > 0 && conversation.quoteRequests.length === 0 ? (
-        <BuildQuotePromptCard />
+        <BuildQuotePromptCard onBuildQuote={onBuildQuote} />
       ) : null}
     </>
   );
@@ -792,15 +810,18 @@ function FullInquiryBrief({
 }
 
 function QuoteWorkflowCard({
+  onBuildQuote,
   quoteRequest,
   viewerIsVendor
 }: {
+  onBuildQuote: () => void;
   quoteRequest: QuoteRequestItem;
   viewerIsVendor: boolean;
 }) {
   const quote = quoteRequest.quote;
   const href = viewerIsVendor ? "/vendor/dashboard#requests" : "/account#quotes";
-  const title = quoteRequest.offering?.title ?? "Custom Event Quote";
+  const quoteDetails = parseQuoteDetails(quote?.lineItemsJson);
+  const title = quoteDetails.title ?? quoteRequest.offering?.title ?? "Custom Event Quote";
 
   return (
     <article className="mx-auto w-full max-w-[92%] rounded-[1.1rem] border border-[#e7d3c9] bg-white px-3 py-2.5 shadow-[0_10px_26px_rgba(82,55,55,0.08)] md:max-w-2xl md:px-4 md:py-3">
@@ -828,20 +849,47 @@ function QuoteWorkflowCard({
           {quote?.notes ? (
             <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#6a5b56]">{quote.notes}</p>
           ) : null}
-          <Link
-            href={href}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#2f2626] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#4b403c]"
-          >
-            {quote ? (viewerIsVendor ? "Manage Quote" : "View Quote") : viewerIsVendor ? "Build Quote" : "Waiting on Quote"}
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Link>
+          {quoteDetails.lineItems.length > 0 ? (
+            <div className="mt-2 grid gap-1 border-t border-[#f0dfda] pt-2">
+              {quoteDetails.lineItems.slice(0, 3).map((item, index) => (
+                <div key={`${item.description}-${index}`} className="flex items-center justify-between gap-3 text-xs text-[#5f514e]">
+                  <span className="truncate">{item.description}</span>
+                  <span className="shrink-0 font-bold text-[#2f2626]">
+                    {formatBudget(Math.round(item.quantity * item.unitAmountCents))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {quote ? (
+            <Link
+              href={href}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#2f2626] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#4b403c]"
+            >
+              {viewerIsVendor ? "Manage Quote" : "Review Quote"}
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          ) : viewerIsVendor ? (
+            <button
+              type="button"
+              onClick={onBuildQuote}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#2f2626] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#4b403c]"
+            >
+              Build Quote
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          ) : (
+            <span className="mt-2 inline-flex rounded-full bg-[#fbf1ed] px-3 py-1.5 text-xs font-bold text-[#8f5f5b]">
+              Waiting on Quote
+            </span>
+          )}
         </div>
       </div>
     </article>
   );
 }
 
-function BuildQuotePromptCard() {
+function BuildQuotePromptCard({ onBuildQuote }: { onBuildQuote: () => void }) {
   return (
     <article className="mx-auto w-full max-w-[92%] rounded-[1.1rem] border border-[#eadbd3] bg-[#fffdfa] px-3 py-2.5 shadow-[0_10px_26px_rgba(82,55,55,0.07)] md:max-w-2xl md:px-4 md:py-3">
       <div className="flex items-center gap-3">
@@ -854,14 +902,274 @@ function BuildQuotePromptCard() {
             Send a custom quote once the details feel clear.
           </p>
         </div>
-        <Link
-          href="/vendor/dashboard#requests"
+        <button
+          type="button"
+          onClick={onBuildQuote}
           className="shrink-0 rounded-full bg-[#2f2626] px-3 py-1.5 text-xs font-bold text-white"
         >
           Build Quote
-        </Link>
+        </button>
       </div>
     </article>
+  );
+}
+
+function QuoteBuilderModal({
+  conversation,
+  onClose,
+  onSent
+}: {
+  conversation: SerializedMessageConversation;
+  onClose: () => void;
+  onSent: () => void;
+}) {
+  const latestInquiry = conversation.inquiries.at(-1);
+  const defaultTitle = conversation.offering?.title ?? latestInquiry?.offering?.title ?? latestInquiry?.listing?.title ?? "Custom Event Quote";
+  const [title, setTitle] = useState(defaultTitle);
+  const [lineItems, setLineItems] = useState<QuoteLineForm[]>([
+    { description: defaultTitle, quantity: 1, unitAmount: "" }
+  ]);
+  const [setupFee, setSetupFee] = useState("");
+  const [deliveryFee, setDeliveryFee] = useState("");
+  const [tax, setTax] = useState("");
+  const [depositPercent, setDepositPercent] = useState("50");
+  const [paymentPreference, setPaymentPreference] = useState<"DEPOSIT" | "FULL">("DEPOSIT");
+  const [expiresAt, setExpiresAt] = useState(() => getDefaultExpirationDate());
+  const [notes, setNotes] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const subtotalCents = lineItems.reduce(
+    (sum, item) => sum + dollarsToCents(item.unitAmount) * Math.max(1, Number(item.quantity) || 1),
+    0
+  );
+  const totalCents =
+    subtotalCents + dollarsToCents(setupFee) + dollarsToCents(deliveryFee) + dollarsToCents(tax);
+  const depositCents =
+    paymentPreference === "DEPOSIT"
+      ? Math.round(totalCents * ((Number(depositPercent) || 0) / 100))
+      : totalCents;
+
+  function updateLineItem(index: number, field: "description" | "quantity" | "unitAmount", value: string | number) {
+    setLineItems((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item
+      )
+    );
+  }
+
+  async function sendQuote() {
+    setError(null);
+    setIsSending(true);
+    const response = await fetch("/api/messages/quotes", {
+      body: JSON.stringify({
+        conversationId: conversation.id,
+        deliveryFeeCents: dollarsToCents(deliveryFee),
+        depositPercent: Number(depositPercent) || 0,
+        expiresAt,
+        lineItems: lineItems
+          .filter((item) => item.description.trim())
+          .map((item) => ({
+            description: item.description.trim(),
+            quantity: Math.max(1, Number(item.quantity) || 1),
+            unitAmountCents: dollarsToCents(item.unitAmount)
+          })),
+        notes,
+        paymentPreference,
+        setupFeeCents: dollarsToCents(setupFee),
+        taxCents: dollarsToCents(tax),
+        title
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST"
+    });
+    setIsSending(false);
+
+    if (!response.ok) {
+      const result = (await response.json().catch(() => null)) as { error?: string } | null;
+      setError(result?.error ?? "Could not send quote.");
+      return;
+    }
+
+    onSent();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-[#2f2626]/30 p-3 backdrop-blur-sm">
+      <div className="ml-auto flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_70px_rgba(47,38,38,0.24)]">
+        <div className="flex shrink-0 items-center justify-between border-b border-[#eadbd3] bg-[#fffaf6] px-4 py-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#9b6b65]">
+              Build Quote
+            </p>
+            <h2 className="text-lg font-bold text-[#2f2626]">Custom proposal for this inquiry</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#8a5c58] shadow-sm"
+            aria-label="Close quote builder"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <div className="grid gap-4">
+            <label className="grid gap-1.5 text-sm font-bold text-[#2f2626]">
+              Quote title
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                className="rounded-[1rem] border border-[#eadbd3] bg-[#fffdfa] px-3 py-2 text-sm font-medium outline-none focus:border-[#d8a39c]"
+              />
+            </label>
+
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-bold text-[#2f2626]">Line items</p>
+                <button
+                  type="button"
+                  onClick={() => setLineItems((current) => [...current, { description: "", quantity: 1, unitAmount: "" }])}
+                  className="rounded-full border border-[#eadbd3] bg-white px-3 py-1.5 text-xs font-bold text-[#8f5f5b]"
+                >
+                  Add item
+                </button>
+              </div>
+              {lineItems.map((item, index) => (
+                <div key={index} className="grid gap-2 rounded-[1rem] border border-[#eadbd3] bg-[#fffdfa] p-2 sm:grid-cols-[1fr_80px_120px]">
+                  <input
+                    value={item.description}
+                    onChange={(event) => updateLineItem(index, "description", event.target.value)}
+                    placeholder="Package or service"
+                    className="rounded-[0.8rem] border border-[#eadbd3] bg-white px-3 py-2 text-sm outline-none"
+                  />
+                  <input
+                    value={item.quantity}
+                    onChange={(event) => updateLineItem(index, "quantity", event.target.value)}
+                    placeholder="Qty"
+                    type="number"
+                    min="1"
+                    className="rounded-[0.8rem] border border-[#eadbd3] bg-white px-3 py-2 text-sm outline-none"
+                  />
+                  <input
+                    value={item.unitAmount}
+                    onChange={(event) => updateLineItem(index, "unitAmount", event.target.value)}
+                    placeholder="$ Amount"
+                    inputMode="decimal"
+                    className="rounded-[0.8rem] border border-[#eadbd3] bg-white px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-3">
+              <MoneyInput label="Setup fee" value={setupFee} onChange={setSetupFee} />
+              <MoneyInput label="Delivery fee" value={deliveryFee} onChange={setDeliveryFee} />
+              <MoneyInput label="Taxes" value={tax} onChange={setTax} />
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-3">
+              <label className="grid gap-1.5 text-sm font-bold text-[#2f2626]">
+                Payment
+                <select
+                  value={paymentPreference}
+                  onChange={(event) => setPaymentPreference(event.target.value as "DEPOSIT" | "FULL")}
+                  className="rounded-[1rem] border border-[#eadbd3] bg-[#fffdfa] px-3 py-2 text-sm outline-none"
+                >
+                  <option value="DEPOSIT">Deposit</option>
+                  <option value="FULL">Full payment</option>
+                </select>
+              </label>
+              <label className="grid gap-1.5 text-sm font-bold text-[#2f2626]">
+                Deposit %
+                <input
+                  value={depositPercent}
+                  onChange={(event) => setDepositPercent(event.target.value)}
+                  type="number"
+                  min="0"
+                  max="100"
+                  disabled={paymentPreference === "FULL"}
+                  className="rounded-[1rem] border border-[#eadbd3] bg-[#fffdfa] px-3 py-2 text-sm outline-none disabled:opacity-50"
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-bold text-[#2f2626]">
+                Expires
+                <input
+                  value={expiresAt}
+                  onChange={(event) => setExpiresAt(event.target.value)}
+                  type="date"
+                  className="rounded-[1rem] border border-[#eadbd3] bg-[#fffdfa] px-3 py-2 text-sm outline-none"
+                />
+              </label>
+            </div>
+
+            <label className="grid gap-1.5 text-sm font-bold text-[#2f2626]">
+              Notes to buyer
+              <textarea
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="Share what is included, timeline, or next steps..."
+                className="min-h-24 rounded-[1rem] border border-[#eadbd3] bg-[#fffdfa] px-3 py-2 text-sm outline-none"
+              />
+            </label>
+
+            <div className="rounded-[1.1rem] border border-[#eadbd3] bg-[#fffaf6] p-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-bold text-[#2f2626]">Quote total</span>
+                <span className="font-bold text-[#2f2626]">{formatBudget(totalCents)}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{paymentPreference === "DEPOSIT" ? "Deposit due after approval" : "Full payment due after approval"}</span>
+                <span>{formatBudget(depositCents)}</span>
+              </div>
+            </div>
+            {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-[#eadbd3] bg-white px-4 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-[#eadbd3] bg-white px-4 py-2 text-sm font-bold text-[#6a5b56]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void sendQuote()}
+            disabled={isSending || totalCents <= 0}
+            className="rounded-full bg-[#2f2626] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {isSending ? "Sending..." : "Send Quote"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MoneyInput({
+  label,
+  onChange,
+  value
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  return (
+    <label className="grid gap-1.5 text-sm font-bold text-[#2f2626]">
+      {label}
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        inputMode="decimal"
+        placeholder="$0"
+        className="rounded-[1rem] border border-[#eadbd3] bg-[#fffdfa] px-3 py-2 text-sm outline-none"
+      />
+    </label>
   );
 }
 
@@ -1093,6 +1401,62 @@ function isHttpUrl(value: string) {
 
 function isVisualAttachment(value: string) {
   return value.startsWith("data:image/") || /\.(png|jpe?g|gif|webp|avif)(\?.*)?$/i.test(value);
+}
+
+function dollarsToCents(value: string) {
+  const normalized = value.replace(/[^0-9.]/g, "");
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  return Math.round(amount * 100);
+}
+
+function getDefaultExpirationDate() {
+  const date = new Date();
+  date.setDate(date.getDate() + 14);
+  return date.toISOString().slice(0, 10);
+}
+
+function parseQuoteDetails(value: unknown): {
+  deliveryFeeCents: number;
+  lineItems: QuoteLineItem[];
+  setupFeeCents: number;
+  taxCents: number;
+  title: string | null;
+} {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { deliveryFeeCents: 0, lineItems: [], setupFeeCents: 0, taxCents: 0, title: null };
+  }
+
+  const details = value as {
+    deliveryFeeCents?: unknown;
+    lineItems?: unknown;
+    setupFeeCents?: unknown;
+    taxCents?: unknown;
+    title?: unknown;
+  };
+
+  return {
+    deliveryFeeCents: typeof details.deliveryFeeCents === "number" ? details.deliveryFeeCents : 0,
+    lineItems: Array.isArray(details.lineItems)
+      ? details.lineItems
+          .map((item) => {
+            if (!item || typeof item !== "object") return null;
+            const line = item as { description?: unknown; quantity?: unknown; unitAmountCents?: unknown };
+            if (typeof line.description !== "string" || typeof line.unitAmountCents !== "number") {
+              return null;
+            }
+            return {
+              description: line.description,
+              quantity: typeof line.quantity === "number" ? line.quantity : 1,
+              unitAmountCents: line.unitAmountCents
+            };
+          })
+          .filter((item): item is QuoteLineItem => Boolean(item))
+      : [],
+    setupFeeCents: typeof details.setupFeeCents === "number" ? details.setupFeeCents : 0,
+    taxCents: typeof details.taxCents === "number" ? details.taxCents : 0,
+    title: typeof details.title === "string" ? details.title : null
+  };
 }
 
 function playSoftPop() {
