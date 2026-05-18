@@ -47,25 +47,29 @@ export function NotificationPreferences({ compact = false }: { compact?: boolean
         description: "A polished ShopFia email when a new inquiry or reply arrives.",
         icon: Mail,
         key: "email" as const,
-        label: "Email notifications"
+        label: "Email notifications",
+        shortLabel: "Email"
       },
       {
         description: "Text alerts for time-sensitive vendor leads once SMS is connected.",
         icon: MessageSquareText,
         key: "sms" as const,
-        label: "SMS notifications"
+        label: "SMS notifications",
+        shortLabel: "SMS"
       },
       {
         description: browserStatus,
         icon: Bell,
         key: "browser" as const,
-        label: "Browser push"
+        label: "Browser push",
+        shortLabel: "Push"
       },
       {
         description: "A gentle pop for new messages while ShopFia is open.",
         icon: Volume2,
         key: "sound" as const,
-        label: "Soft pop"
+        label: "Soft pop",
+        shortLabel: "Sound"
       }
     ],
     [browserStatus]
@@ -98,7 +102,7 @@ export function NotificationPreferences({ compact = false }: { compact?: boolean
       <p className={`${compact ? "mt-1 text-xs leading-5" : "mt-2 text-sm leading-6"} text-muted-foreground`}>
         Choose how ShopFia should nudge you when a new inquiry or reply arrives.
       </p>
-      <div className={`${compact ? "mt-3 grid-cols-2 gap-2" : "mt-4 gap-3"} grid`}>
+      <div className={`${compact ? "mt-3 grid-cols-2 gap-1.5" : "mt-4 gap-3"} grid`}>
         {rows.map((row) => {
           const Icon = row.icon;
           const enabled = preferences[row.key];
@@ -107,17 +111,38 @@ export function NotificationPreferences({ compact = false }: { compact?: boolean
               key={row.key}
               type="button"
               onClick={() => void togglePreference(row.key)}
-              className={`${compact ? "items-center gap-2 rounded-[1rem] p-2" : "items-start gap-3 rounded-[1.25rem] p-3"} flex border border-[#eadbd3] bg-[#fffdfa] text-left transition hover:bg-white`}
+              aria-label={row.label}
+              title={row.label}
+              className={`flex border text-left transition hover:bg-white ${
+                compact
+                  ? `min-w-0 items-center justify-between gap-1.5 rounded-full px-2.5 py-2 ${
+                      enabled
+                        ? "border-[#dfb9b1] bg-[#fff4f0] text-[#8f5f5b] shadow-sm"
+                        : "border-[#eadbd3] bg-[#fffdfa] text-[#5f514e]"
+                    }`
+                  : "items-start gap-3 rounded-[1.25rem] border-[#eadbd3] bg-[#fffdfa] p-3"
+              }`}
             >
-              <span className={`${compact ? "h-8 w-8" : "h-9 w-9"} grid shrink-0 place-items-center rounded-full bg-white text-[#c5837f] shadow-sm`}>
-                <Icon className="h-4 w-4" />
+              <span className={`${compact ? "contents" : "flex items-start gap-3"}`}>
+                <span className={`${compact ? "h-6 w-6" : "h-9 w-9"} grid shrink-0 place-items-center rounded-full bg-white text-[#c5837f] shadow-sm`}>
+                  <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                </span>
               </span>
               <span className="min-w-0 flex-1">
-                <span className={`${compact ? "text-xs" : "text-sm"} block font-semibold text-[#2f2626]`}>{row.label}</span>
+                <span className={`${compact ? "truncate text-[11px]" : "text-sm"} block font-semibold text-[#2f2626]`}>
+                  {compact ? row.shortLabel : row.label}
+                </span>
                 <span className={`${compact ? "hidden" : "mt-1 block"} text-xs leading-5 text-muted-foreground`}>
                   {row.description}
                 </span>
               </span>
+              {compact ? (
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${
+                    enabled ? "bg-[#d8a39c]" : "bg-[#e5d8d0]"
+                  }`}
+                />
+              ) : null}
               <span
                 className={`${compact ? "hidden" : "mt-1"} h-6 w-11 rounded-full p-1 transition ${
                   enabled ? "bg-[#d8a39c]" : "bg-[#e4d9d2]"
