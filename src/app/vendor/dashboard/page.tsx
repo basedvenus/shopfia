@@ -27,8 +27,10 @@ import { updateSellerMarketplaceSettingsAction } from "@/app/actions/vendor";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ConnectStripeButton } from "@/components/vendor/connect-stripe-button";
+import { ReadinessChecklist } from "@/components/vendor/readiness-checklist";
 import { db } from "@/lib/db";
 import { getMarketplaceFeeConfig } from "@/lib/services/marketplace-fees";
+import { getConnectReadiness, retrieveConnectAccount } from "@/lib/stripe";
 import { basisPointsToPercent, formatCurrency, formatPercent } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -41,13 +43,18 @@ const paidOrderStatuses = new Set(["paid", "in_progress", "completed"]);
 const activeOrderStatuses = new Set(["paid", "in_progress"]);
 const requestStatuses = new Set(["SUBMITTED", "RESPONDED"]);
 
-export default async function VendorDashboardPage() {
+export default async function VendorDashboardPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ stripe?: string }> | { stripe?: string };
+}) {
+  const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/account?next=login");
   }
 
-  const [vendor, feeConfig] = await Promise.all([
+  let [vendor, feeConfig] = await Promise.all([
     db.vendorProfile.findUnique({
       where: { userId: session.user.id },
       include: {
@@ -142,6 +149,29 @@ export default async function VendorDashboardPage() {
     return <VendorOnboardingGate />;
   }
 
+  if (resolvedSearchParams.stripe && vendor.stripeAccountId) {
+    try {
+      const stripeAccount = await retrieveConnectAccount(vendor.stripeAccountId);
+      const readiness = getConnectReadiness(stripeAccount);
+      vendor = {
+        ...vendor,
+        stripeChargesEnabled: readiness.chargesEnabled,
+        stripeOnboardingComplete: readiness.onboardingComplete,
+        stripePayoutsEnabled: readiness.payoutsEnabled
+      };
+      await db.vendorProfile.update({
+        where: { id: vendor.id },
+        data: {
+          stripeChargesEnabled: readiness.chargesEnabled,
+          stripeOnboardingComplete: readiness.onboardingComplete,
+          stripePayoutsEnabled: readiness.payoutsEnabled
+        }
+      });
+    } catch {
+      // Keep rendering the dashboard; the Connect button can re-open onboarding or account management.
+    }
+  }
+
   const categoryNames = vendor.categories.map((item) => item.category.name);
   const allOfferingPhotos = vendor.offerings.flatMap((offering) => offering.photos);
   const heroImage = vendor.coverPhoto ?? vendor.photos[0] ?? allOfferingPhotos[0] ?? fallbackHero;
@@ -181,7 +211,7 @@ export default async function VendorDashboardPage() {
 
   return (
     <div className="-mx-3 space-y-6 pb-10 sm:mx-0">
-      <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-[0_22px_70px_rgba(72,44,43,0.08)]">
+      <section id="profile-assets" className="scroll-mt-24 overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-[0_22px_70px_rgba(72,44,43,0.08)]">
         <div className="relative min-h-[270px] overflow-hidden bg-[#f8ece9]">
           <Image src={heroImage} alt={`${vendor.name} cover`} fill priority className="object-cover" />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(25,22,22,0.72),rgba(25,22,22,0.22)_48%,rgba(25,22,22,0.08))]" />
@@ -293,7 +323,7 @@ export default async function VendorDashboardPage() {
       </nav>
 
       <section id="overview" className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-        <Panel className="p-6 sm:p-7">
+        <Panel id="business-description" className="scroll-mt-24 p-6 sm:p-7">
           <SectionKicker icon={<Store className="h-4 w-4" />} label="Overview" />
           <div className="mt-5 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <div>
@@ -328,14 +358,16 @@ export default async function VendorDashboardPage() {
 
         <Panel className="p-6 sm:p-7">
           <SectionKicker icon={<Wand2 className="h-4 w-4" />} label="Profile readiness" />
-          <div className="mt-5 space-y-4">
-            <ReadinessRow complete={Boolean(vendor.logoUrl)} label="Business logo" />
-            <ReadinessRow complete={Boolean(vendor.coverPhoto || vendor.photos.length)} label="Cover and portfolio imagery" />
-            <ReadinessRow complete={Boolean(vendor.bio)} label="Business description" />
-            <ReadinessRow complete={vendor.offerings.length > 0} label="At least one service" />
-            <ReadinessRow complete={vendor.stripeOnboardingComplete} label="Payout profile started" />
-            <ReadinessRow complete={vendor.stripeChargesEnabled && vendor.stripePayoutsEnabled} label="Ready to accept payments and payouts" />
-          </div>
+          <ReadinessChecklist
+            items={[
+              { complete: Boolean(vendor.logoUrl), label: "Business logo", targetId: "profile-assets" },
+              { complete: Boolean(vendor.coverPhoto || vendor.photos.length), label: "Cover and portfolio imagery", targetId: "portfolio" },
+              { complete: Boolean(vendor.bio), label: "Business description", targetId: "business-description" },
+              { complete: vendor.offerings.length > 0, label: "At least one service", targetId: "services" },
+              { complete: vendor.stripeOnboardingComplete, label: "Payout profile started", targetId: "availability" },
+              { complete: vendor.stripeChargesEnabled && vendor.stripePayoutsEnabled, label: "Ready to accept payments and payouts", targetId: "availability" }
+            ]}
+          />
           <div className="mt-6 rounded-[1.4rem] border border-[#eadbd8] bg-white p-4">
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-full bg-[#f8deda] text-primary">
@@ -352,7 +384,7 @@ export default async function VendorDashboardPage() {
         </Panel>
       </section>
 
-      <section id="services" className="space-y-4">
+      <section id="services" className="scroll-mt-24 space-y-4">
         <SectionHeader
           eyebrow="Services"
           title="Your mini storefront"
@@ -549,7 +581,7 @@ export default async function VendorDashboardPage() {
         )}
       </section>
 
-      <section id="portfolio" className="space-y-4">
+      <section id="portfolio" className="scroll-mt-24 space-y-4">
         <SectionHeader
           eyebrow="Portfolio"
           title="Image-first proof of your style"
@@ -569,7 +601,7 @@ export default async function VendorDashboardPage() {
         </div>
       </section>
 
-      <section id="availability" className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+      <section id="availability" className="scroll-mt-24 grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
         <Panel className="p-6 sm:p-7">
           <SectionKicker icon={<CalendarDays className="h-4 w-4" />} label="Get paid" />
           <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em]">Payouts and booking readiness</h2>
@@ -908,9 +940,17 @@ function Avatar({ image, name }: { image?: string | null; name: string }) {
   );
 }
 
-function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function Panel({
+  children,
+  className = "",
+  id
+}: {
+  children: React.ReactNode;
+  className?: string;
+  id?: string;
+}) {
   return (
-    <div className={`rounded-[2rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.07)] ${className}`}>
+    <div id={id} className={`rounded-[2rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.07)] ${className}`}>
       {children}
     </div>
   );
@@ -971,17 +1011,6 @@ function SoftChip({ children }: { children: React.ReactNode }) {
     <span className="rounded-full border border-[#eadbd8] bg-white px-3 py-1 text-xs font-medium text-muted-foreground">
       {children}
     </span>
-  );
-}
-
-function ReadinessRow({ complete, label }: { complete: boolean; label: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-[1.1rem] border border-[#eadbd8] bg-white p-3">
-      <span className="text-sm font-medium">{label}</span>
-      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${complete ? "bg-[#e5f4df] text-[#507343]" : "bg-[#f8ece9] text-primary"}`}>
-        {complete ? "Ready" : "Needs detail"}
-      </span>
-    </div>
   );
 }
 

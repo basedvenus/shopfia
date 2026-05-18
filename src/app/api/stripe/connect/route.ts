@@ -40,9 +40,6 @@ export async function POST(request: Request) {
     }
   });
   if (!vendor) return NextResponse.json({ error: "Vendor profile not found" }, { status: 404 });
-  if (!vendor.verified && session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Vendor account is suspended" }, { status: 403 });
-  }
 
   let stripeAccountId = vendor.stripeAccountId;
   if (!stripeAccountId) {
@@ -82,6 +79,7 @@ export async function POST(request: Request) {
     } catch (error) {
       securityLog("stripe_connect_status_refresh_failed", {
         error: error instanceof Error ? error.message : "unknown",
+        stripeAccountId,
         vendorId: vendor.id
       });
     }
