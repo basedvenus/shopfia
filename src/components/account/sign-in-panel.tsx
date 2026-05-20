@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { signIn } from "next-auth/react";
-import { createPasswordAccountAction, requestPasswordResetAction } from "@/app/actions/auth";
+import { createPasswordAccountAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -10,6 +10,34 @@ type SignInPanelProps = {
   googleEnabled: boolean;
   emailEnabled: boolean;
 };
+
+type PasswordResetResult = {
+  error?: string;
+  message?: string;
+  ok: boolean;
+};
+
+async function requestPasswordReset(email: string): Promise<PasswordResetResult> {
+  try {
+    const response = await fetch("/api/auth/password-reset", {
+      body: JSON.stringify({ email }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST"
+    });
+    const result = (await response.json().catch(() => null)) as PasswordResetResult | null;
+
+    if (result?.ok) return result;
+    return {
+      ok: false,
+      error: result?.error ?? "Could not send a reset link. Please try again."
+    };
+  } catch {
+    return {
+      ok: false,
+      error: "Could not reach ShopFia email reset. Check your connection and try again."
+    };
+  }
+}
 
 export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
   const [mode, setMode] = useState<"sign-in" | "sign-up" | "forgot-password">("sign-in");
@@ -61,9 +89,7 @@ export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
             setMessage(null);
 
             if (isForgotPassword) {
-              const formData = new FormData();
-              formData.set("email", email);
-              const result = await requestPasswordResetAction(formData);
+              const result = await requestPasswordReset(email);
               setMessage(
                 result.ok
                   ? result.message ?? "Check your email for a reset link."
