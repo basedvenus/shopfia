@@ -6,12 +6,11 @@ import { revalidatePath } from "next/cache";
 import { PartyCollaborationStatus, PartyCollaboratorRole, type Prisma } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { requestPasswordResetEmail } from "@/lib/auth/password-reset";
 import { db } from "@/lib/db";
 import { sendWelcomeEmail } from "@/lib/email";
 import { parseImageCrop } from "@/lib/image-crop";
 import { securityLog } from "@/lib/security/audit-log";
-import { checkServerActionRateLimit, getServerActionClientIp } from "@/lib/security/request";
+import { checkServerActionRateLimit } from "@/lib/security/request";
 import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 import { friendlyValidationMessage } from "@/lib/validators/messages";
 
@@ -150,11 +149,6 @@ const passwordResetSchema = z.object({
 
 function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
-}
-
-export async function requestPasswordResetAction(formData: FormData) {
-  const ip = await getServerActionClientIp();
-  return requestPasswordResetEmail({ email: formData.get("email"), ip });
 }
 
 export async function resetPasswordAction(formData: FormData) {
