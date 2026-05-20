@@ -88,17 +88,33 @@ export default async function AccountPage() {
   } catch (error) {
     console.error("ShopFia account dashboard failed", error);
     return (
-      <div className="mx-auto max-w-md">
-        <Card>
-          <CardHeader><CardTitle>Account is temporarily unavailable</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm leading-6 text-muted-foreground">
-              Your ShopFia site is still online, but your signed-in account view could not load.
-              Please open ShopFia in a private window or try Google sign-in while we finish the account recovery path.
+      <div className="mx-auto max-w-xl">
+        <Card className="border-[#ead6cf] bg-white/92 shadow-soft">
+          <CardHeader>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9b6b65]">
+              Database needs attention
             </p>
-            <Button asChild>
-              <Link href="/">Return home</Link>
-            </Button>
+            <CardTitle>Your account data cannot load right now.</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm leading-6 text-muted-foreground">
+              ShopFia is online, but the database provider is currently refusing reads because
+              the project exceeded its data transfer quota. That is why Explore is empty and
+              your signed-in account dashboard cannot load your vendor/profile data yet.
+            </p>
+            <div className="rounded-2xl border border-[#ead6cf] bg-[#fff8f5] p-4 text-sm leading-6 text-muted-foreground">
+              Fix the Neon database quota or wait for the quota reset. Once Neon allows reads
+              again, your vendors, listings, account, and messages should come back without
+              recreating them.
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild>
+                <Link href="/">Return home</Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link href="/explore">Check Explore</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
