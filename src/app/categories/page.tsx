@@ -9,6 +9,9 @@ export default async function CategoriesPage() {
   const categories = await db.category.findMany({
     include: { _count: { select: { offerings: true, eventOfferings: true, vendors: true } } },
     orderBy: [{ audience: "asc" }, { name: "asc" }]
+  }).catch((error) => {
+    console.error("ShopFia categories failed", error);
+    return fallbackCategories;
   });
   const vendorCategories = sortByOrder(
     categories.filter((c) => c.audience === CategoryAudience.VENDOR),
@@ -81,6 +84,21 @@ const eventCategoryOrder = [
   "Corporate Event",
   "Holiday Party",
   "Graduation Party"
+];
+
+const fallbackCategories = [
+  ...serviceCategoryOrder.map((name, index) => ({
+    id: `service-${index}`,
+    name,
+    audience: CategoryAudience.VENDOR,
+    _count: { eventOfferings: 0, offerings: 0, vendors: 0 }
+  })),
+  ...eventCategoryOrder.map((name, index) => ({
+    id: `event-${index}`,
+    name,
+    audience: CategoryAudience.BUYER,
+    _count: { eventOfferings: 0, offerings: 0, vendors: 0 }
+  }))
 ];
 
 function displayCategoryName(name: string) {

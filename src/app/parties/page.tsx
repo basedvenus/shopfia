@@ -44,7 +44,13 @@ export default async function PartiesPage({
   searchParams?: Promise<{ feed?: string; friend?: string }> | { feed?: string; friend?: string };
 }) {
   const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
-  const [session, originalMemberCutoff] = await Promise.all([auth(), getOriginalMemberCutoffDate(db)]);
+  const [session, originalMemberCutoff] = await Promise.all([
+    auth(),
+    getOriginalMemberCutoffDate(db).catch((error) => {
+      console.error("ShopFia parties badge cutoff failed", error);
+      return null;
+    })
+  ]);
   const selectedFeed = getSelectedFeed(resolvedSearchParams.feed);
   const friendQuery = normalizeFriendQuery(resolvedSearchParams.friend);
   const parties = await db.partyEvent.findMany({
@@ -91,6 +97,9 @@ export default async function PartiesPage({
     },
     orderBy: [{ createdAt: "desc" }],
     take: 60
+  }).catch((error) => {
+    console.error("ShopFia parties feed failed", error);
+    return [];
   });
   const followingIds = session?.user?.id
     ? new Set(
@@ -98,6 +107,9 @@ export default async function PartiesPage({
           await db.follow.findMany({
             where: { followerId: session.user.id },
             select: { followingId: true }
+          }).catch((error) => {
+            console.error("ShopFia following lookup failed", error);
+            return [];
           })
         ).map((follow) => follow.followingId)
       )
@@ -129,6 +141,9 @@ export default async function PartiesPage({
         },
         orderBy: [{ name: "asc" }, { username: "asc" }],
         take: 8
+      }).catch((error) => {
+        console.error("ShopFia friend search failed", error);
+        return [];
       })
     : [];
   const savedPartyIds = session?.user?.id
@@ -137,6 +152,9 @@ export default async function PartiesPage({
           await db.favorite.findMany({
             where: { buyerId: session.user.id, partyEventId: { not: null } },
             select: { partyEventId: true }
+          }).catch((error) => {
+            console.error("ShopFia saved parties failed", error);
+            return [];
           })
         ).map((favorite) => favorite.partyEventId).filter(Boolean) as string[]
       )

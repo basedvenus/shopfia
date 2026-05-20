@@ -14,10 +14,21 @@ export default async function ExplorePage({
   searchParams: Record<string, string | string[] | undefined>;
 }) {
   const { db } = await import("@/lib/db");
-  const [data, session, originalMemberCutoff] = await Promise.all([
-    getExploreData(searchParams),
-    auth(),
-    getOriginalMemberCutoffDate(db)
+  const session = await auth();
+  const [data, originalMemberCutoff] = await Promise.all([
+    getExploreData(searchParams).catch((error) => {
+      console.error("ShopFia explore data failed", error);
+      return {
+        categories: [],
+        eventCategories: [],
+        filters: {},
+        vendors: []
+      };
+    }),
+    getOriginalMemberCutoffDate(db).catch((error) => {
+      console.error("ShopFia original member cutoff failed", error);
+      return null;
+    })
   ]);
   const savedVendorIds = session?.user?.id
     ? new Set(
@@ -25,6 +36,9 @@ export default async function ExplorePage({
           await db.favorite.findMany({
             where: { buyerId: session.user.id, vendorId: { not: null } },
             select: { vendorId: true }
+          }).catch((error) => {
+            console.error("ShopFia saved vendors failed", error);
+            return [];
           })
         ).map((favorite) => favorite.vendorId).filter(Boolean) as string[]
       )
@@ -64,7 +78,7 @@ export default async function ExplorePage({
         </div>
         {data.vendors.length === 0 ? (
           <div className="rounded-3xl border bg-white/80 p-8 text-center text-muted-foreground">
-            No vendors matched your filters yet.
+            We are refreshing vendor results right now. Please check back shortly.
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
