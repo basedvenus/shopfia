@@ -78,9 +78,11 @@ export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
 
             if (result?.error) {
               setMessage(
-                mode === "sign-up"
-                  ? "Account created, but sign-in failed. Try signing in."
-                  : "Email or password is incorrect."
+                result.error === "Configuration" || result.error === "CallbackRouteError"
+                  ? "Sign-in is temporarily unavailable while ShopFia reconnects to the database. Please try again shortly."
+                  : mode === "sign-up"
+                    ? "Account created, but sign-in failed. Try signing in."
+                    : "Email or password is incorrect."
               );
               return;
             }

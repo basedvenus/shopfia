@@ -51,6 +51,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: true,
             passwordHash: true
           }
+        }).catch((error) => {
+          console.error("ShopFia credentials lookup failed", error);
+          securityLog("login_failed_database_unavailable", { email });
+          return null;
         });
 
         if (!user?.passwordHash) {
@@ -118,6 +122,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 role: true,
                 username: true
               }
+            }).catch((error) => {
+              console.error("ShopFia session refresh failed", error);
+              return null;
             })
           : null;
 
@@ -134,11 +141,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   events: {
     async createUser({ user }) {
       if (user.email) {
-        await sendWelcomeEmail(user.email);
+        await sendWelcomeEmail(user.email).catch((error) => {
+          console.error("ShopFia welcome email failed", error);
+        });
       }
     }
   },
   pages: {
+    error: "/account",
     signIn: "/account"
   }
 });

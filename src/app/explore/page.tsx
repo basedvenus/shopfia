@@ -14,7 +14,10 @@ export default async function ExplorePage({
   searchParams: Record<string, string | string[] | undefined>;
 }) {
   const { db } = await import("@/lib/db");
-  const session = await auth();
+  const session = await auth().catch((error) => {
+    console.error("ShopFia explore auth failed", error);
+    return null;
+  });
   const [data, originalMemberCutoff] = await Promise.all([
     getExploreData(searchParams).catch((error) => {
       console.error("ShopFia explore data failed", error);

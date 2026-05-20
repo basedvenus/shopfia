@@ -17,7 +17,10 @@ export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
   const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
-  const session = await auth();
+  const session = await auth().catch((error) => {
+    console.error("ShopFia auth session failed on account page", error);
+    return null;
+  });
 
   if (!session?.user?.id) {
     return (

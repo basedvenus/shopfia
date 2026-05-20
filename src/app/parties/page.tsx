@@ -45,7 +45,10 @@ export default async function PartiesPage({
 }) {
   const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
   const [session, originalMemberCutoff] = await Promise.all([
-    auth(),
+    auth().catch((error) => {
+      console.error("ShopFia parties auth failed", error);
+      return null;
+    }),
     getOriginalMemberCutoffDate(db).catch((error) => {
       console.error("ShopFia parties badge cutoff failed", error);
       return null;

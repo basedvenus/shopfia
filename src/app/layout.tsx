@@ -58,7 +58,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
+  const session = await auth().catch((error) => {
+    console.error("ShopFia root auth failed", error);
+    return null;
+  });
   let initialProfile: SharedUserProfile | null = null;
 
   if (session?.user?.id) {
