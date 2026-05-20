@@ -38,42 +38,71 @@ export default async function AccountPage() {
     );
   }
 
-  const [accountUser, orders, quoteRequests, favoriteCount, conversationCount] = await Promise.all([
-    db.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        name: true,
-        email: true,
-        image: true,
-        username: true,
-        bio: true,
-        instagramUrl: true,
-        tiktokUrl: true
-      }
-    }),
-    db.order.findMany({
-      where: { buyerId: session.user.id },
-      include: {
-        vendorProfile: true,
-        review: true
-      },
-      orderBy: { createdAt: "desc" }
-    }),
-    db.quoteRequest.findMany({
-      where: { buyerId: session.user.id },
-      include: {
-        vendor: true,
-        quote: true
-      },
-      orderBy: { createdAt: "desc" }
-    }),
-    db.favorite.count({ where: { buyerId: session.user.id } }),
-    db.conversation.count({
-      where: {
-        OR: [{ buyerId: session.user.id }, { vendorId: session.user.id }]
-      }
-    })
-  ]);
+  const userId = session.user.id;
+  let accountData: Awaited<ReturnType<typeof loadAccountData>>;
+
+  async function loadAccountData() {
+    return Promise.all([
+      db.user.findUnique({
+        where: { id: userId },
+        select: {
+          name: true,
+          email: true,
+          image: true,
+          username: true,
+          bio: true,
+          instagramUrl: true,
+          tiktokUrl: true
+        }
+      }),
+      db.order.findMany({
+        where: { buyerId: userId },
+        include: {
+          vendorProfile: true,
+          review: true
+        },
+        orderBy: { createdAt: "desc" }
+      }),
+      db.quoteRequest.findMany({
+        where: { buyerId: userId },
+        include: {
+          vendor: true,
+          quote: true
+        },
+        orderBy: { createdAt: "desc" }
+      }),
+      db.favorite.count({ where: { buyerId: userId } }),
+      db.conversation.count({
+        where: {
+          OR: [{ buyerId: userId }, { vendorId: userId }]
+        }
+      })
+    ]);
+  }
+
+  try {
+    accountData = await loadAccountData();
+  } catch (error) {
+    console.error("ShopFia account dashboard failed", error);
+    return (
+      <div className="mx-auto max-w-md">
+        <Card>
+          <CardHeader><CardTitle>Account is temporarily unavailable</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm leading-6 text-muted-foreground">
+              Your ShopFia site is still online, but your signed-in account view could not load.
+              Please open ShopFia in a private window or try Google sign-in while we finish the account recovery path.
+            </p>
+            <Button asChild>
+              <Link href="/">Return home</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const [accountUser, orders, quoteRequests, favoriteCount, conversationCount] = accountData;
 
   if (!accountUser?.username || !accountUser.name) {
     redirect("/account/setup");

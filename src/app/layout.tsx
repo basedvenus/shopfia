@@ -62,13 +62,17 @@ export default async function RootLayout({
   let initialProfile: SharedUserProfile | null = null;
 
   if (session?.user?.id) {
-    const dbUser = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: userProfileSelect
-    });
+    try {
+      const dbUser = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: userProfileSelect
+      });
 
-    if (dbUser) {
-      initialProfile = serializeUserProfile(dbUser);
+      if (dbUser) {
+        initialProfile = serializeUserProfile(dbUser);
+      }
+    } catch (error) {
+      console.error("ShopFia profile bootstrap failed", error);
     }
   }
 
