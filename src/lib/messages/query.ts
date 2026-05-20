@@ -61,7 +61,23 @@ export type SerializedMessageConversation = ReturnType<typeof serializeConversat
 type MessageQuoteRequest = Prisma.QuoteRequestGetPayload<{
   include: {
     offering: { select: { photos: true; title: true } };
-    quote: true;
+    quote: {
+      include: {
+        orders: {
+          orderBy: { createdAt: "desc" };
+          take: 1;
+          select: {
+            amountCents: true;
+            buyerTotalCents: true;
+            createdAt: true;
+            id: true;
+            paymentSucceededAt: true;
+            status: true;
+            updatedAt: true;
+          };
+        };
+      };
+    };
   };
 }>;
 
@@ -192,7 +208,23 @@ export async function getMessagesPayload({
           },
           include: {
             offering: { select: { photos: true, title: true } },
-            quote: true
+            quote: {
+              include: {
+                orders: {
+                  orderBy: { createdAt: "desc" },
+                  take: 1,
+                  select: {
+                    amountCents: true,
+                    buyerTotalCents: true,
+                    createdAt: true,
+                    id: true,
+                    paymentSucceededAt: true,
+                    status: true,
+                    updatedAt: true
+                  }
+                }
+              }
+            }
           },
           orderBy: { createdAt: "asc" }
         })
@@ -253,6 +285,12 @@ export function serializeConversation(
             ...quoteRequest.quote,
             createdAt: quoteRequest.quote.createdAt.toISOString(),
             expiresAt: quoteRequest.quote.expiresAt.toISOString(),
+            orders: quoteRequest.quote.orders.map((order) => ({
+              ...order,
+              createdAt: order.createdAt.toISOString(),
+              paymentSucceededAt: order.paymentSucceededAt?.toISOString() ?? null,
+              updatedAt: order.updatedAt.toISOString()
+            })),
             updatedAt: quoteRequest.quote.updatedAt.toISOString()
           }
         : null,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { QuoteRequestStatus, QuoteStatus, UserRole } from "@prisma/client";
+import { OrderStatus, QuoteRequestStatus, QuoteStatus, UserRole } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
@@ -25,6 +25,13 @@ const quoteBuilderSchema = z.object({
   taxCents: z.coerce.number().int().min(0).max(10_000_000).default(0),
   title: z.string().trim().min(2).max(120)
 });
+
+const LOCKED_ORDER_STATUSES = [
+  OrderStatus.awaiting_payment,
+  OrderStatus.paid,
+  OrderStatus.in_progress,
+  OrderStatus.completed
+] as const;
 
 export async function POST(request: Request) {
   const limited = enforceRequestRateLimit(request, [
@@ -112,8 +119,19 @@ export async function POST(request: Request) {
 
     const existingQuote = await tx.quote.findUnique({
       where: { quoteRequestId: quoteRequest.id },
-      select: { id: true }
+      select: {
+        id: true,
+        orders: {
+          where: { status: { in: [...LOCKED_ORDER_STATUSES] } },
+          select: { id: true, status: true },
+          take: 1
+        }
+      }
     });
+
+    if (existingQuote?.orders.length) {
+      throw new Error("QUOTE_LOCKED_BY_PAYMENT");
+    }
 
     const quote = await tx.quote.upsert({
       where: { quoteRequestId: quoteRequest.id },
@@ -172,7 +190,23 @@ export async function POST(request: Request) {
     });
 
     return { quoteId: quote.id };
+  }).catch((error: unknown) => {
+    if (isLockedQuoteError(error)) {
+      return null;
+    }
+    throw error;
   });
 
+  if (!result) {
+    return NextResponse.json(
+      { error: "This booking has payment activity, so the original quote is locked." },
+      { status: 409 }
+    );
+  }
+
   return NextResponse.json({ ok: true, quoteId: result.quoteId });
+}
+
+function isLockedQuoteError(error: unknown) {
+  return error instanceof Error && error.message === "QUOTE_LOCKED_BY_PAYMENT";
 }

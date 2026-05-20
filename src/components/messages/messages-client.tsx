@@ -831,32 +831,65 @@ function QuoteWorkflowCard({
   viewerIsVendor: boolean;
 }) {
   const quote = quoteRequest.quote;
+  const latestOrder = getLatestQuoteOrder(quote);
+  const isBooked = isPaidBookingOrder(latestOrder?.status);
   const quoteDetails = parseQuoteDetails(quote?.lineItemsJson);
   const title = quoteDetails.title ?? quoteRequest.offering?.title ?? "Custom Event Quote";
   const totalLabel = quote ? formatBudget(quote.amountCents) : null;
   const depositLabel = quote?.depositAmountCents ? formatBudget(quote.depositAmountCents) : null;
+  const paidAtLabel = formatBookingTimestamp(
+    latestOrder?.paymentSucceededAt ?? latestOrder?.updatedAt ?? latestOrder?.createdAt ?? null
+  );
 
   return (
-    <article className="mx-auto w-full max-w-[92%] overflow-hidden rounded-[1.2rem] border border-[#e7d3c9] bg-white shadow-[0_12px_30px_rgba(82,55,55,0.09)] md:max-w-2xl">
-      <div className="h-1 bg-[linear-gradient(90deg,#f4cfca,#f9e8dd,#d7e5d0)]" />
+    <article
+      className={`mx-auto w-full max-w-[92%] overflow-hidden rounded-[1.2rem] border bg-white shadow-[0_12px_30px_rgba(82,55,55,0.09)] md:max-w-2xl ${
+        isBooked ? "border-[#cfe1c8]" : "border-[#e7d3c9]"
+      }`}
+    >
+      <div
+        className={
+          isBooked
+            ? "h-1 bg-[linear-gradient(90deg,#d7e5d0,#f7fbf4,#f4cfca)]"
+            : "h-1 bg-[linear-gradient(90deg,#f4cfca,#f9e8dd,#d7e5d0)]"
+        }
+      />
       <div className="p-3 md:p-4">
       <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[0.9rem] bg-[#fff4f0] text-[#9b6b65] shadow-sm">
-          <ReceiptText className="h-5 w-5" />
+        <span
+          className={`grid h-10 w-10 shrink-0 place-items-center rounded-[0.9rem] shadow-sm ${
+            isBooked ? "bg-[#f3f9ef] text-[#6f8469]" : "bg-[#fff4f0] text-[#9b6b65]"
+          }`}
+        >
+          {isBooked ? <CheckCircle2 className="h-5 w-5" /> : <ReceiptText className="h-5 w-5" />}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-[11px] font-bold uppercase tracking-[0.12em] text-[#9b6b65]">
-              {quote ? "Custom Proposal" : "Quote Request"}
+            <p
+              className={`truncate text-[11px] font-bold uppercase tracking-[0.12em] ${
+                isBooked ? "text-[#6f8469]" : "text-[#9b6b65]"
+              }`}
+            >
+              {isBooked ? "Booking confirmed" : quote ? "Custom Proposal" : "Quote Request"}
             </p>
-            <span className="rounded-full bg-[#fbf1ed] px-2 py-0.5 text-[11px] font-bold text-[#8f5f5b]">
-              {quoteRequest.status.toLowerCase()}
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                isBooked ? "bg-[#eef7ea] text-[#5f7658]" : "bg-[#fbf1ed] text-[#8f5f5b]"
+              }`}
+            >
+              {isBooked ? "Paid" : quoteRequest.status.toLowerCase()}
             </span>
           </div>
           <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="truncate text-base font-bold leading-tight text-[#2f2626] md:text-lg">{title}</h3>
-              {quote && depositLabel ? (
+              <h3 className="truncate text-base font-bold leading-tight text-[#2f2626] md:text-lg">
+                {isBooked ? "Your party is officially booked" : title}
+              </h3>
+              {isBooked ? (
+                <p className="mt-1 text-xs font-semibold text-[#6f8469]">
+                  Planning is in progress for {title}.
+                </p>
+              ) : quote && depositLabel ? (
                 <p className="mt-1 text-xs font-semibold text-[#6f8469]">
                   {formatDepositPercent(quote.depositAmountCents!, quote.amountCents)} deposit required
                 </p>
@@ -870,7 +903,9 @@ function QuoteWorkflowCard({
             ) : null}
           </div>
           <p className="mt-2 text-xs leading-5 text-muted-foreground">
-            {quote
+            {isBooked
+              ? `Payment confirmed${paidAtLabel ? ` on ${paidAtLabel}` : ""}. Use this thread for logistics, inspiration, timeline updates, and next steps.`
+              : quote
               ? depositLabel
                 ? `${depositLabel} due after approval`
                 : "Full payment due after approval"
@@ -893,7 +928,23 @@ function QuoteWorkflowCard({
               ))}
             </div>
           ) : null}
-          {quote && viewerIsVendor ? (
+          {isBooked ? (
+            viewerIsVendor ? (
+              <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#dbe9d5] bg-[#f7fbf4] px-3 py-1.5 text-xs font-bold text-[#5f7658] shadow-sm">
+                Quote Locked
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onReviewQuote(quoteRequest)}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
+              >
+                View Booking Details
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            )
+          ) : quote && viewerIsVendor ? (
             <button
               type="button"
               onClick={() => onBuildQuote(quoteRequest)}
@@ -975,6 +1026,11 @@ function QuoteReviewModal({
   if (!quote) return null;
 
   const reviewedQuote = quote;
+  const latestOrder = getLatestQuoteOrder(reviewedQuote);
+  const bookingIsPaid = isPaidBookingOrder(latestOrder?.status);
+  const paidAtLabel = formatBookingTimestamp(
+    latestOrder?.paymentSucceededAt ?? latestOrder?.updatedAt ?? latestOrder?.createdAt ?? null
+  );
   const quoteDetails = parseQuoteDetails(reviewedQuote.lineItemsJson);
   const title = quoteDetails.title ?? quoteRequest.offering?.title ?? "Custom Event Quote";
   const eventDate = quoteRequest.eventDate ? formatEventDate(quoteRequest.eventDate) : "Date TBD";
@@ -985,7 +1041,9 @@ function QuoteReviewModal({
   );
   const requiredDepositCents = reviewedQuote.depositAmountCents ?? reviewedQuote.amountCents;
   const paymentTerms =
-    reviewedQuote.depositAmountCents && reviewedQuote.depositAmountCents < reviewedQuote.amountCents
+    bookingIsPaid
+      ? "Payment received. Your booking is confirmed."
+      : reviewedQuote.depositAmountCents && reviewedQuote.depositAmountCents < reviewedQuote.amountCents
       ? `${formatDepositPercent(reviewedQuote.depositAmountCents, reviewedQuote.amountCents)} deposit required to secure booking`
       : "Full payment required to secure booking";
   const image =
@@ -1111,9 +1169,11 @@ function QuoteReviewModal({
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#9b6b65]">
-                Proposal from {conversation.vendorProfile.name}
+                {bookingIsPaid ? "Booking with" : "Proposal from"} {conversation.vendorProfile.name}
               </p>
-              <h2 className="mt-1 text-xl font-bold leading-tight text-[#2f2626]">{title}</h2>
+              <h2 className="mt-1 text-xl font-bold leading-tight text-[#2f2626]">
+                {bookingIsPaid ? "Your party is officially booked" : title}
+              </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {eventDate} • {eventLocation}
               </p>
@@ -1131,6 +1191,29 @@ function QuoteReviewModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           <div className="grid gap-3">
+            {bookingIsPaid ? (
+              <div className="rounded-[1.15rem] border border-[#cfe1c8] bg-[#f7fbf4] p-3 shadow-[0_12px_26px_rgba(111,132,105,0.10)]">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#6f8469] shadow-sm">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#6f8469]">
+                      Paid and confirmed
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-[#2f2626]">
+                      Your event is officially moving forward.
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[#5f6f59]">
+                      {paidAtLabel ? `Payment received on ${paidAtLabel}. ` : ""}
+                      This original quote is locked for your records. Keep sharing logistics,
+                      inspiration, and timeline updates in the conversation.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <div className="rounded-[1.15rem] border border-[#eadbd3] bg-[#fffdfa] p-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -1190,10 +1273,12 @@ function QuoteReviewModal({
             ) : null}
 
             <p className="text-xs text-muted-foreground">
-              Expires {formatEventDate(reviewedQuote.expiresAt)}. Approval comes first; payment is the next secure step.
+              {bookingIsPaid
+                ? `Original quote accepted for ${formatBudget(reviewedQuote.amountCents)}.`
+                : `Expires ${formatEventDate(reviewedQuote.expiresAt)}. Approval comes first; payment is the next secure step.`}
             </p>
 
-            {paymentPrepared ? (
+            {paymentPrepared && !bookingIsPaid ? (
               <QuotePaymentForm
                 amountLabel={formatBudget(requiredDepositCents)}
                 clientSecret={paymentPrepared.clientSecret}
@@ -1207,7 +1292,15 @@ function QuoteReviewModal({
         </div>
 
         <div className="grid shrink-0 gap-2 border-t border-[#eadbd3] bg-white p-3 sm:grid-cols-[1fr_auto]">
-          {paymentPrepared ? (
+          {bookingIsPaid ? (
+            <button
+              type="button"
+              onClick={returnToConversation}
+              className="rounded-full border border-[#aec8a8] bg-[linear-gradient(135deg,#b8d3ae,#8fb384)] px-4 py-2 text-sm font-extrabold text-[#fffaf6] shadow-[0_12px_26px_rgba(87,119,78,0.20)] transition hover:-translate-y-0.5 sm:col-start-2"
+            >
+              Back to Conversation
+            </button>
+          ) : paymentPrepared ? (
             <button
               type="button"
               onClick={onClose}
@@ -1963,6 +2056,27 @@ function formatDepositPercent(depositCents: number, totalCents: number) {
   if (totalCents <= 0) return "Deposit";
   const percent = Math.round((depositCents / totalCents) * 100);
   return `${percent}%`;
+}
+
+function getLatestQuoteOrder(quote: QuoteRequestItem["quote"] | null | undefined) {
+  return quote?.orders?.[0] ?? null;
+}
+
+function isPaidBookingOrder(status: string | null | undefined) {
+  return status === "paid" || status === "in_progress" || status === "completed";
+}
+
+function formatBookingTimestamp(date: string | null | undefined) {
+  if (!date) return null;
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(parsed);
 }
 
 function getInitials(label: string) {
