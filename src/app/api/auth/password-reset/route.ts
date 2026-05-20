@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { requestPasswordResetAction } from "@/app/actions/auth";
+import { requestPasswordResetEmail } from "@/lib/auth/password-reset";
+import { getClientIp } from "@/lib/security/request";
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json().catch(() => null)) as { email?: unknown } | null;
-    const formData = new FormData();
-    formData.set("email", typeof body?.email === "string" ? body.email : "");
-
-    const result = await requestPasswordResetAction(formData);
+    const result = await requestPasswordResetEmail({
+      email: body?.email,
+      ip: getClientIp(request.headers)
+    });
     return NextResponse.json(result, { status: result.ok ? 200 : 400 });
   } catch {
     return NextResponse.json(
