@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   Banknote,
   CalendarHeart,
+  CheckCircle2,
   ChevronRight,
   ExternalLink,
   FileText,
@@ -942,12 +943,34 @@ function QuoteReviewModal({
   onRequestedChanges: () => void;
   quoteRequest: QuoteRequestItem;
 }) {
+  const router = useRouter();
   const quote = quoteRequest.quote;
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRequestingChanges, setIsRequestingChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentPrepared, setPaymentPrepared] = useState<PreparedPayment | null>(null);
   const [paymentComplete, setPaymentComplete] = useState(false);
+
+  useEffect(() => {
+    if (!paymentComplete) return;
+
+    const timeout = window.setTimeout(() => {
+      router.refresh();
+      onClose();
+    }, 6500);
+
+    return () => window.clearTimeout(timeout);
+  }, [onClose, paymentComplete, router]);
+
+  function finishPaymentFlow() {
+    setPaymentComplete(true);
+    setError(null);
+  }
+
+  function returnToConversation() {
+    router.refresh();
+    onClose();
+  }
 
   if (!quote) return null;
 
@@ -1011,6 +1034,64 @@ function QuoteReviewModal({
     }
 
     onRequestedChanges();
+  }
+
+  if (paymentComplete) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#2f2626]/25 p-3 backdrop-blur-sm">
+        <div className="mx-auto flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_70px_rgba(47,38,38,0.24)] md:h-auto md:max-h-[90vh]">
+          <div className="relative overflow-hidden border-b border-[#dbe9d5] bg-[#f7fbf4]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(215,229,208,0.9),transparent_34%),linear-gradient(135deg,#fffaf6,#f7fbf4_70%)]" />
+            <button
+              type="button"
+              onClick={returnToConversation}
+              className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-[#6b554f] shadow-sm"
+              aria-label="Close payment confirmation"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="relative grid gap-5 px-5 py-10 text-center">
+              <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-[#cfe1c8] bg-white shadow-[0_18px_38px_rgba(111,132,105,0.16)]">
+                <CheckCircle2 className="h-11 w-11 animate-[success-pop_520ms_ease-out] text-[#6f9465]" />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6f8469]">
+                  Payment complete
+                </p>
+                <h2 className="mt-2 font-serif text-3xl leading-tight text-[#2f2626] md:text-4xl">
+                  Thank you! Your payment was completed successfully.
+                </h2>
+                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+                  Your booking request is now moving forward with {conversation.vendorProfile.name}.
+                  The payment has been received and this conversation will stay connected to the booking.
+                </p>
+              </div>
+              {paymentPrepared ? (
+                <div className="mx-auto inline-flex rounded-full border border-[#d7e5d0] bg-white px-4 py-2 text-sm font-bold text-[#5f7658] shadow-sm">
+                  Order {paymentPrepared.orderId.slice(-6).toUpperCase()}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="grid gap-2 p-4 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={returnToConversation}
+              className="rounded-full border border-[#eadbd3] bg-white px-4 py-3 text-sm font-bold text-[#8a5c58] transition hover:bg-[#fffaf6]"
+            >
+              Back to Conversation
+            </button>
+            <button
+              type="button"
+              onClick={returnToConversation}
+              className="rounded-full border border-[#aec8a8] bg-[linear-gradient(135deg,#b8d3ae,#8fb384)] px-4 py-3 text-sm font-extrabold text-[#fffaf6] shadow-[0_12px_26px_rgba(87,119,78,0.20)] transition hover:-translate-y-0.5"
+            >
+              View Booking Thread
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -1117,14 +1198,9 @@ function QuoteReviewModal({
                 amountLabel={formatBudget(requiredDepositCents)}
                 clientSecret={paymentPrepared.clientSecret}
                 conversationId={conversation.id}
-                onPaymentComplete={() => setPaymentComplete(true)}
+                onPaymentComplete={finishPaymentFlow}
                 orderId={paymentPrepared.orderId}
               />
-            ) : null}
-            {paymentComplete ? (
-              <div className="rounded-[1.15rem] border border-[#d7e5d0] bg-[#f5faf2] p-3 text-sm font-semibold text-[#4f6548]">
-                Payment received. Your booking is moving forward with {conversation.vendorProfile.name}.
-              </div>
             ) : null}
             {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
           </div>
