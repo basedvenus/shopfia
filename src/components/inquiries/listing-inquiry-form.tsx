@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Heart, Lock, Send } from "lucide-react";
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { createPublicInquiryAction } from "@/app/actions/inquiries";
@@ -77,6 +77,7 @@ export function ListingInquiryForm({
   vendorProfileId
 }: ListingInquiryFormProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ tone: "success" | "error"; message: string } | null>(null);
@@ -89,6 +90,11 @@ export function ListingInquiryForm({
         setStatus(null);
         startTransition(async () => {
           const result = await createPublicInquiryAction(formData);
+          if (result.requiresAuth) {
+            router.push(`/account?redirectTo=${encodeURIComponent(`${pathname}#inquiry`)}`);
+            return;
+          }
+
           if (!result.success) {
             setStatus({
               tone: "error",

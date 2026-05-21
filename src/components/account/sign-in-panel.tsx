@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type SignInPanelProps = {
+  callbackUrl?: string;
   googleEnabled: boolean;
   emailEnabled: boolean;
 };
 
-export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
+export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnabled }: SignInPanelProps) {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -72,7 +73,7 @@ export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
             const result = await signIn("credentials", {
               email,
               password,
-              callbackUrl: mode === "sign-up" ? "/account/setup" : "/explore",
+              callbackUrl: mode === "sign-up" ? "/account/setup" : callbackUrl,
               redirect: false
             });
 
@@ -87,7 +88,7 @@ export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
               return;
             }
 
-            window.location.href = mode === "sign-up" ? "/account/setup" : "/explore";
+            window.location.href = mode === "sign-up" ? "/account/setup" : callbackUrl;
           });
         }}
         className="space-y-2"
@@ -150,7 +151,7 @@ export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
               setMessage(null);
               const result = await signIn("nodemailer", {
                 email,
-                callbackUrl: "/account/setup",
+                callbackUrl,
                 redirect: false
               });
               if (result?.error) {
@@ -171,7 +172,7 @@ export function SignInPanel({ googleEnabled, emailEnabled }: SignInPanelProps) {
           className="w-full"
           disabled={pending}
           onClick={() => {
-            signIn("google", { callbackUrl: "/account/setup" });
+            signIn("google", { callbackUrl });
           }}
         >
           Continue with Google

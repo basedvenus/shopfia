@@ -15,8 +15,16 @@ import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
+  const resolvedSearchParams: Record<string, string | string[] | undefined> = searchParams
+    ? await searchParams
+    : {};
+  const callbackUrl = getSafeCallbackUrl(resolvedSearchParams.redirectTo ?? resolvedSearchParams.callbackUrl);
   const session = await auth().catch((error) => {
     console.error("ShopFia auth session failed on account page", error);
     return null;
@@ -32,6 +40,7 @@ export default async function AccountPage() {
               Sign in to favorite vendors, message, request quotes, and book.
             </p>
             <SignInPanel
+              callbackUrl={callbackUrl}
               emailEnabled={authProviderConfig.emailEnabled}
               googleEnabled={authProviderConfig.googleEnabled}
             />
@@ -322,4 +331,18 @@ export default async function AccountPage() {
       </section>
     </div>
   );
+}
+
+function getSafeCallbackUrl(value: string | string[] | undefined) {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  if (!rawValue) return "/explore";
+
+  try {
+    const decoded = decodeURIComponent(rawValue);
+    if (!decoded.startsWith("/") || decoded.startsWith("//")) return "/explore";
+    if (decoded.startsWith("/api/")) return "/explore";
+    return decoded;
+  } catch {
+    return "/explore";
+  }
 }

@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { MapPin, Pencil, Sparkles } from "lucide-react";
+import { Camera, MapPin, Pencil, Sparkles } from "lucide-react";
 import { PartyEventForm } from "@/components/parties/party-event-form";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { normalizeImageCrop } from "@/lib/image-crop";
@@ -24,8 +23,14 @@ const fallbackEvents = [
 
 export default async function MyPartiesPage() {
   const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
-  const session = await auth();
-  if (!session?.user?.id) redirect("/account");
+  const session = await auth().catch((error) => {
+    console.error("ShopFia my parties auth failed", error);
+    return null;
+  });
+
+  if (!session?.user?.id) {
+    return <PublicMyPartiesPreview />;
+  }
 
   const [events, vendors, users] = await Promise.all([
     db.partyEvent.findMany({
@@ -159,6 +164,70 @@ export default async function MyPartiesPage() {
           </div>
           <PartyEventForm key="new-party" currentUserId={session.user.id} users={users} vendors={vendors} />
         </aside>
+      </section>
+    </div>
+  );
+}
+
+function PublicMyPartiesPreview() {
+  return (
+    <div className="space-y-8">
+      <section className="grid gap-6 rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-soft lg:grid-cols-[1fr_0.76fr]">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <Sparkles className="h-3.5 w-3.5" />
+            Party portfolio
+          </div>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
+            Create parties worth saving.
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
+            Browse the party gallery first, then sign in when you are ready to upload your own celebration,
+            tag vendors, and turn inspiration into a planning board.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link
+              href="/parties"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-semibold text-background transition hover:bg-foreground/90"
+            >
+              Browse parties
+            </Link>
+            <Link
+              href="/account?redirectTo=%2Fmy-parties"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-primary/20 bg-white px-5 text-sm font-semibold text-primary shadow-sm transition hover:bg-white/90"
+            >
+              Sign in to create
+            </Link>
+          </div>
+        </div>
+        <div className="rounded-[1.7rem] border border-dashed border-primary/25 bg-[#fff8f5] p-5">
+          <Camera className="h-6 w-6 text-primary" />
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight">What unlocks when you sign in</h2>
+          <div className="mt-4 grid gap-3 text-sm leading-6 text-muted-foreground">
+            <p>Upload event photos and crop them beautifully.</p>
+            <p>Tag vendors directly on party moments.</p>
+            <p>Save ideas, build galleries, and share your party style.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid auto-rows-[220px] grid-cols-2 gap-3 md:grid-cols-4">
+        {fallbackEvents.map((event, index) => (
+          <Link
+            key={event.title}
+            href={`/events/${event.slug}`}
+            className={`relative overflow-hidden rounded-[1.5rem] border border-white/80 bg-muted shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${
+              index === 0 ? "col-span-2 row-span-2" : "col-span-2"
+            }`}
+          >
+            <div className="absolute inset-0 bg-cover bg-center transition duration-500 hover:scale-[1.04]" style={{ backgroundImage: `url(${event.coverImageUrl})` }} />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+              <h3 className="font-semibold">{event.title}</h3>
+              <p className="text-xs text-white/80">{event.theme}</p>
+            </div>
+          </Link>
+        ))}
       </section>
     </div>
   );

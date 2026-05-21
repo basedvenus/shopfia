@@ -14,7 +14,11 @@ export async function createPublicInquiryAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await auth();
   if (!session?.user?.id) {
-    return { success: false, error: "Sign in to send an inquiry." };
+    return {
+      success: false,
+      error: "Create a free account or sign in to send this inquiry.",
+      requiresAuth: true
+    };
   }
 
   const ipRate = await checkServerActionRateLimit([
