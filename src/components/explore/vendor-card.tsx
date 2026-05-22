@@ -47,22 +47,22 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
   ]);
 
   return (
-    <Card className="group relative overflow-hidden border-white/50 bg-white/90 transition hover:-translate-y-0.5 hover:shadow-soft">
+    <Card className="group relative overflow-hidden rounded-[1.05rem] border-white/50 bg-white/90 transition hover:-translate-y-0.5 hover:shadow-soft sm:rounded-3xl">
       <Link href={`/vendor/profile/${vendor.slug}`} className="absolute inset-0 z-10" aria-label={`View ${vendor.name}`} />
-      <div className="relative aspect-[4/3]">
+      <div className="relative aspect-[4/5] sm:aspect-[4/3]">
         <Image src={image} alt={vendor.name} fill className="object-cover" />
-        <div className="absolute left-3 top-3 flex gap-2">
+        <div className="absolute left-2 top-2 flex gap-1 sm:left-3 sm:top-3 sm:gap-2">
           {vendor.verified && <Badge variant="accent">Verified</Badge>}
         </div>
-        <div className="absolute right-3 top-3 z-20">
+        <div className="absolute right-1.5 top-1.5 z-20 origin-top-right scale-75 sm:right-3 sm:top-3 sm:scale-100">
           <FavoriteToggle targetType="vendor" targetId={vendor.id} isSaved={isSaved} />
         </div>
       </div>
-      <CardContent className="space-y-3 p-4">
+      <CardContent className="space-y-2 p-2.5 sm:space-y-3 sm:p-4">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="line-clamp-1 font-semibold">{vendor.name}</h3>
+              <h3 className="line-clamp-1 text-sm font-semibold sm:text-base">{vendor.name}</h3>
               <ProfileBadge badge={profileBadge} />
             </div>
             <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
@@ -73,33 +73,33 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs">
+          <div className="hidden items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs sm:flex">
             <Star className="h-3.5 w-3.5 fill-current text-amber-500" />
             <span>{vendor.averageRating.toFixed(1)}</span>
             <span className="text-muted-foreground">({vendor.reviewCount})</span>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="hidden flex-wrap gap-2 sm:flex">
           <Badge variant="accent">Verified reviews only</Badge>
           {vendor.rankingScore ? (
             <Badge variant="outline">{vendor.rankingScore.tierLabel}</Badge>
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="hidden flex-wrap gap-2 sm:flex">
           {categoryNames.slice(0, 3).map((category) => (
             <Badge key={category} variant="outline">
               {displayCategoryName(category)}
             </Badge>
           ))}
         </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <p className="min-w-0 text-xs sm:text-sm">
             {vendor.startingPriceCents ? "From " : ""}
             <span className="font-semibold">
               {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Custom pricing"}
             </span>
           </p>
-          <Link href={`/vendor/profile/${vendor.slug}`} className="relative z-20">
+          <Link href={`/vendor/profile/${vendor.slug}`} className="relative z-20 hidden sm:block">
             <Button size="sm">View Profile</Button>
           </Link>
         </div>
