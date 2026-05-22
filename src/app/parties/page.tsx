@@ -317,15 +317,6 @@ export default async function PartiesPage({
                     <div className="absolute right-1.5 top-1.5 z-20 origin-top-right scale-75 sm:right-4 sm:top-4 sm:scale-100">
                       <FavoriteToggle targetType="party" targetId={party.id} isSaved={savedPartyIds.has(party.id)} />
                     </div>
-                    <div className="absolute left-2 top-2 flex flex-wrap gap-1 sm:left-4 sm:top-4 sm:gap-1.5">
-                      {(party.tags.length ? party.tags : [party.theme].filter(Boolean))
-                        .slice(0, 2)
-                        .map((tag) => (
-                          <span key={tag} className="max-w-[7.25rem] truncate rounded-full bg-white/25 px-2 py-0.5 text-[10px] text-white backdrop-blur sm:max-w-none sm:px-2.5 sm:py-1 sm:text-xs">
-                            #{tag}
-                          </span>
-                        ))}
-                    </div>
                     <div className="absolute inset-x-0 bottom-0 p-2.5 text-white sm:p-5">
                       <h2 className="line-clamp-2 text-sm font-semibold tracking-tight sm:text-2xl">{party.title}</h2>
                       {party.location || party.city ? (
@@ -388,13 +379,6 @@ export default async function PartiesPage({
                     style={{ backgroundImage: `url(${party.coverImageUrl})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                  <div className="absolute left-2 top-2 flex flex-wrap gap-1 sm:left-4 sm:top-4 sm:gap-1.5">
-                    {party.tags.slice(0, 2).map((tag) => (
-                      <span key={tag} className="max-w-[7.25rem] truncate rounded-full bg-white/25 px-2 py-0.5 text-[10px] text-white backdrop-blur sm:max-w-none sm:px-2.5 sm:py-1 sm:text-xs">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
                   <div className="absolute inset-x-0 bottom-0 p-2.5 text-white sm:p-5">
                     <h2 className="line-clamp-2 text-sm font-semibold tracking-tight sm:text-2xl">{party.title}</h2>
                     <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-white/80 sm:mt-2 sm:gap-1.5 sm:text-sm">
