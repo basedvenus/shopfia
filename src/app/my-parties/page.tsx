@@ -97,13 +97,6 @@ export default async function MyPartiesPage() {
                     <CroppedImage src={image} alt="" crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 p-4 text-white">
-                      <div className="mb-2 flex flex-wrap gap-1.5">
-                        {event.tags.slice(0, featured ? 4 : 2).map((tag) => (
-                          <span key={tag} className="rounded-full bg-white/20 px-2.5 py-1 text-[11px] backdrop-blur">
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
                       <h3 className="font-semibold">{event.title}</h3>
                       {event.location ? (
                         <p className="mt-1 inline-flex items-center gap-1 text-xs text-white/80">
