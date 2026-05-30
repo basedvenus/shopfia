@@ -111,7 +111,7 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
 }
 
 function displayCategoryName(name: string) {
-  return name === "Party Favors and Gifts" ? "Party Favors & Gifts" : name;
+  return name;
 }
 
 function unique(values: string[]) {

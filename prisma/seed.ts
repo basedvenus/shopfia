@@ -11,14 +11,15 @@ import { refreshSellerReviewMetrics } from "../src/lib/services/reviews";
 const prisma = new PrismaClient();
 
 const categories = [
+  { name: "Backdrops", iconName: "image", audience: CategoryAudience.VENDOR },
+  { name: "Balloons", iconName: "party-popper", audience: CategoryAudience.VENDOR },
   { name: "Cakes & Desserts", iconName: "cake", audience: CategoryAudience.VENDOR },
-  { name: "Decor & Installation", iconName: "party-popper", audience: CategoryAudience.VENDOR },
-  { name: "Event Planning", iconName: "calendar-check-2", audience: CategoryAudience.VENDOR },
-  { name: "Florals", iconName: "flower-2", audience: CategoryAudience.VENDOR },
-  { name: "Food & Beverage", iconName: "utensils-crossed", audience: CategoryAudience.VENDOR },
+  { name: "Catering", iconName: "utensils-crossed", audience: CategoryAudience.VENDOR },
   { name: "Children's Entertainment", iconName: "baby", audience: CategoryAudience.VENDOR },
-  { name: "Styled Setups", iconName: "sofa", audience: CategoryAudience.VENDOR },
-  { name: "Party Favors and Gifts", iconName: "gift", audience: CategoryAudience.VENDOR },
+  { name: "Entertainment", iconName: "music", audience: CategoryAudience.VENDOR },
+  { name: "Florals", iconName: "flower-2", audience: CategoryAudience.VENDOR },
+  { name: "Party Rentals", iconName: "sofa", audience: CategoryAudience.VENDOR },
+  { name: "Styling & Decor", iconName: "sparkles", audience: CategoryAudience.VENDOR },
   { name: "Birthday Party", iconName: "cake-slice", audience: CategoryAudience.BUYER },
   { name: "Baby Shower", iconName: "baby", audience: CategoryAudience.BUYER },
   { name: "Wedding", iconName: "heart", audience: CategoryAudience.BUYER },
@@ -409,8 +410,7 @@ async function main() {
   if (baker.vendorProfile) {
     await ensureSellerAccountForVendorProfile(baker.vendorProfile.id, prisma);
     await ensureVendorCategory(baker.vendorProfile.id, categoryMap["Cakes & Desserts"]);
-    await ensureVendorCategory(baker.vendorProfile.id, categoryMap["Party Favors and Gifts"]);
-    await ensureVendorCategory(baker.vendorProfile.id, categoryMap["Styled Setups"]);
+    await ensureVendorCategory(baker.vendorProfile.id, categoryMap["Styling & Decor"]);
 
     const signatureCake = await ensureOffering({
       vendorId: baker.vendorProfile.id,
@@ -438,7 +438,7 @@ async function main() {
       description:
         "A styled favor display with 3-5 dozen custom cookies, signage, trays, ribbon details, and setup for showers, birthdays, or brand events.",
       basePriceCents: 28500,
-      categoryId: categoryMap["Styled Setups"],
+      categoryId: categoryMap["Styling & Decor"],
       eventCategoryIds: [
         categoryMap["Baby Shower"],
         categoryMap["Birthday Party"],
@@ -457,7 +457,7 @@ async function main() {
       description:
         "Six coordinated cookies in a keepsake box for bridesmaids, birthdays, teacher gifts, or thoughtful hostess moments.",
       basePriceCents: 4200,
-      categoryId: categoryMap["Party Favors and Gifts"],
+      categoryId: categoryMap["Styling & Decor"],
       eventCategoryIds: [
         categoryMap["Birthday Party"],
         categoryMap["Wedding"],
@@ -525,8 +525,7 @@ async function main() {
   if (florist.vendorProfile) {
     await ensureSellerAccountForVendorProfile(florist.vendorProfile.id, prisma);
     await ensureVendorCategory(florist.vendorProfile.id, categoryMap["Florals"]);
-    await ensureVendorCategory(florist.vendorProfile.id, categoryMap["Styled Setups"]);
-    await ensureVendorCategory(florist.vendorProfile.id, categoryMap["Event Planning"]);
+    await ensureVendorCategory(florist.vendorProfile.id, categoryMap["Styling & Decor"]);
 
     await ensureOffering({
       vendorId: florist.vendorProfile.id,
@@ -553,7 +552,7 @@ async function main() {
       description:
         "Layered linens, place settings, florals, candles, and seasonal details for dinner parties, bridal brunches, and backyard celebrations.",
       basePriceCents: 42000,
-      categoryId: categoryMap["Styled Setups"],
+      categoryId: categoryMap["Styling & Decor"],
       eventCategoryIds: [
         categoryMap["Baby Shower"],
         categoryMap["Birthday Party"],

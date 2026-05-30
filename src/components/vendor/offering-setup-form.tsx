@@ -726,7 +726,7 @@ const starterComponents: Omit<ServiceComponent, "id">[] = [
   { category: "Rental", priceCents: 12500, title: "Ball pit" },
   { category: "Setup", priceCents: 7500, title: "Delivery" },
   { category: "Setup", priceCents: 7500, title: "Setup" },
-  { category: "Decor", priceCents: 15000, title: "Balloon garland" }
+  { category: "Styling & Decor", priceCents: 15000, title: "Balloon garland" }
 ];
 
 function formatCentsAsDollars(value?: number | null) {

@@ -62,14 +62,15 @@ function getDistanceSortScore(vendor: {
 }
 
 const serviceCategoryOrder = [
+  "Backdrops",
+  "Balloons",
   "Cakes & Desserts",
+  "Catering",
+  "Children's Entertainment",
+  "Entertainment",
   "Florals",
-  "Decor & Installation",
-  "Styled Setups",
-  "Event Planning",
-  "Party Favors & Gifts",
-  "Food & Beverage",
-  "Children's Entertainment"
+  "Party Rentals",
+  "Styling & Decor"
 ];
 
 const eventCategoryOrder = [
@@ -82,7 +83,7 @@ const eventCategoryOrder = [
 ];
 
 function displayCategoryName(name: string) {
-  return name === "Party Favors and Gifts" ? "Party Favors & Gifts" : name;
+  return name;
 }
 
 function sortByOrder<T extends { name: string }>(items: T[], order: string[]) {
@@ -113,7 +114,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
     locationLabel: clean(input.locationLabel),
     lat: clean(input.lat),
     lng: clean(input.lng),
-    categoryId: clean(input.categoryId),
+    categoryId: input.categoryId,
     eventCategoryId: clean(input.eventCategoryId),
     minPrice: clean(input.minPrice),
     maxPrice: clean(input.maxPrice),
@@ -158,17 +159,17 @@ export async function getExploreData(input: Record<string, string | string[] | u
   if (parsed.availableWeekend === "true") andFilters.push({ weekendAvailable: true });
   if (parsed.availableWeekend === "false") andFilters.push({ weekendAvailable: false });
 
-  if (parsed.categoryId) {
+  if (parsed.categoryId.length > 0) {
     andFilters.push({
       OR: [
-        { categories: { some: { categoryId: parsed.categoryId } } },
+        { categories: { some: { categoryId: { in: parsed.categoryId } } } },
         {
           offerings: {
             some: {
               active: true,
               OR: [
-                { categoryId: parsed.categoryId },
-                { categories: { some: { categoryId: parsed.categoryId } } }
+                { categoryId: { in: parsed.categoryId } },
+                { categories: { some: { categoryId: { in: parsed.categoryId } } } }
               ]
             }
           }

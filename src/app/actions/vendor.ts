@@ -36,28 +36,27 @@ function slugify(value: FormDataEntryValue | null) {
 }
 
 const UNCLAIMED_VENDOR_CATEGORIES = [
+  "Backdrops",
   "Balloons",
   "Cakes & Desserts",
-  "Florals",
-  "Children's Entertainment",
-  "Event Rentals",
-  "Photography",
   "Catering",
-  "Venue",
+  "Children's Entertainment",
   "Entertainment",
-  "Decor",
-  "Other"
+  "Florals",
+  "Party Rentals",
+  "Styling & Decor"
 ] as const;
 
 const unclaimedVendorSchema = z.object({
   name: z.string().trim().min(2, "Business Name is required.").max(120, "Business Name is too long."),
   instagramHandle: z.string().trim().max(80).optional(),
   website: z.string().trim().max(255).optional(),
-  category: z.enum(UNCLAIMED_VENDOR_CATEGORIES)
+  categories: z.array(z.enum(UNCLAIMED_VENDOR_CATEGORIES)).min(1, "Choose at least one category.").max(9, "Choose up to 9 categories.")
 });
 
 export async function createUnclaimedVendorAction(input: {
-  category: string;
+  categories?: string[];
+  category?: string;
   instagramHandle?: string;
   name: string;
   website?: string;
@@ -72,7 +71,10 @@ export async function createUnclaimedVendorAction(input: {
     return { ok: false, error: "Please wait a minute before adding another vendor." };
   }
 
-  const parsed = unclaimedVendorSchema.safeParse(input);
+  const parsed = unclaimedVendorSchema.safeParse({
+    ...input,
+    categories: input.categories?.length ? input.categories : input.category ? [input.category] : []
+  });
   if (!parsed.success) {
     return {
       ok: false,
@@ -80,20 +82,24 @@ export async function createUnclaimedVendorAction(input: {
         name: "Business Name",
         instagramHandle: "Instagram Handle",
         website: "Website",
-        category: "Category"
+        categories: "Categories"
       })
     };
   }
 
-  const category = await db.category.upsert({
-    where: { name: parsed.data.category },
-    update: { audience: CategoryAudience.VENDOR },
-    create: {
-      name: parsed.data.category,
-      iconName: "Sparkles",
-      audience: CategoryAudience.VENDOR
-    }
-  });
+  const categoryRecords = await Promise.all(
+    parsed.data.categories.map((name) =>
+      db.category.upsert({
+        where: { name },
+        update: { audience: CategoryAudience.VENDOR },
+        create: {
+          name,
+          iconName: "Sparkles",
+          audience: CategoryAudience.VENDOR
+        }
+      })
+    )
+  );
   const baseSlug = slugify(parsed.data.name) || "vendor";
   const slug = await getAvailableVendorSlug(baseSlug);
   const website = normalizeOptionalUrl(parsed.data.website);
@@ -110,9 +116,7 @@ export async function createUnclaimedVendorAction(input: {
       city: "",
       verified: false,
       categories: {
-        create: {
-          categoryId: category.id
-        }
+        create: categoryRecords.map((category) => ({ categoryId: category.id }))
       }
     },
     select: {

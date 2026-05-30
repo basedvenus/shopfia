@@ -178,14 +178,15 @@ function getImageCrops(value: unknown) {
 }
 
 const categoryOrder = [
+  "Backdrops",
+  "Balloons",
   "Cakes & Desserts",
+  "Catering",
+  "Children's Entertainment",
+  "Entertainment",
   "Florals",
-  "Decor & Installation",
-  "Styled Setups",
-  "Event Planning",
-  "Party Favors & Gifts",
-  "Food & Beverage",
-  "Children's Entertainment"
+  "Party Rentals",
+  "Styling & Decor"
 ];
 
 const eventCategoryOrder = [
@@ -198,7 +199,7 @@ const eventCategoryOrder = [
 ];
 
 function displayCategoryName(name: string) {
-  return name === "Party Favors and Gifts" ? "Party Favors & Gifts" : name;
+  return name;
 }
 
 function sortVendorCategories<T extends { name: string }>(categories: T[]) {

@@ -16,7 +16,7 @@ type Filters = {
   locationLabel?: string;
   lat?: number;
   lng?: number;
-  categoryId?: string;
+  categoryId?: string[];
   eventCategoryId?: string;
   minPrice?: number;
   maxPrice?: number;
@@ -38,7 +38,7 @@ export function ExploreSearch({
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const activeFilterCount = [
-    filters.categoryId,
+    filters.categoryId?.length ? filters.categoryId.join(",") : undefined,
     filters.eventCategoryId,
     filters.minPrice,
     filters.maxPrice,
@@ -135,19 +135,24 @@ export function ExploreSearch({
           </div>
 
           <div className="grid gap-4">
-            <FilterField label="Service Category">
-              <select
-                name="categoryId"
-                defaultValue={filters.categoryId ?? ""}
-                className={filterSelectClassName}
-              >
-                <option value="">All categories</option>
+            <FilterField label="Service Categories">
+              <div className="flex flex-wrap gap-2 rounded-[1.2rem] border border-[#eadbd7] bg-white/80 p-3">
                 {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
+                  <label
+                    key={category.id}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[#eadbd7] bg-[#fbf7f5] px-3 py-2 text-sm font-medium text-[#4b403c] transition hover:border-primary/45"
+                  >
+                    <input
+                      name="categoryId"
+                      type="checkbox"
+                      value={category.id}
+                      defaultChecked={filters.categoryId?.includes(category.id)}
+                      className="h-4 w-4 accent-primary"
+                    />
                     {category.name}
-                  </option>
+                  </label>
                 ))}
-              </select>
+              </div>
             </FilterField>
             <FilterField label="Event Type">
               <select
@@ -311,7 +316,7 @@ function getPillHref(
   } else if (pill.kind === "event" && event) {
     params.set("eventCategoryId", event.id);
   } else if (pill.kind === "category" && category) {
-    params.set("categoryId", category.id);
+    params.append("categoryId", category.id);
   } else {
     params.set("q", pill.label);
   }
@@ -340,5 +345,8 @@ function baseSearchParams(filters: Filters) {
   if (filters.placeId) params.set("placeId", filters.placeId);
   if (filters.lat != null) params.set("lat", String(filters.lat));
   if (filters.lng != null) params.set("lng", String(filters.lng));
+  for (const categoryId of filters.categoryId ?? []) {
+    params.append("categoryId", categoryId);
+  }
   return params;
 }

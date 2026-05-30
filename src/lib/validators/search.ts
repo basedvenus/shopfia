@@ -14,7 +14,14 @@ export const exploreSearchSchema = z.object({
   locationLabel: z.string().optional(),
   lat: optionalCoordinate(-90, 90),
   lng: optionalCoordinate(-180, 180),
-  categoryId: z.string().cuid().optional(),
+  categoryId: z.preprocess(
+    (value) => {
+      if (Array.isArray(value)) return value.filter(Boolean);
+      if (typeof value === "string" && value.trim()) return [value.trim()];
+      return [];
+    },
+    z.array(z.string().cuid()).max(9).default([])
+  ),
   eventCategoryId: z.string().min(1).optional(),
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),

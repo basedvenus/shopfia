@@ -469,17 +469,15 @@ function IconButton({
 }
 
 const UNCLAIMED_VENDOR_CATEGORIES = [
+  "Backdrops",
   "Balloons",
   "Cakes & Desserts",
-  "Florals",
-  "Children's Entertainment",
-  "Event Rentals",
-  "Photography",
   "Catering",
-  "Venue",
+  "Children's Entertainment",
   "Entertainment",
-  "Decor",
-  "Other"
+  "Florals",
+  "Party Rentals",
+  "Styling & Decor"
 ] as const;
 
 function UnclaimedVendorModal({
@@ -494,9 +492,16 @@ function UnclaimedVendorModal({
   const [name, setName] = useState(initialName);
   const [instagramHandle, setInstagramHandle] = useState("");
   const [website, setWebsite] = useState("");
-  const [category, setCategory] = useState<(typeof UNCLAIMED_VENDOR_CATEGORIES)[number]>("Other");
+  const [categories, setCategories] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  function toggleCategory(category: string, checked: boolean) {
+    setCategories((current) =>
+      checked
+        ? current.includes(category) ? current : [...current, category]
+        : current.filter((item) => item !== category)
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[80] grid place-items-center bg-[#2f2626]/35 p-4 backdrop-blur-sm">
@@ -523,19 +528,22 @@ function UnclaimedVendorModal({
             Business Name
             <Input value={name} onChange={(event) => setName(event.target.value)} className="h-11 rounded-[1rem] bg-white" required />
           </label>
-          <label className="grid gap-1.5 text-sm font-semibold">
-            Category
-            <select
-              value={category}
-              onChange={(event) => setCategory(event.target.value as (typeof UNCLAIMED_VENDOR_CATEGORIES)[number])}
-              className="h-11 rounded-[1rem] border border-input bg-white px-3 text-sm outline-none focus:border-primary/45 focus:ring-2 focus:ring-primary/15"
-              required
-            >
+          <div className="grid gap-2 text-sm font-semibold">
+            Categories
+            <div className="flex flex-wrap gap-2">
               {UNCLAIMED_VENDOR_CATEGORIES.map((item) => (
-                <option key={item} value={item}>{item}</option>
+                <label key={item} className="inline-flex cursor-pointer items-center gap-2 rounded-full border bg-white px-3 py-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={categories.includes(item)}
+                    onChange={(event) => toggleCategory(item, event.target.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  {item}
+                </label>
               ))}
-            </select>
-          </label>
+            </div>
+          </div>
           <label className="grid gap-1.5 text-sm font-semibold">
             Instagram Handle <span className="font-normal text-muted-foreground">(optional)</span>
             <Input value={instagramHandle} onChange={(event) => setInstagramHandle(event.target.value)} placeholder="@businessname" className="h-11 rounded-[1rem] bg-white" />
@@ -554,7 +562,7 @@ function UnclaimedVendorModal({
             onClick={() => {
               setError(null);
               startTransition(async () => {
-                const result = await createUnclaimedVendorAction({ category, instagramHandle, name, website });
+                const result = await createUnclaimedVendorAction({ categories, instagramHandle, name, website });
                 if (!result.ok || !result.vendor) {
                   setError(result.error ?? "Could not add that vendor yet.");
                   return;
