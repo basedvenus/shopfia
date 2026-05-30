@@ -44,7 +44,7 @@ export default async function MyPartiesPage() {
       orderBy: { createdAt: "desc" }
     }),
     db.vendorProfile.findMany({
-      select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true },
+      select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true, status: true },
       orderBy: { name: "asc" }
     }),
     db.user.findMany({

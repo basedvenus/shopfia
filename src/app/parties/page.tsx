@@ -450,8 +450,8 @@ function getPartiesForFeed<T extends {
   createdAt: Date;
   user: { id: string };
   collaborators: Array<{ userId: string }>;
-  taggedVendors: Array<{ id: string; userId: string }>;
-  photos: Array<{ taggedVendors: Array<{ id: string; userId: string }> }>;
+  taggedVendors: Array<{ id: string; userId: string | null }>;
+  photos: Array<{ taggedVendors: Array<{ id: string; userId: string | null }> }>;
   tags: string[];
   imageUrls: string[];
 }>(parties: T[], feed: FeedTab, followingIds: Set<string>) {
@@ -459,9 +459,9 @@ function getPartiesForFeed<T extends {
     const followed = parties.filter((party) => {
       if (followingIds.has(party.user.id)) return true;
       if (party.collaborators.some((collaborator) => followingIds.has(collaborator.userId))) return true;
-      if (party.taggedVendors.some((vendor) => followingIds.has(vendor.userId))) return true;
+      if (party.taggedVendors.some((vendor) => vendor.userId && followingIds.has(vendor.userId))) return true;
       return party.photos.some((photo) =>
-        photo.taggedVendors.some((vendor) => followingIds.has(vendor.userId))
+        photo.taggedVendors.some((vendor) => vendor.userId && followingIds.has(vendor.userId))
       );
     });
     return followed.length ? followed : parties;

@@ -129,6 +129,11 @@ enum PartyCollaborationStatus {
   REMOVED
 }
 
+enum VendorProfileStatus {
+  CLAIMED
+  UNCLAIMED
+}
+
 model User {
   id                     String            @id @default(cuid())
   name                   String?
@@ -224,9 +229,10 @@ model Shop {
 
 model VendorProfile {
   id                        String                @id @default(cuid())
-  userId                    String                @unique
+  userId                    String?               @unique
   slug                      String                @unique
   username                  String?               @unique
+  status                    VendorProfileStatus   @default(CLAIMED)
   name                      String
   website                   String?
   instagramUrl              String?
@@ -259,10 +265,11 @@ model VendorProfile {
   weekendAvailable          Boolean               @default(true)
   depositEnabled            Boolean               @default(true)
   depositPercent            Int                   @default(30)
+  claimedAt                 DateTime?
   createdAt                 DateTime              @default(now())
   updatedAt                 DateTime              @updatedAt
 
-  user                      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                      User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
   shop                      Shop?
   offerings                 Offering[]
   categories                VendorCategory[]

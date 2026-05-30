@@ -65,6 +65,9 @@ export async function ensureSellerAccountForVendorProfile(
   if (!vendorProfile) {
     throw new Error("Vendor profile not found");
   }
+  if (!vendorProfile.userId) {
+    throw new Error("Vendor profile must be claimed before payouts can be configured.");
+  }
 
   const seller = await resolvedClient.seller.upsert({
     where: { userId: vendorProfile.userId },

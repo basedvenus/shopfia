@@ -237,7 +237,7 @@ export default async function AdminPage() {
               <div>
                 <div className="font-medium">{vendor.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {vendor.user.email} · {vendor.verified ? "Approved" : "Pending/Suspended"}
+                  {vendor.user?.email ?? "Unclaimed business"} · {vendor.verified ? "Approved" : "Pending/Suspended"}
                 </div>
               </div>
               <div className="flex gap-2">

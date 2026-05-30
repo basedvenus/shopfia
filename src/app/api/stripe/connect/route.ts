@@ -40,6 +40,9 @@ export async function POST(request: Request) {
     }
   });
   if (!vendor) return NextResponse.json({ error: "Vendor profile not found" }, { status: 404 });
+  if (!vendor.userId || !vendor.user) {
+    return NextResponse.json({ error: "Vendor profile must be claimed before payouts can be configured" }, { status: 400 });
+  }
 
   let stripeAccountId = vendor.stripeAccountId;
   if (!stripeAccountId) {

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { CategoryAudience, OffsiteAdsTier, Prisma, UserRole } from "@prisma/client";
+import { CategoryAudience, OffsiteAdsTier, Prisma, UserRole, VendorProfileStatus } from "@prisma/client";
+import { z } from "zod";
 import { requireRole, requireSession, requireVerifiedVendorProfile } from "@/lib/auth/guards";
 import { parseImageCrop, parseImageCropArray } from "@/lib/image-crop";
 import { securityLog } from "@/lib/security/audit-log";
@@ -32,6 +33,239 @@ function slugify(value: FormDataEntryValue | null) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+const UNCLAIMED_VENDOR_CATEGORIES = [
+  "Balloons",
+  "Cakes & Desserts",
+  "Florals",
+  "Soft Play",
+  "Event Rentals",
+  "Photography",
+  "Catering",
+  "Venue",
+  "Entertainment",
+  "Decor",
+  "Other"
+] as const;
+
+const unclaimedVendorSchema = z.object({
+  name: z.string().trim().min(2, "Business Name is required.").max(120, "Business Name is too long."),
+  instagramHandle: z.string().trim().max(80).optional(),
+  website: z.string().trim().max(255).optional(),
+  category: z.enum(UNCLAIMED_VENDOR_CATEGORIES)
+});
+
+export async function createUnclaimedVendorAction(input: {
+  category: string;
+  instagramHandle?: string;
+  name: string;
+  website?: string;
+}) {
+  const { db } = await import("@/lib/db");
+  const session = await requireSession();
+  const rate = await checkServerActionRateLimit([
+    { key: "unclaimed-vendor:ip:{ip}", limit: 20, intervalMs: 60_000 },
+    { key: `unclaimed-vendor:user:${session.user.id}`, limit: 10, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    return { ok: false, error: "Please wait a minute before adding another vendor." };
+  }
+
+  const parsed = unclaimedVendorSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: firstValidationMessage(parsed.error, {
+        name: "Business Name",
+        instagramHandle: "Instagram Handle",
+        website: "Website",
+        category: "Category"
+      })
+    };
+  }
+
+  const category = await db.category.upsert({
+    where: { name: parsed.data.category },
+    update: { audience: CategoryAudience.VENDOR },
+    create: {
+      name: parsed.data.category,
+      iconName: "Sparkles",
+      audience: CategoryAudience.VENDOR
+    }
+  });
+  const baseSlug = slugify(parsed.data.name) || "vendor";
+  const slug = await getAvailableVendorSlug(baseSlug);
+  const website = normalizeOptionalUrl(parsed.data.website);
+  const instagramUrl = normalizeInstagramUrl(parsed.data.instagramHandle);
+
+  const vendor = await db.vendorProfile.create({
+    data: {
+      name: parsed.data.name,
+      slug,
+      status: VendorProfileStatus.UNCLAIMED,
+      website,
+      instagramUrl,
+      bio: "This business was tagged by the ShopFia community and has not claimed their profile yet.",
+      city: "",
+      verified: false,
+      categories: {
+        create: {
+          categoryId: category.id
+        }
+      }
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      username: true,
+      city: true,
+      state: true,
+      logoUrl: true,
+      status: true
+    }
+  });
+
+  revalidatePath("/my-parties");
+  revalidatePath(`/vendor/profile/${vendor.slug}`);
+  return { ok: true, vendor };
+}
+
+export async function claimUnclaimedVendorAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
+  const session = await requireSession();
+  const vendorId = String(formData.get("vendorId") ?? "");
+  if (!vendorId) redirect("/onboarding");
+
+  const unclaimedVendor = await db.vendorProfile.findFirst({
+    where: { id: vendorId, status: VendorProfileStatus.UNCLAIMED },
+    include: {
+      categories: true,
+      taggedPartyEvents: { select: { id: true } },
+      taggedPartyPhotos: { select: { id: true } },
+      partyPhotoRatings: { select: { id: true, photoId: true, rating: true, userId: true } }
+    }
+  });
+  if (!unclaimedVendor) redirect("/onboarding");
+
+  const destination = await db.$transaction(async (tx) => {
+    const existingVendor = await tx.vendorProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true, slug: true }
+    });
+
+    if (!existingVendor) {
+      return tx.vendorProfile.update({
+        where: { id: unclaimedVendor.id },
+        data: {
+          userId: session.user.id,
+          status: VendorProfileStatus.CLAIMED,
+          claimedAt: new Date()
+        },
+        select: { id: true, slug: true }
+      });
+    }
+
+    for (const category of unclaimedVendor.categories) {
+      await tx.vendorCategory.upsert({
+        where: {
+          vendorId_categoryId: {
+            vendorId: existingVendor.id,
+            categoryId: category.categoryId
+          }
+        },
+        update: {},
+        create: {
+          vendorId: existingVendor.id,
+          categoryId: category.categoryId
+        }
+      });
+    }
+
+    for (const event of unclaimedVendor.taggedPartyEvents) {
+      await tx.partyEvent.update({
+        where: { id: event.id },
+        data: {
+          taggedVendors: {
+            connect: { id: existingVendor.id },
+            disconnect: { id: unclaimedVendor.id }
+          }
+        }
+      });
+    }
+
+    for (const photo of unclaimedVendor.taggedPartyPhotos) {
+      await tx.partyPhoto.update({
+        where: { id: photo.id },
+        data: {
+          taggedVendors: {
+            connect: { id: existingVendor.id },
+            disconnect: { id: unclaimedVendor.id }
+          }
+        }
+      });
+    }
+
+    for (const rating of unclaimedVendor.partyPhotoRatings) {
+      const existingRating = await tx.partyPhotoVendorRating.findUnique({
+        where: {
+          photoId_vendorId: {
+            photoId: rating.photoId,
+            vendorId: existingVendor.id
+          }
+        },
+        select: { id: true }
+      });
+      if (existingRating) {
+        await tx.partyPhotoVendorRating.delete({ where: { id: rating.id } });
+      } else {
+        await tx.partyPhotoVendorRating.update({
+          where: { id: rating.id },
+          data: { vendorId: existingVendor.id }
+        });
+      }
+    }
+
+    await tx.vendorProfile.delete({ where: { id: unclaimedVendor.id } });
+    return existingVendor;
+  });
+
+  revalidatePath(`/vendor/profile/${unclaimedVendor.slug}`);
+  revalidatePath(`/vendor/profile/${destination.slug}`);
+  revalidatePath("/my-parties");
+  redirect(`/vendor/profile/${destination.slug}`);
+}
+
+async function getAvailableVendorSlug(baseSlug: string) {
+  const { db } = await import("@/lib/db");
+  const candidates = [
+    baseSlug,
+    `${baseSlug}-${Date.now().toString(36).slice(-4)}`,
+    `${baseSlug}-${Math.random().toString(36).slice(2, 7)}`
+  ];
+  for (const candidate of candidates) {
+    const existing = await db.vendorProfile.findUnique({
+      where: { slug: candidate },
+      select: { id: true }
+    });
+    if (!existing) return candidate;
+  }
+  return `${baseSlug}-${Date.now().toString(36)}`;
+}
+
+function normalizeOptionalUrl(value?: string) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function normalizeInstagramUrl(value?: string) {
+  const trimmed = String(value ?? "").trim().replace(/^@/, "");
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://instagram.com/${trimmed}`;
 }
 
 function dollarsToCents(value: FormDataEntryValue | null) {
@@ -173,6 +407,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
       where: { userId: session.user.id },
       update: {
         name: parsed.name,
+        status: VendorProfileStatus.CLAIMED,
         slug: parsed.slug,
         username: parsed.username || null,
         website: parsed.website || null,
@@ -199,6 +434,8 @@ export async function upsertVendorProfileAction(formData: FormData) {
       },
       create: {
         userId: session.user.id,
+        status: VendorProfileStatus.CLAIMED,
+        claimedAt: new Date(),
         name: parsed.name,
         slug: parsed.slug,
         username: parsed.username || null,

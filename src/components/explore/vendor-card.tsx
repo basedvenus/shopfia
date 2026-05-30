@@ -27,7 +27,7 @@ type VendorCardProps = {
       createdAt: Date | string;
       email: string | null;
       username: string | null;
-    };
+    } | null;
     categories: { category: { name: string } }[];
     offerings: { category: { name: string } }[];
   };
@@ -37,10 +37,12 @@ type VendorCardProps = {
 
 export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendor }: VendorCardProps) {
   const image = vendor.coverPhoto ?? vendor.photos[0] ?? "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1000&q=80";
-  const profileBadge = getProfileBadge(vendor.user, originalMemberCutoff, {
-    includeFounder: false,
-    vendorContext: true
-  });
+  const profileBadge = vendor.user
+    ? getProfileBadge(vendor.user, originalMemberCutoff, {
+        includeFounder: false,
+        vendorContext: true
+      })
+    : null;
   const categoryNames = unique([
     ...vendor.categories.map((vc) => vc.category.name),
     ...vendor.offerings.map((offering) => offering.category.name)

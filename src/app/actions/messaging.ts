@@ -40,6 +40,9 @@ export async function sendMessageAction(formData: FormData) {
       include: { user: true }
     });
     if (!vendorProfile) throw new Error("Vendor not found");
+    if (!vendorProfile.userId) {
+      throw new Error("This business has not claimed their ShopFia profile yet");
+    }
     if (!vendorProfile.verified && session.user.role !== UserRole.ADMIN) {
       throw new Error("Vendor is not accepting platform messages");
     }

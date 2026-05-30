@@ -73,9 +73,16 @@ export async function createPublicInquiryAction(formData: FormData) {
   if (!vendor) {
     return { success: false, error: "Vendor not found." };
   }
+  if (!vendor.userId || !vendor.user) {
+    return {
+      success: false,
+      error: "This business has not claimed their ShopFia profile yet."
+    };
+  }
   if (vendor.userId === session.user.id && session.user.role !== UserRole.ADMIN) {
     return { success: false, error: "You cannot inquire on your own listing." };
   }
+  const vendorUserId = vendor.userId;
 
   let listingId: string | null = null;
   let offeringId: string | null = null;
@@ -124,7 +131,7 @@ export async function createPublicInquiryAction(formData: FormData) {
       where: {
         buyerId_vendorId: {
           buyerId: session.user.id,
-          vendorId: vendor.userId
+          vendorId: vendorUserId
         }
       },
       update: {
@@ -134,7 +141,7 @@ export async function createPublicInquiryAction(formData: FormData) {
       },
       create: {
         buyerId: session.user.id,
-        vendorId: vendor.userId,
+        vendorId: vendorUserId,
         vendorProfileId: vendor.id,
         listingId,
         offeringId,

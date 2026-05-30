@@ -202,7 +202,7 @@ export default async function EventPage({
   const [editVendors, editUsers] = isEditing
     ? await Promise.all([
         db.vendorProfile.findMany({
-          select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true },
+          select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true, status: true },
           orderBy: { name: "asc" }
         }),
         db.user.findMany({

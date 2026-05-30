@@ -75,6 +75,12 @@ export async function POST(request: Request) {
       include: { user: true }
     });
     if (!vendorProfile) return NextResponse.json({ error: "Vendor not found." }, { status: 404 });
+    if (!vendorProfile.userId) {
+      return NextResponse.json(
+        { error: "This business has not claimed their ShopFia profile yet." },
+        { status: 403 }
+      );
+    }
     if (!vendorProfile.verified && session.user.role !== UserRole.ADMIN) {
       return NextResponse.json({ error: "Vendor is not accepting platform messages." }, { status: 403 });
     }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition, type DragEvent, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Loader2, Search, Star, Upload, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Loader2, Plus, Search, Star, Upload, X } from "lucide-react";
 import { createPartyEventAction, updatePartyEventAction } from "@/app/actions/auth";
+import { createUnclaimedVendorAction } from "@/app/actions/vendor";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
@@ -22,6 +23,7 @@ type VendorOption = {
   city: string;
   state: string | null;
   logoUrl: string | null;
+  status?: "CLAIMED" | "UNCLAIMED";
 };
 
 type UserOption = {
@@ -72,9 +74,11 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>(() => initialParty?.tags ?? []);
   const [photos, setPhotos] = useState<UploadedPartyPhoto[]>(() => initialParty?.photos ?? []);
+  const [vendorOptions, setVendorOptions] = useState<VendorOption[]>(vendors);
   const [mainHostId, setMainHostId] = useState(initialParty?.mainHostId ?? currentUserId);
   const [coHostIds, setCoHostIds] = useState<string[]>(() => initialParty?.coHostIds ?? []);
   const [editingCropPhoto, setEditingCropPhoto] = useState<UploadedPartyPhoto | null>(null);
+  const [newVendorModal, setNewVendorModal] = useState<{ initialName: string; photoId: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -139,6 +143,14 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
         };
       })
     );
+  }
+
+  function addCreatedVendor(photoId: string, vendor: VendorOption) {
+    setVendorOptions((current) => {
+      if (current.some((option) => option.id === vendor.id)) return current;
+      return [...current, vendor].sort((a, b) => a.name.localeCompare(b.name));
+    });
+    togglePhotoVendor(photoId, vendor.id, true);
   }
 
   function setPhotoVendorRating(photoId: string, vendorId: string, rating: number) {
@@ -382,10 +394,11 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
                   </div>
                   <PhotoVendorTagger
                     onAddVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, true)}
+                    onCreateVendor={(initialName) => setNewVendorModal({ initialName, photoId: photo.id })}
                     onRateVendor={(vendorId, rating) => setPhotoVendorRating(photo.id, vendorId, rating)}
                     onRemoveVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, false)}
                     photo={photo}
-                    vendors={vendors}
+                    vendors={vendorOptions}
                   />
                 </div>
               </article>
@@ -416,6 +429,16 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
           previewClassName="aspect-[4/3]"
         />
       ) : null}
+      {newVendorModal ? (
+        <UnclaimedVendorModal
+          initialName={newVendorModal.initialName}
+          onClose={() => setNewVendorModal(null)}
+          onCreated={(vendor) => {
+            addCreatedVendor(newVendorModal.photoId, vendor);
+            setNewVendorModal(null);
+          }}
+        />
+      ) : null}
     </form>
   );
 }
@@ -442,6 +465,110 @@ function IconButton({
     >
       {children}
     </button>
+  );
+}
+
+const UNCLAIMED_VENDOR_CATEGORIES = [
+  "Balloons",
+  "Cakes & Desserts",
+  "Florals",
+  "Soft Play",
+  "Event Rentals",
+  "Photography",
+  "Catering",
+  "Venue",
+  "Entertainment",
+  "Decor",
+  "Other"
+] as const;
+
+function UnclaimedVendorModal({
+  initialName,
+  onClose,
+  onCreated
+}: {
+  initialName: string;
+  onClose: () => void;
+  onCreated: (vendor: VendorOption) => void;
+}) {
+  const [name, setName] = useState(initialName);
+  const [instagramHandle, setInstagramHandle] = useState("");
+  const [website, setWebsite] = useState("");
+  const [category, setCategory] = useState<(typeof UNCLAIMED_VENDOR_CATEGORIES)[number]>("Other");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <div className="fixed inset-0 z-[80] grid place-items-center bg-[#2f2626]/35 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md overflow-hidden rounded-[1.5rem] border border-white/70 bg-[#fffaf7] shadow-[0_28px_80px_rgba(72,44,43,0.22)]">
+        <div className="flex items-start justify-between gap-4 border-b border-[#eadbd7] px-5 py-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Unclaimed vendor</p>
+            <h2 className="mt-1 text-xl font-semibold">Add New Vendor</h2>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              Add a lightweight profile so this party can credit the business now.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-muted-foreground shadow-sm transition hover:text-foreground"
+            aria-label="Close add vendor"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="grid gap-3 p-5">
+          <label className="grid gap-1.5 text-sm font-semibold">
+            Business Name
+            <Input value={name} onChange={(event) => setName(event.target.value)} className="h-11 rounded-[1rem] bg-white" required />
+          </label>
+          <label className="grid gap-1.5 text-sm font-semibold">
+            Category
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value as (typeof UNCLAIMED_VENDOR_CATEGORIES)[number])}
+              className="h-11 rounded-[1rem] border border-input bg-white px-3 text-sm outline-none focus:border-primary/45 focus:ring-2 focus:ring-primary/15"
+              required
+            >
+              {UNCLAIMED_VENDOR_CATEGORIES.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1.5 text-sm font-semibold">
+            Instagram Handle <span className="font-normal text-muted-foreground">(optional)</span>
+            <Input value={instagramHandle} onChange={(event) => setInstagramHandle(event.target.value)} placeholder="@businessname" className="h-11 rounded-[1rem] bg-white" />
+          </label>
+          <label className="grid gap-1.5 text-sm font-semibold">
+            Website <span className="font-normal text-muted-foreground">(optional)</span>
+            <Input value={website} onChange={(event) => setWebsite(event.target.value)} placeholder="business.com" className="h-11 rounded-[1rem] bg-white" />
+          </label>
+          {error ? <p className="rounded-[1rem] bg-primary/10 px-3 py-2 text-sm text-primary">{error}</p> : null}
+        </div>
+        <div className="flex justify-end gap-2 border-t border-[#eadbd7] bg-white px-5 py-4">
+          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button
+            type="button"
+            disabled={isPending}
+            onClick={() => {
+              setError(null);
+              startTransition(async () => {
+                const result = await createUnclaimedVendorAction({ category, instagramHandle, name, website });
+                if (!result.ok || !result.vendor) {
+                  setError(result.error ?? "Could not add that vendor yet.");
+                  return;
+                }
+                onCreated(result.vendor);
+              });
+            }}
+          >
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            Add Vendor
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -594,12 +721,14 @@ function getUserHandle(user?: UserOption) {
 
 function PhotoVendorTagger({
   onAddVendor,
+  onCreateVendor,
   onRateVendor,
   onRemoveVendor,
   photo,
   vendors
 }: {
   onAddVendor: (vendorId: string) => void;
+  onCreateVendor: (initialName: string) => void;
   onRateVendor: (vendorId: string, rating: number) => void;
   onRemoveVendor: (vendorId: string) => void;
   photo: UploadedPartyPhoto;
@@ -629,7 +758,31 @@ function PhotoVendorTagger({
       })
       .slice(0, 5);
   }, [photo.vendorIds, query, vendors]);
-  const showDropdown = isFocused && (query.trim().length > 0 || matches.length > 0);
+  const trimmedQuery = query.trim();
+  const showAddVendor = trimmedQuery.length > 0;
+  const addVendorButton = showAddVendor ? (
+    <button
+      type="button"
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => {
+        onCreateVendor(trimmedQuery);
+        setQuery("");
+        setIsFocused(false);
+      }}
+      className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#fff7f4]"
+    >
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+        <Plus className="h-4 w-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold text-foreground">Add New Vendor</span>
+        <span className="block truncate text-xs text-muted-foreground">
+          Create an unclaimed profile for “{trimmedQuery}”
+        </span>
+      </span>
+    </button>
+  ) : null;
+  const showDropdown = isFocused && (trimmedQuery.length > 0 || matches.length > 0);
 
   return (
     <div className="grid gap-3">
@@ -645,32 +798,34 @@ function PhotoVendorTagger({
         />
         {showDropdown ? (
           <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-20 overflow-hidden rounded-[1.2rem] border border-[#eadbd7] bg-white shadow-[0_16px_42px_rgba(80,55,45,0.13)]">
+            {matches.length === 0 ? addVendorButton : null}
             {matches.length > 0 ? (
-              matches.map((vendor) => (
-                <button
-                  key={vendor.id}
-                  type="button"
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => {
-                    onAddVendor(vendor.id);
-                    setQuery("");
-                    setIsFocused(false);
-                  }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#fff7f4]"
-                >
-                  <VendorAvatar vendor={vendor} />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-foreground">{vendor.name}</span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {vendor.username ? `@${vendor.username}` : "Vendor profile"}
-                      {vendor.city ? ` · ${vendor.city}${vendor.state ? `, ${vendor.state}` : ""}` : ""}
+              <>
+                {matches.map((vendor) => (
+                  <button
+                    key={vendor.id}
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      onAddVendor(vendor.id);
+                      setQuery("");
+                      setIsFocused(false);
+                    }}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#fff7f4]"
+                  >
+                    <VendorAvatar vendor={vendor} />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-foreground">{vendor.name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {vendor.status === "UNCLAIMED" ? "Unclaimed business" : vendor.username ? `@${vendor.username}` : "Vendor profile"}
+                        {vendor.city ? ` · ${vendor.city}${vendor.state ? `, ${vendor.state}` : ""}` : ""}
+                      </span>
                     </span>
-                  </span>
-                </button>
-              ))
-            ) : (
-              <div className="px-4 py-3 text-sm text-muted-foreground">No vendors found.</div>
-            )}
+                  </button>
+                ))}
+                {addVendorButton}
+              </>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -688,7 +843,7 @@ function PhotoVendorTagger({
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">{vendor.name}</div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {vendor.username ? `@${vendor.username}` : "Tagged vendor"}
+                      {vendor.status === "UNCLAIMED" ? "Unclaimed business" : vendor.username ? `@${vendor.username}` : "Tagged vendor"}
                     </div>
                   </div>
                 </div>

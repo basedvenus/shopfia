@@ -13,6 +13,7 @@ import {
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
+import { claimUnclaimedVendorAction } from "@/app/actions/vendor";
 import { ListingInquiryPanel } from "@/components/inquiries/listing-inquiry-form";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { Badge } from "@/components/ui/badge";
@@ -110,9 +111,10 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           photoCount: 0
         }));
   const currentUserId = session?.user?.id;
-  const vendorBadge = getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true });
+  const isUnclaimed = vendor.status === "UNCLAIMED" || !vendor.user;
+  const vendorBadge = vendor.user ? getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true }) : null;
   const isFollowingVendor =
-    currentUserId && currentUserId !== vendor.user.id
+    currentUserId && vendor.user && currentUserId !== vendor.user.id
       ? Boolean(
           await db.follow.findUnique({
             where: {
@@ -142,6 +144,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                 <div className="mb-3 flex flex-wrap gap-2">
                   {vendor.verified && <Badge variant="accent">Verified vendor</Badge>}
+                  {isUnclaimed ? <Badge className="bg-white/25 text-white backdrop-blur">Unclaimed Business</Badge> : null}
                   {vendor.categories.slice(0, 3).map((c) => (
                     <Badge key={c.id} className="bg-white/20 text-white backdrop-blur" variant="default">
                       {c.category.name}
@@ -185,8 +188,17 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                     </div>
                   </div>
                 </div>
-                    <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">{vendor.bio}</p>
-                    {session?.user?.id && session.user.id !== vendor.user.id ? (
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">
+                      {vendor.bio ?? (isUnclaimed ? "This business has been tagged by the ShopFia community." : null)}
+                    </p>
+                    {isUnclaimed ? (
+                      <form action={claimUnclaimedVendorAction} className="mt-4">
+                        <input type="hidden" name="vendorId" value={vendor.id} />
+                        <Button type="submit" size="sm" variant="secondary">
+                          Claim This Business
+                        </Button>
+                      </form>
+                    ) : session?.user?.id && vendor.user && session.user.id !== vendor.user.id ? (
                       <form action={toggleFollow} className="mt-4">
                         <input type="hidden" name="followingId" value={vendor.user.id} />
                         <Button type="submit" size="sm" variant="secondary">
@@ -272,11 +284,29 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         </div>
 
         <div className="space-y-4">
-          <ListingInquiryPanel
-            defaultName={session?.user?.name}
-            description="Share what you are planning and this vendor can reply inside ShopFia messages."
-            vendorProfileId={vendor.id}
-          />
+          {isUnclaimed ? (
+            <Card className="border-white/70 bg-white/90">
+              <CardHeader>
+                <Badge variant="outline" className="w-fit">Unclaimed Business</Badge>
+                <CardTitle>Own this business?</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3 text-sm text-muted-foreground">
+                <p>
+                  Claim this ShopFia profile to manage your storefront and keep the parties and photos already tagged by the community.
+                </p>
+                <form action={claimUnclaimedVendorAction}>
+                  <input type="hidden" name="vendorId" value={vendor.id} />
+                  <Button type="submit">Claim This Business</Button>
+                </form>
+              </CardContent>
+            </Card>
+          ) : (
+            <ListingInquiryPanel
+              defaultName={session?.user?.name}
+              description="Share what you are planning and this vendor can reply inside ShopFia messages."
+              vendorProfileId={vendor.id}
+            />
+          )}
 
           <Card className="border-white/70 bg-white/90">
             <CardHeader>

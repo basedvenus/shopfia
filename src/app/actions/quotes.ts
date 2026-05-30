@@ -30,6 +30,7 @@ export async function createQuoteRequestAction(formData: FormData) {
 
   const vendor = await db.vendorProfile.findUnique({ where: { id: parsed.vendorId } });
   if (!vendor) throw new Error("Vendor not found");
+  if (!vendor.userId) throw new Error("This business has not claimed their ShopFia profile yet");
   if (!vendor.verified) throw new Error("Vendor is not accepting platform bookings");
 
   if (parsed.offeringId) {
@@ -214,6 +215,9 @@ export async function acceptQuoteAndCreatePaymentIntentAction(formData: FormData
     !quote.quoteRequest.vendor.stripePayoutsEnabled
   ) {
     throw new Error("This vendor has not finished payout setup yet.");
+  }
+  if (!quote.quoteRequest.vendor.userId) {
+    throw new Error("This business has not claimed their ShopFia profile yet.");
   }
 
   const vendorUser = await db.user.findUnique({
