@@ -556,13 +556,6 @@ export default async function VendorDashboardPage({
                   <Image src={post.image} alt={post.title} fill className="object-cover transition duration-500 group-hover:scale-[1.03]" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/62 via-black/8 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                    <div className="mb-2 flex flex-wrap gap-1.5">
-                      {post.tags.slice(0, 3).map((tag) => (
-                        <span key={tag} className="rounded-full bg-white/22 px-2.5 py-1 text-xs font-medium backdrop-blur">
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
                     <div className="text-lg font-semibold tracking-tight">{post.title}</div>
                     <div className="mt-1 text-xs text-white/78">{post.location || post.credit}</div>
                   </div>

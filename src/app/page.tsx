@@ -147,13 +147,6 @@ export default function Page() {
                   <ArrowUpRight className="h-4 w-4" />
                 </div>
                 <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    {tile.tags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="rounded-md bg-white/15 px-2 py-1 text-[11px] backdrop-blur">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
                   <h2 className="text-xl font-semibold">{tile.title}</h2>
                   <p className="mt-1 text-xs text-white/80">{tile.vendor}</p>
                 </div>
