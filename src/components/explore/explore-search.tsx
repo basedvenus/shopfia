@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SlidersHorizontal, Search, X } from "lucide-react";
+import { Baby, CakeSlice, Gem, Gift, Heart, PartyPopper, Search, SlidersHorizontal, Sparkles, Trees, X } from "lucide-react";
 import { useState } from "react";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { Button } from "@/components/ui/button";
@@ -254,15 +254,15 @@ function FilterField({
 }
 
 const inspirationPills = [
-  "Birthday Party",
-  "Baby Shower",
-  "Bridal Shower",
-  "Wedding",
-  "Kids Party",
-  "Luxury",
-  "Garden Party",
-  "Outdoor Event",
-  "Picnic Party"
+  { label: "Birthday Party", Icon: CakeSlice },
+  { label: "Baby Shower", Icon: Baby },
+  { label: "Bridal Shower", Icon: Sparkles },
+  { label: "Wedding", Icon: Heart },
+  { label: "Kids Party", Icon: PartyPopper },
+  { label: "Luxury", Icon: Gem },
+  { label: "Garden Party", Icon: Trees },
+  { label: "Outdoor Event", Icon: Gift },
+  { label: "Picnic Party", Icon: PartyPopper }
 ];
 
 function DiscoveryPills({ filters }: { filters: Filters }) {
@@ -270,22 +270,23 @@ function DiscoveryPills({ filters }: { filters: Filters }) {
 
   return (
     <div className="flex gap-2 overflow-x-auto pb-1">
-      {inspirationPills.map((pill) => {
-        const selected = selectedThemes.has(pill);
-        const href = getPillHref(pill, filters);
+      {inspirationPills.map(({ Icon, label }) => {
+        const selected = selectedThemes.has(label);
+        const href = getPillHref(label, filters);
         return (
           <Link
-            key={pill}
+            key={label}
             href={href}
             aria-pressed={selected}
             className={cn(
-              "whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition",
+              "inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition",
               selected
                 ? "border-primary/40 bg-primary text-white shadow-sm hover:bg-primary/90"
                 : "border-[#eadbd7] bg-white/75 text-[#5f534e] hover:border-primary/40 hover:bg-primary/10 hover:text-foreground"
             )}
           >
-            {pill}
+            <Icon className="h-4 w-4" />
+            {label}
           </Link>
         );
       })}
@@ -304,8 +305,8 @@ function getPillHref(pill: string, filters: Filters) {
     selectedThemes.add(pill);
   }
 
-  for (const theme of inspirationPills.filter((theme) => selectedThemes.has(theme))) {
-    params.append("theme", theme);
+  for (const { label } of inspirationPills.filter((theme) => selectedThemes.has(theme.label))) {
+    params.append("theme", label);
   }
 
   return `/explore?${params.toString()}`;

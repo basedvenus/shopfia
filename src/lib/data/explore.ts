@@ -254,6 +254,82 @@ export async function getExploreData(input: Record<string, string | string[] | u
   }
 
   const where: Prisma.VendorProfileWhereInput = { AND: andFilters };
+  const partyAndFilters: Prisma.PartyEventWhereInput[] = [
+    {
+      OR: [
+        { coverImageUrl: { not: null } },
+        { imageUrls: { isEmpty: false } },
+        { photos: { some: {} } }
+      ]
+    }
+  ];
+
+  if (parsed.city && !searchPoint) {
+    partyAndFilters.push({
+      OR: [
+        { city: { contains: parsed.city, mode: "insensitive" } },
+        { zipCode: { contains: parsed.city, mode: "insensitive" } },
+        { location: { contains: parsed.city, mode: "insensitive" } },
+        { formattedAddress: { contains: parsed.city, mode: "insensitive" } }
+      ]
+    });
+  }
+
+  if (parsed.categoryId.length > 0) {
+    partyAndFilters.push({
+      taggedVendors: {
+        some: {
+          OR: [
+            { categories: { some: { categoryId: { in: parsed.categoryId } } } },
+            {
+              offerings: {
+                some: {
+                  active: true,
+                  OR: [
+                    { categoryId: { in: parsed.categoryId } },
+                    { categories: { some: { categoryId: { in: parsed.categoryId } } } }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    });
+  }
+
+  const partyThemeTerms = [
+    ...parsed.theme.flatMap((theme) => getThemeTerms(theme)),
+    ...(parsed.q ? [parsed.q] : [])
+  ];
+  if (partyThemeTerms.length > 0) {
+    partyAndFilters.push({
+      OR: partyThemeTerms.flatMap((term) => [
+        { title: { contains: term, mode: "insensitive" } },
+        { theme: { contains: term, mode: "insensitive" } },
+        { description: { contains: term, mode: "insensitive" } },
+        { location: { contains: term, mode: "insensitive" } },
+        { tags: { has: term.toLowerCase() } },
+        {
+          taggedVendors: {
+            some: {
+              OR: [
+                { name: { contains: term, mode: "insensitive" } },
+                { bio: { contains: term, mode: "insensitive" } },
+                {
+                  categories: {
+                    some: {
+                      category: { name: { contains: term, mode: "insensitive" } }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ])
+    });
+  }
 
   const orderBy =
     parsed.sort === "top-rated"
@@ -271,7 +347,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
             { createdAt: "desc" as const }
           ];
 
-  const [vendors, categories, eventCategories] = await Promise.all([
+  const [vendors, parties, categories, eventCategories] = await Promise.all([
     db.vendorProfile.findMany({
       where,
       take: 30,
@@ -292,6 +368,28 @@ export async function getExploreData(input: Record<string, string | string[] | u
           select: { id: true, basePriceCents: true, category: { select: { name: true } }, type: true },
           take: 3,
           orderBy: { createdAt: "desc" }
+        }
+      }
+    }),
+    db.partyEvent.findMany({
+      where: { AND: partyAndFilters },
+      take: 48,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: {
+            id: true,
+            createdAt: true,
+            email: true,
+            image: true,
+            name: true,
+            username: true
+          }
+        },
+        photos: {
+          orderBy: { sortOrder: "asc" },
+          select: { crop: true, id: true, updatedAt: true },
+          take: 1
         }
       }
     }),
@@ -351,6 +449,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
 
   return {
     filters: parsed,
+    parties,
     vendors: finalVendors,
     categories: sortByOrder(categories, serviceCategoryOrder).map((category) => ({
       ...category,
