@@ -76,7 +76,12 @@ const serviceCategoryOrder = [
 const eventCategoryOrder = [
   "Baby Shower",
   "Birthday Party",
+  "Bridal Shower",
   "Wedding",
+  "Kids Party",
+  "Garden Party",
+  "Outdoor Event",
+  "Picnic Party",
   "Corporate Event",
   "Holiday Party",
   "Graduation Party"
@@ -114,6 +119,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
     locationLabel: clean(input.locationLabel),
     lat: clean(input.lat),
     lng: clean(input.lng),
+    theme: input.theme,
     categoryId: input.categoryId,
     eventCategoryId: clean(input.eventCategoryId),
     minPrice: clean(input.minPrice),
@@ -187,6 +193,37 @@ export async function getExploreData(input: Record<string, string | string[] | u
         }
       }
     });
+  }
+
+  if (parsed.theme.length > 0) {
+    const themeFilters = parsed.theme.flatMap((theme) => getThemeTerms(theme));
+    if (themeFilters.length > 0) {
+      andFilters.push({
+        OR: themeFilters.flatMap((theme) => [
+          { name: { contains: theme, mode: "insensitive" } },
+          { bio: { contains: theme, mode: "insensitive" } },
+          {
+            offerings: {
+              some: {
+                active: true,
+                OR: [
+                  { title: { contains: theme, mode: "insensitive" } },
+                  { description: { contains: theme, mode: "insensitive" } },
+                  { tags: { has: theme.toLowerCase() } },
+                  {
+                    eventCategories: {
+                      some: {
+                        category: { name: { contains: theme, mode: "insensitive" } }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ])
+      });
+    }
   }
 
   if (parsed.q) {
@@ -324,4 +361,21 @@ export async function getExploreData(input: Record<string, string | string[] | u
       eventCategoryOrder
     )
   };
+}
+
+function getThemeTerms(theme: string) {
+  const normalized = theme.trim();
+  const aliases: Record<string, string[]> = {
+    "Birthday Party": ["Birthday Party", "birthday"],
+    "Baby Shower": ["Baby Shower", "baby shower"],
+    "Bridal Shower": ["Bridal Shower", "bridal shower"],
+    Wedding: ["Wedding", "wedding"],
+    "Kids Party": ["Kids Party", "kids", "children"],
+    Luxury: ["Luxury", "luxury"],
+    "Garden Party": ["Garden Party", "garden"],
+    "Outdoor Event": ["Outdoor Event", "outdoor"],
+    "Picnic Party": ["Picnic Party", "picnic"]
+  };
+
+  return aliases[normalized] ?? [normalized];
 }

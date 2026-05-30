@@ -16,6 +16,7 @@ type Filters = {
   locationLabel?: string;
   lat?: number;
   lng?: number;
+  theme?: string[];
   categoryId?: string[];
   eventCategoryId?: string;
   minPrice?: number;
@@ -98,11 +99,7 @@ export function ExploreSearch({
         </Button>
       </div>
 
-      <DiscoveryPills
-        categories={categories}
-        eventCategories={eventCategories}
-        filters={filters}
-      />
+      <DiscoveryPills filters={filters} />
 
       <div className={cn("fixed inset-0 z-50", filtersOpen ? "block" : "hidden")}>
         <button
@@ -256,38 +253,39 @@ function FilterField({
   );
 }
 
-function DiscoveryPills({
-  categories,
-  eventCategories,
-  filters
-}: {
-  categories: Category[];
-  eventCategories: Category[];
-  filters: Filters;
-}) {
-  const pills = [
-    { label: "Baby Shower", kind: "event" },
-    { label: "Weddings", eventName: "Wedding", kind: "event" },
-    { label: "Florals", kind: "category" },
-    { label: "Balloons", query: "balloons" },
-    { label: "Cookies", query: "cookies" },
-    { label: "Brunch", query: "brunch" },
-    { label: "Luxury", query: "luxury" },
-    { label: "Kids Parties", categoryName: "Children's Entertainment", kind: "category" },
-    { label: "Outdoor Events", query: "outdoor" }
-  ];
+const inspirationPills = [
+  "Birthday Party",
+  "Baby Shower",
+  "Bridal Shower",
+  "Wedding",
+  "Kids Party",
+  "Luxury",
+  "Garden Party",
+  "Outdoor Event",
+  "Picnic Party"
+];
+
+function DiscoveryPills({ filters }: { filters: Filters }) {
+  const selectedThemes = new Set(filters.theme ?? []);
 
   return (
     <div className="flex gap-2 overflow-x-auto pb-1">
-      {pills.map((pill) => {
-        const href = getPillHref(pill, categories, eventCategories, filters);
+      {inspirationPills.map((pill) => {
+        const selected = selectedThemes.has(pill);
+        const href = getPillHref(pill, filters);
         return (
           <Link
-            key={pill.label}
+            key={pill}
             href={href}
-            className="whitespace-nowrap rounded-full border border-[#eadbd7] bg-white/75 px-4 py-2 text-sm font-medium text-[#5f534e] transition hover:border-primary/40 hover:bg-primary/10 hover:text-foreground"
+            aria-pressed={selected}
+            className={cn(
+              "whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition",
+              selected
+                ? "border-primary/40 bg-primary text-white shadow-sm hover:bg-primary/90"
+                : "border-[#eadbd7] bg-white/75 text-[#5f534e] hover:border-primary/40 hover:bg-primary/10 hover:text-foreground"
+            )}
           >
-            {pill.label}
+            {pill}
           </Link>
         );
       })}
@@ -295,30 +293,19 @@ function DiscoveryPills({
   );
 }
 
-function getPillHref(
-  pill: {
-    label: string;
-    categoryName?: string;
-    eventName?: string;
-    kind?: string;
-    query?: string;
-  },
-  categories: Category[],
-  eventCategories: Category[],
-  filters: Filters
-) {
+function getPillHref(pill: string, filters: Filters) {
   const params = baseSearchParams(filters);
-  const category = categories.find((item) => item.name === (pill.categoryName ?? pill.label));
-  const event = eventCategories.find((item) => item.name === (pill.eventName ?? pill.label));
+  params.delete("theme");
 
-  if (pill.query) {
-    params.set("q", pill.query);
-  } else if (pill.kind === "event" && event) {
-    params.set("eventCategoryId", event.id);
-  } else if (pill.kind === "category" && category) {
-    params.append("categoryId", category.id);
+  const selectedThemes = new Set(filters.theme ?? []);
+  if (selectedThemes.has(pill)) {
+    selectedThemes.delete(pill);
   } else {
-    params.set("q", pill.label);
+    selectedThemes.add(pill);
+  }
+
+  for (const theme of inspirationPills.filter((theme) => selectedThemes.has(theme))) {
+    params.append("theme", theme);
   }
 
   return `/explore?${params.toString()}`;
@@ -332,6 +319,9 @@ function clearAdvancedHref(filters: Filters) {
   if (filters.placeId) params.set("placeId", filters.placeId);
   if (filters.lat != null) params.set("lat", String(filters.lat));
   if (filters.lng != null) params.set("lng", String(filters.lng));
+  for (const theme of filters.theme ?? []) {
+    params.append("theme", theme);
+  }
 
   const query = params.toString();
   return query ? `/explore?${query}` : "/explore";
@@ -345,6 +335,9 @@ function baseSearchParams(filters: Filters) {
   if (filters.placeId) params.set("placeId", filters.placeId);
   if (filters.lat != null) params.set("lat", String(filters.lat));
   if (filters.lng != null) params.set("lng", String(filters.lng));
+  for (const theme of filters.theme ?? []) {
+    params.append("theme", theme);
+  }
   for (const categoryId of filters.categoryId ?? []) {
     params.append("categoryId", categoryId);
   }

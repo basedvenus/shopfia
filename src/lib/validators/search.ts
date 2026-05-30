@@ -14,6 +14,14 @@ export const exploreSearchSchema = z.object({
   locationLabel: z.string().optional(),
   lat: optionalCoordinate(-90, 90),
   lng: optionalCoordinate(-180, 180),
+  theme: z.preprocess(
+    (value) => {
+      if (Array.isArray(value)) return value.filter(Boolean);
+      if (typeof value === "string" && value.trim()) return [value.trim()];
+      return [];
+    },
+    z.array(z.string().trim().min(1).max(60)).max(12).default([])
+  ),
   categoryId: z.preprocess(
     (value) => {
       if (Array.isArray(value)) return value.filter(Boolean);
