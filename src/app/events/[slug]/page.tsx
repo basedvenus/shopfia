@@ -64,6 +64,7 @@ export default async function EventPage({
         user: { select: { id: true, createdAt: true, email: true, name: true, username: true, image: true } },
         taggedVendors: {
           include: {
+            categories: { include: { category: true } },
             user: { select: { createdAt: true, email: true, username: true } }
           }
         },
@@ -72,6 +73,7 @@ export default async function EventPage({
           include: {
             taggedVendors: {
               include: {
+                categories: { include: { category: true } },
                 user: { select: { createdAt: true, email: true, username: true } }
               }
             },
@@ -99,6 +101,7 @@ export default async function EventPage({
           city: true,
           state: true,
           coverPhoto: true,
+          categories: { include: { category: true } },
           logoUrl: true,
           user: { select: { createdAt: true, email: true, username: true } }
         }
@@ -152,6 +155,14 @@ export default async function EventPage({
       ].map((vendor) => [vendor.id, vendor])
     ).values()
   );
+  const firstPhotoIdByVendor = new Map<string, string>();
+  for (const photo of safePhotos) {
+    for (const vendor of photo.taggedVendors) {
+      if (!firstPhotoIdByVendor.has(vendor.id)) {
+        firstPhotoIdByVendor.set(vendor.id, photo.id);
+      }
+    }
+  }
   const host = event?.user ?? null;
   const visibleCollaborators = getVisibleCollaborators(event?.collaborators ?? [], host);
   const hostBadge = getProfileBadge(host, originalMemberCutoff);
@@ -356,7 +367,7 @@ export default async function EventPage({
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="grid auto-rows-[190px] grid-cols-2 gap-3 md:grid-cols-4">
+        <div id="party-gallery" className="grid scroll-mt-24 auto-rows-[190px] grid-cols-2 gap-3 md:grid-cols-4">
           {safePhotos.map((photo, index) => (
             <div
               key={photo.id}
@@ -365,131 +376,74 @@ export default async function EventPage({
               }`}
             >
               <CroppedImage src={photo.url} alt="" crop={photo.crop} className="absolute inset-0 h-full w-full object-cover" />
-              {photo.taggedVendors.length > 0 ? (
-                <div className="absolute inset-x-2 bottom-2 flex flex-wrap gap-1.5">
-                  {photo.taggedVendors.slice(0, 3).map((vendor) => (
-                    <Link
-                      key={vendor.id}
-                      href={`/vendor/profile/${vendor.slug}`}
-                      className="rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-medium text-foreground shadow-sm"
-                    >
-                      {vendor.name}
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
+              {photo.taggedVendors.map((vendor) =>
+                firstPhotoIdByVendor.get(vendor.id) === photo.id ? (
+                  <span
+                    key={vendor.id}
+                    id={`vendor-${vendor.id}-photos`}
+                    className="pointer-events-none absolute inset-1 rounded-[1.2rem] transition target:ring-4 target:ring-primary/45 target:ring-offset-2 target:ring-offset-background"
+                    aria-hidden="true"
+                  />
+                ) : null
+              )}
             </div>
           ))}
         </div>
 
         <div className="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft">
-          <h2 className="text-2xl font-semibold tracking-tight">Vendor Contributions</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Featured Vendors</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            ShopFia event pages connect beautiful celebrations back to the vendors who helped make them happen.
+            The creative team behind this celebration.
           </p>
-          <div className="mt-5 grid gap-3">
+          <div className="mt-5 grid gap-2">
             {vendors.length > 0 ? (
               vendors.map((vendor) => {
                 const taggedPhotoCount = safePhotos.filter((photo) =>
                   photo.taggedVendors.some((taggedVendor) => taggedVendor.id === vendor.id)
                 ).length;
-                const contributionNotes = getContributionNotesForVendor(safePhotos, vendor.id);
+                const categoryLabel = getVendorCategoryLabel(vendor);
+                const taggedPhotoAnchor = firstPhotoIdByVendor.has(vendor.id)
+                  ? `#vendor-${vendor.id}-photos`
+                  : "#party-gallery";
                 return (
-                  <Link
+                  <article
                     key={vendor.id}
-                    href={`/vendor/profile/${vendor.slug}`}
-                    className="grid gap-3 rounded-[1.4rem] border bg-white p-3 transition hover:shadow-soft sm:grid-cols-[88px_1fr]"
+                    className="rounded-[1.25rem] border border-[#eadbd7] bg-white/85 p-3 transition hover:-translate-y-0.5 hover:shadow-soft"
                   >
-                    <div
-                      className="min-h-[88px] rounded-[1rem] bg-muted bg-cover bg-center"
-                      style={{ backgroundImage: `url(${vendor.logoUrl ?? vendor.coverPhoto ?? "/demo/fairfield-lemon-tablescape.png"})` }}
-                    />
-                    <div>
-                      <p className="text-sm font-semibold">Vendor contribution by {vendor.name}</p>
-                      <ProfileBadge
-                        badge={getProfileBadge(vendor.user, originalMemberCutoff, {
-                          includeFounder: false,
-                          vendorContext: true
-                        })}
+                    <a href={taggedPhotoAnchor} className="flex items-center gap-3">
+                      <span
+                        className="h-14 w-14 shrink-0 rounded-full border border-white/80 bg-muted bg-cover bg-center shadow-sm"
+                        style={{ backgroundImage: `url(${vendor.logoUrl ?? vendor.coverPhoto ?? "/demo/fairfield-lemon-tablescape.png"})` }}
                       />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {vendor.city}{vendor.state ? `, ${vendor.state}` : ""}
-                      </p>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {taggedPhotoCount > 0
-                          ? `Tagged in ${taggedPhotoCount} photo${taggedPhotoCount === 1 ? "" : "s"} from this party.`
-                          : "Tagged on this party."}
-                      </p>
-                      {contributionNotes[0] ? (
-                        <p className="mt-2 text-sm leading-5 text-muted-foreground">
-                          “{contributionNotes[0]}”
-                        </p>
-                      ) : null}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-foreground">{vendor.name}</span>
+                        <span className="mt-0.5 block truncate text-xs font-medium text-primary/75">{categoryLabel}</span>
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
+                          {taggedPhotoCount > 0
+                            ? `${taggedPhotoCount} tagged photo${taggedPhotoCount === 1 ? "" : "s"}`
+                            : "Tagged on this party"}
+                        </span>
+                      </span>
+                    </a>
+                    <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#f1e2dd] pt-3">
+                      <a href={taggedPhotoAnchor} className="text-xs font-semibold text-primary underline-offset-4 hover:underline">
+                        Show tagged photos
+                      </a>
+                      <Link href={`/vendor/profile/${vendor.slug}`} className="text-xs font-semibold text-foreground underline-offset-4 hover:underline">
+                        View profile
+                      </Link>
                     </div>
-                  </Link>
+                  </article>
                 );
               })
             ) : (
               <div className="rounded-[1.4rem] bg-muted/60 p-4 text-sm text-muted-foreground">
-                Vendor tags will appear here as this party grows.
+                Featured vendors will appear here once this party has tagged credits.
               </div>
             )}
           </div>
-          <div className="mt-5 rounded-[1.4rem] bg-muted/60 p-4 text-sm text-muted-foreground">
-            Next layer: customer-tagged party photos can feed back into vendor profiles as authentic event proof.
-          </div>
         </div>
       </section>
-
-      {vendors.length > 0 ? (
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Tagged Vendor Moments</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Each vendor tag can become a mini portfolio section with photos, context, and a direct profile link.
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {vendors.map((vendor, vendorIndex) => {
-              const vendorPhotos = safePhotos.filter((photo) =>
-                photo.taggedVendors.some((taggedVendor) => taggedVendor.id === vendor.id)
-              );
-              const displayPhotos = vendorPhotos.length ? vendorPhotos : safePhotos;
-              const contributionNotes = getContributionNotesForVendor(safePhotos, vendor.id);
-              return (
-                <article key={vendor.id} className="overflow-hidden rounded-[1.6rem] border border-white/80 bg-white/90 shadow-sm">
-                  <div className="grid grid-cols-3 gap-1 p-2">
-                    {displayPhotos.slice(0, 3).map((photo) => (
-                      <div key={`${vendor.id}-${photo.id}`} className="relative aspect-square overflow-hidden rounded-[1rem] bg-muted">
-                        <CroppedImage src={photo.url} alt="" crop={photo.crop} className="absolute inset-0 h-full w-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold">
-                      {vendorIndex === 0 ? "Featured styling" : "Event detail"} by {vendor.name}
-                    </h3>
-                    <ProfileBadge
-                      badge={getProfileBadge(vendor.user, originalMemberCutoff, {
-                        includeFounder: false,
-                        vendorContext: true
-                      })}
-                      className="mt-2"
-                    />
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {contributionNotes[0] ??
-                        "Tagged photos give this vendor real context from a celebration, not just a static portfolio upload."}
-                    </p>
-                    <Link href={`/vendor/profile/${vendor.slug}`} className="mt-3 inline-flex">
-                      <Button size="sm" variant="secondary">View vendor profile</Button>
-                    </Link>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
 
       <Link href="/my-parties" className="inline-flex">
         <Button variant="secondary">Back to My Parties</Button>
@@ -563,11 +517,6 @@ function getVisibleCollaborators(
     : [];
 }
 
-function getContributionNotesForVendor(
-  photos: Array<{ vendorContributions: Record<string, string> }>,
-  vendorId: string
-) {
-  return photos
-    .map((photo) => photo.vendorContributions[vendorId]?.trim())
-    .filter((note): note is string => Boolean(note));
+function getVendorCategoryLabel(vendor: { categories?: Array<{ category: { name: string } }> }) {
+  return vendor.categories?.[0]?.category.name ?? "Event Vendor";
 }
