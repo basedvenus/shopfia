@@ -62,6 +62,7 @@ export async function getVendorProfileBySlug(slug: string) {
           }
         },
         include: {
+          vendorRatings: true,
           event: {
             include: {
               user: {

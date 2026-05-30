@@ -286,6 +286,7 @@ const partyPhotoPayloadSchema = z.object({
     })
     .default({ x: 50, y: 50, zoom: 1 }),
   vendorIds: z.array(z.string().cuid()).max(8).default([]),
+  vendorContributions: z.record(z.string().cuid(), z.string().trim().max(220)).default({}),
   vendorRatings: z.record(z.string().cuid(), z.coerce.number().int().min(1).max(5)).default({})
 });
 
@@ -398,7 +399,7 @@ export async function createPartyEventAction(formData: FormData) {
 
     await Promise.all(
       prepared.orderedPhotos.map(async (photo, index) => {
-        const ratedVendorIds = getRatedVendorIds(photo, prepared.validVendorIds);
+        const creditedVendorIds = getCreditedVendorIds(photo, prepared.validVendorIds);
         await tx.partyPhoto.update({
           where: { id: photo.id },
           data: {
@@ -412,9 +413,9 @@ export async function createPartyEventAction(formData: FormData) {
             }
           }
         });
-        await persistPartyPhotoVendorRatings({
+        await persistPartyPhotoVendorCredits({
           photo,
-          ratedVendorIds,
+          creditedVendorIds,
           tx,
           userId: session.user.id
         });
@@ -527,7 +528,7 @@ export async function updatePartyEventAction(formData: FormData) {
 
     await Promise.all(
       prepared.orderedPhotos.map(async (photo, index) => {
-        const ratedVendorIds = getRatedVendorIds(photo, prepared.validVendorIds);
+        const creditedVendorIds = getCreditedVendorIds(photo, prepared.validVendorIds);
         await tx.partyPhoto.update({
           where: { id: photo.id },
           data: {
@@ -541,9 +542,9 @@ export async function updatePartyEventAction(formData: FormData) {
             }
           }
         });
-        await persistPartyPhotoVendorRatings({
+        await persistPartyPhotoVendorCredits({
           photo,
-          ratedVendorIds,
+          creditedVendorIds,
           tx,
           userId: session.user.id
         });
@@ -774,27 +775,28 @@ async function preparePartyPhotoPersistence({
   };
 }
 
-function getRatedVendorIds(
+function getCreditedVendorIds(
   photo: z.infer<typeof partyPhotoPayloadSchema>,
   validVendorIds: Set<string>
 ) {
   return photo.vendorIds.filter(
     (vendorId) =>
       validVendorIds.has(vendorId) &&
-      typeof photo.vendorRatings[vendorId] === "number" &&
-      photo.vendorRatings[vendorId] >= 1 &&
-      photo.vendorRatings[vendorId] <= 5
+      (hasContributionNote(photo.vendorContributions[vendorId]) ||
+        (typeof photo.vendorRatings[vendorId] === "number" &&
+          photo.vendorRatings[vendorId] >= 1 &&
+          photo.vendorRatings[vendorId] <= 5))
   );
 }
 
-async function persistPartyPhotoVendorRatings({
+async function persistPartyPhotoVendorCredits({
+  creditedVendorIds,
   photo,
-  ratedVendorIds,
   tx,
   userId
 }: {
+  creditedVendorIds: string[];
   photo: z.infer<typeof partyPhotoPayloadSchema>;
-  ratedVendorIds: string[];
   tx: Prisma.TransactionClient;
   userId: string;
 }) {
@@ -802,12 +804,12 @@ async function persistPartyPhotoVendorRatings({
     where: {
       photoId: photo.id,
       userId,
-      ...(ratedVendorIds.length ? { vendorId: { notIn: ratedVendorIds } } : {})
+      ...(creditedVendorIds.length ? { vendorId: { notIn: creditedVendorIds } } : {})
     }
   });
 
   await Promise.all(
-    ratedVendorIds.map((vendorId) =>
+    creditedVendorIds.map((vendorId) =>
       tx.partyPhotoVendorRating.upsert({
         where: {
           photoId_vendorId: {
@@ -816,17 +818,28 @@ async function persistPartyPhotoVendorRatings({
           }
         },
         update: {
-          rating: photo.vendorRatings[vendorId]
+          contributionNote: normalizeContributionNote(photo.vendorContributions[vendorId]),
+          rating: photo.vendorRatings[vendorId] ?? null
         },
         create: {
+          contributionNote: normalizeContributionNote(photo.vendorContributions[vendorId]),
           photoId: photo.id,
-          rating: photo.vendorRatings[vendorId],
+          rating: photo.vendorRatings[vendorId] ?? null,
           userId,
           vendorId
         }
       })
     )
   );
+}
+
+function hasContributionNote(value: string | undefined) {
+  return Boolean(normalizeContributionNote(value));
+}
+
+function normalizeContributionNote(value: string | undefined) {
+  const note = value?.trim();
+  return note ? note.slice(0, 220) : null;
 }
 
 function normalizeTag(value: string) {
@@ -847,7 +860,22 @@ function parsePartyPhotoPayload(value: FormDataEntryValue | null) {
       if (!photo || typeof photo !== "object") {
         return { id: "", vendorIds: [] };
       }
-      const record = photo as { crop?: unknown; id?: unknown; vendorIds?: unknown; vendorRatings?: unknown };
+      const record = photo as {
+        crop?: unknown;
+        id?: unknown;
+        vendorContributions?: unknown;
+        vendorIds?: unknown;
+        vendorRatings?: unknown;
+      };
+      const vendorContributions =
+        record.vendorContributions && typeof record.vendorContributions === "object" && !Array.isArray(record.vendorContributions)
+          ? Object.fromEntries(
+              Object.entries(record.vendorContributions as Record<string, unknown>)
+                .filter(([vendorId, contribution]) => typeof vendorId === "string" && typeof contribution === "string")
+                .map(([vendorId, contribution]) => [vendorId, String(contribution).trim().slice(0, 220)])
+                .filter(([, contribution]) => Boolean(contribution))
+            )
+          : {};
       const vendorRatings =
         record.vendorRatings && typeof record.vendorRatings === "object" && !Array.isArray(record.vendorRatings)
           ? Object.fromEntries(
@@ -867,6 +895,7 @@ function parsePartyPhotoPayload(value: FormDataEntryValue | null) {
         vendorIds: Array.isArray(record.vendorIds)
           ? record.vendorIds.filter((vendorId): vendorId is string => typeof vendorId === "string")
           : [],
+        vendorContributions,
         vendorRatings
       };
     });

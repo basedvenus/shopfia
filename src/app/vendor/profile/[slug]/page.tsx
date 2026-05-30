@@ -72,14 +72,19 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       tags: string[];
       coverImageUrl: string;
       credit: string;
+      contributionNotes: string[];
       photoCount: number;
     }
   >();
   vendor.taggedPartyPhotos.forEach((photo) => {
     if (!photo.event) return;
+    const contributionNote = photo.vendorRatings.find((credit) => credit.vendorId === vendor.id)?.contributionNote?.trim();
     const existing = photoTaggedEventMap.get(photo.event.id);
     if (existing) {
       existing.photoCount += 1;
+      if (contributionNote) {
+        existing.contributionNotes.push(contributionNote);
+      }
       return;
     }
     photoTaggedEventMap.set(photo.event.id, {
@@ -89,6 +94,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       tags: photo.event.tags,
       coverImageUrl: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
       credit: photo.event.user.username ? `@${photo.event.user.username}` : photo.event.user.name ?? "a ShopFia host",
+      contributionNotes: contributionNote ? [contributionNote] : [],
       photoCount: 1
     });
   });
@@ -104,15 +110,19 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           tags: event.tags,
           coverImageUrl: event.coverImageUrl ?? event.imageUrls[0] ?? hero,
           credit: event.user.username ? `@${event.user.username}` : event.user.name ?? "a ShopFia host",
+          contributionNotes: [],
           photoCount: 0
         }))
       : [...(demoTaggedEvents[vendor.slug as keyof typeof demoTaggedEvents] ?? [])].map((event) => ({
           ...event,
+          contributionNotes: [],
           photoCount: 0
         }));
   const currentUserId = session?.user?.id;
   const isUnclaimed = vendor.status === "UNCLAIMED" || !vendor.user;
   const vendorBadge = vendor.user ? getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true }) : null;
+  const verifiedReviewCount = vendor.sellerRatingAggregate?.totalReviews ?? vendor.reviewCount;
+  const verifiedAverageRating = vendor.sellerRatingAggregate?.weightedAverageRating ?? vendor.averageRating;
   const isFollowingVendor =
     currentUserId && vendor.user && currentUserId !== vendor.user.id
       ? Boolean(
@@ -228,14 +238,20 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-[1.5rem] bg-accent/60 p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Reviews
+                  {verifiedReviewCount > 0 ? "Verified Reviews" : "Event Credits"}
                 </div>
-                <div className="mt-2 flex items-center gap-2 text-2xl font-semibold">
-                  <Star className="h-5 w-5 fill-current text-amber-500" />
-                  {(vendor.sellerRatingAggregate?.weightedAverageRating ?? vendor.averageRating).toFixed(1)}
-                </div>
+                {verifiedReviewCount > 0 ? (
+                  <div className="mt-2 flex items-center gap-2 text-2xl font-semibold">
+                    <Star className="h-5 w-5 fill-current text-amber-500" />
+                    {verifiedAverageRating.toFixed(1)}
+                  </div>
+                ) : (
+                  <div className="mt-2 text-2xl font-semibold">{taggedEvents.length}</div>
+                )}
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {vendor.sellerRatingAggregate?.totalReviews ?? vendor.reviewCount} verified reviews
+                  {verifiedReviewCount > 0
+                    ? `${verifiedReviewCount} booking-based review${verifiedReviewCount === 1 ? "" : "s"}`
+                    : "community vendor credits"}
                 </p>
               </div>
               <div className="rounded-[1.5rem] bg-muted/70 p-4">
@@ -270,8 +286,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 What this profile should feel like
               </div>
               <p className="text-sm leading-6 text-muted-foreground">
-                A portfolio-first storefront where completed orders turn into verified reviews,
-                and verified reviews turn into visibility.
+                A portfolio-first storefront where community credits show real event work today,
+                and completed ShopFia bookings can become verified reviews later.
               </p>
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                 <span className="rounded-full bg-white px-3 py-1">Pinterest mood-board energy</span>
@@ -354,6 +370,11 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                     <div className="p-4">
                       <h3 className="font-semibold">{event.title}</h3>
                       {event.theme ? <p className="mt-1 text-sm text-muted-foreground">{event.theme}</p> : null}
+                      {event.contributionNotes[0] ? (
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          “{event.contributionNotes[0]}”
+                        </p>
+                      ) : null}
                       <p className="mt-2 text-xs text-muted-foreground">
                         Credited by {event.credit}
                         {event.photoCount ? ` in ${event.photoCount} tagged photo${event.photoCount === 1 ? "" : "s"}` : ""}
@@ -466,16 +487,18 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               “how much it was” becomes concrete.
             </div>
             <div className="rounded-[1.2rem] bg-muted/70 p-4">
-              Review blocks stay warm and visual instead of looking like a dense marketplace ledger.
+              Community credits show where this vendor has been tagged. Verified reviews stay reserved for completed ShopFia bookings.
             </div>
           </CardContent>
         </Card>
 
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold tracking-tight">Reviews</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Verified Reviews</h2>
             <div className="text-sm text-muted-foreground">
-              {(vendor.sellerRatingAggregate?.weightedAverageRating ?? vendor.averageRating).toFixed(1)} average from {vendor.sellerRatingAggregate?.totalReviews ?? vendor.reviewCount} reviews
+              {verifiedReviewCount > 0
+                ? `${verifiedAverageRating.toFixed(1)} average from ${verifiedReviewCount} booking-based review${verifiedReviewCount === 1 ? "" : "s"}`
+                : "Reserved for completed ShopFia bookings"}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -485,7 +508,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
           {vendor.reviews.length === 0 ? (
             <Card>
-              <CardContent className="p-4 text-sm text-muted-foreground">No reviews yet.</CardContent>
+              <CardContent className="p-4 text-sm text-muted-foreground">
+                No verified reviews yet. Party tags above are shown as event credits until bookings are completed through ShopFia.
+              </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">

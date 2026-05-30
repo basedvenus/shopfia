@@ -38,7 +38,8 @@ type UploadedPartyPhoto = {
   id: string;
   url: string;
   vendorIds: string[];
-  vendorRatings: Record<string, number>;
+  vendorContributions: Record<string, string>;
+  vendorRatings?: Record<string, number>;
 };
 
 export type EditablePartyEvent = {
@@ -73,7 +74,12 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
   const [message, setMessage] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>(() => initialParty?.tags ?? []);
-  const [photos, setPhotos] = useState<UploadedPartyPhoto[]>(() => initialParty?.photos ?? []);
+  const [photos, setPhotos] = useState<UploadedPartyPhoto[]>(() =>
+    (initialParty?.photos ?? []).map((photo) => ({
+      ...photo,
+      vendorContributions: photo.vendorContributions ?? {}
+    }))
+  );
   const [vendorOptions, setVendorOptions] = useState<VendorOption[]>(vendors);
   const [mainHostId, setMainHostId] = useState(initialParty?.mainHostId ?? currentUserId);
   const [coHostIds, setCoHostIds] = useState<string[]>(() => initialParty?.coHostIds ?? []);
@@ -128,9 +134,9 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
         if (photo.id !== photoId) return photo;
         const hasVendor = photo.vendorIds.includes(vendorId);
         const shouldSelect = forceSelected ?? !hasVendor;
-        const vendorRatings = { ...photo.vendorRatings };
+        const vendorContributions = { ...photo.vendorContributions };
         if (!shouldSelect) {
-          delete vendorRatings[vendorId];
+          delete vendorContributions[vendorId];
         }
         return {
           ...photo,
@@ -139,7 +145,7 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
               ? photo.vendorIds
               : [...photo.vendorIds, vendorId].slice(0, 8)
             : photo.vendorIds.filter((id) => id !== vendorId),
-          vendorRatings
+          vendorContributions
         };
       })
     );
@@ -153,15 +159,15 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
     togglePhotoVendor(photoId, vendor.id, true);
   }
 
-  function setPhotoVendorRating(photoId: string, vendorId: string, rating: number) {
+  function setPhotoVendorContribution(photoId: string, vendorId: string, contribution: string) {
     setPhotos((current) =>
       current.map((photo) =>
         photo.id === photoId
           ? {
               ...photo,
-              vendorRatings: {
-                ...photo.vendorRatings,
-                [vendorId]: rating
+              vendorContributions: {
+                ...photo.vendorContributions,
+                [vendorId]: contribution
               }
             }
           : photo
@@ -214,7 +220,7 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
         coHostIds.forEach((id) => formData.append("coHostIds", id));
         formData.set(
           "photos",
-          JSON.stringify(photos.map(({ crop, id, vendorIds, vendorRatings }) => ({ crop, id, vendorIds, vendorRatings })))
+          JSON.stringify(photos.map(({ crop, id, vendorContributions, vendorIds }) => ({ crop, id, vendorContributions, vendorIds })))
         );
 
         startTransition(async () => {
@@ -394,8 +400,8 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
                   </div>
                   <PhotoVendorTagger
                     onAddVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, true)}
+                    onContributionChange={(vendorId, contribution) => setPhotoVendorContribution(photo.id, vendorId, contribution)}
                     onCreateVendor={(initialName) => setNewVendorModal({ initialName, photoId: photo.id })}
-                    onRateVendor={(vendorId, rating) => setPhotoVendorRating(photo.id, vendorId, rating)}
                     onRemoveVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, false)}
                     photo={photo}
                     vendors={vendorOptions}
@@ -729,15 +735,15 @@ function getUserHandle(user?: UserOption) {
 
 function PhotoVendorTagger({
   onAddVendor,
+  onContributionChange,
   onCreateVendor,
-  onRateVendor,
   onRemoveVendor,
   photo,
   vendors
 }: {
   onAddVendor: (vendorId: string) => void;
+  onContributionChange: (vendorId: string, contribution: string) => void;
   onCreateVendor: (initialName: string) => void;
-  onRateVendor: (vendorId: string, rating: number) => void;
   onRemoveVendor: (vendorId: string) => void;
   photo: UploadedPartyPhoto;
   vendors: VendorOption[];
@@ -864,22 +870,18 @@ function PhotoVendorTagger({
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="mt-3 flex items-center gap-1.5">
-                <span className="mr-1 text-xs text-muted-foreground">Rate</span>
-                {[1, 2, 3, 4, 5].map((rating) => {
-                  const selected = (photo.vendorRatings[vendor.id] ?? 0) >= rating;
-                  return (
-                    <button
-                      key={rating}
-                      type="button"
-                      onClick={() => onRateVendor(vendor.id, rating)}
-                      className={`transition ${selected ? "text-primary" : "text-[#d8c7c2] hover:text-primary/70"}`}
-                      aria-label={`Rate ${vendor.name} ${rating} star${rating === 1 ? "" : "s"}`}
-                    >
-                      <Star className={`h-4 w-4 ${selected ? "fill-current" : ""}`} />
-                    </button>
-                  );
-                })}
+              <div className="mt-3 grid gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground" htmlFor={`vendor-credit-${photo.id}-${vendor.id}`}>
+                  Contribution note
+                </label>
+                <Textarea
+                  id={`vendor-credit-${photo.id}-${vendor.id}`}
+                  value={photo.vendorContributions[vendor.id] ?? ""}
+                  onChange={(event) => onContributionChange(vendor.id, event.target.value)}
+                  placeholder="Optional: e.g. balloon arch, dessert table, florals, setup styling..."
+                  className="min-h-20 rounded-[1rem] border-[#eadbd7] bg-white text-sm shadow-none"
+                  maxLength={220}
+                />
               </div>
             </div>
           ))}
@@ -934,6 +936,7 @@ async function uploadPartyPhoto(file: File) {
     ...result.photo,
     crop: DEFAULT_IMAGE_CROP,
     vendorIds: [],
+    vendorContributions: {},
     vendorRatings: {}
   };
 }

@@ -117,13 +117,19 @@ export default async function EventPage({
       id: photo.id,
       url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
       crop: normalizeImageCrop(photo.crop),
-      taggedVendors: photo.taggedVendors
+      taggedVendors: photo.taggedVendors,
+      vendorContributions: Object.fromEntries(
+        photo.vendorRatings
+          .filter((credit) => credit.contributionNote)
+          .map((credit) => [credit.vendorId, credit.contributionNote ?? ""])
+      )
       }))
     : legacyImages.map((image, index) => ({
       id: `${image}-${index}`,
       url: image,
       crop: normalizeImageCrop(null),
-      taggedVendors: event?.taggedVendors ?? fallbackVendors
+      taggedVendors: event?.taggedVendors ?? fallbackVendors,
+      vendorContributions: {}
       }));
   const safePhotos = photos.length
     ? photos
@@ -132,7 +138,8 @@ export default async function EventPage({
           id: "placeholder",
           url: fallback?.coverImageUrl ?? "/demo/fairfield-lemon-tablescape.png",
           crop: normalizeImageCrop(null),
-          taggedVendors: []
+          taggedVendors: [],
+          vendorContributions: {}
         }
       ];
   const hero = event?.coverImageUrl ?? safePhotos[0]?.url ?? fallback?.coverImageUrl ?? "/demo/fairfield-lemon-tablescape.png";
@@ -174,8 +181,10 @@ export default async function EventPage({
           url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
           crop: normalizeImageCrop(photo.crop),
           vendorIds: photo.taggedVendors.map((vendor) => vendor.id),
-          vendorRatings: Object.fromEntries(
-            photo.vendorRatings.map((rating) => [rating.vendorId, rating.rating])
+          vendorContributions: Object.fromEntries(
+            photo.vendorRatings
+              .filter((credit) => credit.contributionNote)
+              .map((credit) => [credit.vendorId, credit.contributionNote ?? ""])
           )
         })),
         mainHostId:
@@ -384,6 +393,7 @@ export default async function EventPage({
                 const taggedPhotoCount = safePhotos.filter((photo) =>
                   photo.taggedVendors.some((taggedVendor) => taggedVendor.id === vendor.id)
                 ).length;
+                const contributionNotes = getContributionNotesForVendor(safePhotos, vendor.id);
                 return (
                   <Link
                     key={vendor.id}
@@ -410,6 +420,11 @@ export default async function EventPage({
                           ? `Tagged in ${taggedPhotoCount} photo${taggedPhotoCount === 1 ? "" : "s"} from this party.`
                           : "Tagged on this party."}
                       </p>
+                      {contributionNotes[0] ? (
+                        <p className="mt-2 text-sm leading-5 text-muted-foreground">
+                          “{contributionNotes[0]}”
+                        </p>
+                      ) : null}
                     </div>
                   </Link>
                 );
@@ -440,6 +455,7 @@ export default async function EventPage({
                 photo.taggedVendors.some((taggedVendor) => taggedVendor.id === vendor.id)
               );
               const displayPhotos = vendorPhotos.length ? vendorPhotos : safePhotos;
+              const contributionNotes = getContributionNotesForVendor(safePhotos, vendor.id);
               return (
                 <article key={vendor.id} className="overflow-hidden rounded-[1.6rem] border border-white/80 bg-white/90 shadow-sm">
                   <div className="grid grid-cols-3 gap-1 p-2">
@@ -461,7 +477,8 @@ export default async function EventPage({
                       className="mt-2"
                     />
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Tagged photos give this vendor real context from a celebration, not just a static portfolio upload.
+                      {contributionNotes[0] ??
+                        "Tagged photos give this vendor real context from a celebration, not just a static portfolio upload."}
                     </p>
                     <Link href={`/vendor/profile/${vendor.slug}`} className="mt-3 inline-flex">
                       <Button size="sm" variant="secondary">View vendor profile</Button>
@@ -544,4 +561,13 @@ function getVisibleCollaborators(
         }
       ]
     : [];
+}
+
+function getContributionNotesForVendor(
+  photos: Array<{ vendorContributions: Record<string, string> }>,
+  vendorId: string
+) {
+  return photos
+    .map((photo) => photo.vendorContributions[vendorId]?.trim())
+    .filter((note): note is string => Boolean(note));
 }

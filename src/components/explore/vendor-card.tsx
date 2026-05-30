@@ -47,6 +47,7 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
     ...vendor.categories.map((vc) => vc.category.name),
     ...vendor.offerings.map((offering) => offering.category.name)
   ]);
+  const hasVerifiedReviews = vendor.reviewCount > 0;
 
   return (
     <Card className="group relative overflow-hidden rounded-[1.05rem] border-white/50 bg-white/90 transition hover:-translate-y-0.5 hover:shadow-soft sm:rounded-3xl">
@@ -75,14 +76,16 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
               </span>
             </div>
           </div>
-          <div className="hidden items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs sm:flex">
-            <Star className="h-3.5 w-3.5 fill-current text-amber-500" />
-            <span>{vendor.averageRating.toFixed(1)}</span>
-            <span className="text-muted-foreground">({vendor.reviewCount})</span>
-          </div>
+          {hasVerifiedReviews ? (
+            <div className="hidden items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs sm:flex">
+              <Star className="h-3.5 w-3.5 fill-current text-amber-500" />
+              <span>{vendor.averageRating.toFixed(1)}</span>
+              <span className="text-muted-foreground">({vendor.reviewCount})</span>
+            </div>
+          ) : null}
         </div>
         <div className="hidden flex-wrap gap-2 sm:flex">
-          <Badge variant="accent">Verified reviews only</Badge>
+          {hasVerifiedReviews ? <Badge variant="accent">Verified reviews only</Badge> : null}
           {vendor.rankingScore ? (
             <Badge variant="outline">{vendor.rankingScore.tierLabel}</Badge>
           ) : null}
