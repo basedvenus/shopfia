@@ -817,7 +817,7 @@ function PhotoVendorTagger({
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold text-foreground">{vendor.name}</span>
                       <span className="block truncate text-xs text-muted-foreground">
-                        {vendor.status === "UNCLAIMED" ? "Unclaimed business" : vendor.username ? `@${vendor.username}` : "Vendor profile"}
+                        {vendor.status === "UNCLAIMED" ? "Unclaimed vendor" : vendor.username ? `@${vendor.username}` : "Vendor profile"}
                         {vendor.city ? ` · ${vendor.city}${vendor.state ? `, ${vendor.state}` : ""}` : ""}
                       </span>
                     </span>
@@ -843,7 +843,7 @@ function PhotoVendorTagger({
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">{vendor.name}</div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {vendor.status === "UNCLAIMED" ? "Unclaimed business" : vendor.username ? `@${vendor.username}` : "Tagged vendor"}
+                      {vendor.status === "UNCLAIMED" ? "Unclaimed vendor" : vendor.username ? `@${vendor.username}` : "Tagged vendor"}
                     </div>
                   </div>
                 </div>

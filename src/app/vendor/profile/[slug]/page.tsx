@@ -144,7 +144,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                 <div className="mb-3 flex flex-wrap gap-2">
                   {vendor.verified && <Badge variant="accent">Verified vendor</Badge>}
-                  {isUnclaimed ? <Badge className="bg-white/25 text-white backdrop-blur">Unclaimed Business</Badge> : null}
+                  {isUnclaimed ? <Badge className="bg-white/25 text-white backdrop-blur">Unclaimed Vendor</Badge> : null}
                   {vendor.categories.slice(0, 3).map((c) => (
                     <Badge key={c.id} className="bg-white/20 text-white backdrop-blur" variant="default">
                       {c.category.name}
@@ -287,7 +287,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           {isUnclaimed ? (
             <Card className="border-white/70 bg-white/90">
               <CardHeader>
-                <Badge variant="outline" className="w-fit">Unclaimed Business</Badge>
+                <Badge variant="outline" className="w-fit">Unclaimed Vendor</Badge>
                 <CardTitle>Own this business?</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-3 text-sm text-muted-foreground">
