@@ -185,7 +185,7 @@ const categoryOrder = [
   "Event Planning",
   "Party Favors & Gifts",
   "Food & Beverage",
-  "Kids Activities"
+  "Children's Entertainment"
 ];
 
 const eventCategoryOrder = [

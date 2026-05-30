@@ -16,7 +16,7 @@ const categories = [
   { name: "Event Planning", iconName: "calendar-check-2", audience: CategoryAudience.VENDOR },
   { name: "Florals", iconName: "flower-2", audience: CategoryAudience.VENDOR },
   { name: "Food & Beverage", iconName: "utensils-crossed", audience: CategoryAudience.VENDOR },
-  { name: "Kids Activities", iconName: "baby", audience: CategoryAudience.VENDOR },
+  { name: "Children's Entertainment", iconName: "baby", audience: CategoryAudience.VENDOR },
   { name: "Styled Setups", iconName: "sofa", audience: CategoryAudience.VENDOR },
   { name: "Party Favors and Gifts", iconName: "gift", audience: CategoryAudience.VENDOR },
   { name: "Birthday Party", iconName: "cake-slice", audience: CategoryAudience.BUYER },

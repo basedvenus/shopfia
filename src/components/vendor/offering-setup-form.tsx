@@ -642,7 +642,7 @@ function MenuBuilderExample({ onDismiss }: { onDismiss: () => void }) {
             Example service menu
           </p>
           <h4 className="mt-1 text-lg font-semibold tracking-[-0.02em]">
-            How soft play vendors can build packages from one item list
+            How children&apos;s entertainment vendors can build packages from one item list
           </h4>
         </div>
         <button

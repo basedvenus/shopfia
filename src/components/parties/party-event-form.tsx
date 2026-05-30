@@ -472,7 +472,7 @@ const UNCLAIMED_VENDOR_CATEGORIES = [
   "Balloons",
   "Cakes & Desserts",
   "Florals",
-  "Soft Play",
+  "Children's Entertainment",
   "Event Rentals",
   "Photography",
   "Catering",

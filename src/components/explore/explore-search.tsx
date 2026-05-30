@@ -268,7 +268,7 @@ function DiscoveryPills({
     { label: "Cookies", query: "cookies" },
     { label: "Brunch", query: "brunch" },
     { label: "Luxury", query: "luxury" },
-    { label: "Kids Parties", categoryName: "Kids Activities", kind: "category" },
+    { label: "Kids Parties", categoryName: "Children's Entertainment", kind: "category" },
     { label: "Outdoor Events", query: "outdoor" }
   ];
 

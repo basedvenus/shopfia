@@ -267,7 +267,7 @@ const categoryOrder = [
   "Event Planning",
   "Party Favors & Gifts",
   "Food & Beverage",
-  "Kids Activities"
+  "Children's Entertainment"
 ];
 
 function displayCategoryName(name: string) {

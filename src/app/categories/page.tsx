@@ -74,7 +74,7 @@ const serviceCategoryOrder = [
   "Event Planning",
   "Party Favors & Gifts",
   "Food & Beverage",
-  "Kids Activities"
+  "Children's Entertainment"
 ];
 
 const eventCategoryOrder = [
