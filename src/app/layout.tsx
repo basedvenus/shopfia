@@ -82,10 +82,18 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-foreground focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-background"
+        >
+          Skip to main content
+        </a>
         <ProfileProvider initialProfile={initialProfile}>
           <RequiredProfileGate />
           <SiteNav />
-          <main className="container py-6 pb-28 md:pb-6">{children}</main>
+          <main id="main-content" className="container py-6 pb-28 md:pb-6">
+            {children}
+          </main>
         </ProfileProvider>
       </body>
     </html>

@@ -182,6 +182,9 @@ export function PlaceAutocompleteInput({
           name={fieldNames.input}
           value={inputValue}
           required={required}
+          aria-label={label ?? placeholder}
+          aria-autocomplete="list"
+          aria-expanded={isOpen}
           autoComplete="off"
           placeholder={placeholder}
           className={`${inputClassName ?? ""} pl-10 pr-9`}

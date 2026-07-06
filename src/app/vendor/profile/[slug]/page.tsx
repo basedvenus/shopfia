@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
+import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorProfileBySlug } from "@/lib/data/vendor";
 
@@ -92,7 +93,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       slug: photo.event.slug,
       theme: photo.event.theme,
       tags: photo.event.tags,
-      coverImageUrl: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
+      coverImageUrl: partyPhotoUrl(photo.id, photo.updatedAt, { width: 900 }),
       credit: photo.event.user.username ? `@${photo.event.user.username}` : photo.event.user.name ?? "a ShopFia host",
       contributionNotes: contributionNote ? [contributionNote] : [],
       photoCount: 1

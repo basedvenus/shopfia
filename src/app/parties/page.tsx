@@ -7,6 +7,7 @@ import { ProfileBadge } from "@/components/badges/profile-badge";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { db } from "@/lib/db";
 import { normalizeImageCrop } from "@/lib/image-crop";
+import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { getSafeProfileImage } from "@/lib/profile-image";
 
@@ -233,7 +234,7 @@ export default async function PartiesPage({
                   <article key={friend.id} className="rounded-2xl border border-border/70 bg-white p-3 shadow-sm">
                     <Link href={`/profiles/${username}`} className="flex items-center gap-3">
                       {image ? (
-                        <img src={image} alt="" className="h-12 w-12 rounded-full object-cover" />
+                        <img src={image} alt={name} className="h-12 w-12 rounded-full object-cover" loading="lazy" decoding="async" />
                       ) : (
                         <span className="grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                           {getInitials(name)}
@@ -312,7 +313,7 @@ export default async function PartiesPage({
                 >
                   <Link href={`/events/${party.slug}`} className="absolute inset-0 z-10" aria-label={`Open ${party.title}`} />
                   <div className={`relative overflow-hidden bg-muted ${tall ? "aspect-[3/4]" : "aspect-[4/5]"}`}>
-                    <CroppedImage src={image} alt="" crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                    <CroppedImage src={image} alt={party.title} crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                     <div className="absolute right-1.5 top-1.5 z-20 origin-top-right scale-75 sm:right-4 sm:top-4 sm:scale-100">
                       <FavoriteToggle targetType="party" targetId={party.id} isSaved={savedPartyIds.has(party.id)} />
@@ -331,7 +332,7 @@ export default async function PartiesPage({
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-2.5">
                         {hostImage ? (
-                          <img src={hostImage} alt="" className="h-8 w-8 rounded-full object-cover" />
+                          <img src={hostImage} alt={hostName} className="h-8 w-8 rounded-full object-cover" loading="lazy" decoding="async" />
                         ) : (
                           <span className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                             {hostName.slice(0, 2).toUpperCase()}
@@ -548,7 +549,7 @@ function getEventImage(event: {
   return event.photos[0]
     ? {
         crop: normalizeImageCrop(event.photos[0].crop),
-        image: `/api/party-photos/${event.photos[0].id}?v=${event.photos[0].updatedAt.getTime()}`
+        image: partyPhotoUrl(event.photos[0].id, event.photos[0].updatedAt, { width: 900 })
       }
     : {
         crop: normalizeImageCrop(null),

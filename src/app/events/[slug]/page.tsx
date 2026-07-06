@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { normalizeImageCrop } from "@/lib/image-crop";
+import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { getSafeProfileImage } from "@/lib/profile-image";
 
@@ -118,7 +119,7 @@ export default async function EventPage({
   const photos = event?.photos?.length
     ? event.photos.map((photo) => ({
       id: photo.id,
-      url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
+      url: partyPhotoUrl(photo.id, photo.updatedAt, { width: 1400 }),
       crop: normalizeImageCrop(photo.crop),
       taggedVendors: photo.taggedVendors,
       vendorContributions: Object.fromEntries(
@@ -189,7 +190,7 @@ export default async function EventPage({
         googlePlaceId: event.googlePlaceId,
         photos: event.photos.map((photo) => ({
           id: photo.id,
-          url: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
+          url: partyPhotoUrl(photo.id, photo.updatedAt, { width: 1400 }),
           crop: normalizeImageCrop(photo.crop),
           vendorIds: photo.taggedVendors.map((vendor) => vendor.id),
           vendorContributions: Object.fromEntries(
@@ -341,7 +342,7 @@ export default async function EventPage({
                         <img
                           key={collaborator.user.image}
                           src={getSafeProfileImage(collaborator.user.image) ?? ""}
-                          alt=""
+                          alt={collaborator.user.name ?? collaborator.user.username ?? "ShopFia host"}
                           className="block h-full w-full object-cover object-center"
                         />
                       ) : (
@@ -375,7 +376,13 @@ export default async function EventPage({
                 index === 0 ? "col-span-2 row-span-2" : ""
               }`}
             >
-              <CroppedImage src={photo.url} alt="" crop={photo.crop} className="absolute inset-0 h-full w-full object-cover" />
+              <CroppedImage
+                src={photo.url}
+                alt={`${title} party photo ${index + 1}`}
+                crop={photo.crop}
+                className="absolute inset-0 h-full w-full object-cover"
+                loading={index === 0 ? "eager" : "lazy"}
+              />
               {photo.taggedVendors.map((vendor) =>
                 firstPhotoIdByVendor.get(vendor.id) === photo.id ? (
                   <span

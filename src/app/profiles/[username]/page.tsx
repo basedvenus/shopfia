@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { db } from "@/lib/db";
 import { normalizeImageCrop } from "@/lib/image-crop";
+import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { getSafeProfileImage } from "@/lib/profile-image";
 import { getOriginalMemberCutoffDate, getProfileBadges } from "@/lib/profile-badges";
 
@@ -228,7 +229,7 @@ function getPartyCardImage(event: {
   if (photo) {
     return {
       crop: normalizeImageCrop(photo.crop),
-      image: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`
+      image: partyPhotoUrl(photo.id, photo.updatedAt, { width: 1000 })
     };
   }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import sharp from "sharp";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { assertSameOrigin, enforceRequestRateLimit } from "@/lib/security/request";
@@ -30,17 +31,38 @@ export async function GET(
     return NextResponse.json({ error: "Photo not found." }, { status: 404 });
   }
 
-  return new Response(
-    new Blob([new Uint8Array(photo.data)], { type: photo.contentType }),
-    {
+  const width = parseImageWidth(new URL(request.url).searchParams.get("w"));
+  if (width && photo.contentType !== "image/gif") {
+    const optimized = await sharp(Buffer.from(photo.data))
+      .rotate()
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer();
+
+    return new Response(new Uint8Array(optimized), {
       headers: {
         "Cache-Control": "public, max-age=31536000, immutable",
-        "Content-Length": String(photo.size),
-        "Content-Type": photo.contentType,
+        "Content-Length": String(optimized.byteLength),
+        "Content-Type": "image/webp",
         "Last-Modified": photo.updatedAt.toUTCString()
       }
+    });
+  }
+
+  return new Response(new Uint8Array(photo.data), {
+    headers: {
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "Content-Length": String(photo.size),
+      "Content-Type": photo.contentType,
+      "Last-Modified": photo.updatedAt.toUTCString()
     }
-  );
+  });
+}
+
+function parseImageWidth(value: string | null) {
+  const width = Number(value);
+  if (!Number.isFinite(width)) return null;
+  return Math.min(Math.max(Math.round(width), 96), 2400);
 }
 
 export async function DELETE(

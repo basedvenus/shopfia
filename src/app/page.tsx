@@ -158,8 +158,8 @@ export default function Page() {
     <div className="-mt-6 space-y-20 pb-12 [font-family:Inter,ui-sans-serif,system-ui,sans-serif]">
       <section className="grid min-h-[calc(100vh-5rem)] items-center gap-10 overflow-hidden py-8 lg:grid-cols-[0.84fr_1.16fr]">
         <div className="max-w-2xl">
-          <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            <span className="h-px w-12 bg-primary" />
+          <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
+            <span className="h-px w-12 bg-[#a85f5e]" />
             <span>Real celebrations, shoppable inspiration</span>
           </div>
           <h1 className="mt-7 text-5xl font-semibold leading-[1.02] tracking-normal text-foreground md:text-6xl lg:text-7xl [font-family:'PP_Neue_Montreal','Satoshi','Instrument_Sans',Inter,ui-sans-serif,system-ui,sans-serif]">
@@ -198,7 +198,7 @@ export default function Page() {
                 key={line}
                 className="flex items-start gap-3 rounded-[8px] border border-white/80 bg-white/80 p-4 text-sm leading-6 text-muted-foreground shadow-sm"
               >
-                <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#a85f5e]" />
                 <span>{line}</span>
               </div>
             ))}
@@ -230,7 +230,7 @@ export default function Page() {
               </div>
               <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                 <h2 className="text-lg font-semibold leading-tight">{party.title}</h2>
-                <p className="mt-1 text-xs leading-5 text-white/82">{party.detail}</p>
+                <p className="mt-1 text-xs leading-5 text-white/90">{party.detail}</p>
               </div>
             </Link>
           ))}
@@ -250,7 +250,7 @@ export default function Page() {
       <section className="space-y-6">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
               Trending Categories
             </p>
             <h2 className="mt-2 text-3xl font-semibold tracking-normal md:text-4xl">
@@ -288,7 +288,7 @@ export default function Page() {
                 </div>
                 <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                   <h3 className="text-2xl font-semibold">{category.name}</h3>
-                  <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-white/78">
+                  <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-white/90">
                     Vendors behind the party
                   </p>
                 </div>
@@ -300,7 +300,7 @@ export default function Page() {
 
       <section className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
             Featured Parties
           </p>
           <h2 className="mt-2 text-3xl font-semibold tracking-normal md:text-4xl">
@@ -348,7 +348,7 @@ export default function Page() {
 
       <section className="space-y-6">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
             How ShopFia Works
           </p>
           <h2 className="mt-2 text-3xl font-semibold tracking-normal md:text-4xl">
@@ -377,7 +377,7 @@ export default function Page() {
         <div className="rounded-[8px] border border-white/80 bg-white/85 p-6 shadow-sm">
           <div className="flex items-center gap-3">
             <Bookmark className="h-5 w-5 text-primary" />
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
               Popular Party Styles
             </p>
           </div>
@@ -400,7 +400,7 @@ export default function Page() {
         <div className="rounded-[8px] border border-white/80 bg-white/85 p-6 shadow-sm">
           <div className="flex items-center gap-3">
             <Tags className="h-5 w-5 text-primary" />
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
               Recently Added Vendors
             </p>
           </div>
@@ -424,13 +424,13 @@ export default function Page() {
       <section className="overflow-hidden rounded-[8px] border border-white/80 bg-foreground text-white shadow-sm">
         <div className="grid lg:grid-cols-[1.06fr_0.94fr]">
           <div className="p-6 md:p-10">
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
               Seasonal Inspiration
             </p>
             <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-normal md:text-5xl">
               Plan from a real celebration, then make it your own.
             </h2>
-            <p className="mt-5 max-w-xl text-sm leading-7 text-white/72">
+            <p className="mt-5 max-w-xl text-sm leading-7 text-white/82">
               Save citrus brunches, floral showers, bow-filled birthdays, and
               candlelit dinner parties. When you are ready, connect with the
               vendors behind the details you already love.

@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ConnectStripeButton } from "@/components/vendor/connect-stripe-button";
 import { ReadinessChecklist } from "@/components/vendor/readiness-checklist";
 import { db } from "@/lib/db";
+import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { getMarketplaceFeeConfig } from "@/lib/services/marketplace-fees";
 import { getConnectReadiness, retrieveConnectAccount } from "@/lib/stripe";
 import { basisPointsToPercent, formatCurrency, formatPercent } from "@/lib/utils";
@@ -203,7 +204,7 @@ export default async function VendorDashboardPage({
     heroImage,
     ...vendor.photos,
     ...allOfferingPhotos,
-    ...vendor.taggedPartyPhotos.map((photo) => `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`),
+    ...vendor.taggedPartyPhotos.map((photo) => partyPhotoUrl(photo.id, photo.updatedAt, { width: 1000 })),
     fallbackPortfolio
   ]).slice(0, 10);
   const partyPosts = buildPartyPosts(vendor, heroImage);
@@ -769,7 +770,7 @@ function VendorOnboardingGate() {
             {[fallbackHero, fallbackService, fallbackPortfolio].map((image, index) => (
               <div key={image} className="overflow-hidden rounded-[1.75rem] border border-white bg-white">
                 <div className="relative aspect-[4/3]">
-                  <Image src={image} alt="" fill className="object-cover" />
+                  <Image src={image} alt={`Vendor dashboard preview image ${index + 1}`} fill className="object-cover" />
                 </div>
                 <div className="space-y-2 p-4">
                   <div className="h-4 w-2/3 rounded-full bg-[#eadbd8]" />
@@ -845,7 +846,7 @@ function buildPartyPosts(vendor: PartyPostSource, heroImage: string) {
   const photoPosts = vendor.taggedPartyPhotos.map((photo) => ({
     id: photo.id,
     credit: formatHost(photo.event?.user),
-    image: `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`,
+    image: partyPhotoUrl(photo.id, photo.updatedAt, { width: 900 }),
     location: photo.event?.location ?? null,
     slug: photo.event?.slug ?? null,
     tags: photo.event?.tags ?? [],
@@ -860,7 +861,7 @@ function buildPartyPosts(vendor: PartyPostSource, heroImage: string) {
         id: event.id,
         credit: formatHost(event.user),
         image: firstPhoto
-          ? `/api/party-photos/${firstPhoto.id}?v=${firstPhoto.updatedAt.getTime()}`
+          ? partyPhotoUrl(firstPhoto.id, firstPhoto.updatedAt, { width: 900 })
           : event.coverImageUrl ?? event.imageUrls[0] ?? heroImage,
         location: event.location,
         slug: event.slug,
@@ -920,7 +921,7 @@ function VendorLogo({
 }) {
   return (
     <div className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#f8deda] text-xl font-semibold text-primary ${className}`}>
-      {logoUrl ? <img src={logoUrl} alt="" className="absolute inset-0 h-full w-full object-cover" /> : name.charAt(0)}
+      {logoUrl ? <img src={logoUrl} alt={`${name} logo`} className="absolute inset-0 h-full w-full object-cover" loading="lazy" decoding="async" /> : name.charAt(0)}
     </div>
   );
 }
@@ -928,7 +929,7 @@ function VendorLogo({
 function Avatar({ image, name }: { image?: string | null; name: string }) {
   return (
     <div className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#f8deda] text-sm font-semibold text-primary">
-      {image ? <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" /> : name.charAt(0)}
+      {image ? <img src={image} alt={name} className="absolute inset-0 h-full w-full object-cover" loading="lazy" decoding="async" /> : name.charAt(0)}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
+import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -143,7 +144,7 @@ export default async function FavoritesPage() {
               if (!favorite.partyEvent) return null;
               const photo = favorite.partyEvent.photos[0];
               const image = photo
-                ? `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`
+                ? partyPhotoUrl(photo.id, photo.updatedAt, { width: 900 })
                 : favorite.partyEvent.coverImageUrl ?? favorite.partyEvent.imageUrls[0] ?? fallbackImage;
               return (
                 <SavedCard
@@ -265,7 +266,7 @@ function SavedCard({
       <div className="relative aspect-[4/3] bg-muted">
         <Image
           src={image}
-          alt=""
+          alt={title}
           fill
           sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
           className="object-cover transition duration-500 group-hover:scale-[1.03]"

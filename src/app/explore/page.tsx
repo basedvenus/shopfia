@@ -9,6 +9,7 @@ import { getExploreData } from "@/lib/data/explore";
 import { auth } from "@/auth";
 import { getOriginalMemberCutoffDate, getProfileBadges } from "@/lib/profile-badges";
 import { normalizeImageCrop } from "@/lib/image-crop";
+import { partyPhotoUrl } from "@/lib/party-photo-url";
 
 export const dynamic = "force-dynamic";
 
@@ -122,7 +123,7 @@ function PartyExploreCard({
 }) {
   const coverPhoto = party.photos[0];
   const image = coverPhoto
-    ? `/api/party-photos/${coverPhoto.id}?v=${coverPhoto.updatedAt.getTime()}`
+    ? partyPhotoUrl(coverPhoto.id, coverPhoto.updatedAt, { width: 760 })
     : party.coverImageUrl ?? party.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png";
   const crop = normalizeImageCrop(coverPhoto?.crop ?? party.coverImageCrop);
   const location = formatPartyLocation(party);

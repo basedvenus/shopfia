@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { parseImageCrop } from "@/lib/image-crop";
+import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { assertSameOrigin, enforceRequestRateLimit } from "@/lib/security/request";
 import { readVerifiedImageFile } from "@/lib/security/uploads";
 
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
       updatedAt: true
     }
   });
-  const url = `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`;
+  const url = partyPhotoUrl(photo.id, photo.updatedAt, { width: 1400 });
 
   return NextResponse.json({
     photo: {

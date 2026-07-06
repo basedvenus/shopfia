@@ -9,6 +9,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { sendWelcomeEmail } from "@/lib/email";
 import { parseImageCrop } from "@/lib/image-crop";
+import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { securityLog } from "@/lib/security/audit-log";
 import { checkServerActionRateLimit } from "@/lib/security/request";
 import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
@@ -760,7 +761,7 @@ async function preparePartyPhotoPersistence({
   const photoUrlById = new Map(
     uploadedPhotos.map((photo) => [
       photo.id,
-      `/api/party-photos/${photo.id}?v=${photo.updatedAt.getTime()}`
+      partyPhotoUrl(photo.id, photo.updatedAt, { width: 1400 })
     ])
   );
   const imageUrls = orderedPhotos

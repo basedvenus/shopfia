@@ -3,6 +3,7 @@ import { Camera, MapPin, Pencil, Sparkles } from "lucide-react";
 import { PartyEventForm } from "@/components/parties/party-event-form";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { normalizeImageCrop } from "@/lib/image-crop";
+import { partyPhotoUrl } from "@/lib/party-photo-url";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +95,7 @@ export default async function MyPartiesPage() {
                     >
                       <Pencil className="h-4 w-4" />
                     </Link>
-                    <CroppedImage src={image} alt="" crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                    <CroppedImage src={image} alt={event.title} crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 p-4 text-white">
                       <h3 className="font-semibold">{event.title}</h3>
@@ -234,7 +235,7 @@ function getEventImage(event: {
   return event.photos[0]
     ? {
         crop: normalizeImageCrop(event.photos[0].crop),
-        image: `/api/party-photos/${event.photos[0].id}?v=${event.photos[0].updatedAt.getTime()}`
+        image: partyPhotoUrl(event.photos[0].id, event.photos[0].updatedAt, { width: 900 })
       }
     : {
         crop: normalizeImageCrop(null),
