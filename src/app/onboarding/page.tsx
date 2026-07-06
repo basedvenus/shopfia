@@ -46,9 +46,48 @@ export default async function VendorOnboardingPage({
         </p>
       </div>
 
+      <div className="grid gap-3 rounded-[1.5rem] border border-primary/15 bg-white/85 p-4 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#a85f5e]">
+            Setup progress
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <a
+              href="#profile"
+              className="rounded-[8px] border border-primary/20 bg-[#fbf3f0] px-3 py-2 text-sm font-medium text-foreground transition hover:border-primary/35"
+            >
+              1. Vendor profile
+              <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                Identity, photos, location, service areas, and categories.
+              </span>
+            </a>
+            <a
+              href="#services"
+              className="rounded-[8px] border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-primary/25"
+            >
+              2. First offering
+              <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                Add a shoppable service once your profile is saved.
+              </span>
+            </a>
+          </div>
+        </div>
+        <a
+          href="#profile-save"
+          className="inline-flex h-10 items-center justify-center rounded-full border border-[#E6B0AE]/70 bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-4 text-sm font-medium text-primary-foreground shadow-[0_10px_24px_rgba(230,176,174,0.22)] transition hover:border-[#DFA3A2]/80 hover:bg-[#DFA3A2] hover:bg-none"
+        >
+          Jump to save
+        </a>
+      </div>
+
       <Card id="profile">
         <CardHeader>
-          <CardTitle>1. Vendor Profile</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>1. Vendor Profile</CardTitle>
+            <a href="#services" className="text-sm font-medium text-primary hover:underline">
+              Next: first offering
+            </a>
+          </div>
         </CardHeader>
         <CardContent>
           {searchParams?.profileError ? (
@@ -61,6 +100,19 @@ export default async function VendorOnboardingPage({
             className="grid gap-4 md:grid-cols-2"
             errorIntro="Your vendor profile is almost there. Fix the highlighted field and save again."
           >
+            <div className="sticky bottom-20 z-20 order-last md:col-span-2 md:bottom-4">
+              <div className="flex flex-col gap-3 rounded-[1.2rem] border border-primary/20 bg-white/95 p-3 shadow-[0_12px_34px_rgba(82,55,55,0.14)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Ready to keep your progress?</p>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Save anytime. You can come back and polish the details later.
+                  </p>
+                </div>
+                <SubmitButton type="submit" pendingText="Saving vendor profile...">
+                  Save vendor profile
+                </SubmitButton>
+              </div>
+            </div>
             <div>
               <ImageUploadField
                 name="logoUrl"
@@ -215,10 +267,18 @@ export default async function VendorOnboardingPage({
                 })}
               </div>
             </div>
-            <div className="md:col-span-2">
-              <SubmitButton type="submit" pendingText="Saving vendor profile...">
-                Save vendor profile
-              </SubmitButton>
+            <div id="profile-save" className="md:col-span-2 scroll-mt-28 rounded-[1.2rem] border border-border bg-[#fbf7f5] p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Profile details complete?</p>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Save this profile before moving on to your first offering.
+                  </p>
+                </div>
+                <SubmitButton type="submit" pendingText="Saving vendor profile...">
+                  Save vendor profile
+                </SubmitButton>
+              </div>
             </div>
           </ValidatedForm>
         </CardContent>
@@ -226,7 +286,12 @@ export default async function VendorOnboardingPage({
 
       <Card id="services">
         <CardHeader>
-          <CardTitle>2. Add First Offering</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>2. Add First Offering</CardTitle>
+            <a href="#profile" className="text-sm font-medium text-primary hover:underline">
+              Previous: vendor profile
+            </a>
+          </div>
         </CardHeader>
         <CardContent>
           {searchParams?.offeringError ? (
