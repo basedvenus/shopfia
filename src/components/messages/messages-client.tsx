@@ -1920,8 +1920,11 @@ function EmptyInbox() {
       <Mail className="mx-auto h-7 w-7 text-[#c5837f]" />
       <h2 className="mt-3 text-base font-semibold text-[#2f2626]">No conversations yet.</h2>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">
-        Inquiries and vendor replies will appear here.
+        Start by sending an inquiry from a claimed vendor profile or service page. Replies will appear here.
       </p>
+      <Button asChild className="mt-4 h-9 rounded-full px-4 text-sm">
+        <Link href="/explore">Find vendors to message</Link>
+      </Button>
     </div>
   );
 }

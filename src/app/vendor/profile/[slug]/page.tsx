@@ -262,10 +262,15 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 <div className="mt-2 text-2xl font-semibold">
                   {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Message for pricing"}
                 </div>
-                {!vendor.startingPriceCents ? (
+                {!vendor.startingPriceCents && !isUnclaimed ? (
                   <Button asChild size="sm" className="mt-3">
-                    <a href="#inquiry">Message for pricing</a>
+                    <a href="#inquiry">Send inquiry</a>
                   </Button>
+                ) : null}
+                {!vendor.startingPriceCents && isUnclaimed ? (
+                  <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                    Messaging opens after this business claims its ShopFia profile.
+                  </p>
                 ) : null}
                 <p className="mt-1 text-sm text-muted-foreground">Custom scope and delivery options</p>
               </div>
