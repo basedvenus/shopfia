@@ -540,7 +540,7 @@ export async function upsertOfferingAction(formData: FormData) {
     description: formData.get("description"),
     basePriceCents: formData.get("basePriceCents") || dollarsToCents(formData.get("startingPrice")) || undefined,
     messageForPricing: formData.get("messageForPricing") === "on",
-    categoryId: formData.get("categoryId"),
+    categoryId: formData.get("categoryId") || undefined,
     categoryIds: formDataToArray(formData, "categoryIds"),
     eventCategoryIds: formDataToArray(formData, "eventCategoryIds"),
     tags: [],
