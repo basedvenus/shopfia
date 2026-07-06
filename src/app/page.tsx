@@ -163,7 +163,10 @@ export default function Page() {
             <span>Real celebrations, shoppable inspiration</span>
           </div>
           <h1 className="mt-7 text-5xl font-semibold leading-[1.02] tracking-normal text-foreground md:text-6xl lg:text-7xl [font-family:'PP_Neue_Montreal','Satoshi','Instrument_Sans',Inter,ui-sans-serif,system-ui,sans-serif]">
-            Find the vendors behind the most beautiful parties.
+            Find the vendors behind{" "}
+            <span className="font-normal italic text-primary [font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif]">
+              every party.
+            </span>
           </h1>
           <p className="mt-6 max-w-xl text-base leading-8 text-muted-foreground md:text-lg">
             Browse real celebrations to discover the cake artists, florists,
