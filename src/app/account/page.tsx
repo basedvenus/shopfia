@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarHeart, Heart, MessageCircle, PackageCheck, PenLine, Store } from "lucide-react";
-import { acceptQuoteAndCreatePaymentIntentAction } from "@/app/actions/quotes";
 import { createReviewAction } from "@/app/actions/reviews";
 import { AccountProfileEditor } from "@/components/account/account-profile-editor";
 import { Button } from "@/components/ui/button";
@@ -244,14 +243,7 @@ export default async function AccountPage({
                         Quote: {formatCurrency(qr.quote.amountCents)} (expires {new Date(qr.quote.expiresAt).toLocaleDateString()})
                       </div>
                       {qr.quote.status === "SENT" && (
-                        <form
-                          action={async (formData) => {
-                            "use server";
-                            const result = await acceptQuoteAndCreatePaymentIntentAction(formData);
-                            redirect(result.checkoutUrl);
-                          }}
-                          className="flex flex-wrap items-center gap-2"
-                        >
+                        <form action="/api/messages/quotes/accept" method="post" className="flex flex-wrap items-center gap-2">
                           <input type="hidden" name="quoteId" value={qr.quote.id} />
                           <select name="payMode" className="h-9 rounded-xl border bg-white px-2 text-sm">
                             <option value="deposit">Pay deposit</option>

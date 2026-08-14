@@ -132,8 +132,11 @@ describe("quote checkout preparation", () => {
 
   it("reuses an open checkout session for retried acceptance", async () => {
     mocks.db.order.findFirst.mockResolvedValue({
+      amountCents: 12500,
       id: "order_existing",
       seller: { offsiteAdsEnabled: false, offsiteAdsTier: OffsiteAdsTier.STANDARD },
+      sellerId: "seller_1",
+      shopId: "shop_1",
       status: OrderStatus.awaiting_payment,
       stripeCheckoutSessionId: "cs_test_existing"
     });
@@ -149,5 +152,39 @@ describe("quote checkout preparation", () => {
     expect(result.orderId).toBe("order_existing");
     expect(mocks.db.order.create).not.toHaveBeenCalled();
     expect(mocks.stripe.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it("reopens an accepted quote order when the prior checkout handoff did not complete", async () => {
+    mocks.db.quote.findUnique.mockResolvedValue({ ...quote, status: QuoteStatus.ACCEPTED });
+    mocks.db.order.findFirst.mockResolvedValue({
+      amountCents: 12500,
+      id: "order_canceled",
+      seller: { offsiteAdsEnabled: false, offsiteAdsTier: OffsiteAdsTier.STANDARD },
+      sellerId: "seller_1",
+      shopId: "shop_1",
+      status: OrderStatus.canceled,
+      stripeCheckoutSessionId: null
+    });
+
+    const result = await prepareQuoteCheckout({
+      buyerId: "buyer_1",
+      origin: "https://www.shopfia.app",
+      payMode: "deposit",
+      quoteId: "quote_1"
+    });
+
+    expect(result).toEqual({
+      checkoutSessionId: "cs_test_new",
+      checkoutUrl: "https://checkout.stripe.com/c/pay/new",
+      orderId: "order_canceled"
+    });
+    expect(mocks.db.order.create).not.toHaveBeenCalled();
+    expect(mocks.db.order.update).toHaveBeenCalledWith({
+      where: { id: "order_canceled" },
+      data: {
+        status: OrderStatus.awaiting_payment,
+        stripeCheckoutSessionId: "cs_test_new"
+      }
+    });
   });
 });

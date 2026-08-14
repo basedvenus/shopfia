@@ -49,44 +49,58 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await db.$transaction(async (tx) => {
-    const avatar = await tx.userAvatar.upsert({
-      where: { userId: session.user.id },
-      update: {
-        contentType: file.type,
-        data: bytes,
-        size: file.size
-      },
-      create: {
-        userId: session.user.id,
-        contentType: file.type,
-        data: bytes,
-        size: file.size
-      },
-      select: {
-        id: true,
-        updatedAt: true
-      }
-    });
-    const url = `/api/users/${session.user.id}/avatar?v=${avatar.updatedAt.getTime()}`;
-    const updatedUser = await tx.user.update({
-      where: { id: session.user.id },
-      data: { image: url, imageCrop: crop ?? Prisma.JsonNull },
-      select: userProfileSelect
-    });
-    const savedUser = await tx.user.findUnique({
-      where: { id: session.user.id },
-      select: { image: true }
-    });
+  let result: {
+    avatarId: string;
+    persisted: boolean;
+    profile: ReturnType<typeof serializeUserProfile>;
+    savedImage: string | null;
+    url: string;
+  };
+  try {
+    result = await db.$transaction(async (tx) => {
+      const avatar = await tx.userAvatar.upsert({
+        where: { userId: session.user.id },
+        update: {
+          contentType: file.type,
+          data: bytes,
+          size: bytes.length
+        },
+        create: {
+          userId: session.user.id,
+          contentType: file.type,
+          data: bytes,
+          size: bytes.length
+        },
+        select: {
+          id: true,
+          updatedAt: true
+        }
+      });
+      const url = `/api/users/${session.user.id}/avatar?v=${avatar.updatedAt.getTime()}`;
+      const updatedUser = await tx.user.update({
+        where: { id: session.user.id },
+        data: { image: url, imageCrop: crop ?? Prisma.JsonNull },
+        select: userProfileSelect
+      });
+      const savedUser = await tx.user.findUnique({
+        where: { id: session.user.id },
+        select: { image: true }
+      });
 
-    return {
-      avatarId: avatar.id,
-      persisted: savedUser?.image === url,
-      profile: serializeUserProfile(updatedUser),
-      savedImage: savedUser?.image ?? null,
-      url
-    };
-  });
+      return {
+        avatarId: avatar.id,
+        persisted: savedUser?.image === url,
+        profile: serializeUserProfile(updatedUser),
+        savedImage: savedUser?.image ?? null,
+        url
+      };
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "That image could not be saved. Please retry the upload." },
+      { status: 500 }
+    );
+  }
 
   revalidatePath("/", "layout");
   revalidatePath("/account");

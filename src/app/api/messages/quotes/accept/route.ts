@@ -12,6 +12,7 @@ const acceptQuoteSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const wantsJson = request.headers.get("content-type")?.includes("application/json") ?? false;
   const limited = enforceRequestRateLimit(request, [
     { key: "message-quote-accept:ip:{ip}", limit: 12, intervalMs: 60_000 }
   ]);
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const parsed = acceptQuoteSchema.safeParse(await request.json().catch(() => ({})));
+  const parsed = acceptQuoteSchema.safeParse(await readAcceptQuoteBody(request));
   if (!parsed.success) {
     return NextResponse.json({ error: "Quote could not be reviewed." }, { status: 400 });
   }
@@ -48,6 +49,9 @@ export async function POST(request: Request) {
       payMode: quote.depositAmountCents ? "deposit" : "full",
       quoteId: quote.id
     });
+    if (!wantsJson) {
+      return NextResponse.redirect(result.checkoutUrl, { status: 303 });
+    }
     return NextResponse.json({
       checkoutSessionId: result.checkoutSessionId,
       checkoutUrl: result.checkoutUrl,
@@ -55,9 +59,29 @@ export async function POST(request: Request) {
       ok: true
     });
   } catch (error) {
+    if (!wantsJson) {
+      const url = new URL("/account", request.url);
+      url.searchParams.set("quoteError", error instanceof Error ? error.message : "Could not prepare payment yet.");
+      return NextResponse.redirect(url, { status: 303 });
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Could not prepare payment yet." },
       { status: 400 }
     );
   }
+}
+
+async function readAcceptQuoteBody(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return request.json().catch(() => ({}));
+  }
+  if (
+    contentType.includes("application/x-www-form-urlencoded") ||
+    contentType.includes("multipart/form-data")
+  ) {
+    const formData = await request.formData().catch(() => null);
+    return { quoteId: formData?.get("quoteId") };
+  }
+  return {};
 }

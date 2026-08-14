@@ -668,7 +668,7 @@ model Order {
   shopId                String?
   listingId             String?
   offeringId            String?
-  quoteId               String?
+  quoteId               String?              @unique
   amountCents           Int
   itemSubtotalCents     Int                  @default(0)
   shippingAmountCents   Int                  @default(0)

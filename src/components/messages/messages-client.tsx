@@ -1291,7 +1291,7 @@ function QuoteReviewModal({
             <p className="text-xs text-muted-foreground">
               {bookingIsPaid
                 ? `Original quote accepted for ${formatBudget(reviewedQuote.amountCents)}.`
-                : `Expires ${formatEventDate(reviewedQuote.expiresAt)}. Approval comes first; payment is the next secure step.`}
+                : `Expires ${formatMessageDate(reviewedQuote.expiresAt)}. Approval comes first; payment is the next secure step.`}
             </p>
 
             {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}

@@ -367,9 +367,12 @@ export async function upsertVendorProfileAction(formData: FormData) {
     .replace(/^@/, "")
     .toLowerCase();
   const vendorUsername = submittedVendorUsername || existingVendor?.username || existingVendor?.slug || "";
+  const vendorSlug = submittedVendorUsername
+    ? slugify(submittedVendorUsername)
+    : existingVendor?.slug || slugify(vendorUsername || formData.get("name"));
   const result = vendorOnboardingSchema.safeParse({
     name: formData.get("name"),
-    slug: formData.get("slug") || slugify(vendorUsername || formData.get("name")),
+    slug: vendorSlug,
     username: vendorUsername,
     website: formData.get("website") || undefined,
     instagramUrl: formData.get("instagramUrl") || undefined,

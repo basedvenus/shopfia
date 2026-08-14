@@ -144,7 +144,8 @@ export function ImageUploadField({
     try {
       const croppedFile = await cropImageFile(file, nextCrop, {
         aspectRatio: isRound ? 1 : 4 / 3,
-        maxSize: isRound ? 900 : 1600
+        maxSize: isRound ? 900 : 1600,
+        outputType: "image/jpeg"
       });
       const uploadData = new FormData();
       uploadData.set("file", croppedFile);
@@ -314,7 +315,7 @@ async function resizeImageFile(file: File, maxSize: number) {
 async function cropImageFile(
   file: File,
   crop: ImageCrop,
-  options: { aspectRatio: number; maxSize: number }
+  options: { aspectRatio: number; maxSize: number; outputType?: string }
 ) {
   const objectUrl = URL.createObjectURL(file);
   const sourceImage = await loadImage(objectUrl);
@@ -349,6 +350,11 @@ async function cropImageFile(
       throw new Error("Canvas is unavailable.");
     }
 
+    if ((options.outputType ?? file.type) === "image/jpeg") {
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, outputWidth, outputHeight);
+    }
+
     context.drawImage(
       sourceImage,
       sourceX,
@@ -361,12 +367,17 @@ async function cropImageFile(
       outputHeight
     );
 
-    const mimeType = SUPPORTED_IMAGE_TYPES.includes(file.type) ? file.type : "image/jpeg";
+    const mimeType = options.outputType ?? (SUPPORTED_IMAGE_TYPES.includes(file.type) ? file.type : "image/jpeg");
     const blob = await canvasToBlob(canvas, mimeType);
-    return new File([blob], file.name, { type: blob.type || mimeType });
+    return new File([blob], imageFileName(file.name, blob.type || mimeType), { type: blob.type || mimeType });
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
+}
+
+function imageFileName(fileName: string, mimeType: string) {
+  const extension = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+  return `${fileName.replace(/\.[^.]+$/, "")}.${extension}`;
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string) {

@@ -39,19 +39,25 @@ export async function prepareQuoteCheckout({
   const existingOrder = await db.order.findFirst({
     where: {
       quoteId: quote.id,
-      buyerId,
-      status: { in: [OrderStatus.awaiting_payment, OrderStatus.paid, OrderStatus.in_progress, OrderStatus.completed] }
+      buyerId
     },
     orderBy: { createdAt: "desc" },
     select: {
+      amountCents: true,
       id: true,
       seller: { select: { offsiteAdsEnabled: true, offsiteAdsTier: true } },
+      sellerId: true,
+      shopId: true,
       status: true,
       stripeCheckoutSessionId: true
     }
   });
   if (existingOrder) {
-    if (existingOrder.status !== OrderStatus.awaiting_payment) {
+    if (
+      existingOrder.status === OrderStatus.paid ||
+      existingOrder.status === OrderStatus.in_progress ||
+      existingOrder.status === OrderStatus.completed
+    ) {
       throw new Error("Quote already has an active order");
     }
 
@@ -59,6 +65,12 @@ export async function prepareQuoteCheckout({
       ? await getOpenCheckoutSessionUrl(existingOrder.stripeCheckoutSessionId)
       : null;
     if (checkoutUrl) {
+      if (existingOrder.status !== OrderStatus.awaiting_payment) {
+        await db.order.update({
+          where: { id: existingOrder.id },
+          data: { status: OrderStatus.awaiting_payment }
+        });
+      }
       return {
         checkoutSessionId: existingOrder.stripeCheckoutSessionId,
         checkoutUrl,
@@ -67,7 +79,7 @@ export async function prepareQuoteCheckout({
     }
 
     const session = await createCheckoutSessionForOrder({
-      amountCents: existingOrderAmount(quote, payMode),
+      amountCents: existingOrder.amountCents || existingOrderAmount(quote, payMode),
       buyerId,
       conversationId: quote.quoteRequest.conversation?.id ?? null,
       destinationAccountId: requireStripeReadyVendor(quote.quoteRequest.vendor),
@@ -77,13 +89,16 @@ export async function prepareQuoteCheckout({
       productName: checkoutProductName(quote.quoteRequest.vendor.name, quote.quoteRequest.offering?.title),
       quoteId: quote.id,
       seller: existingOrder.seller ?? { offsiteAdsEnabled: false, offsiteAdsTier: OffsiteAdsTier.STANDARD },
-      sellerId: null,
-      shopId: null,
+      sellerId: existingOrder.sellerId,
+      shopId: existingOrder.shopId,
       vendorProfileId: quote.quoteRequest.vendorId
     });
     await db.order.update({
       where: { id: existingOrder.id },
-      data: { stripeCheckoutSessionId: session.id }
+      data: {
+        status: OrderStatus.awaiting_payment,
+        stripeCheckoutSessionId: session.id
+      }
     });
     return {
       checkoutSessionId: session.id,
@@ -92,7 +107,7 @@ export async function prepareQuoteCheckout({
     };
   }
 
-  if (!canAcceptQuote(quote)) throw new Error("Quote is not payable");
+  if (!canPrepareQuoteCheckout(quote)) throw new Error("Quote is not payable");
   const destinationAccountId = requireStripeReadyVendor(quote.quoteRequest.vendor);
   if (!quote.quoteRequest.vendor.userId) {
     throw new Error("This business has not claimed their ShopFia profile yet.");
@@ -173,6 +188,11 @@ function existingOrderAmount(
   payMode: "deposit" | "full"
 ) {
   return quotePayableAmount(quote, payMode);
+}
+
+function canPrepareQuoteCheckout(quote: { status: QuoteStatus; expiresAt: Date }) {
+  if (canAcceptQuote(quote)) return true;
+  return quote.status === QuoteStatus.ACCEPTED && quote.expiresAt > new Date();
 }
 
 function requireStripeReadyVendor(vendor: {
