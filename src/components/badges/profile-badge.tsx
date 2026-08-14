@@ -17,15 +17,15 @@ export function ProfileBadge({ badge, className, light = false }: ProfileBadgePr
     return (
       <span
         className={cn(
-          "inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-medium uppercase leading-none tracking-[0.2em]",
+          "inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-[13px] font-medium uppercase leading-none tracking-[0.08em] sm:h-8 sm:px-3 sm:text-[13px]",
           "border-[#f0b1bc]/75 bg-[linear-gradient(135deg,#fff3f5_0%,#f8b3c0_54%,#ee90a5_100%)] text-[#a94d63] shadow-[0_6px_16px_rgba(214,72,116,0.10)]",
           light && "border-white/35 bg-white/20 text-white shadow-sm backdrop-blur",
           className
         )}
         title={badge.title}
       >
-        <CandleIcon className="h-3 w-3" />
-        {badge.label}
+        <CandleIcon className="h-4 w-4 shrink-0" />
+        <span className="truncate">{badge.label}</span>
       </span>
     );
   }
@@ -33,15 +33,15 @@ export function ProfileBadge({ badge, className, light = false }: ProfileBadgePr
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase leading-none tracking-[0.28em] shadow-sm",
+        "inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-[13px] font-semibold uppercase leading-none tracking-[0.08em] shadow-sm sm:h-8 sm:px-3 sm:text-[13px]",
         "border-[#eadbc9] bg-[linear-gradient(135deg,#fffaf5,#f4e9dc)] text-[#9b633d] shadow-[0_8px_22px_rgba(180,126,78,0.14)]",
         light && "border-white/30 bg-white/20 text-white shadow-sm backdrop-blur",
         className
       )}
       title={badge.title}
     >
-      <Crown className="h-3 w-3" aria-hidden="true" />
-      {badge.label}
+      <Crown className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span className="truncate">{badge.label}</span>
     </span>
   );
 }
@@ -93,7 +93,7 @@ export function ProfileBadges({
   if (badges.length === 0) return null;
 
   return (
-    <span className={cn("inline-flex flex-wrap items-center gap-2", className)}>
+    <span className={cn("inline-flex min-w-0 flex-wrap items-center gap-1.5", className)}>
       {badges.map((badge) => (
         <ProfileBadge key={badge.kind} badge={badge} light={light} />
       ))}

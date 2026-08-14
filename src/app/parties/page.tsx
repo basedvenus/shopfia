@@ -315,7 +315,7 @@ export default async function PartiesPage({
                   <div className={`relative overflow-hidden bg-muted ${tall ? "aspect-[3/4]" : "aspect-[4/5]"}`}>
                     <CroppedImage src={image} alt={party.title} crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                    <div className="absolute right-1.5 top-1.5 z-20 origin-top-right scale-75 sm:right-4 sm:top-4 sm:scale-100">
+                    <div className="absolute right-2 top-2 z-20 sm:right-3 sm:top-3">
                       <FavoriteToggle targetType="party" targetId={party.id} isSaved={savedPartyIds.has(party.id)} />
                     </div>
                     <div className="absolute inset-x-0 bottom-0 p-2.5 text-white sm:p-5">
@@ -328,31 +328,35 @@ export default async function PartiesPage({
                       ) : null}
                     </div>
                   </div>
-                  <div className="hidden space-y-3 p-4 sm:block">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="hidden space-y-2.5 p-3.5 sm:block">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
                         {hostImage ? (
-                          <img src={hostImage} alt={hostName} className="h-8 w-8 rounded-full object-cover" loading="lazy" decoding="async" />
+                          <img src={hostImage} alt={hostName} className="h-7 w-7 shrink-0 rounded-full object-cover" loading="lazy" decoding="async" />
                         ) : (
-                          <span className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                             {hostName.slice(0, 2).toUpperCase()}
                           </span>
                         )}
-                        <span className="truncate text-sm text-muted-foreground">{hostSummary}</span>
-                        <ProfileBadge badge={hostBadge} />
+                        <span className="min-w-0 truncate text-[13px] text-muted-foreground">{hostSummary}</span>
+                        <ProfileBadge badge={hostBadge} className="max-w-[112px] shrink-0" />
                       </div>
-                      <span className="shrink-0 rounded-full bg-[#fff7f4] px-3 py-1 text-xs text-muted-foreground">
+                      <span className="inline-flex h-7 max-w-[42%] shrink-0 items-center rounded-full bg-[#fff7f4] px-2.5 text-[13px] text-muted-foreground">
+                        <span className="truncate">
                         {party.theme ?? "Party"}
+                        </span>
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
-                        <Heart className={`h-3.5 w-3.5 ${savedPartyIds.has(party.id) ? "fill-current text-primary" : ""}`} />
+                    <div className="flex min-w-0 flex-wrap gap-1.5 text-[13px] text-muted-foreground">
+                      <span className="inline-flex h-8 items-center gap-1 rounded-full border border-border/80 bg-white px-2.5">
+                        <Heart className={`h-4 w-4 ${savedPartyIds.has(party.id) ? "fill-current text-primary" : ""}`} />
                         {savedPartyIds.has(party.id) ? "Saved" : "Save"}
                       </span>
-                      <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
-                        <Tags className="h-3.5 w-3.5" />
-                        {vendors.length} tagged vendor{vendors.length === 1 ? "" : "s"}
+                      <span className="inline-flex h-8 min-w-0 max-w-full items-center gap-1 rounded-full border border-border/80 bg-white px-2.5">
+                        <Tags className="h-4 w-4 shrink-0" />
+                        <span className="truncate">
+                          {vendors.length} tagged vendor{vendors.length === 1 ? "" : "s"}
+                        </span>
                       </span>
                     </div>
                     {vendors.length > 0 ? (
@@ -388,21 +392,21 @@ export default async function PartiesPage({
                     </p>
                   </div>
                 </div>
-                <div className="hidden space-y-3 p-4 sm:block">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm text-muted-foreground">{party.host}</span>
-                    <span className="rounded-full bg-[#fff7f4] px-3 py-1 text-xs text-muted-foreground">
-                      {party.theme}
+                <div className="hidden space-y-2.5 p-3.5 sm:block">
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-[13px] text-muted-foreground">{party.host}</span>
+                    <span className="inline-flex h-7 max-w-[54%] shrink-0 items-center rounded-full bg-[#fff7f4] px-2.5 text-[13px] text-muted-foreground">
+                      <span className="truncate">{party.theme}</span>
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
-                      <Heart className="h-3.5 w-3.5" />
+                  <div className="flex min-w-0 flex-wrap gap-1.5 text-[13px] text-muted-foreground">
+                    <span className="inline-flex h-8 items-center gap-1 rounded-full border border-border/80 bg-white px-2.5">
+                      <Heart className="h-4 w-4" />
                       Save
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-white px-3 py-1.5">
-                      <Tags className="h-3.5 w-3.5" />
-                      {party.vendorCount} tagged vendor
+                    <span className="inline-flex h-8 min-w-0 max-w-full items-center gap-1 rounded-full border border-border/80 bg-white px-2.5">
+                      <Tags className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{party.vendorCount} tagged vendor</span>
                     </span>
                   </div>
                 </div>

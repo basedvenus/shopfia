@@ -380,7 +380,11 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold">{event.title}</h3>
-                      {event.theme ? <p className="mt-1 text-sm text-muted-foreground">{event.theme}</p> : null}
+                      {event.theme ? (
+                        <span className="mt-2 inline-flex h-7 max-w-full items-center rounded-full bg-[#fff7f4] px-2.5 text-[13px] text-muted-foreground">
+                          <span className="truncate">{event.theme}</span>
+                        </span>
+                      ) : null}
                       {event.contributionNotes[0] ? (
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
                           “{event.contributionNotes[0]}”

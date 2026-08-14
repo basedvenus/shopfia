@@ -181,10 +181,18 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                       <h3 className="text-xl font-semibold">{event.title}</h3>
-                      {event.theme ? <p className="mt-1 text-sm text-white/80">{event.theme}</p> : null}
-                      <p className="mt-2 text-xs text-white/75">
-                        {event.taggedVendors.length} tagged vendor{event.taggedVendors.length === 1 ? "" : "s"}
-                      </p>
+                      <div className="mt-2 flex min-w-0 flex-wrap gap-1.5">
+                        {event.theme ? (
+                          <span className="inline-flex h-7 max-w-full items-center rounded-full bg-white/15 px-2.5 text-[13px] text-white/85 backdrop-blur">
+                            <span className="truncate">{event.theme}</span>
+                          </span>
+                        ) : null}
+                        <span className="inline-flex h-7 max-w-full items-center rounded-full bg-white/15 px-2.5 text-[13px] text-white/75 backdrop-blur">
+                          <span className="truncate">
+                            {event.taggedVendors.length} tagged vendor{event.taggedVendors.length === 1 ? "" : "s"}
+                          </span>
+                        </span>
+                      </div>
                       {"collaborators" in event && event.collaborators?.length ? (
                         <p className="mt-1 text-xs text-white/75">
                           Hosted by {getPrimaryHostName(event)}

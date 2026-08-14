@@ -261,7 +261,7 @@ function PartyExploreCard({
           crop={crop}
           className="h-full w-full object-cover transition duration-500 hover:scale-[1.03]"
         />
-        <div className="absolute right-2 top-2 z-20">
+        <div className="absolute right-2 top-2 z-20 sm:right-3 sm:top-3">
           <FavoriteToggle targetType="party" targetId={party.id} isSaved={isSaved} />
         </div>
       </div>
@@ -277,16 +277,16 @@ function PartyExploreCard({
             <span className="line-clamp-1">{location}</span>
           </p>
         ) : null}
-        {party.theme ? (
-          <p className="line-clamp-1 text-xs font-semibold text-primary/80">
-            {party.theme}
-          </p>
-        ) : null}
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex min-w-0 items-center gap-1.5 pt-0.5">
           <HostAvatar image={party.user.image} name={party.user.name ?? party.user.username} />
           <span className="min-w-0 truncate text-xs font-medium text-[#5f534e]">{hostName}</span>
           <IconBadges badges={badges} />
         </div>
+        {party.theme ? (
+          <span className="inline-flex h-7 max-w-full items-center rounded-full bg-[#fff7f4] px-2.5 text-[13px] font-medium text-primary/80">
+            <span className="truncate">{party.theme}</span>
+          </span>
+        ) : null}
       </div>
     </article>
   );
@@ -309,7 +309,7 @@ function IconBadges({ badges }: { badges: ReturnType<typeof getProfileBadges> })
   if (badges.length === 0) return null;
 
   return (
-    <span className="ml-auto inline-flex shrink-0 items-center gap-1">
+    <span className="ml-auto inline-flex min-w-0 shrink-0 items-center gap-1">
       {badges.map((badge) => {
         const Icon = badge.kind === "founder" ? Crown : Store;
         return (
