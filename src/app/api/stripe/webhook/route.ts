@@ -56,6 +56,55 @@ export async function POST(req: Request) {
     }
   }
 
+  if (
+    event.type === "checkout.session.completed" ||
+    event.type === "checkout.session.async_payment_succeeded"
+  ) {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const orderId = session.metadata?.orderId ?? null;
+    const paymentIntentId =
+      typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null;
+    const chargeId = await getCheckoutChargeId(paymentIntentId);
+
+    const order = await db.order.findFirst({
+      where: orderId
+        ? { id: orderId }
+        : session.id
+          ? { stripeCheckoutSessionId: session.id }
+          : { stripePaymentIntentId: paymentIntentId ?? undefined },
+      select: { id: true, status: true }
+    });
+    if (order && order.status === "awaiting_payment") {
+      await db.order.update({
+        where: { id: order.id },
+        data: {
+          stripeCheckoutSessionId: session.id,
+          stripePaymentIntentId: paymentIntentId,
+          stripeChargeId: chargeId
+        }
+      });
+
+      if (session.payment_status === "paid") {
+        await finalizeOrder({
+          orderId: order.id,
+          status: "paid",
+          paymentSucceeded: true
+        });
+      }
+    }
+  }
+
+  if (event.type === "checkout.session.expired") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    await db.order.updateMany({
+      where: {
+        stripeCheckoutSessionId: session.id,
+        status: "awaiting_payment"
+      },
+      data: { status: "canceled" }
+    });
+  }
+
   if (event.type === "payment_intent.payment_failed") {
     const pi = event.data.object as Stripe.PaymentIntent;
     await db.order.updateMany({
@@ -78,4 +127,11 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+async function getCheckoutChargeId(paymentIntentId: string | null) {
+  if (!paymentIntentId) return null;
+  const stripe = getStripeServer();
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  return typeof paymentIntent.latest_charge === "string" ? paymentIntent.latest_charge : null;
 }

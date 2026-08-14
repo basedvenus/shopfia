@@ -248,7 +248,7 @@ export default async function AccountPage({
                           action={async (formData) => {
                             "use server";
                             const result = await acceptQuoteAndCreatePaymentIntentAction(formData);
-                            redirect(`/account?orderId=${result.orderId}&paymentIntent=created`);
+                            redirect(result.checkoutUrl);
                           }}
                           className="flex flex-wrap items-center gap-2"
                         >

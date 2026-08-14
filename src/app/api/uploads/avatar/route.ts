@@ -11,7 +11,7 @@ import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 export const runtime = "nodejs";
 
 const MAX_AVATAR_BYTES = 8 * 1024 * 1024;
-const ALLOWED_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const ALLOWED_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function POST(request: Request) {
   const session = await auth();

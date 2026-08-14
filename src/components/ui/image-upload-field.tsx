@@ -123,7 +123,7 @@ export function ImageUploadField({
     setUploadPreviewValue(pendingPreview);
 
     const saved = uploadEndpoint
-      ? await uploadOriginalImage(pendingFile, nextCrop)
+      ? await uploadEditedImage(pendingFile, nextCrop)
       : await storeOriginalImagePreview(pendingFile);
 
     if (saved) {
@@ -140,11 +140,15 @@ export function ImageUploadField({
     }
   }
 
-  async function uploadOriginalImage(file: File, nextCrop: ImageCrop) {
+  async function uploadEditedImage(file: File, nextCrop: ImageCrop) {
     try {
+      const croppedFile = await cropImageFile(file, nextCrop, {
+        aspectRatio: isRound ? 1 : 4 / 3,
+        maxSize: isRound ? 900 : 1600
+      });
       const uploadData = new FormData();
-      uploadData.set("file", file);
-      uploadData.set("crop", JSON.stringify(nextCrop));
+      uploadData.set("file", croppedFile);
+      uploadData.set("crop", JSON.stringify(DEFAULT_IMAGE_CROP));
       const response = await fetch(uploadEndpoint!, {
         method: "POST",
         body: uploadData
@@ -156,6 +160,7 @@ export function ImageUploadField({
       }
 
       updateValue(result.url);
+      updateCrop(DEFAULT_IMAGE_CROP);
       onUploadComplete?.(result);
       setMessage(
         result.persisted
@@ -304,4 +309,83 @@ async function resizeImageFile(file: File, maxSize: number) {
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
+}
+
+async function cropImageFile(
+  file: File,
+  crop: ImageCrop,
+  options: { aspectRatio: number; maxSize: number }
+) {
+  const objectUrl = URL.createObjectURL(file);
+  const sourceImage = await loadImage(objectUrl);
+  const canvas = document.createElement("canvas");
+
+  try {
+    const normalized = normalizeImageCrop(crop);
+    const visibleScale = Math.max(1, normalized.zoom);
+    let sourceWidth = sourceImage.naturalWidth / visibleScale;
+    let sourceHeight = sourceWidth / options.aspectRatio;
+
+    if (sourceHeight > sourceImage.naturalHeight / visibleScale) {
+      sourceHeight = sourceImage.naturalHeight / visibleScale;
+      sourceWidth = sourceHeight * options.aspectRatio;
+    }
+
+    sourceWidth = Math.min(sourceWidth, sourceImage.naturalWidth);
+    sourceHeight = Math.min(sourceHeight, sourceImage.naturalHeight);
+
+    const centerX = (sourceImage.naturalWidth * normalized.x) / 100;
+    const centerY = (sourceImage.naturalHeight * normalized.y) / 100;
+    const sourceX = clamp(centerX - sourceWidth / 2, 0, sourceImage.naturalWidth - sourceWidth);
+    const sourceY = clamp(centerY - sourceHeight / 2, 0, sourceImage.naturalHeight - sourceHeight);
+
+    const outputWidth = Math.max(1, Math.min(options.maxSize, Math.round(sourceWidth)));
+    const outputHeight = Math.max(1, Math.round(outputWidth / options.aspectRatio));
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Canvas is unavailable.");
+    }
+
+    context.drawImage(
+      sourceImage,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      outputWidth,
+      outputHeight
+    );
+
+    const mimeType = SUPPORTED_IMAGE_TYPES.includes(file.type) ? file.type : "image/jpeg";
+    const blob = await canvasToBlob(canvas, mimeType);
+    return new File([blob], file.name, { type: blob.type || mimeType });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("That image could not be processed."));
+        }
+      },
+      mimeType,
+      mimeType === "image/png" ? undefined : 0.86
+    );
+  });
+}
+
+function clamp(value: number, min: number, max: number) {
+  if (max <= min) return min;
+  return Math.min(max, Math.max(min, value));
 }

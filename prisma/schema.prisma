@@ -679,6 +679,7 @@ model Order {
   offsiteAdsAttributed  Boolean              @default(false)
   offsiteAdsTier        OffsiteAdsTier?
   stripePaymentIntentId String?              @unique
+  stripeCheckoutSessionId String?            @unique
   stripeChargeId        String?
   status                OrderStatus          @default(draft)
   notes                 String?

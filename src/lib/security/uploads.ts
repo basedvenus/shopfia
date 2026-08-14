@@ -9,7 +9,7 @@ const IMAGE_SIGNATURES: Record<string, number[][]> = {
 
 export async function readVerifiedImageFile(file: File, options: { allowedTypes: Set<string>; maxBytes: number }) {
   if (!options.allowedTypes.has(file.type)) {
-    throw new Error("Use a JPG, PNG, WebP, or GIF image.");
+    throw new Error(`Use a ${formatAllowedImageTypes(options.allowedTypes)} image.`);
   }
 
   if (file.size > options.maxBytes) {
@@ -26,6 +26,21 @@ export async function readVerifiedImageFile(file: File, options: { allowedTypes:
   }
 
   return bytes;
+}
+
+function formatAllowedImageTypes(types: Set<string>) {
+  const labels = Array.from(types)
+    .map((type) => {
+      if (type === "image/jpeg") return "JPG";
+      if (type === "image/png") return "PNG";
+      if (type === "image/webp") return "WebP";
+      if (type === "image/gif") return "GIF";
+      return type.replace(/^image\//, "").toUpperCase();
+    })
+    .filter(Boolean);
+
+  if (labels.length <= 1) return labels[0] ?? "supported";
+  return `${labels.slice(0, -1).join(", ")}, or ${labels[labels.length - 1]}`;
 }
 
 function hasExpectedImageSignature(bytes: Buffer, contentType: string) {

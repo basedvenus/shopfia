@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { loadStripe, type Stripe, type StripeElements, type StripePaymentElement } from "@stripe/stripe-js";
 import {
   ArrowLeft,
   Banknote,
@@ -45,10 +44,6 @@ type InquiryItem = SerializedMessageConversation["inquiries"][number];
 type QuoteRequestItem = SerializedMessageConversation["quoteRequests"][number];
 type QuoteLineForm = { description: string; quantity: number | string; unitAmount: string };
 type QuoteLineItem = { description: string; quantity: number; unitAmountCents: number };
-type PreparedPayment = { clientSecret: string; orderId: string };
-
-const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 export function MessagesClient({
   currentUserId,
@@ -117,6 +112,15 @@ export function MessagesClient({
     if (!selectedConversationId) return;
     void refreshMessages({ markRead: true });
   }, [refreshMessages, selectedConversationId]);
+
+  useEffect(() => {
+    const payment = searchParams.get("payment");
+    if (payment !== "return" && payment !== "canceled") return;
+    void refreshMessages({ markRead: true });
+    if (selectedConversationId) {
+      router.replace(`/messages?conversationId=${selectedConversationId}`, { scroll: false });
+    }
+  }, [refreshMessages, router, searchParams, selectedConversationId]);
 
   useEffect(() => {
     if (!payload.supabase.url || !payload.supabase.anonKey) {
@@ -1087,24 +1091,6 @@ function QuoteReviewModal({
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRequestingChanges, setIsRequestingChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentPrepared, setPaymentPrepared] = useState<PreparedPayment | null>(null);
-  const [paymentComplete, setPaymentComplete] = useState(false);
-
-  useEffect(() => {
-    if (!paymentComplete) return;
-
-    const timeout = window.setTimeout(() => {
-      router.refresh();
-      onClose();
-    }, 6500);
-
-    return () => window.clearTimeout(timeout);
-  }, [onClose, paymentComplete, router]);
-
-  function finishPaymentFlow() {
-    setPaymentComplete(true);
-    setError(null);
-  }
 
   function returnToConversation() {
     router.refresh();
@@ -1152,14 +1138,14 @@ function QuoteReviewModal({
     setIsAccepting(false);
 
     const result = (await response.json().catch(() => null)) as
-      | { clientSecret?: string; error?: string; orderId?: string }
+      | { checkoutUrl?: string; error?: string; orderId?: string }
       | null;
-    if (!response.ok || !result?.orderId || !result.clientSecret) {
+    if (!response.ok || !result?.orderId || !result.checkoutUrl) {
       setError(result?.error ?? "Could not prepare payment yet.");
       return;
     }
 
-    setPaymentPrepared({ clientSecret: result.clientSecret, orderId: result.orderId });
+    window.location.assign(result.checkoutUrl);
   }
 
   async function requestChanges() {
@@ -1180,64 +1166,6 @@ function QuoteReviewModal({
     }
 
     onRequestedChanges();
-  }
-
-  if (paymentComplete) {
-    return (
-      <div className="fixed inset-0 z-50 bg-[#2f2626]/25 p-3 backdrop-blur-sm">
-        <div className="mx-auto flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_70px_rgba(47,38,38,0.24)] md:h-auto md:max-h-[90vh]">
-          <div className="relative overflow-hidden border-b border-[#dbe9d5] bg-[#f7fbf4]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(215,229,208,0.9),transparent_34%),linear-gradient(135deg,#fffaf6,#f7fbf4_70%)]" />
-            <button
-              type="button"
-              onClick={returnToConversation}
-              className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-[#6b554f] shadow-sm"
-              aria-label="Close payment confirmation"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <div className="relative grid gap-5 px-5 py-10 text-center">
-              <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-[#cfe1c8] bg-white shadow-[0_18px_38px_rgba(111,132,105,0.16)]">
-                <CheckCircle2 className="h-11 w-11 animate-[success-pop_520ms_ease-out] text-[#6f9465]" />
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6f8469]">
-                  Payment complete
-                </p>
-                <h2 className="mt-2 font-serif text-3xl leading-tight text-[#2f2626] md:text-4xl">
-                  Thank you! Your payment was completed successfully.
-                </h2>
-                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-                  Your booking request is now moving forward with {conversation.vendorProfile.name}.
-                  The payment has been received and this conversation will stay connected to the booking.
-                </p>
-              </div>
-              {paymentPrepared ? (
-                <div className="mx-auto inline-flex rounded-full border border-[#d7e5d0] bg-white px-4 py-2 text-sm font-bold text-[#5f7658] shadow-sm">
-                  Order {paymentPrepared.orderId.slice(-6).toUpperCase()}
-                </div>
-              ) : null}
-            </div>
-          </div>
-          <div className="grid gap-2 p-4 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={returnToConversation}
-              className="rounded-full border border-[#eadbd3] bg-white px-4 py-3 text-sm font-bold text-[#8a5c58] transition hover:bg-[#fffaf6]"
-            >
-              Back to Conversation
-            </button>
-            <button
-              type="button"
-              onClick={returnToConversation}
-              className="rounded-full border border-[#aec8a8] bg-[linear-gradient(135deg,#b8d3ae,#8fb384)] px-4 py-3 text-sm font-extrabold text-[#fffaf6] shadow-[0_12px_26px_rgba(87,119,78,0.20)] transition hover:-translate-y-0.5"
-            >
-              View Booking Thread
-            </button>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -1366,15 +1294,6 @@ function QuoteReviewModal({
                 : `Expires ${formatEventDate(reviewedQuote.expiresAt)}. Approval comes first; payment is the next secure step.`}
             </p>
 
-            {paymentPrepared && !bookingIsPaid ? (
-              <QuotePaymentForm
-                amountLabel={formatBudget(requiredDepositCents)}
-                clientSecret={paymentPrepared.clientSecret}
-                conversationId={conversation.id}
-                onPaymentComplete={finishPaymentFlow}
-                orderId={paymentPrepared.orderId}
-              />
-            ) : null}
             {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
           </div>
         </div>
@@ -1385,14 +1304,6 @@ function QuoteReviewModal({
               type="button"
               onClick={returnToConversation}
               className="rounded-full border border-[#aec8a8] bg-[linear-gradient(135deg,#b8d3ae,#8fb384)] px-4 py-2 text-sm font-extrabold text-[#fffaf6] shadow-[0_12px_26px_rgba(87,119,78,0.20)] transition hover:-translate-y-0.5 sm:col-start-2"
-            >
-              Back to Conversation
-            </button>
-          ) : paymentPrepared ? (
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full border border-[#eadbd3] bg-white px-4 py-2 text-sm font-bold text-[#8a5c58] transition hover:bg-[#fffaf6] sm:col-start-2"
             >
               Back to Conversation
             </button>
@@ -1418,176 +1329,6 @@ function QuoteReviewModal({
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function QuotePaymentForm({
-  amountLabel,
-  clientSecret,
-  conversationId,
-  onPaymentComplete,
-  orderId
-}: {
-  amountLabel: string;
-  clientSecret: string;
-  conversationId: string;
-  onPaymentComplete: () => void;
-  orderId: string;
-}) {
-  const paymentElementRef = useRef<HTMLDivElement>(null);
-  const stripeRef = useRef<Stripe | null>(null);
-  const elementsRef = useRef<StripeElements | null>(null);
-  const [ready, setReady] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [retryKey, setRetryKey] = useState(0);
-  const [loaderStarted, setLoaderStarted] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    let paymentElement: StripePaymentElement | null = null;
-    const timeout = window.setTimeout(() => {
-      if (mounted) {
-        setError("Stripe is taking longer than expected to load. Please retry the secure payment form.");
-      }
-    }, 12000);
-
-    async function mountPaymentElement() {
-      setError(null);
-      setReady(false);
-      setLoaderStarted(false);
-
-      if (!stripePromise) {
-        setError("Stripe publishable key is missing.");
-        window.clearTimeout(timeout);
-        return;
-      }
-      if (!clientSecret.includes("_secret_")) {
-        setError("Stripe payment details are incomplete. Please reopen this quote and try again.");
-        window.clearTimeout(timeout);
-        return;
-      }
-
-      try {
-        const stripe = await stripePromise;
-        if (!stripe || !paymentElementRef.current || !mounted) {
-          setError("Stripe could not load. Please refresh and try again.");
-          window.clearTimeout(timeout);
-          return;
-        }
-
-        const elements = stripe.elements({
-          appearance: {
-            theme: "stripe",
-            variables: {
-              borderRadius: "14px",
-              colorPrimary: "#8fb384",
-              colorText: "#2f2626",
-              fontFamily: "Inter, system-ui, sans-serif"
-            }
-          },
-          clientSecret
-        });
-        paymentElement = elements.create("payment", {
-          business: { name: "ShopFia" },
-          terms: { card: "never" }
-        });
-        paymentElement.on("loaderstart", () => mounted && setLoaderStarted(true));
-        paymentElement.on("ready", () => {
-          if (!mounted) return;
-          window.clearTimeout(timeout);
-          setReady(true);
-          setError(null);
-        });
-        paymentElement.on("loaderror", (event) => {
-          if (!mounted) return;
-          window.clearTimeout(timeout);
-          setError(event.error.message ?? "Stripe could not load the payment form. Please retry.");
-        });
-        paymentElement.mount(paymentElementRef.current);
-        stripeRef.current = stripe;
-        elementsRef.current = elements;
-      } catch (mountError) {
-        window.clearTimeout(timeout);
-        if (mounted) {
-          setError(mountError instanceof Error ? mountError.message : "Stripe could not load the payment form.");
-        }
-      }
-    }
-
-    void mountPaymentElement();
-
-    return () => {
-      mounted = false;
-      window.clearTimeout(timeout);
-      paymentElement?.unmount();
-      stripeRef.current = null;
-      elementsRef.current = null;
-    };
-  }, [clientSecret, retryKey]);
-
-  async function submitPayment() {
-    const stripe = stripeRef.current;
-    const elements = elementsRef.current;
-    if (!stripe || !elements || processing) return;
-
-    setProcessing(true);
-    setError(null);
-    const result = await stripe.confirmPayment({
-      confirmParams: {
-        return_url: `${window.location.origin}/messages?conversationId=${conversationId}&payment=complete`
-      },
-      elements,
-      redirect: "if_required"
-    });
-    setProcessing(false);
-
-    if (result.error) {
-      setError(result.error.message ?? "Payment could not be completed.");
-      return;
-    }
-
-    onPaymentComplete();
-  }
-
-  return (
-    <div className="rounded-[1.15rem] border border-[#d7e5d0] bg-[#f7fbf4] p-3 shadow-[0_10px_24px_rgba(87,119,78,0.08)]">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#6f8469]">Secure payment</p>
-          <p className="mt-1 text-sm font-bold text-[#2f2626]">Pay {amountLabel} to continue booking</p>
-        </div>
-        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#6f8469] shadow-sm">
-          Order {orderId.slice(-6).toUpperCase()}
-        </span>
-      </div>
-      <div className="relative mt-3 min-h-[150px] overflow-hidden rounded-[1rem] bg-white p-3 shadow-sm">
-        {!ready ? (
-          <div className="absolute inset-3 grid place-items-center rounded-[0.85rem] bg-[#fffdfa] text-center text-sm font-semibold text-[#6f8469]">
-            {loaderStarted ? "Preparing payment fields..." : "Connecting to Stripe..."}
-          </div>
-        ) : null}
-        <div ref={paymentElementRef} className={ready ? "opacity-100" : "opacity-0"} />
-      </div>
-      {error ? <p className="mt-2 text-sm font-semibold text-red-600">{error}</p> : null}
-      {error && !ready ? (
-        <button
-          type="button"
-          onClick={() => setRetryKey((current) => current + 1)}
-          className="mt-2 rounded-full border border-[#d7e5d0] bg-white px-3 py-1.5 text-xs font-bold text-[#6f8469] transition hover:bg-[#f7fbf4]"
-        >
-          Retry secure payment form
-        </button>
-      ) : null}
-      <button
-        type="button"
-        onClick={() => void submitPayment()}
-        disabled={!ready || processing}
-        className="mt-3 w-full rounded-full border border-[#aec8a8] bg-[linear-gradient(135deg,#b8d3ae,#8fb384)] px-4 py-2.5 text-sm font-extrabold text-[#fffaf6] shadow-[0_12px_26px_rgba(87,119,78,0.24)] transition hover:-translate-y-0.5 hover:border-[#98b78f] hover:bg-[linear-gradient(135deg,#a9c99d,#7fa672)] disabled:translate-y-0 disabled:opacity-60"
-      >
-        {processing ? "Processing..." : ready ? `Pay ${amountLabel}` : "Loading secure payment..."}
-      </button>
     </div>
   );
 }

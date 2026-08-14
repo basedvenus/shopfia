@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { acceptQuoteAndCreatePaymentIntentAction } from "@/app/actions/quotes";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { enforceRequestRateLimit } from "@/lib/security/request";
+import { prepareQuoteCheckout } from "@/lib/services/quote-checkout";
 
 export const dynamic = "force-dynamic";
 
@@ -41,14 +41,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Quote not found." }, { status: 404 });
   }
 
-  const formData = new FormData();
-  formData.set("quoteId", quote.id);
-  formData.set("payMode", quote.depositAmountCents ? "deposit" : "full");
-
   try {
-    const result = await acceptQuoteAndCreatePaymentIntentAction(formData);
+    const result = await prepareQuoteCheckout({
+      buyerId: session.user.id,
+      origin: new URL(request.url).origin,
+      payMode: quote.depositAmountCents ? "deposit" : "full",
+      quoteId: quote.id
+    });
     return NextResponse.json({
-      clientSecret: result.clientSecret,
+      checkoutSessionId: result.checkoutSessionId,
+      checkoutUrl: result.checkoutUrl,
       orderId: result.orderId,
       ok: true
     });

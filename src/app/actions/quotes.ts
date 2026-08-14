@@ -1,12 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { QuoteRequestStatus, QuoteStatus, UserRole } from "@prisma/client";
 import { requireRole, requireVerifiedVendorProfile } from "@/lib/auth/guards";
 import { checkServerActionRateLimit } from "@/lib/security/request";
-import { canAcceptQuote, quotePayableAmount } from "@/lib/payments";
-import { calculateOrderFees, ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
-import { getStripeServer } from "@/lib/stripe";
+import { prepareQuoteCheckout } from "@/lib/services/quote-checkout";
 import { acceptQuoteSchema, quoteRequestSchema, quoteResponseSchema } from "@/lib/validators/quote";
 
 export async function createQuoteRequestAction(formData: FormData) {
@@ -201,7 +200,6 @@ export async function sendQuoteResponseAction(formData: FormData) {
 }
 
 export async function acceptQuoteAndCreatePaymentIntentAction(formData: FormData) {
-  const { db } = await import("@/lib/db");
   const session = await requireRole([UserRole.BUYER, UserRole.ADMIN]);
   const rate = await checkServerActionRateLimit([
     { key: "quote-payment:ip:{ip}", limit: 12, intervalMs: 60_000 },
@@ -212,135 +210,21 @@ export async function acceptQuoteAndCreatePaymentIntentAction(formData: FormData
     quoteId: formData.get("quoteId"),
     payMode: formData.get("payMode") ?? "deposit"
   });
-
-  const quote = await db.quote.findUnique({
-    where: { id: parsed.quoteId },
-    include: {
-      quoteRequest: {
-        include: {
-          vendor: true
-        }
-      }
-    }
+  const result = await prepareQuoteCheckout({
+    buyerId: session.user.id,
+    origin: await getServerActionOrigin(),
+    payMode: parsed.payMode,
+    quoteId: parsed.quoteId
   });
-  if (!quote) throw new Error("Quote not found");
-  if (quote.quoteRequest.buyerId !== session.user.id && session.user.role !== UserRole.ADMIN) {
-    throw new Error("Forbidden");
-  }
-
-  const existingOrder = await db.order.findFirst({
-    where: {
-      quoteId: quote.id,
-      buyerId: session.user.id,
-      status: { in: ["awaiting_payment", "paid", "in_progress", "completed"] }
-    },
-    select: { id: true, status: true, stripePaymentIntentId: true }
-  });
-  if (existingOrder) {
-    if (existingOrder.status === "awaiting_payment" && existingOrder.stripePaymentIntentId) {
-      const stripe = getStripeServer();
-      const paymentIntent = await stripe.paymentIntents.retrieve(existingOrder.stripePaymentIntentId);
-      if (!paymentIntent.client_secret) {
-        throw new Error("Payment is not ready yet. Please try again.");
-      }
-      return { clientSecret: paymentIntent.client_secret, orderId: existingOrder.id };
-    }
-    throw new Error("Quote already has an active order");
-  }
-
-  if (!canAcceptQuote(quote)) throw new Error("Quote is not payable");
-
-  const amountCents = quotePayableAmount(quote, parsed.payMode);
-  if (
-    !quote.quoteRequest.vendor.stripeAccountId ||
-    !quote.quoteRequest.vendor.stripeOnboardingComplete ||
-    !quote.quoteRequest.vendor.stripeChargesEnabled ||
-    !quote.quoteRequest.vendor.stripePayoutsEnabled
-  ) {
-    throw new Error("This vendor has not finished payout setup yet.");
-  }
-  if (!quote.quoteRequest.vendor.userId) {
-    throw new Error("This business has not claimed their ShopFia profile yet.");
-  }
-
-  const vendorUser = await db.user.findUnique({
-    where: { id: quote.quoteRequest.vendor.userId },
-    select: { id: true }
-  });
-  if (!vendorUser) throw new Error("Vendor user not found");
-
-  const { seller, shop } = await ensureSellerAccountForVendorProfile(quote.quoteRequest.vendorId);
-  const listing = quote.quoteRequest.offeringId
-    ? await db.listing.findUnique({
-        where: { offeringId: quote.quoteRequest.offeringId }
-      })
-    : null;
-  const fees = await calculateOrderFees(
-    {
-      itemSubtotalCents: amountCents,
-      shippingAmountCents: 0,
-      taxAmountCents: 0,
-      giftWrapAmountCents: 0,
-      buyerTotalCents: amountCents,
-      taxRemittedByMarketplace: false,
-      listingFeeCents: 0,
-      offsiteAdsAttributed: false,
-      offsiteAdsTier: seller.offsiteAdsTier
-    },
-    seller
-  );
-
-  const stripe = getStripeServer();
-  const applicationFeeAmount = Math.min(amountCents, Math.max(0, fees.totalFeesCents));
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: amountCents,
-    currency: "usd",
-    automatic_payment_methods: { enabled: true },
-    application_fee_amount: applicationFeeAmount,
-    transfer_data: {
-      destination: quote.quoteRequest.vendor.stripeAccountId
-    },
-    metadata: {
-      orderContext: "quote_acceptance",
-      quoteId: quote.id,
-      buyerId: session.user.id,
-      vendorProfileId: quote.quoteRequest.vendorId,
-      sellerId: seller.id,
-      shopId: shop.id,
-      payableMode: parsed.payMode,
-      platformFeeCents: String(applicationFeeAmount)
-    }
-  });
-
-  const order = await db.order.create({
-    data: {
-      buyerId: session.user.id,
-      vendorId: vendorUser.id,
-      vendorProfileId: quote.quoteRequest.vendorId,
-      sellerId: seller.id,
-      shopId: shop.id,
-      listingId: listing?.id ?? null,
-      offeringId: quote.quoteRequest.offeringId,
-      quoteId: quote.id,
-      amountCents,
-      itemSubtotalCents: amountCents,
-      buyerTotalCents: amountCents,
-      stripePaymentIntentId: paymentIntent.id,
-      status: "awaiting_payment"
-    }
-  });
-
-  await db.quote.update({
-    where: { id: quote.id },
-    data: { status: QuoteStatus.ACCEPTED }
-  });
-
-  await db.quoteRequest.update({
-    where: { id: quote.quoteRequest.id },
-    data: { status: QuoteRequestStatus.ACCEPTED }
-  });
-
   revalidatePath("/messages");
   revalidatePath("/account");
-  return { clientSecret: paymentIntent.client_secret, orderId: order.id };
+  return result;
+}
+
+async function getServerActionOrigin() {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  if (!host) return process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${protocol}://${host}`;
 }
