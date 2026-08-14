@@ -145,7 +145,11 @@ export default async function VendorOnboardingPage({
                 required
               />
             </FieldShell>
-            <FieldShell label="Vendor Username" required helperText="Example: solanoflora. This becomes part of your public storefront identity.">
+            <FieldShell
+              label="Vendor Username"
+              required
+              helperText="Example: solanoflora. This must be unique. Changing it updates your public profile URL."
+            >
               <Input
                 name="username"
                 placeholder="solanoflora"

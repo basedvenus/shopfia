@@ -24,11 +24,10 @@ import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badg
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorProfileBySlug } from "@/lib/data/vendor";
+import { getVendorTrustStatus } from "@/lib/vendor-status";
 
 export const dynamic = "force-dynamic";
 
-const fallbackImage =
-  "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1200&q=80";
 const demoTaggedEvents = {
   "solano-flora-and-table": [
     {
@@ -61,8 +60,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   ]);
   if (!vendor) return notFound();
 
-  const gallery = vendor.photos.length > 0 ? vendor.photos : [fallbackImage];
-  const hero = vendor.coverPhoto ?? gallery[0] ?? fallbackImage;
+  const gallery = vendor.photos;
+  const hero = vendor.coverPhoto ?? gallery[0] ?? null;
   const portfolio = vendor.offerings.filter((offering) => offering.photos.length > 0);
   const photoTaggedEventMap = new Map<
     string,
@@ -109,7 +108,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           slug: event.slug,
           theme: event.theme,
           tags: event.tags,
-          coverImageUrl: event.coverImageUrl ?? event.imageUrls[0] ?? hero,
+          coverImageUrl: event.coverImageUrl ?? event.imageUrls[0] ?? "",
           credit: event.user.username ? `@${event.user.username}` : event.user.name ?? "a ShopFia host",
           contributionNotes: [],
           photoCount: 0
@@ -121,6 +120,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         }));
   const currentUserId = session?.user?.id;
   const isUnclaimed = vendor.status === "UNCLAIMED" || !vendor.user;
+  const trustStatus = getVendorTrustStatus(vendor);
   const vendorBadge = vendor.user ? getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true }) : null;
   const verifiedReviewCount = vendor.sellerRatingAggregate?.totalReviews ?? vendor.reviewCount;
   const verifiedAverageRating = vendor.sellerRatingAggregate?.weightedAverageRating ?? vendor.averageRating;
@@ -150,12 +150,17 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
           <div className="grid gap-3 p-3 md:grid-cols-[1.45fr_0.75fr]">
             <div className="relative min-h-[380px] overflow-hidden rounded-[1.6rem] bg-muted">
-              <Image src={hero} alt={vendor.name} fill className="object-cover" />
+              {hero ? (
+                <Image src={hero} alt={vendor.name} fill className="object-cover" />
+              ) : (
+                <NeutralVendorPlaceholder label={vendor.categories[0]?.category.name ?? "ShopFia vendor"} />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                 <div className="mb-3 flex flex-wrap gap-2">
-                  {vendor.verified && <Badge variant="accent">Verified vendor</Badge>}
-                  {isUnclaimed ? <Badge className="bg-white/25 text-white backdrop-blur">Unclaimed Vendor</Badge> : null}
+                  <Badge variant={trustStatus.tone === "verified" ? "accent" : "default"} className="bg-white/25 text-white backdrop-blur">
+                    {trustStatus.label} Vendor
+                  </Badge>
                   {vendor.categories.slice(0, 3).map((c) => (
                     <Badge key={c.id} className="bg-white/20 text-white backdrop-blur" variant="default">
                       {c.category.name}
@@ -222,11 +227,11 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 </div>
 
             <div className="grid gap-3 md:grid-rows-3">
-              {gallery.slice(1, 4).map((photo, index) => (
+              {gallery.slice(0, 3).map((photo, index) => (
                 <div key={`${photo}-${index}`} className="relative min-h-[116px] overflow-hidden rounded-[1.35rem] bg-muted">
                   <Image
                     src={photo}
-                    alt={`${vendor.name} portfolio ${index + 2}`}
+                    alt={`${vendor.name} portfolio image ${index + 1}`}
                     fill
                     className="object-cover"
                   />
@@ -365,7 +370,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
         {taggedEvents.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {taggedEvents.map((event) => {
+            {taggedEvents.filter((event) => event.coverImageUrl).map((event) => {
               const photo = event.coverImageUrl;
               return (
                 <Link key={event.slug} href={`/events/${event.slug}`}>
@@ -420,9 +425,10 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <Badge variant="outline">{vendor.offerings.length} featured examples</Badge>
         </div>
 
+        {vendor.offerings.length > 0 ? (
         <div className="grid auto-rows-[220px] gap-4 md:grid-cols-2 xl:grid-cols-3">
           {vendor.offerings.map((offering, index) => {
-            const photo = offering.photos[0] ?? hero;
+            const photo = offering.photos[0] ?? null;
             const featured = index === 0;
 
             return (
@@ -433,12 +439,16 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               >
                 <article className="group relative h-full overflow-hidden rounded-[1.75rem] border border-white/70 bg-white shadow-soft">
                   <div className="absolute inset-0">
-                    <Image
-                      src={photo}
-                      alt={offering.title}
-                      fill
-                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
+                    {photo ? (
+                      <Image
+                        src={photo}
+                        alt={offering.title}
+                        fill
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <NeutralVendorPlaceholder label={offering.category.name} />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                   </div>
                   <div className="relative flex h-full flex-col justify-between p-4 text-white">
@@ -469,6 +479,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             );
           })}
         </div>
+        ) : null}
 
         {portfolio.length === 0 ? (
           <Card>
@@ -583,6 +594,14 @@ function formatReviewDate(date: Date) {
     day: "numeric",
     year: "numeric"
   }).format(date);
+}
+
+function NeutralVendorPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="absolute inset-0 grid place-items-center bg-[#f8ece9] px-5 text-center text-sm font-medium text-muted-foreground">
+      {label}
+    </div>
+  );
 }
 
 function formatOfferingPrice(offering: { basePriceCents: number | null; messageForPricing: boolean }) {

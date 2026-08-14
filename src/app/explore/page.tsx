@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Crown, MapPin, Store } from "lucide-react";
+import Image from "next/image";
+import { Crown, MapPin, Store, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ExploreSearch } from "@/components/explore/explore-search";
+import { VendorCard } from "@/components/explore/vendor-card";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { getExploreData } from "@/lib/data/explore";
@@ -10,6 +12,8 @@ import { auth } from "@/auth";
 import { getOriginalMemberCutoffDate, getProfileBadges } from "@/lib/profile-badges";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
+import { formatCurrency } from "@/lib/utils";
+import { getVendorTrustStatus } from "@/lib/vendor-status";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +34,7 @@ export default async function ExplorePage({
       return {
         categories: [],
         eventCategories: [],
+        offerings: [],
         parties: [],
         filters: {},
         vendors: []
@@ -40,19 +45,18 @@ export default async function ExplorePage({
       return null;
     })
   ]);
-  const savedPartyIds = session?.user?.id
-    ? new Set(
-        (
-          await db.favorite.findMany({
-            where: { buyerId: session.user.id, partyEventId: { not: null } },
-            select: { partyEventId: true }
-          }).catch((error) => {
-            console.error("ShopFia saved parties failed", error);
-            return [];
-          })
-        ).map((favorite) => favorite.partyEventId).filter(Boolean) as string[]
-      )
-    : new Set<string>();
+  const savedFavorites = session?.user?.id
+    ? await db.favorite.findMany({
+        where: { buyerId: session.user.id },
+        select: { offeringId: true, partyEventId: true, vendorId: true }
+      }).catch((error) => {
+        console.error("ShopFia saved favorites failed", error);
+        return [];
+      })
+    : [];
+  const savedPartyIds = new Set(savedFavorites.map((favorite) => favorite.partyEventId).filter(Boolean) as string[]);
+  const savedVendorIds = new Set(savedFavorites.map((favorite) => favorite.vendorId).filter(Boolean) as string[]);
+  const savedOfferingIds = new Set(savedFavorites.map((favorite) => favorite.offeringId).filter(Boolean) as string[]);
 
   return (
     <div className="space-y-6">
@@ -64,10 +68,10 @@ export default async function ExplorePage({
         </div>
         <div className="max-w-3xl">
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            Explore real parties and local event inspiration.
+            Discover local vendors, offerings, and real party inspiration.
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Browse beautiful celebrations first, then refine by vendor category, location, availability, and style when you are ready.
+            Search by business, service, category, location, or style, then browse party posts for extra inspiration.
           </p>
         </div>
         <div className="mt-5">
@@ -81,9 +85,54 @@ export default async function ExplorePage({
         </div>
       </section>
 
+      <section className="space-y-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Vendors</h2>
+          <p className="text-sm text-muted-foreground">{data.vendors.length} vendors</p>
+        </div>
+        {data.vendors.length === 0 ? (
+          <div className="rounded-3xl border bg-white/80 p-8 text-center text-muted-foreground">
+            No vendors match those filters yet. Try a business name, username, category, or nearby city.
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {data.vendors.map((vendor) => (
+              <VendorCard
+                key={vendor.id}
+                isSaved={savedVendorIds.has(vendor.id)}
+                originalMemberCutoff={originalMemberCutoff}
+                vendor={vendor}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Offerings</h2>
+          <p className="text-sm text-muted-foreground">{data.offerings.length} offerings</p>
+        </div>
+        {data.offerings.length === 0 ? (
+          <div className="rounded-3xl border bg-white/80 p-8 text-center text-muted-foreground">
+            No offerings match those filters yet. Search a service title, category, vendor, or city.
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {data.offerings.map((offering) => (
+              <OfferingExploreCard
+                key={offering.id}
+                isSaved={savedOfferingIds.has(offering.id)}
+                offering={offering}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Explore</h2>
+          <h2 className="text-lg font-semibold">Party Inspiration</h2>
           <p className="text-sm text-muted-foreground">{data.parties.length} parties</p>
         </div>
         {data.parties.length === 0 ? (
@@ -109,6 +158,77 @@ export default async function ExplorePage({
 }
 
 type ExploreParty = Awaited<ReturnType<typeof getExploreData>>["parties"][number];
+type ExploreOffering = Awaited<ReturnType<typeof getExploreData>>["offerings"][number];
+
+function OfferingExploreCard({
+  isSaved,
+  offering
+}: {
+  isSaved: boolean;
+  offering: ExploreOffering;
+}) {
+  const image = offering.photos[0] ?? offering.vendor.coverPhoto ?? offering.vendor.photos[0] ?? null;
+  const trustStatus = getVendorTrustStatus(offering.vendor);
+  const categoryNames = unique([
+    offering.category.name,
+    ...offering.categories.map((category) => category.category.name)
+  ]);
+
+  return (
+    <article className="group relative overflow-hidden rounded-[1.05rem] border border-white/60 bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft sm:rounded-3xl">
+      <Link href={`/offering/${offering.id}`} className="absolute inset-0 z-10" aria-label={`View ${offering.title}`} />
+      <div className="relative aspect-[4/3] bg-[#f8ece9]">
+        {image ? (
+          <Image src={image} alt={offering.title} fill className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+        ) : (
+          <NeutralImagePlaceholder label={offering.category.name} />
+        )}
+        <div className="absolute left-3 top-3 flex flex-wrap gap-1">
+          <Badge variant={trustStatus.tone === "verified" ? "accent" : "outline"}>{trustStatus.label}</Badge>
+        </div>
+        <div className="absolute right-3 top-3 z-20">
+          <FavoriteToggle targetType="offering" targetId={offering.id} isSaved={isSaved} />
+        </div>
+      </div>
+      <div className="space-y-3 p-4">
+        <div>
+          <h3 className="line-clamp-1 font-semibold">{offering.title}</h3>
+          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span className="line-clamp-1">
+              {offering.vendor.name} · {offering.vendor.city}
+              {offering.vendor.state ? `, ${offering.vendor.state}` : ""}
+            </span>
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {categoryNames.slice(0, 3).map((category) => (
+            <Badge key={category} variant="outline">{category}</Badge>
+          ))}
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold">
+            {offering.messageForPricing || !offering.basePriceCents
+              ? "Custom pricing"
+              : `From ${formatCurrency(offering.basePriceCents)}`}
+          </p>
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <Tag className="h-3.5 w-3.5" />
+            {offering.type.replace("_", " ").toLowerCase()}
+          </span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function NeutralImagePlaceholder({ label }: { label: string }) {
+  return (
+    <div className="absolute inset-0 grid place-items-center bg-[#f8ece9] px-5 text-center text-sm font-medium text-muted-foreground">
+      {label}
+    </div>
+  );
+}
 
 function PartyExploreCard({
   index,
@@ -216,4 +336,8 @@ function formatPartyLocation(party: ExploreParty) {
 function getMasonryAspectRatio(index: number) {
   const ratios = ["4 / 5", "1 / 1", "3 / 4", "4 / 3", "5 / 7", "1 / 1"];
   return ratios[index % ratios.length];
+}
+
+function unique(values: string[]) {
+  return [...new Set(values.filter(Boolean))];
 }

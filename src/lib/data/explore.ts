@@ -136,9 +136,8 @@ export async function getExploreData(input: Record<string, string | string[] | u
     ? { lat: parsed.lat, lng: parsed.lng }
     : undefined;
 
-  const andFilters: Prisma.VendorProfileWhereInput[] = [
-    { offerings: { some: { active: true } } }
-  ];
+  const andFilters: Prisma.VendorProfileWhereInput[] = [];
+  const offeringAndFilters: Prisma.OfferingWhereInput[] = [{ active: true }];
 
   if (parsed.city && !searchPoint) {
     andFilters.push({
@@ -157,13 +156,27 @@ export async function getExploreData(input: Record<string, string | string[] | u
         }
       ]
     });
+    offeringAndFilters.push({
+      OR: [
+        { vendor: { city: { contains: parsed.city, mode: "insensitive" } } },
+        { vendor: { zipCode: { contains: parsed.city, mode: "insensitive" } } },
+        { vendor: { state: { contains: parsed.city, mode: "insensitive" } } }
+      ]
+    });
   }
 
   if (parsed.minRating) andFilters.push({ averageRating: { gte: parsed.minRating } });
   if (parsed.radius) andFilters.push({ serviceRadiusMiles: { gte: parsed.radius } });
-  if (parsed.verified === "true") andFilters.push({ verified: true });
+  if (parsed.minRating) offeringAndFilters.push({ vendor: { averageRating: { gte: parsed.minRating } } });
+  if (parsed.radius) offeringAndFilters.push({ vendor: { serviceRadiusMiles: { gte: parsed.radius } } });
+  if (parsed.verified === "true") {
+    andFilters.push({ verified: true });
+    offeringAndFilters.push({ vendor: { verified: true } });
+  }
   if (parsed.availableWeekend === "true") andFilters.push({ weekendAvailable: true });
   if (parsed.availableWeekend === "false") andFilters.push({ weekendAvailable: false });
+  if (parsed.availableWeekend === "true") offeringAndFilters.push({ vendor: { weekendAvailable: true } });
+  if (parsed.availableWeekend === "false") offeringAndFilters.push({ vendor: { weekendAvailable: false } });
 
   if (parsed.categoryId.length > 0) {
     andFilters.push({
@@ -182,6 +195,13 @@ export async function getExploreData(input: Record<string, string | string[] | u
         }
       ]
     });
+    offeringAndFilters.push({
+      OR: [
+        { categoryId: { in: parsed.categoryId } },
+        { categories: { some: { categoryId: { in: parsed.categoryId } } } },
+        { vendor: { categories: { some: { categoryId: { in: parsed.categoryId } } } } }
+      ]
+    });
   }
 
   if (parsed.eventCategoryId) {
@@ -192,6 +212,9 @@ export async function getExploreData(input: Record<string, string | string[] | u
           eventCategories: { some: { categoryId: parsed.eventCategoryId } }
         }
       }
+    });
+    offeringAndFilters.push({
+      eventCategories: { some: { categoryId: parsed.eventCategoryId } }
     });
   }
 
@@ -223,6 +246,16 @@ export async function getExploreData(input: Record<string, string | string[] | u
           }
         ])
       });
+      offeringAndFilters.push({
+        OR: themeFilters.flatMap((theme) => [
+          { title: { contains: theme, mode: "insensitive" } },
+          { description: { contains: theme, mode: "insensitive" } },
+          { tags: { has: theme.toLowerCase() } },
+          { category: { name: { contains: theme, mode: "insensitive" } } },
+          { categories: { some: { category: { name: { contains: theme, mode: "insensitive" } } } } },
+          { eventCategories: { some: { category: { name: { contains: theme, mode: "insensitive" } } } } }
+        ])
+      });
     }
   }
 
@@ -230,14 +263,38 @@ export async function getExploreData(input: Record<string, string | string[] | u
     andFilters.push({
       OR: [
         { name: { contains: parsed.q, mode: "insensitive" } },
+        { username: { contains: parsed.q, mode: "insensitive" } },
+        { slug: { contains: parsed.q, mode: "insensitive" } },
         { bio: { contains: parsed.q, mode: "insensitive" } },
+        { city: { contains: parsed.q, mode: "insensitive" } },
+        { state: { contains: parsed.q, mode: "insensitive" } },
+        { zipCode: { contains: parsed.q, mode: "insensitive" } },
+        { serviceAreaNotes: { contains: parsed.q, mode: "insensitive" } },
+        { availabilityNotes: { contains: parsed.q, mode: "insensitive" } },
+        { user: { username: { contains: parsed.q, mode: "insensitive" } } },
+        {
+          categories: {
+            some: {
+              category: { name: { contains: parsed.q, mode: "insensitive" } }
+            }
+          }
+        },
         {
           offerings: {
             some: {
+              active: true,
               OR: [
                 { title: { contains: parsed.q, mode: "insensitive" } },
                 { description: { contains: parsed.q, mode: "insensitive" } },
                 { tags: { has: parsed.q.toLowerCase() } },
+                { category: { name: { contains: parsed.q, mode: "insensitive" } } },
+                {
+                  categories: {
+                    some: {
+                      category: { name: { contains: parsed.q, mode: "insensitive" } }
+                    }
+                  }
+                },
                 {
                   eventCategories: {
                     some: {
@@ -251,9 +308,40 @@ export async function getExploreData(input: Record<string, string | string[] | u
         }
       ]
     });
+    offeringAndFilters.push({
+      OR: [
+        { title: { contains: parsed.q, mode: "insensitive" } },
+        { description: { contains: parsed.q, mode: "insensitive" } },
+        { tags: { has: parsed.q.toLowerCase() } },
+        { category: { name: { contains: parsed.q, mode: "insensitive" } } },
+        {
+          categories: {
+            some: {
+              category: { name: { contains: parsed.q, mode: "insensitive" } }
+            }
+          }
+        },
+        {
+          eventCategories: {
+            some: {
+              category: { name: { contains: parsed.q, mode: "insensitive" } }
+            }
+          }
+        },
+        { vendor: { name: { contains: parsed.q, mode: "insensitive" } } },
+        { vendor: { username: { contains: parsed.q, mode: "insensitive" } } },
+        { vendor: { slug: { contains: parsed.q, mode: "insensitive" } } },
+        { vendor: { city: { contains: parsed.q, mode: "insensitive" } } },
+        { vendor: { state: { contains: parsed.q, mode: "insensitive" } } },
+        { vendor: { zipCode: { contains: parsed.q, mode: "insensitive" } } },
+        { vendor: { serviceAreaNotes: { contains: parsed.q, mode: "insensitive" } } },
+        { vendor: { availabilityNotes: { contains: parsed.q, mode: "insensitive" } } }
+      ]
+    });
   }
 
   const where: Prisma.VendorProfileWhereInput = { AND: andFilters };
+  const offeringWhere: Prisma.OfferingWhereInput = { AND: offeringAndFilters };
   const partyAndFilters: Prisma.PartyEventWhereInput[] = [
     {
       OR: [
@@ -347,7 +435,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
             { createdAt: "desc" as const }
           ];
 
-  const [vendors, parties, categories, eventCategories] = await Promise.all([
+  const [vendors, offerings, parties, categories, eventCategories] = await Promise.all([
     db.vendorProfile.findMany({
       where,
       take: 30,
@@ -365,9 +453,24 @@ export async function getExploreData(input: Record<string, string | string[] | u
         categories: { include: { category: true } },
         offerings: {
           where: { active: true },
-          select: { id: true, basePriceCents: true, category: { select: { name: true } }, type: true },
+          select: { id: true, basePriceCents: true, category: { select: { name: true } }, title: true, type: true },
           take: 3,
           orderBy: { createdAt: "desc" }
+        }
+      }
+    }),
+    db.offering.findMany({
+      where: offeringWhere,
+      take: 36,
+      orderBy: parsed.sort === "newest" ? { createdAt: "desc" } : { updatedAt: "desc" },
+      include: {
+        category: true,
+        categories: { include: { category: true } },
+        vendor: {
+          include: {
+            user: { select: { createdAt: true, email: true, username: true } },
+            rankingScore: true
+          }
         }
       }
     }),
@@ -432,6 +535,34 @@ export async function getExploreData(input: Record<string, string | string[] | u
       })
     : filteredByPrice;
 
+  const filteredOfferingsByPrice = offerings.filter((offering) => {
+    const price = offering.basePriceCents ?? offering.vendor.startingPriceCents ?? null;
+    if (!price) return true;
+    if (minPriceCents != null && price < minPriceCents) return false;
+    if (maxPriceCents != null && price > maxPriceCents) return false;
+    return true;
+  });
+
+  const finalOfferings = searchPoint
+    ? filteredOfferingsByPrice.filter((offering) => {
+        const miles = distanceMiles(searchPoint, {
+          lat: offering.vendor.locationLat,
+          lng: offering.vendor.locationLng
+        });
+        if (Number.isFinite(miles)) {
+          return miles <= Math.max(parsed.radius ?? 50, offering.vendor.serviceRadiusMiles);
+        }
+
+        const normalizedQuery = normalizeLocation(parsed.locationLabel ?? parsed.city);
+        return (
+          !normalizedQuery ||
+          normalizeLocation(offering.vendor.city).includes(normalizedQuery) ||
+          normalizedQuery.includes(normalizeLocation(offering.vendor.city)) ||
+          (offering.vendor.zipCode ? normalizedQuery.includes(offering.vendor.zipCode) : false)
+        );
+      })
+    : filteredOfferingsByPrice;
+
   const finalVendors =
     parsed.sort === "distance"
       ? [...filteredByLocation].sort((left, right) => {
@@ -449,6 +580,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
 
   return {
     filters: parsed,
+    offerings: finalOfferings,
     parties,
     vendors: finalVendors,
     categories: sortByOrder(categories, serviceCategoryOrder).map((category) => ({

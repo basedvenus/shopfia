@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { sendNewInquiryEmail } from "@/lib/email";
 import { securityLog } from "@/lib/security/audit-log";
 import { checkServerActionRateLimit } from "@/lib/security/request";
+import { ensureQuoteRequestForInquiry } from "@/lib/services/inquiry-quote-requests";
 import { publicInquirySchema } from "@/lib/validators/inquiry";
 import { friendlyValidationMessage } from "@/lib/validators/messages";
 
@@ -126,6 +127,8 @@ export async function createPublicInquiryAction(formData: FormData) {
 
   const now = new Date();
   const eventLocation = parsed.formattedAddress || parsed.eventLocation || null;
+  const eventDate = parsed.eventDate ? new Date(parsed.eventDate) : null;
+  const budgetCents = parsed.budgetDollars != null ? Math.round(parsed.budgetDollars * 100) : null;
   const result = await db.$transaction(async (tx) => {
     const conversation = await tx.conversation.upsert({
       where: {
@@ -149,50 +152,100 @@ export async function createPublicInquiryAction(formData: FormData) {
       }
     });
 
-    const inquiry = await tx.inquiry.create({
-      data: {
+    const existingInquiry = await tx.inquiry.findFirst({
+      where: {
         buyerId: session.user.id,
         vendorProfileId: vendor.id,
         listingId,
         offeringId,
-        conversationId: conversation.id,
-        name: parsed.name,
-        email: parsed.email || null,
-        phone: parsed.phone || null,
-        eventDate: parsed.eventDate ? new Date(parsed.eventDate) : null,
+        eventDate,
         eventLocation,
-        formattedAddress: parsed.formattedAddress || null,
-        locationCity: parsed.locationCity || null,
-        locationState: parsed.locationState || null,
-        locationZipCode: parsed.locationZipCode || null,
-        locationLat: parsed.locationLat ?? null,
-        locationLng: parsed.locationLng ?? null,
-        googlePlaceId: parsed.googlePlaceId || null,
-        guestCount: parsed.guestCount ?? null,
-        inspirationUrls: parsed.inspirationUrls,
-        budgetCents:
-          parsed.budgetDollars != null ? Math.round(parsed.budgetDollars * 100) : null,
         message: parsed.message
-      }
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true }
     });
 
-    await tx.message.create({
-      data: {
-        conversationId: conversation.id,
-        senderId: session.user.id,
-        body: `INQUIRY_CARD:${inquiry.id}`,
-        attachments: parsed.inspirationUrls,
-        readAt: null
-      }
+    const inquiry = existingInquiry
+      ? await tx.inquiry.update({
+          where: { id: existingInquiry.id },
+          data: {
+            conversationId: conversation.id,
+            email: parsed.email || null,
+            phone: parsed.phone || null,
+            formattedAddress: parsed.formattedAddress || null,
+            locationCity: parsed.locationCity || null,
+            locationState: parsed.locationState || null,
+            locationZipCode: parsed.locationZipCode || null,
+            locationLat: parsed.locationLat ?? null,
+            locationLng: parsed.locationLng ?? null,
+            googlePlaceId: parsed.googlePlaceId || null,
+            guestCount: parsed.guestCount ?? null,
+            inspirationUrls: parsed.inspirationUrls,
+            budgetCents
+          }
+        })
+      : await tx.inquiry.create({
+          data: {
+            buyerId: session.user.id,
+            vendorProfileId: vendor.id,
+            listingId,
+            offeringId,
+            conversationId: conversation.id,
+            name: parsed.name,
+            email: parsed.email || null,
+            phone: parsed.phone || null,
+            eventDate,
+            eventLocation,
+            formattedAddress: parsed.formattedAddress || null,
+            locationCity: parsed.locationCity || null,
+            locationState: parsed.locationState || null,
+            locationZipCode: parsed.locationZipCode || null,
+            locationLat: parsed.locationLat ?? null,
+            locationLng: parsed.locationLng ?? null,
+            googlePlaceId: parsed.googlePlaceId || null,
+            guestCount: parsed.guestCount ?? null,
+            inspirationUrls: parsed.inspirationUrls,
+            budgetCents,
+            message: parsed.message
+          }
+        });
+
+    const quoteRequest = await ensureQuoteRequestForInquiry(tx.quoteRequest, {
+      attachments: parsed.inspirationUrls,
+      budgetCents,
+      buyerId: session.user.id,
+      conversationId: conversation.id,
+      eventDate,
+      eventLocation,
+      inquiryId: inquiry.id,
+      notes: parsed.message,
+      offeringId,
+      vendorId: vendor.id
     });
+
+    if (!existingInquiry) {
+      await tx.message.create({
+        data: {
+          conversationId: conversation.id,
+          senderId: session.user.id,
+          body: `INQUIRY_CARD:${inquiry.id}`,
+          attachments: parsed.inspirationUrls,
+          readAt: null
+        }
+      });
+    }
 
     return {
       conversationId: conversation.id,
-      inquiryId: inquiry.id
+      inquiryId: inquiry.id,
+      quoteRequestId: quoteRequest.id
     };
   });
 
   revalidatePath("/messages");
+  revalidatePath("/account");
+  revalidatePath("/vendor/dashboard");
   revalidatePath("/admin");
   revalidatePath(`/vendor/profile/${vendor.slug}`);
   if (offeringId) {
@@ -215,7 +268,8 @@ export async function createPublicInquiryAction(formData: FormData) {
   return {
     success: true,
     conversationId: result.conversationId,
-    inquiryId: result.inquiryId
+    inquiryId: result.inquiryId,
+    quoteRequestId: result.quoteRequestId
   };
 }
 

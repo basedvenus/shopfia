@@ -1,18 +1,25 @@
 import Link from "next/link";
 import { CategoryAudience } from "@prisma/client";
 import { Card, CardContent } from "@/components/ui/card";
+import { getExploreCategoryCounts } from "@/lib/data/category-counts";
 
 export const dynamic = "force-dynamic";
 
 export default async function CategoriesPage() {
   const { db } = await import("@/lib/db");
   const categories = await db.category.findMany({
-    include: { _count: { select: { offerings: true, eventOfferings: true, vendors: true } } },
     orderBy: [{ audience: "asc" }, { name: "asc" }]
   }).catch((error) => {
     console.error("ShopFia categories failed", error);
     return fallbackCategories;
   });
+  const categoryCounts = new Map(
+    await Promise.all(
+      categories.map(async (category) => {
+        return [category.id, await getExploreCategoryCounts(db, category.id)] as const;
+      })
+    )
+  );
   const vendorCategories = sortByOrder(
     categories.filter((c) => c.audience === CategoryAudience.VENDOR),
     serviceCategoryOrder
@@ -34,7 +41,7 @@ export default async function CategoriesPage() {
                 <CardContent className="p-4">
                   <h2 className="font-semibold">{displayCategoryName(category.name)}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {category._count.vendors} vendors · {category._count.offerings} offerings
+                    {categoryCounts.get(category.id)?.vendors ?? 0} vendors · {categoryCounts.get(category.id)?.offerings ?? 0} offerings
                   </p>
                 </CardContent>
               </Card>
@@ -54,7 +61,7 @@ export default async function CategoriesPage() {
                   </p>
                   <h2 className="mt-2 font-semibold">{category.name}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {category._count.eventOfferings} tagged offerings
+                    {categoryCounts.get(category.id)?.eventOfferings ?? 0} tagged offerings
                   </p>
                 </CardContent>
               </Card>
@@ -92,13 +99,11 @@ const fallbackCategories = [
     id: `service-${index}`,
     name,
     audience: CategoryAudience.VENDOR,
-    _count: { eventOfferings: 0, offerings: 0, vendors: 0 }
   })),
   ...eventCategoryOrder.map((name, index) => ({
     id: `event-${index}`,
     name,
     audience: CategoryAudience.BUYER,
-    _count: { eventOfferings: 0, offerings: 0, vendors: 0 }
   }))
 ];
 

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { UserRole } from "@prisma/client";
+import { UserRole, VendorProfileStatus } from "@prisma/client";
 import { requireRole } from "@/lib/auth/guards";
 import { checkServerActionRateLimit } from "@/lib/security/request";
 import { getMarketplaceFeeConfig } from "@/lib/services/marketplace-fees";
@@ -19,7 +19,10 @@ export async function setVendorModerationAction(formData: FormData) {
 
   await db.vendorProfile.update({
     where: { id: vendorId },
-    data: { verified: mode === "approve" }
+    data: {
+      status: mode === "approve" ? VendorProfileStatus.VERIFIED : VendorProfileStatus.CLAIMED,
+      verified: mode === "approve"
+    }
   });
 
   revalidatePath("/admin");

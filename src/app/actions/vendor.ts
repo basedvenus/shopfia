@@ -358,10 +358,15 @@ export async function upsertVendorProfileAction(formData: FormData) {
     redirectWithVendorProfileError("Please wait a minute before saving your vendor profile again.");
   }
 
-  const vendorUsername = String(formData.get("username") ?? "")
+  const existingVendor = await db.vendorProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { slug: true, username: true }
+  });
+  const submittedVendorUsername = String(formData.get("username") ?? "")
     .trim()
     .replace(/^@/, "")
     .toLowerCase();
+  const vendorUsername = submittedVendorUsername || existingVendor?.username || existingVendor?.slug || "";
   const result = vendorOnboardingSchema.safeParse({
     name: formData.get("name"),
     slug: formData.get("slug") || slugify(vendorUsername || formData.get("name")),
@@ -413,7 +418,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
         name: parsed.name,
         status: VendorProfileStatus.CLAIMED,
         slug: parsed.slug,
-        username: parsed.username || null,
+        username: parsed.username,
         website: parsed.website || null,
         instagramUrl: parsed.instagramUrl || null,
         tiktokUrl: parsed.tiktokUrl || null,
@@ -442,7 +447,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
         claimedAt: new Date(),
         name: parsed.name,
         slug: parsed.slug,
-        username: parsed.username || null,
+        username: parsed.username,
         website: parsed.website || null,
         instagramUrl: parsed.instagramUrl || null,
         tiktokUrl: parsed.tiktokUrl || null,

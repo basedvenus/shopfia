@@ -8,6 +8,7 @@ import { ProfileBadge } from "@/components/badges/profile-badge";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
+import { getVendorTrustStatus } from "@/lib/vendor-status";
 
 type VendorCardProps = {
   vendor: {
@@ -18,6 +19,7 @@ type VendorCardProps = {
     state: string | null;
     coverPhoto: string | null;
     photos: string[];
+    status: string;
     verified: boolean;
     averageRating: number;
     reviewCount: number;
@@ -36,7 +38,8 @@ type VendorCardProps = {
 };
 
 export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendor }: VendorCardProps) {
-  const image = vendor.coverPhoto ?? vendor.photos[0] ?? "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1000&q=80";
+  const image = vendor.coverPhoto ?? vendor.photos[0] ?? null;
+  const trustStatus = getVendorTrustStatus(vendor);
   const profileBadge = vendor.user
     ? getProfileBadge(vendor.user, originalMemberCutoff, {
         includeFounder: false,
@@ -53,9 +56,15 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
     <Card className="group relative overflow-hidden rounded-[1.05rem] border-white/50 bg-white/90 transition hover:-translate-y-0.5 hover:shadow-soft sm:rounded-3xl">
       <Link href={`/vendor/profile/${vendor.slug}`} className="absolute inset-0 z-10" aria-label={`View ${vendor.name}`} />
       <div className="relative aspect-[4/5] sm:aspect-[4/3]">
-        <Image src={image} alt={vendor.name} fill className="object-cover" />
+        {image ? (
+          <Image src={image} alt={vendor.name} fill className="object-cover" />
+        ) : (
+          <div className="absolute inset-0 grid place-items-center bg-[#f8ece9] px-5 text-center text-sm font-medium text-muted-foreground">
+            {vendor.categories[0]?.category.name ?? "ShopFia vendor"}
+          </div>
+        )}
         <div className="absolute left-2 top-2 flex gap-1 sm:left-3 sm:top-3 sm:gap-2">
-          {vendor.verified && <Badge variant="accent">Verified</Badge>}
+          <Badge variant={trustStatus.tone === "verified" ? "accent" : "outline"}>{trustStatus.label}</Badge>
         </div>
         <div className="absolute right-1.5 top-1.5 z-20 origin-top-right scale-75 sm:right-3 sm:top-3 sm:scale-100">
           <FavoriteToggle targetType="vendor" targetId={vendor.id} isSaved={isSaved} />

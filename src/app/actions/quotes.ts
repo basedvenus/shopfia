@@ -53,6 +53,7 @@ export async function createQuoteRequestAction(formData: FormData) {
       budgetCents: parsed.budgetCents ?? null,
       notes: parsed.notes || null,
       attachments: parsed.attachments,
+      conversationId: null,
       status: QuoteRequestStatus.SUBMITTED
     }
   });
@@ -70,6 +71,11 @@ export async function createQuoteRequestAction(formData: FormData) {
       vendorId: vendor.userId,
       vendorProfileId: vendor.id
     }
+  });
+
+  await db.quoteRequest.update({
+    where: { id: quoteRequest.id },
+    data: { conversationId: conversation.id }
   });
 
   await db.message.create({
@@ -153,8 +159,45 @@ export async function sendQuoteResponseAction(formData: FormData) {
     data: { status: QuoteRequestStatus.RESPONDED }
   });
 
+  const conversation = quoteRequest.conversationId
+    ? await db.conversation.findUnique({
+        where: { id: quoteRequest.conversationId },
+        select: { id: true, vendorId: true }
+      })
+    : quoteRequest.vendor.userId
+      ? await db.conversation.findUnique({
+          where: {
+            buyerId_vendorId: {
+              buyerId: quoteRequest.buyerId,
+              vendorId: quoteRequest.vendor.userId
+            }
+          },
+          select: { id: true, vendorId: true }
+        })
+      : null;
+
+  if (conversation) {
+    await db.quoteRequest.update({
+      where: { id: quoteRequest.id },
+      data: { conversationId: conversation.id }
+    });
+    await db.message.create({
+      data: {
+        attachments: [],
+        body: `${quoteRequest.vendor.name} sent a custom quote.`,
+        conversationId: conversation.id,
+        senderId: conversation.vendorId
+      }
+    });
+    await db.conversation.update({
+      where: { id: conversation.id },
+      data: { lastMessageAt: new Date() }
+    });
+  }
+
   revalidatePath("/messages");
   revalidatePath("/vendor/dashboard");
+  revalidatePath("/account");
 }
 
 export async function acceptQuoteAndCreatePaymentIntentAction(formData: FormData) {

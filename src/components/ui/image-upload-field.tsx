@@ -6,6 +6,10 @@ import { ImageCropEditor } from "@/components/ui/image-crop-editor";
 import { DEFAULT_IMAGE_CROP, normalizeImageCrop, type ImageCrop } from "@/lib/image-crop";
 import type { SharedUserProfile } from "@/lib/user-profile";
 
+const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const SUPPORTED_IMAGE_FORMAT_LABEL = "JPG, PNG, or WebP";
+const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
+
 type UploadResult = {
   error?: string;
   path?: string;
@@ -55,6 +59,11 @@ export function ImageUploadField({
   const [uploadPreviewValue, setUploadPreviewValue] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [failedUpload, setFailedUpload] = useState<{
+    crop: ImageCrop;
+    file: File;
+    preview: string;
+  } | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const isRound = rounded === "full";
@@ -85,14 +94,20 @@ export function ImageUploadField({
     if (!file) return;
     setMessage(null);
 
-    if (!file.type.startsWith("image/")) {
-      setMessage("Choose an image file.");
+    if (!SUPPORTED_IMAGE_TYPES.includes(file.type)) {
+      setMessage(`Choose a supported image file: ${SUPPORTED_IMAGE_FORMAT_LABEL}.`);
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setMessage(`Choose an image smaller than ${formatBytes(MAX_IMAGE_SIZE_BYTES)}.`);
       return;
     }
 
     const localPreviewUrl = URL.createObjectURL(file);
     setPendingFile(file);
     setPendingPreview(localPreviewUrl);
+    setFailedUpload(null);
     setEditorOpen(true);
   }
 
@@ -107,16 +122,22 @@ export function ImageUploadField({
     updateCrop(nextCrop);
     setUploadPreviewValue(pendingPreview);
 
-    if (uploadEndpoint) {
-      await uploadOriginalImage(pendingFile, nextCrop);
-    } else {
-      await storeOriginalImagePreview(pendingFile);
-    }
+    const saved = uploadEndpoint
+      ? await uploadOriginalImage(pendingFile, nextCrop)
+      : await storeOriginalImagePreview(pendingFile);
 
-    URL.revokeObjectURL(pendingPreview);
-    setPendingFile(null);
-    setPendingPreview(null);
-    setEditorOpen(false);
+    if (saved) {
+      URL.revokeObjectURL(pendingPreview);
+      setPendingFile(null);
+      setPendingPreview(null);
+      setFailedUpload(null);
+      setEditorOpen(false);
+    } else {
+      setFailedUpload({ crop: nextCrop, file: pendingFile, preview: pendingPreview });
+      setPendingFile(null);
+      setPendingPreview(null);
+      setEditorOpen(false);
+    }
   }
 
   async function uploadOriginalImage(file: File, nextCrop: ImageCrop) {
@@ -141,10 +162,14 @@ export function ImageUploadField({
           ? "Photo uploaded and saved."
           : "Photo uploaded. Positioning will save with this form."
       );
+      return true;
     } catch (error) {
       setUploadPreviewValue(null);
       onChangePreview?.(value);
-      setMessage(error instanceof Error ? error.message : "That image could not be uploaded.");
+      setMessage(
+        `${error instanceof Error ? error.message : "That image could not be uploaded."} The form will save without this image unless you retry.`
+      );
+      return false;
     }
   }
 
@@ -153,9 +178,11 @@ export function ImageUploadField({
       const nextValue = await resizeImageFile(file, isRound ? 900 : 1600);
       updateValue(nextValue);
       setMessage("Image added. Positioning will save with this form.");
+      return true;
     } catch {
       setUploadPreviewValue(null);
-      setMessage("That image could not be processed. Try a different photo.");
+      setMessage("That image could not be processed. The form will save without this image unless you retry.");
+      return false;
     }
   }
 
@@ -166,6 +193,25 @@ export function ImageUploadField({
     setPendingFile(null);
     setPendingPreview(null);
     setEditorOpen(false);
+  }
+
+  function retryFailedUpload() {
+    if (!failedUpload) return;
+    setPendingFile(failedUpload.file);
+    setPendingPreview(failedUpload.preview);
+    setInternalCrop(normalizeImageCrop(failedUpload.crop));
+    setFailedUpload(null);
+    setEditorOpen(true);
+    setMessage(null);
+  }
+
+  function removeFailedUpload() {
+    if (failedUpload) {
+      URL.revokeObjectURL(failedUpload.preview);
+    }
+    setFailedUpload(null);
+    setUploadPreviewValue(null);
+    setMessage("Failed image removed. It will not be saved or counted.");
   }
 
   return (
@@ -187,12 +233,25 @@ export function ImageUploadField({
         <span className="relative z-10 rounded-full bg-white/90 px-3 py-1.5 shadow-sm">
           {previewValue ? changeLabel : uploadLabel}
         </span>
-        <input type="file" accept="image/*" className="sr-only" onChange={handleFile} />
+        <input type="file" accept={SUPPORTED_IMAGE_TYPES.join(",")} className="sr-only" onChange={handleFile} />
       </label>
       <input type="hidden" name={name} value={value} />
       <input type="hidden" name={resolvedCropName} value={JSON.stringify(crop)} />
       {helperText ? <p className="text-xs text-muted-foreground">{helperText}</p> : null}
+      <p className="text-xs text-muted-foreground">
+        Supported formats: {SUPPORTED_IMAGE_FORMAT_LABEL}. Max size: {formatBytes(MAX_IMAGE_SIZE_BYTES)}.
+      </p>
       {message ? <p className="text-xs text-destructive">{message}</p> : null}
+      {failedUpload ? (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="text-xs font-medium text-primary underline-offset-4 hover:underline" onClick={retryFailedUpload}>
+            Retry
+          </button>
+          <button type="button" className="text-xs font-medium text-muted-foreground underline-offset-4 hover:underline" onClick={removeFailedUpload}>
+            Remove
+          </button>
+        </div>
+      ) : null}
       {editorOpen && pendingPreview ? (
         <ImageCropEditor
           aspectLabel={isRound ? "Profile crop" : "Image crop"}
@@ -205,6 +264,11 @@ export function ImageUploadField({
       ) : null}
     </div>
   );
+}
+
+function formatBytes(bytes: number) {
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(mb % 1 === 0 ? 0 : 1)} MB`;
 }
 
 function loadImage(src: string) {

@@ -132,6 +132,7 @@ enum PartyCollaborationStatus {
 enum VendorProfileStatus {
   CLAIMED
   UNCLAIMED
+  VERIFIED
 }
 
 model User {
@@ -550,6 +551,7 @@ model Inquiry {
   listing          Listing?      @relation(fields: [listingId], references: [id], onDelete: SetNull)
   offering         Offering?     @relation(fields: [offeringId], references: [id], onDelete: SetNull)
   conversation     Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  quoteRequest     QuoteRequest?
 
   @@index([buyerId])
   @@index([conversationId])
@@ -578,6 +580,8 @@ model QuoteRequest {
   id              String             @id @default(cuid())
   buyerId         String
   vendorId        String
+  inquiryId       String?            @unique
+  conversationId  String?
   offeringId      String?
   eventDate       DateTime?
   eventLocation   String
@@ -590,8 +594,12 @@ model QuoteRequest {
 
   buyer           User               @relation("BuyerQuoteRequests", fields: [buyerId], references: [id], onDelete: Cascade)
   vendor          VendorProfile      @relation("VendorQuoteRequests", fields: [vendorId], references: [id], onDelete: Cascade)
+  inquiry         Inquiry?           @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  conversation    Conversation?      @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   offering        Offering?          @relation(fields: [offeringId], references: [id], onDelete: SetNull)
   quote           Quote?
+
+  @@index([conversationId])
 }
 
 model Quote {
@@ -628,6 +636,7 @@ model Conversation {
   listing          Listing?      @relation(fields: [listingId], references: [id], onDelete: SetNull)
   offering         Offering?     @relation(fields: [offeringId], references: [id], onDelete: SetNull)
   inquiries        Inquiry[]
+  quoteRequests    QuoteRequest[]
   messages         Message[]
 
   @@unique([buyerId, vendorId])

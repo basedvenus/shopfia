@@ -19,11 +19,9 @@ import { Badge } from "@/components/ui/badge";
 import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
+import { getVendorTrustStatus } from "@/lib/vendor-status";
 
 export const dynamic = "force-dynamic";
-
-const fallbackImage =
-  "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1200&q=80";
 
 export default async function OfferingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -60,9 +58,9 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
 
   if (!offering || !offering.active) return notFound();
 
-  const photos = offering.photos.length > 0 ? offering.photos : [fallbackImage];
+  const photos = offering.photos;
   const photoCrops = getImageCrops(offering.photoCrops);
-  const galleryPhotos = [photos[0], photos[1] ?? photos[0], photos[2] ?? photos[0]];
+  const galleryPhotos = photos.slice(0, 3);
   const galleryCrops = [
     photoCrops[0] ?? normalizeImageCrop(null),
     photoCrops[1] ?? photoCrops[0] ?? normalizeImageCrop(null),
@@ -82,6 +80,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
     includeFounder: false,
     vendorContext: true
   });
+  const trustStatus = getVendorTrustStatus(offering.vendor);
   const eventTags = [
     ...[
       offering.category.name,
@@ -104,15 +103,19 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
         <section className="space-y-7">
           <div className="grid gap-3 md:grid-cols-[1.45fr_0.68fr]">
             <div className="relative min-h-[430px] overflow-hidden rounded-[1.15rem] bg-[#f8ece9] shadow-soft md:min-h-[520px]">
-              <Image
-                src={galleryPhotos[0]}
-                alt={offering.title}
-                fill
-                priority
-                sizes="(min-width: 1280px) 58vw, 100vw"
-                className="object-cover"
-                style={imageCropToCss(galleryCrops[0])}
-              />
+              {galleryPhotos[0] ? (
+                <Image
+                  src={galleryPhotos[0]}
+                  alt={offering.title}
+                  fill
+                  priority
+                  sizes="(min-width: 1280px) 58vw, 100vw"
+                  className="object-cover"
+                  style={imageCropToCss(galleryCrops[0])}
+                />
+              ) : (
+                <NeutralOfferingPlaceholder label={offering.category.name} />
+              )}
               <button
                 type="button"
                 className="absolute right-5 top-5 grid h-12 w-12 place-items-center rounded-full bg-white/95 text-primary shadow-soft"
@@ -135,7 +138,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
                     className="object-cover"
                     style={imageCropToCss(galleryCrops[index + 1])}
                   />
-                  {index === 1 ? (
+                  {index === 1 && photos.length > 2 ? (
                     <div className="absolute inset-x-0 bottom-5 flex justify-center">
                       <span className="inline-flex items-center gap-2 rounded-full bg-white/95 px-5 py-3 text-sm font-medium shadow-soft">
                         <Images className="h-4 w-4" />
@@ -158,8 +161,11 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
                 {tag}
               </Badge>
             ))}
-            <Badge className="rounded-full px-5 py-2 text-sm font-medium" variant="accent">
-              Verified Vendor
+            <Badge
+              className="rounded-full px-5 py-2 text-sm font-medium"
+              variant={trustStatus.tone === "verified" ? "accent" : "outline"}
+            >
+              {trustStatus.label} Vendor
             </Badge>
             <ProfileBadge badge={vendorBadge} />
           </div>
@@ -303,6 +309,14 @@ function InfoPanel({
         {value}
       </div>
       <p className="text-sm leading-6 text-muted-foreground">{detail}</p>
+    </div>
+  );
+}
+
+function NeutralOfferingPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="absolute inset-0 grid place-items-center bg-[#f8ece9] px-5 text-center text-sm font-medium text-muted-foreground">
+      {label}
     </div>
   );
 }

@@ -97,9 +97,14 @@ export async function POST(request: Request) {
     const quoteRequest =
       (await tx.quoteRequest.findFirst({
         where: {
-          buyerId: conversation.buyerId,
-          offeringId: conversation.offeringId ?? undefined,
-          vendorId: conversation.vendorProfileId
+          OR: [
+            { conversationId: conversation.id },
+            {
+              buyerId: conversation.buyerId,
+              offeringId: conversation.offeringId ?? undefined,
+              vendorId: conversation.vendorProfileId
+            }
+          ]
         },
         orderBy: { createdAt: "desc" }
       })) ??
@@ -108,8 +113,10 @@ export async function POST(request: Request) {
           attachments: latestInquiry?.inspirationUrls ?? [],
           budgetCents: latestInquiry?.budgetCents ?? null,
           buyerId: conversation.buyerId,
+          conversationId: conversation.id,
           eventDate: latestInquiry?.eventDate ?? null,
           eventLocation,
+          inquiryId: latestInquiry?.id ?? null,
           notes: latestInquiry?.message ?? null,
           offeringId: conversation.offeringId ?? null,
           status: QuoteRequestStatus.SUBMITTED,

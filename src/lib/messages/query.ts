@@ -201,10 +201,13 @@ export async function getMessagesPayload({
     conversations.length > 0
       ? await db.quoteRequest.findMany({
           where: {
-            OR: conversations.map((conversation) => ({
-              buyerId: conversation.buyerId,
-              vendorId: conversation.vendorProfileId
-            }))
+            OR: [
+              { conversationId: { in: conversationIds } },
+              ...conversations.map((conversation) => ({
+                buyerId: conversation.buyerId,
+                vendorId: conversation.vendorProfileId
+              }))
+            ]
           },
           include: {
             offering: { select: { photos: true, title: true } },
@@ -237,6 +240,7 @@ export async function getMessagesPayload({
         (quoteRequest) =>
           quoteRequest.buyerId === conversation.buyerId &&
           quoteRequest.vendorId === conversation.vendorProfileId &&
+          (!quoteRequest.conversationId || quoteRequest.conversationId === conversation.id) &&
           (!quoteRequest.offeringId || !conversation.offeringId || quoteRequest.offeringId === conversation.offeringId)
       )
     )

@@ -23,7 +23,7 @@ type VendorOption = {
   city: string;
   state: string | null;
   logoUrl: string | null;
-  status?: "CLAIMED" | "UNCLAIMED";
+  status?: "CLAIMED" | "UNCLAIMED" | "VERIFIED";
 };
 
 type UserOption = {

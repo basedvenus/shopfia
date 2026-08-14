@@ -33,6 +33,7 @@ import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { getMarketplaceFeeConfig } from "@/lib/services/marketplace-fees";
 import { getConnectReadiness, retrieveConnectAccount } from "@/lib/stripe";
 import { basisPointsToPercent, formatCurrency, formatPercent } from "@/lib/utils";
+import { getVendorTrustStatus } from "@/lib/vendor-status";
 
 export const dynamic = "force-dynamic";
 
@@ -175,7 +176,8 @@ export default async function VendorDashboardPage({
 
   const categoryNames = vendor.categories.map((item) => item.category.name);
   const allOfferingPhotos = vendor.offerings.flatMap((offering) => offering.photos);
-  const heroImage = vendor.coverPhoto ?? vendor.photos[0] ?? allOfferingPhotos[0] ?? fallbackHero;
+  const heroImage = vendor.coverPhoto ?? vendor.photos[0] ?? allOfferingPhotos[0] ?? null;
+  const trustStatus = getVendorTrustStatus(vendor);
   const seller = vendor.shop?.seller;
   const paidOrders = vendor.orders.filter((order) => paidOrderStatuses.has(order.status));
   const completedOrders = vendor.orders.filter((order) => order.status === "completed");
@@ -201,11 +203,10 @@ export default async function VendorDashboardPage({
     ...(vendor.serviceAreaNotes ? [vendor.serviceAreaNotes] : [])
   ]).slice(0, 10);
   const portfolioImages = unique([
-    heroImage,
+    ...(heroImage ? [heroImage] : []),
     ...vendor.photos,
     ...allOfferingPhotos,
-    ...vendor.taggedPartyPhotos.map((photo) => partyPhotoUrl(photo.id, photo.updatedAt, { width: 1000 })),
-    fallbackPortfolio
+    ...vendor.taggedPartyPhotos.map((photo) => partyPhotoUrl(photo.id, photo.updatedAt, { width: 1000 }))
   ]).slice(0, 10);
   const partyPosts = buildPartyPosts(vendor, heroImage);
   const reviews = vendor.orders.flatMap((order) => (order.review ? [{ ...order.review, order }] : []));
@@ -214,7 +215,11 @@ export default async function VendorDashboardPage({
     <div className="-mx-3 space-y-6 pb-10 sm:mx-0">
       <section id="profile-assets" className="scroll-mt-24 overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-[0_22px_70px_rgba(72,44,43,0.08)]">
         <div className="relative min-h-[270px] overflow-hidden bg-[#f8ece9]">
-          <Image src={heroImage} alt={`${vendor.name} cover`} fill priority className="object-cover" />
+          {heroImage ? (
+            <Image src={heroImage} alt={`${vendor.name} cover`} fill priority className="object-cover" />
+          ) : (
+            <NeutralDashboardPlaceholder label={categoryNames[0] ?? "ShopFia vendor"} />
+          )}
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(25,22,22,0.72),rgba(25,22,22,0.22)_48%,rgba(25,22,22,0.08))]" />
           <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -226,10 +231,10 @@ export default async function VendorDashboardPage({
                 />
                 <div className="max-w-3xl">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-                    {vendor.verified ? (
+                    {trustStatus.label ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-white/18 px-3 py-1 text-xs font-medium backdrop-blur">
-                        <BadgeCheck className="h-3.5 w-3.5" />
-                        Verified vendor
+                        {trustStatus.tone === "verified" ? <BadgeCheck className="h-3.5 w-3.5" /> : null}
+                        {trustStatus.label} vendor
                       </span>
                     ) : null}
                     {categoryNames.slice(0, 4).map((category) => (
@@ -404,12 +409,16 @@ export default async function VendorDashboardPage({
             {vendor.offerings.map((offering) => (
               <article key={offering.id} className="overflow-hidden rounded-[1.75rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]">
                 <div className="relative aspect-[4/3] bg-[#f8ece9]">
-                  <Image
-                    src={offering.photos[0] ?? heroImage ?? fallbackService}
-                    alt={offering.title}
-                    fill
-                    className="object-cover"
-                  />
+                  {offering.photos[0] ? (
+                    <Image
+                      src={offering.photos[0]}
+                      alt={offering.title}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <NeutralDashboardPlaceholder label={offering.category.name} />
+                  )}
                   <div className="absolute left-3 top-3 flex flex-wrap gap-1">
                     {[
                       offering.category,
@@ -581,18 +590,28 @@ export default async function VendorDashboardPage({
           title="Image-first proof of your style"
           body="Use this gallery as a social portfolio: finished details, installation shots, closeups, and customer-tagged moments."
         />
-        <div className="grid auto-rows-[170px] grid-cols-2 gap-3 md:grid-cols-4 lg:auto-rows-[210px]">
-          {portfolioImages.map((image, index) => (
-            <div
-              key={`${image}-${index}`}
-              className={`relative overflow-hidden rounded-[1.5rem] bg-[#f8ece9] ${
-                index === 0 || index === 5 ? "col-span-2 row-span-2" : ""
-              }`}
-            >
-              <Image src={image} alt={`${vendor.name} portfolio ${index + 1}`} fill className="object-cover" />
-            </div>
-          ))}
-        </div>
+        {portfolioImages.length ? (
+          <div className="grid auto-rows-[170px] grid-cols-2 gap-3 md:grid-cols-4 lg:auto-rows-[210px]">
+            {portfolioImages.map((image, index) => (
+              <div
+                key={`${image}-${index}`}
+                className={`relative overflow-hidden rounded-[1.5rem] bg-[#f8ece9] ${
+                  index === 0 || index === 5 ? "col-span-2 row-span-2" : ""
+                }`}
+              >
+                <Image src={image} alt={`${vendor.name} portfolio image ${index + 1}`} fill className="object-cover" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<ImagePlus className="h-5 w-5" />}
+            title="No portfolio photos yet"
+            body="Upload real cover, portfolio, or offering photos before this gallery appears on your storefront."
+            href="/onboarding#profile"
+            action="Upload photos"
+          />
+        )}
       </section>
 
       <section id="availability" className="scroll-mt-24 grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
@@ -842,7 +861,7 @@ type PartyPostSource = {
   }>;
 };
 
-function buildPartyPosts(vendor: PartyPostSource, heroImage: string) {
+function buildPartyPosts(vendor: PartyPostSource, heroImage: string | null) {
   const photoPosts = vendor.taggedPartyPhotos.map((photo) => ({
     id: photo.id,
     credit: formatHost(photo.event?.user),
@@ -870,7 +889,7 @@ function buildPartyPosts(vendor: PartyPostSource, heroImage: string) {
       };
     });
 
-  return [...photoPosts, ...eventPosts].slice(0, 8);
+  return [...photoPosts, ...eventPosts].filter((post) => Boolean(post.image)).slice(0, 8);
 }
 
 function countRepeatClients(buyerIds: string[]) {
@@ -946,6 +965,14 @@ function Panel({
   return (
     <div id={id} className={`rounded-[2rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.07)] ${className}`}>
       {children}
+    </div>
+  );
+}
+
+function NeutralDashboardPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="absolute inset-0 grid place-items-center bg-[#f8ece9] px-5 text-center text-sm font-medium text-muted-foreground">
+      {label}
     </div>
   );
 }
