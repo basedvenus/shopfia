@@ -361,6 +361,7 @@ function ConversationThread({
   const messageCount = conversation.messages.length + conversation.inquiries.length;
   const latestQuoteRequest =
     [...conversation.quoteRequests].reverse().find((quoteRequest) => quoteRequest.quote) ?? null;
+  const activeQuoteRequest = getActiveQuoteRequest(conversation.quoteRequests);
 
   function openQuoteBuilder(quoteRequest: QuoteRequestItem | null = latestQuoteRequest) {
     setQuoteBuilderQuoteRequest(quoteRequest);
@@ -441,6 +442,19 @@ function ConversationThread({
       </div>
 
       <div className="shrink-0 border-t border-[#f0dfda] bg-white px-2.5 py-2 md:px-4">
+        {activeQuoteRequest ? (
+          <CompactQuoteStatusBanner
+            quoteRequest={activeQuoteRequest}
+            viewerIsVendor={viewerIsVendor}
+            onOpen={() => {
+              if (viewerIsVendor && !isPaidBookingOrder(getLatestQuoteOrder(activeQuoteRequest.quote)?.status)) {
+                openQuoteBuilder(activeQuoteRequest);
+                return;
+              }
+              setReviewQuoteRequest(activeQuoteRequest);
+            }}
+          />
+        ) : null}
         <div className="rounded-[1.1rem] border border-[#eadbd7] bg-[#fffdfa] p-1.5 shadow-sm md:rounded-[1.35rem] md:p-2">
           <Textarea
             name="body"
@@ -558,13 +572,15 @@ function ConversationItems({
           <InquiryBriefCard key={inquiry.id} inquiry={inquiry} createdAt={inquiry.createdAt} />
         ))}
       {conversation.quoteRequests.map((quoteRequest) => (
-        <QuoteWorkflowCard
-          key={quoteRequest.id}
-          quoteRequest={quoteRequest}
-          onBuildQuote={onBuildQuote}
-          onReviewQuote={onReviewQuote}
-          viewerIsVendor={viewerIsVendor}
-        />
+        quoteRequest.quote ? null : (
+          <QuoteWorkflowCard
+            key={quoteRequest.id}
+            quoteRequest={quoteRequest}
+            onBuildQuote={onBuildQuote}
+            onReviewQuote={onReviewQuote}
+            viewerIsVendor={viewerIsVendor}
+          />
+        )
       ))}
       {viewerIsVendor && conversation.inquiries.length > 0 && conversation.quoteRequests.length === 0 ? (
         <BuildQuotePromptCard onBuildQuote={onBuildQuote} />
@@ -980,6 +996,78 @@ function QuoteWorkflowCard({
       </div>
       </div>
     </article>
+  );
+}
+
+function CompactQuoteStatusBanner({
+  onOpen,
+  quoteRequest,
+  viewerIsVendor
+}: {
+  onOpen: () => void;
+  quoteRequest: QuoteRequestItem;
+  viewerIsVendor: boolean;
+}) {
+  const quote = quoteRequest.quote;
+  if (!quote) return null;
+
+  const latestOrder = getLatestQuoteOrder(quote);
+  const isBooked = isPaidBookingOrder(latestOrder?.status);
+  const quoteDetails = parseQuoteDetails(quote.lineItemsJson);
+  const title = quoteDetails.title ?? quoteRequest.offering?.title ?? "Custom Event Quote";
+  const totalLabel = formatBudget(quote.amountCents);
+  const statusLabel = isBooked
+    ? "Booking confirmed"
+    : viewerIsVendor
+      ? "Quote sent"
+      : "Quote ready";
+  const actionLabel = isBooked
+    ? "View"
+    : viewerIsVendor
+      ? "Manage"
+      : "Review";
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`mb-2 flex w-full items-center gap-3 rounded-[1rem] border px-3 py-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+        isBooked
+          ? "border-[#cfe1c8] bg-[#f7fbf4]"
+          : "border-[#eadbd7] bg-[#fffaf6]"
+      }`}
+    >
+      <span
+        className={`grid h-9 w-9 shrink-0 place-items-center rounded-[0.8rem] ${
+          isBooked ? "bg-[#eef7ea] text-[#5f7658]" : "bg-[#fbf1ed] text-[#9b6b65]"
+        }`}
+      >
+        {isBooked ? <CheckCircle2 className="h-4 w-4" /> : <ReceiptText className="h-4 w-4" />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          className={`block text-[11px] font-bold uppercase tracking-[0.12em] ${
+            isBooked ? "text-[#5f7658]" : "text-[#9b6b65]"
+          }`}
+        >
+          {statusLabel}
+        </span>
+        <span className="block truncate text-sm font-bold text-[#2f2626]">
+          {isBooked ? "Your party is officially booked" : title}
+        </span>
+      </span>
+      <span className="hidden shrink-0 rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-[#2f2626] shadow-sm sm:inline-flex">
+        {totalLabel}
+      </span>
+      <span
+        className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
+          isBooked ? "bg-[#e9f4e4] text-[#5f7658]" : "bg-[#f4cfca]/50 text-[#8f5f5b]"
+        }`}
+      >
+        {actionLabel}
+        <ChevronRight className="h-3.5 w-3.5" />
+      </span>
+    </button>
   );
 }
 
@@ -2063,6 +2151,18 @@ function formatDepositPercent(depositCents: number, totalCents: number) {
 
 function getLatestQuoteOrder(quote: QuoteRequestItem["quote"] | null | undefined) {
   return quote?.orders?.[0] ?? null;
+}
+
+function getActiveQuoteRequest(quoteRequests: QuoteRequestItem[]) {
+  return (
+    [...quoteRequests]
+      .reverse()
+      .find((quoteRequest) => {
+        if (!quoteRequest.quote) return false;
+        const latestOrder = getLatestQuoteOrder(quoteRequest.quote);
+        return latestOrder?.status !== "completed";
+      }) ?? null
+  );
 }
 
 function isPaidBookingOrder(status: string | null | undefined) {
