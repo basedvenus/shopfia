@@ -13,38 +13,46 @@ export function ProfileBadge({ badge, className, light = false }: ProfileBadgePr
 
   const isFounder = badge.kind === "founder";
   const isOriginalVendor = badge.kind === "original-vendor";
+  const label = badge.kind === "original-member" ? "Original" : badge.label;
+  const accessibleLabel = badge.label;
+  const baseClassName =
+    "inline-flex h-6 max-w-max min-w-0 items-center gap-[5px] whitespace-nowrap rounded-full border px-[9px] text-[10px] font-semibold leading-none tracking-[0.14em] shadow-none";
 
   if (isFounder) {
     return (
       <span
+        aria-label={accessibleLabel}
+        data-profile-badge={badge.kind}
         className={cn(
-          "inline-flex h-[22px] max-w-full items-center gap-1 rounded-full border px-1.5 text-[10px] font-bold uppercase leading-none tracking-[0.04em] sm:h-6 sm:px-2 sm:text-[11px]",
-          "border-[#f0a8b6] bg-[#f59aad] text-white shadow-[0_7px_16px_rgba(214,72,116,0.18)]",
-          light && "border-white/45 bg-white text-[#b85268] shadow-sm backdrop-blur",
+          baseClassName,
+          "border-[#e8b7bf] bg-[#f6d8dd] text-[#9f5863]",
+          light && "border-white/35 bg-white/20 text-white backdrop-blur",
           className
         )}
         title={badge.title}
       >
-        <CandleIcon className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
-        <span className="truncate">{badge.label}</span>
+        <CandleIcon className="h-[11px] w-[11px] shrink-0" />
+        <span>{label}</span>
       </span>
     );
   }
 
   return (
     <span
+      aria-label={accessibleLabel}
+      data-profile-badge={badge.kind}
       className={cn(
-        "inline-flex h-[22px] max-w-full items-center gap-1 rounded-full border px-1.5 text-[10px] font-semibold uppercase leading-none tracking-[0.04em] shadow-sm sm:h-6 sm:px-2 sm:text-[11px]",
+        baseClassName,
         isOriginalVendor
-          ? "border-[#cddfbd] bg-[#f5fbef] text-[#5f7c4c] shadow-[0_6px_16px_rgba(102,132,76,0.11)]"
-          : "border-[#e7d0b4] bg-[#fffaf3] text-[#9b633d] shadow-[0_6px_16px_rgba(180,126,78,0.11)]",
-        light && "border-white/30 bg-white/20 text-white shadow-sm backdrop-blur",
+          ? "border-[#d7dfca] bg-[#fbfcf7] text-[#657653]"
+          : "border-[#ead8bf] bg-[#fffaf1] text-[#8a6a45]",
+        light && "border-white/30 bg-white/15 text-white backdrop-blur",
         className
       )}
       title={badge.title}
     >
-      <Crown className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" aria-hidden="true" />
-      <span className="truncate">{badge.label}</span>
+      <Crown className="h-[11px] w-[11px] shrink-0" aria-hidden="true" />
+      <span>{label}</span>
     </span>
   );
 }

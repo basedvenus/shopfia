@@ -1,12 +1,13 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Crown, MapPin, Store, Tag } from "lucide-react";
+import { MapPin, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ExploreSearch } from "@/components/explore/explore-search";
 import { VendorCard } from "@/components/explore/vendor-card";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { CroppedImage } from "@/components/ui/cropped-image";
+import { ProfileBadges } from "@/components/badges/profile-badge";
 import { getExploreData } from "@/lib/data/explore";
 import { auth } from "@/auth";
 import { getOriginalMemberCutoffDate, getProfileBadges } from "@/lib/profile-badges";
@@ -280,7 +281,7 @@ function PartyExploreCard({
         <div className="flex min-w-0 items-center gap-1.5 pt-0.5">
           <HostAvatar image={party.user.image} name={party.user.name ?? party.user.username} />
           <span className="min-w-0 truncate text-xs font-medium text-[#5f534e]">{hostName}</span>
-          <IconBadges badges={badges} />
+          <ProfileBadges badges={badges} className="ml-auto shrink-0" />
         </div>
         {party.theme ? (
           <span className="inline-flex h-7 max-w-full items-center rounded-full bg-[#fff7f4] px-2.5 text-[13px] font-medium text-primary/80">
@@ -301,27 +302,6 @@ function HostAvatar({ image, name }: { image: string | null; name: string | null
   return (
     <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
       {(name ?? "S").slice(0, 2).toUpperCase()}
-    </span>
-  );
-}
-
-function IconBadges({ badges }: { badges: ReturnType<typeof getProfileBadges> }) {
-  if (badges.length === 0) return null;
-
-  return (
-    <span className="ml-auto inline-flex min-w-0 shrink-0 items-center gap-0.5">
-      {badges.map((badge) => {
-        const Icon = badge.kind === "founder" ? Crown : Store;
-        return (
-          <span
-            key={badge.kind}
-            title={badge.title}
-            className="grid h-4 w-4 place-items-center rounded-full border border-[#eadbd7] bg-[#fff7f4] text-primary/80"
-          >
-            <Icon className="h-2.5 w-2.5" aria-hidden="true" />
-          </span>
-        );
-      })}
     </span>
   );
 }
