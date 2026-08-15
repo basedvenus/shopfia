@@ -12,19 +12,20 @@ export function ProfileBadge({ badge, className, light = false }: ProfileBadgePr
   if (!badge) return null;
 
   const isFounder = badge.kind === "founder";
+  const isOriginalVendor = badge.kind === "original-vendor";
 
   if (isFounder) {
     return (
       <span
         className={cn(
-          "inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-[13px] font-medium uppercase leading-none tracking-[0.08em] sm:h-8 sm:px-3 sm:text-[13px]",
-          "border-[#f0b1bc]/75 bg-[linear-gradient(135deg,#fff3f5_0%,#f8b3c0_54%,#ee90a5_100%)] text-[#a94d63] shadow-[0_6px_16px_rgba(214,72,116,0.10)]",
-          light && "border-white/35 bg-white/20 text-white shadow-sm backdrop-blur",
+          "inline-flex h-6 max-w-full items-center gap-1 rounded-full border px-2 text-[11px] font-bold uppercase leading-none tracking-[0.06em] sm:h-7 sm:px-2.5 sm:text-xs",
+          "border-[#f0a8b6] bg-[#f59aad] text-white shadow-[0_7px_16px_rgba(214,72,116,0.18)]",
+          light && "border-white/45 bg-white text-[#b85268] shadow-sm backdrop-blur",
           className
         )}
         title={badge.title}
       >
-        <CandleIcon className="h-4 w-4 shrink-0" />
+        <CandleIcon className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
         <span className="truncate">{badge.label}</span>
       </span>
     );
@@ -33,14 +34,16 @@ export function ProfileBadge({ badge, className, light = false }: ProfileBadgePr
   return (
     <span
       className={cn(
-        "inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-[13px] font-semibold uppercase leading-none tracking-[0.08em] shadow-sm sm:h-8 sm:px-3 sm:text-[13px]",
-        "border-[#eadbc9] bg-[linear-gradient(135deg,#fffaf5,#f4e9dc)] text-[#9b633d] shadow-[0_8px_22px_rgba(180,126,78,0.14)]",
+        "inline-flex h-6 max-w-full items-center gap-1 rounded-full border px-2 text-[11px] font-semibold uppercase leading-none tracking-[0.06em] shadow-sm sm:h-7 sm:px-2.5 sm:text-xs",
+        isOriginalVendor
+          ? "border-[#cddfbd] bg-[#f5fbef] text-[#5f7c4c] shadow-[0_6px_16px_rgba(102,132,76,0.11)]"
+          : "border-[#e7d0b4] bg-[#fffaf3] text-[#9b633d] shadow-[0_6px_16px_rgba(180,126,78,0.11)]",
         light && "border-white/30 bg-white/20 text-white shadow-sm backdrop-blur",
         className
       )}
       title={badge.title}
     >
-      <Crown className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <Crown className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
       <span className="truncate">{badge.label}</span>
     </span>
   );
@@ -93,7 +96,7 @@ export function ProfileBadges({
   if (badges.length === 0) return null;
 
   return (
-    <span className={cn("inline-flex min-w-0 flex-wrap items-center gap-1.5", className)}>
+    <span className={cn("inline-flex min-w-0 flex-wrap items-center gap-1", className)}>
       {badges.map((badge) => (
         <ProfileBadge key={badge.kind} badge={badge} light={light} />
       ))}
