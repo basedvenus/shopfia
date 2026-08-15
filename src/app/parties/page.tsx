@@ -339,7 +339,7 @@ export default async function PartiesPage({
                           </span>
                         )}
                         <span className="min-w-0 truncate text-[13px] text-muted-foreground">{hostSummary}</span>
-                        <ProfileBadge badge={hostBadge} className="max-w-[112px] shrink-0" />
+                        <ProfileBadge badge={hostBadge} className="max-w-[82px] shrink-0" />
                       </div>
                       <span className="inline-flex h-7 max-w-[42%] shrink-0 items-center rounded-full bg-[#fff7f4] px-2.5 text-[13px] text-muted-foreground">
                         <span className="truncate">

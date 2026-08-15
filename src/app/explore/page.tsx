@@ -309,16 +309,16 @@ function IconBadges({ badges }: { badges: ReturnType<typeof getProfileBadges> })
   if (badges.length === 0) return null;
 
   return (
-    <span className="ml-auto inline-flex min-w-0 shrink-0 items-center gap-1">
+    <span className="ml-auto inline-flex min-w-0 shrink-0 items-center gap-0.5">
       {badges.map((badge) => {
         const Icon = badge.kind === "founder" ? Crown : Store;
         return (
           <span
             key={badge.kind}
             title={badge.title}
-            className="grid h-5 w-5 place-items-center rounded-full border border-[#eadbd7] bg-[#fff7f4] text-primary/80"
+            className="grid h-4 w-4 place-items-center rounded-full border border-[#eadbd7] bg-[#fff7f4] text-primary/80"
           >
-            <Icon className="h-3 w-3" aria-hidden="true" />
+            <Icon className="h-2.5 w-2.5" aria-hidden="true" />
           </span>
         );
       })}

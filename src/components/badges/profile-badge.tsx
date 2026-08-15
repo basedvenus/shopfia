@@ -18,14 +18,14 @@ export function ProfileBadge({ badge, className, light = false }: ProfileBadgePr
     return (
       <span
         className={cn(
-          "inline-flex h-6 max-w-full items-center gap-1 rounded-full border px-2 text-[11px] font-bold uppercase leading-none tracking-[0.06em] sm:h-7 sm:px-2.5 sm:text-xs",
+          "inline-flex h-[22px] max-w-full items-center gap-1 rounded-full border px-1.5 text-[10px] font-bold uppercase leading-none tracking-[0.04em] sm:h-6 sm:px-2 sm:text-[11px]",
           "border-[#f0a8b6] bg-[#f59aad] text-white shadow-[0_7px_16px_rgba(214,72,116,0.18)]",
           light && "border-white/45 bg-white text-[#b85268] shadow-sm backdrop-blur",
           className
         )}
         title={badge.title}
       >
-        <CandleIcon className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
+        <CandleIcon className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
         <span className="truncate">{badge.label}</span>
       </span>
     );
@@ -34,7 +34,7 @@ export function ProfileBadge({ badge, className, light = false }: ProfileBadgePr
   return (
     <span
       className={cn(
-        "inline-flex h-6 max-w-full items-center gap-1 rounded-full border px-2 text-[11px] font-semibold uppercase leading-none tracking-[0.06em] shadow-sm sm:h-7 sm:px-2.5 sm:text-xs",
+        "inline-flex h-[22px] max-w-full items-center gap-1 rounded-full border px-1.5 text-[10px] font-semibold uppercase leading-none tracking-[0.04em] shadow-sm sm:h-6 sm:px-2 sm:text-[11px]",
         isOriginalVendor
           ? "border-[#cddfbd] bg-[#f5fbef] text-[#5f7c4c] shadow-[0_6px_16px_rgba(102,132,76,0.11)]"
           : "border-[#e7d0b4] bg-[#fffaf3] text-[#9b633d] shadow-[0_6px_16px_rgba(180,126,78,0.11)]",
@@ -43,7 +43,7 @@ export function ProfileBadge({ badge, className, light = false }: ProfileBadgePr
       )}
       title={badge.title}
     >
-      <Crown className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+      <Crown className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" aria-hidden="true" />
       <span className="truncate">{badge.label}</span>
     </span>
   );
