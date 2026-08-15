@@ -45,7 +45,7 @@ export function FavoriteToggle({
       <form action={toggle}>
         <button
           type="submit"
-          className="grid h-[34px] w-[34px] place-items-center rounded-full border border-white/75 bg-white/90 text-foreground shadow-[0_4px_14px_rgba(47,38,38,0.16)] backdrop-blur transition hover:bg-white sm:h-[40px] sm:w-[40px]"
+          className="grid h-[34px] w-[34px] place-items-center rounded-full border border-white/75 bg-white/90 text-foreground shadow-[0_4px_14px_rgba(47,38,38,0.16)] backdrop-blur transition hover:bg-white sm:h-9 sm:w-9"
           aria-label={label ?? (isSaved ? "Unsave" : "Save")}
           aria-pressed={isSaved}
         >
