@@ -7,7 +7,7 @@ type FavoriteToggleProps = {
   label?: string;
   targetId: string;
   targetType: FavoriteTargetType;
-  variant?: "icon" | "pill";
+  variant?: "floating" | "icon" | "pill";
 };
 
 export function FavoriteToggle({
@@ -36,6 +36,21 @@ export function FavoriteToggle({
           <Heart className={`h-4 w-4 ${isSaved ? "fill-current text-primary" : ""}`} />
           {label ?? (isSaved ? "Saved" : "Save")}
         </Button>
+      </form>
+    );
+  }
+
+  if (variant === "floating") {
+    return (
+      <form action={toggle}>
+        <button
+          type="submit"
+          className="grid h-[34px] w-[34px] place-items-center rounded-full border border-white/75 bg-white/90 text-foreground shadow-[0_4px_14px_rgba(47,38,38,0.16)] backdrop-blur transition hover:bg-white sm:h-[40px] sm:w-[40px]"
+          aria-label={label ?? (isSaved ? "Unsave" : "Save")}
+          aria-pressed={isSaved}
+        >
+          <Heart className={`h-[17px] w-[17px] sm:h-[18px] sm:w-[18px] ${isSaved ? "fill-current text-primary" : ""}`} />
+        </button>
       </form>
     );
   }

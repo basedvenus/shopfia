@@ -118,10 +118,10 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
               )}
               <button
                 type="button"
-                className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/95 text-primary shadow-soft sm:right-5 sm:top-5 sm:h-10 sm:w-10"
+                className="absolute right-3 top-3 grid h-[34px] w-[34px] place-items-center rounded-full border border-white/75 bg-white/90 text-primary shadow-[0_4px_14px_rgba(47,38,38,0.16)] backdrop-blur transition hover:bg-white sm:h-[40px] sm:w-[40px]"
                 aria-label="Save listing"
               >
-                <Heart className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+                <Heart className="h-[17px] w-[17px] sm:h-[18px] sm:w-[18px]" />
               </button>
             </div>
             <div className="grid gap-3">

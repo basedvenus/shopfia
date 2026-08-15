@@ -138,6 +138,7 @@ export default async function ListingsPage() {
                         targetType="offering"
                         targetId={listing.offering.id}
                         isSaved={savedOfferingIds.has(listing.offering.id)}
+                        variant="floating"
                       />
                     </div>
                   ) : null}

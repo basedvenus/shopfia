@@ -273,7 +273,7 @@ function SavedCard({
           style={imageCropToCss(normalizeImageCrop(crop))}
         />
         <div className="absolute right-3 top-3 z-20">
-          <FavoriteToggle targetType={targetType} targetId={targetId} isSaved />
+          <FavoriteToggle targetType={targetType} targetId={targetId} isSaved variant="floating" />
         </div>
       </div>
       <CardContent className="p-4">

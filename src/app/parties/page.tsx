@@ -315,8 +315,8 @@ export default async function PartiesPage({
                   <div className={`relative overflow-hidden bg-muted ${tall ? "aspect-[3/4]" : "aspect-[4/5]"}`}>
                     <CroppedImage src={image} alt={party.title} crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                    <div className="absolute right-2 top-2 z-20 sm:right-3 sm:top-3">
-                      <FavoriteToggle targetType="party" targetId={party.id} isSaved={savedPartyIds.has(party.id)} />
+                    <div className="absolute right-3 top-3 z-20">
+                      <FavoriteToggle targetType="party" targetId={party.id} isSaved={savedPartyIds.has(party.id)} variant="floating" />
                     </div>
                     <div className="absolute inset-x-0 bottom-0 p-2.5 text-white sm:p-5">
                       <h2 className="line-clamp-2 text-sm font-semibold tracking-tight sm:text-2xl">{party.title}</h2>

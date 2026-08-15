@@ -187,7 +187,7 @@ function OfferingExploreCard({
           <Badge variant={trustStatus.tone === "verified" ? "accent" : "outline"}>{trustStatus.label}</Badge>
         </div>
         <div className="absolute right-3 top-3 z-20">
-          <FavoriteToggle targetType="offering" targetId={offering.id} isSaved={isSaved} />
+          <FavoriteToggle targetType="offering" targetId={offering.id} isSaved={isSaved} variant="floating" />
         </div>
       </div>
       <div className="space-y-3 p-4">
@@ -261,8 +261,8 @@ function PartyExploreCard({
           crop={crop}
           className="h-full w-full object-cover transition duration-500 hover:scale-[1.03]"
         />
-        <div className="absolute right-2 top-2 z-20 sm:right-3 sm:top-3">
-          <FavoriteToggle targetType="party" targetId={party.id} isSaved={isSaved} />
+        <div className="absolute right-3 top-3 z-20">
+          <FavoriteToggle targetType="party" targetId={party.id} isSaved={isSaved} variant="floating" />
         </div>
       </div>
       <div className="space-y-1.5 p-3">

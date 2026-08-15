@@ -66,8 +66,8 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
         <div className="absolute left-2 top-2 flex gap-1 sm:left-3 sm:top-3 sm:gap-2">
           <Badge variant={trustStatus.tone === "verified" ? "accent" : "outline"}>{trustStatus.label}</Badge>
         </div>
-        <div className="absolute right-1.5 top-1.5 z-20 origin-top-right scale-75 sm:right-3 sm:top-3 sm:scale-100">
-          <FavoriteToggle targetType="vendor" targetId={vendor.id} isSaved={isSaved} />
+        <div className="absolute right-3 top-3 z-20">
+          <FavoriteToggle targetType="vendor" targetId={vendor.id} isSaved={isSaved} variant="floating" />
         </div>
       </div>
       <CardContent className="space-y-2 p-2.5 sm:space-y-3 sm:p-4">
