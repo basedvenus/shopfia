@@ -10,6 +10,11 @@ import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
+import {
+  canShowPartyManagementLinks,
+  getPartyDescriptionForViewer,
+  getVisiblePartyCollaborators
+} from "@/lib/party-public-view";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { getSafeProfileImage } from "@/lib/profile-image";
 
@@ -114,7 +119,6 @@ export default async function EventPage({
   const title = event?.title ?? fallback?.title ?? "Party";
   const theme = event?.theme ?? fallback?.theme ?? null;
   const tags = event?.tags?.length ? event.tags : fallback?.tags ?? [];
-  const description = event?.description ?? fallback?.description ?? "This party is still being filled in.";
   const legacyImages = event?.imageUrls?.length ? event.imageUrls : fallback?.imageUrls ?? [];
   const photos = event?.photos?.length
     ? event.photos.map((photo) => ({
@@ -165,11 +169,17 @@ export default async function EventPage({
     }
   }
   const host = event?.user ?? null;
-  const visibleCollaborators = getVisibleCollaborators(event?.collaborators ?? [], host);
   const hostBadge = getProfileBadge(host, originalMemberCutoff);
   const hostHandle = host?.username ? `@${host.username}` : host?.name ?? "ShopFia host";
   const currentUserId = session?.user?.id ?? null;
   const isOwner = Boolean(currentUserId && host?.id && currentUserId === host.id);
+  const description = getPartyDescriptionForViewer({
+    eventDescription: event?.description,
+    fallbackDescription: fallback?.description,
+    isOwner
+  });
+  const showManagementLinks = canShowPartyManagementLinks(isOwner, Boolean(event));
+  const visibleCollaborators = getVisiblePartyCollaborators(event?.collaborators ?? [], host);
   const editRequested = resolvedSearchParams.edit === "1" || resolvedSearchParams.edit === "true";
   const isEditing = Boolean(editRequested && isOwner && event);
   const formParty = event
@@ -284,7 +294,9 @@ export default async function EventPage({
               {theme ? <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{theme}</Badge> : null}
             </div>
             <h1 className="max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">{title}</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">{description}</p>
+            {description ? (
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">{description}</p>
+            ) : null}
             {event?.location ? (
               <div className="mt-3 inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs text-white/85 backdrop-blur">
                 <MapPin className="h-3.5 w-3.5" />
@@ -305,7 +317,7 @@ export default async function EventPage({
                   <span className="text-white/70">{hostHandle}</span>
                   <ProfileBadge badge={hostBadge} light className="ml-2 align-middle" />
                 </div>
-                {isOwner && event ? (
+                {showManagementLinks && event ? (
                   <Link href={`/events/${event.slug}?edit=1`}>
                     <Button
                       type="button"
@@ -452,9 +464,11 @@ export default async function EventPage({
         </div>
       </section>
 
-      <Link href="/my-parties" className="inline-flex">
-        <Button variant="secondary">Back to My Parties</Button>
-      </Link>
+      {showManagementLinks ? (
+        <Link href="/my-parties" className="inline-flex">
+          <Button variant="secondary">Back to My Parties</Button>
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -486,42 +500,6 @@ function renderHostedBy(
       {collaborators.length > 2 ? ` + ${collaborators.length - 2} others` : ""}
     </>
   );
-}
-
-function getVisibleCollaborators(
-  collaborators: Array<{
-    id: string;
-    role: string;
-    status: string;
-    user: { id: string; image: string | null; name: string | null; username: string | null };
-  }>,
-  host: { id: string; image: string | null; name: string | null; username: string | null } | null
-) {
-  const accepted = collaborators.filter((collaborator) => collaborator.status !== "REMOVED");
-
-  if (accepted.length > 0) {
-    return [...accepted].sort((left, right) => {
-      if (left.role === "MAIN_HOST" && right.role !== "MAIN_HOST") return -1;
-      if (right.role === "MAIN_HOST" && left.role !== "MAIN_HOST") return 1;
-      return 0;
-    });
-  }
-
-  return host
-    ? [
-        {
-          id: "host",
-          role: "MAIN_HOST",
-          status: "ACCEPTED",
-          user: {
-            id: host.id,
-            image: host.image,
-            name: host.name,
-            username: host.username
-          }
-        }
-      ]
-    : [];
 }
 
 function getVendorCategoryLabel(vendor: { categories?: Array<{ category: { name: string } }> }) {
