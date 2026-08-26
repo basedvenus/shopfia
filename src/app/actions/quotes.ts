@@ -27,9 +27,13 @@ export async function createQuoteRequestAction(formData: FormData) {
     attachments: formData.getAll("attachments").map(String).filter(Boolean)
   });
 
-  const vendor = await db.vendorProfile.findUnique({ where: { id: parsed.vendorId } });
+  const vendor = await db.vendorProfile.findUnique({
+    where: { id: parsed.vendorId },
+    include: { managers: { where: { role: "OWNER" }, select: { userId: true }, take: 1 } }
+  });
   if (!vendor) throw new Error("Vendor not found");
-  if (!vendor.userId) throw new Error("This business has not claimed their ShopFia profile yet");
+  const vendorUserId = vendor.userId ?? vendor.managers[0]?.userId ?? null;
+  if (!vendorUserId) throw new Error("This business has not claimed their ShopFia profile yet");
   if (!vendor.verified) throw new Error("Vendor is not accepting platform bookings");
 
   if (parsed.offeringId) {
@@ -59,15 +63,16 @@ export async function createQuoteRequestAction(formData: FormData) {
 
   const conversation = await db.conversation.upsert({
     where: {
-      buyerId_vendorId: {
+      buyerId_vendorId_vendorProfileId: {
         buyerId: session.user.id,
-        vendorId: vendor.userId
+        vendorId: vendorUserId,
+        vendorProfileId: vendor.id
       }
     },
     update: { lastMessageAt: new Date() },
     create: {
       buyerId: session.user.id,
-      vendorId: vendor.userId,
+      vendorId: vendorUserId,
       vendorProfileId: vendor.id
     }
   });
@@ -113,11 +118,14 @@ export async function sendQuoteResponseAction(formData: FormData) {
 
   const quoteRequest = await db.quoteRequest.findUnique({
     where: { id: parsed.quoteRequestId },
-    include: { vendor: true }
+    include: { vendor: { include: { managers: { select: { userId: true } } } } }
   });
   if (!quoteRequest) throw new Error("Quote request not found");
 
-  if (session.user.role !== UserRole.ADMIN && quoteRequest.vendor.userId !== session.user.id) {
+  const canManageVendor =
+    quoteRequest.vendor.userId === session.user.id ||
+    quoteRequest.vendor.managers.some((manager) => manager.userId === session.user.id);
+  if (session.user.role !== UserRole.ADMIN && !canManageVendor) {
     throw new Error("Forbidden");
   }
 
@@ -158,17 +166,19 @@ export async function sendQuoteResponseAction(formData: FormData) {
     data: { status: QuoteRequestStatus.RESPONDED }
   });
 
+  const quoteVendorUserId = quoteRequest.vendor.userId ?? quoteRequest.vendor.managers[0]?.userId ?? null;
   const conversation = quoteRequest.conversationId
     ? await db.conversation.findUnique({
         where: { id: quoteRequest.conversationId },
         select: { id: true, vendorId: true }
       })
-    : quoteRequest.vendor.userId
+    : quoteVendorUserId
       ? await db.conversation.findUnique({
           where: {
-            buyerId_vendorId: {
+            buyerId_vendorId_vendorProfileId: {
               buyerId: quoteRequest.buyerId,
-              vendorId: quoteRequest.vendor.userId
+              vendorId: quoteVendorUserId,
+              vendorProfileId: quoteRequest.vendor.id
             }
           },
           select: { id: true, vendorId: true }

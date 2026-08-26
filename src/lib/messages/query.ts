@@ -155,7 +155,11 @@ export async function getMessagesPayload({
       role === UserRole.ADMIN
         ? undefined
         : {
-            OR: [{ buyerId: currentUserId }, { vendorId: currentUserId }]
+            OR: [
+              { buyerId: currentUserId },
+              { vendorId: currentUserId },
+              { vendorProfile: { managers: { some: { userId: currentUserId } } } }
+            ]
           },
     include: conversationInclude,
     orderBy: { lastMessageAt: "desc" },

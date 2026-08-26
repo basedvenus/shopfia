@@ -59,21 +59,25 @@ export async function ensureSellerAccountForVendorProfile(
 ) {
   const resolvedClient = client ?? (await import("@/lib/db")).db;
   const vendorProfile = await resolvedClient.vendorProfile.findUnique({
-    where: { id: vendorProfileId }
+    where: { id: vendorProfileId },
+    include: {
+      managers: { where: { role: "OWNER" }, select: { userId: true }, take: 1 }
+    }
   });
 
   if (!vendorProfile) {
     throw new Error("Vendor profile not found");
   }
-  if (!vendorProfile.userId) {
+  const sellerUserId = vendorProfile.userId ?? vendorProfile.managers[0]?.userId ?? null;
+  if (!sellerUserId) {
     throw new Error("Vendor profile must be claimed before payouts can be configured.");
   }
 
   const seller = await resolvedClient.seller.upsert({
-    where: { userId: vendorProfile.userId },
+    where: { userId: sellerUserId },
     update: {},
     create: {
-      userId: vendorProfile.userId
+      userId: sellerUserId
     }
   });
 

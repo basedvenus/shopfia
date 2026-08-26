@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
+import { storefrontPath } from "@/lib/businesses";
 import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
@@ -114,7 +115,7 @@ export default async function ListingsPage() {
             return (
               <Card key={listing.id} className="group relative overflow-hidden border-white/50 bg-white/90 transition hover:-translate-y-0.5 hover:shadow-soft">
                 <Link
-                  href={listing.offering?.active ? `/offering/${listing.offering.id}` : `/vendor/profile/${vendor.slug}`}
+                  href={listing.offering?.active ? `/offering/${listing.offering.id}` : storefrontPath(vendor.slug)}
                   className="absolute inset-0 z-10"
                   aria-label={`View ${listing.title}`}
                 />
@@ -181,15 +182,15 @@ export default async function ListingsPage() {
                         </Badge>
                       </Link>
                     ) : (
-                      <Link href={`/vendor/profile/${vendor.slug}`} className="relative z-20 flex-1">
+                      <Link href={storefrontPath(vendor.slug)} className="relative z-20 flex-1">
                         <Badge className="w-full justify-center py-2" variant="accent">
                           View Listing
                         </Badge>
                       </Link>
                     )}
-                    <Link href={`/vendor/profile/${vendor.slug}`} className="relative z-20 flex-1">
+                    <Link href={storefrontPath(vendor.slug)} className="relative z-20 flex-1">
                       <Badge className="w-full justify-center py-2" variant="outline">
-                        Vendor Profile
+                        Storefront
                       </Badge>
                     </Link>
                   </div>

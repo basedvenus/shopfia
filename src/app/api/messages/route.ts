@@ -72,10 +72,14 @@ export async function POST(request: Request) {
 
     const vendorProfile = await db.vendorProfile.findUnique({
       where: { id: parsed.data.vendorProfileId },
-      include: { user: true }
+      include: {
+        managers: { where: { role: "OWNER" }, select: { userId: true }, take: 1 },
+        user: true
+      }
     });
     if (!vendorProfile) return NextResponse.json({ error: "Vendor not found." }, { status: 404 });
-    if (!vendorProfile.userId) {
+    const vendorUserId = vendorProfile.userId ?? vendorProfile.managers[0]?.userId ?? null;
+    if (!vendorUserId) {
       return NextResponse.json(
         { error: "This business has not claimed their ShopFia profile yet." },
         { status: 403 }
@@ -87,15 +91,16 @@ export async function POST(request: Request) {
 
     const conversation = await db.conversation.upsert({
       where: {
-        buyerId_vendorId: {
+        buyerId_vendorId_vendorProfileId: {
           buyerId: session.user.id,
-          vendorId: vendorProfile.userId
+          vendorId: vendorUserId,
+          vendorProfileId: vendorProfile.id
         }
       },
       update: { lastMessageAt: new Date() },
       create: {
         buyerId: session.user.id,
-        vendorId: vendorProfile.userId,
+        vendorId: vendorUserId,
         vendorProfileId: vendorProfile.id
       }
     });
@@ -120,7 +125,18 @@ export async function POST(request: Request) {
   const canAccess =
     session.user.role === UserRole.ADMIN ||
     conversation.buyerId === session.user.id ||
-    conversation.vendorId === session.user.id;
+    conversation.vendorId === session.user.id ||
+    Boolean(
+      await db.vendorProfileManager.findUnique({
+        where: {
+          vendorProfileId_userId: {
+            vendorProfileId: conversation.vendorProfileId,
+            userId: session.user.id
+          }
+        },
+        select: { id: true }
+      })
+    );
   if (!canAccess) return NextResponse.json({ error: "Forbidden." }, { status: 403 });
 
   const now = new Date();

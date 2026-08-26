@@ -70,10 +70,12 @@ function slugify(value: string) {
 }
 
 export function OfferingSetupForm({
+  businessId,
   categories,
   eventCategories,
   offering
 }: {
+  businessId?: string;
   categories: CategoryOption[];
   eventCategories: CategoryOption[];
   offering?: ExistingOffering;
@@ -101,6 +103,7 @@ export function OfferingSetupForm({
       errorIntro="Your offering is almost ready. Fix the highlighted field and save again."
     >
       {offering ? <input type="hidden" name="id" value={offering.id} /> : null}
+      {businessId ? <input type="hidden" name="businessId" value={businessId} /> : null}
       <input type="hidden" name="slug" value={generatedSlug || offering?.slug || "new-offering"} />
 
       <section className="grid gap-4 md:grid-cols-[0.8fr_1.2fr]">

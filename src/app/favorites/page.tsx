@@ -7,6 +7,7 @@ import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { storefrontPath } from "@/lib/businesses";
 import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
@@ -168,7 +169,7 @@ export default async function FavoritesPage() {
               return (
                 <SavedCard
                   key={favorite.id}
-                  href={`/vendor/profile/${favorite.vendor.slug}`}
+                  href={storefrontPath(favorite.vendor.slug)}
                   image={favorite.vendor.coverPhoto ?? favorite.vendor.photos[0] ?? favorite.vendor.logoUrl ?? fallbackImage}
                   title={favorite.vendor.name}
                   eyebrow="Vendor"

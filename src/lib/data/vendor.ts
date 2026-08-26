@@ -22,6 +22,16 @@ export async function getVendorProfileBySlug(slug: string) {
       sellerRatingAggregate: true,
       rankingScore: true,
       categories: { include: { category: true } },
+      verificationDocuments: {
+        where: { status: "VERIFIED" },
+        orderBy: { updatedAt: "desc" },
+        select: {
+          expiresAt: true,
+          id: true,
+          status: true,
+          type: true
+        }
+      },
       offerings: {
         where: { active: true },
         include: {

@@ -27,6 +27,7 @@ import {
 import { NotificationPreferences } from "@/components/messages/notification-preferences";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { storefrontPath } from "@/lib/businesses";
 import type { SerializedMessageConversation } from "@/lib/messages/query";
 
 type MessagesPayload = {
@@ -609,7 +610,7 @@ function ContextCard({ conversation }: { conversation: SerializedMessageConversa
     conversation.offering?.basePriceCents ??
     conversation.listing?.offering?.basePriceCents ??
     conversation.vendorProfile.startingPriceCents;
-  const href = conversation.offeringId ? `/offering/${conversation.offeringId}` : `/vendor/profile/${conversation.vendorProfile.slug}`;
+  const href = conversation.offeringId ? `/offering/${conversation.offeringId}` : storefrontPath(conversation.vendorProfile.slug);
 
   return (
     <Link

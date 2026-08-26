@@ -16,6 +16,7 @@ import { auth } from "@/auth";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { ListingInquiryPanel } from "@/components/inquiries/listing-inquiry-form";
 import { Badge } from "@/components/ui/badge";
+import { storefrontPath } from "@/lib/businesses";
 import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
@@ -92,7 +93,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-7">
       <Link
-        href={`/vendor/profile/${offering.vendor.slug}`}
+        href={storefrontPath(offering.vendor.slug)}
         className="inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />

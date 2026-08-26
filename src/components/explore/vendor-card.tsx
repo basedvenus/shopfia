@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
+import { storefrontPath } from "@/lib/businesses";
 import { getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorTrustStatus } from "@/lib/vendor-status";
@@ -54,7 +55,7 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
 
   return (
     <Card className="group relative overflow-hidden rounded-[1.05rem] border-white/50 bg-white/90 transition hover:-translate-y-0.5 hover:shadow-soft sm:rounded-3xl">
-      <Link href={`/vendor/profile/${vendor.slug}`} className="absolute inset-0 z-10" aria-label={`View ${vendor.name}`} />
+      <Link href={storefrontPath(vendor.slug)} className="absolute inset-0 z-10" aria-label={`View ${vendor.name}`} />
       <div className="relative aspect-[4/5] sm:aspect-[4/3]">
         {image ? (
           <Image src={image} alt={vendor.name} fill className="object-cover" />
@@ -113,8 +114,8 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
               {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Custom pricing"}
             </span>
           </p>
-          <Link href={`/vendor/profile/${vendor.slug}`} className="relative z-20 hidden sm:block">
-            <Button size="sm">View Profile</Button>
+          <Link href={storefrontPath(vendor.slug)} className="relative z-20 hidden sm:block">
+            <Button size="sm">View Storefront</Button>
           </Link>
         </div>
       </CardContent>

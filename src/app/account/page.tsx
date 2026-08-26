@@ -63,7 +63,9 @@ export default async function AccountPage({
           username: true,
           bio: true,
           instagramUrl: true,
-          tiktokUrl: true
+          tiktokUrl: true,
+          managedBusinesses: { select: { vendorProfileId: true }, take: 1 },
+          vendorProfile: { select: { id: true } }
         }
       }),
       db.order.findMany({
@@ -85,7 +87,11 @@ export default async function AccountPage({
       db.favorite.count({ where: { buyerId: userId } }),
       db.conversation.count({
         where: {
-          OR: [{ buyerId: userId }, { vendorId: userId }]
+          OR: [
+            { buyerId: userId },
+            { vendorId: userId },
+            { vendorProfile: { managers: { some: { userId } } } }
+          ]
         }
       })
     ]);
@@ -130,6 +136,7 @@ export default async function AccountPage({
   }
 
   const [accountUser, orders, quoteRequests, favoriteCount, conversationCount] = accountData;
+  const hasVendorBusinesses = Boolean(accountUser?.vendorProfile || accountUser?.managedBusinesses.length);
 
   if (!accountUser?.username || !accountUser.name) {
     redirect("/account/setup");
@@ -301,10 +308,12 @@ export default async function AccountPage({
 
       <section className="rounded-3xl border bg-white/70 p-4">
         <h2 className="font-semibold">Vendor tools</h2>
-        <p className="text-sm text-muted-foreground">Create a vendor profile to sell services or goods.</p>
+        <p className="text-sm text-muted-foreground">
+          {hasVendorBusinesses ? "Manage your business storefronts, requests, services, and payouts." : "Create a vendor storefront to sell services or goods."}
+        </p>
         <div className="mt-3 flex gap-2">
-          <Link href="/onboarding"><Button>Become a vendor</Button></Link>
-          <Link href="/vendor/dashboard"><Button variant="secondary">Vendor dashboard</Button></Link>
+          {hasVendorBusinesses ? null : <Link href="/onboarding?newBusiness=1"><Button>Become a vendor</Button></Link>}
+          <Link href="/vendor/dashboard"><Button variant={hasVendorBusinesses ? "default" : "secondary"}>{hasVendorBusinesses ? "Manage storefront" : "Vendor dashboard"}</Button></Link>
         </div>
       </section>
 

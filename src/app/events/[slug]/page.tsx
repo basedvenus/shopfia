@@ -8,6 +8,7 @@ import { ProfileBadge } from "@/components/badges/profile-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
+import { storefrontPath } from "@/lib/businesses";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import {
@@ -448,8 +449,8 @@ export default async function EventPage({
                       <a href={taggedPhotoAnchor} className="text-xs font-semibold text-primary underline-offset-4 hover:underline">
                         Show tagged photos
                       </a>
-                      <Link href={`/vendor/profile/${vendor.slug}`} className="text-xs font-semibold text-foreground underline-offset-4 hover:underline">
-                        View profile
+                      <Link href={storefrontPath(vendor.slug)} className="text-xs font-semibold text-foreground underline-offset-4 hover:underline">
+                        View storefront
                       </Link>
                     </div>
                   </article>

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { CategoryAudience, OffsiteAdsTier, Prisma, UserRole, VendorProfileStatus } from "@prisma/client";
+import { CategoryAudience, OffsiteAdsTier, Prisma, UserRole, VendorProfileStatus, VerificationDocumentType } from "@prisma/client";
 import { z } from "zod";
 import { requireRole, requireSession, requireVerifiedVendorProfile } from "@/lib/auth/guards";
 import { parseImageCrop, parseImageCropArray } from "@/lib/image-crop";
@@ -11,6 +11,13 @@ import { checkServerActionRateLimit } from "@/lib/security/request";
 import { createListing, ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
 import { vendorOnboardingSchema, offeringSchema } from "@/lib/validators/vendor";
 import { friendlyValidationMessage } from "@/lib/validators/messages";
+import {
+  isReservedStorefrontSlug,
+  normalizeStorefrontAccentColor,
+  sanitizeStorefrontSections,
+  slugifyBusinessUrl,
+  storefrontPath
+} from "@/lib/businesses";
 
 function formDataToArray(formData: FormData, key: string) {
   return formData
@@ -159,86 +166,38 @@ export async function claimUnclaimedVendorAction(formData: FormData) {
       select: { id: true, slug: true }
     });
 
-    if (!existingVendor) {
-      return tx.vendorProfile.update({
-        where: { id: unclaimedVendor.id },
-        data: {
-          userId: session.user.id,
-          status: VendorProfileStatus.CLAIMED,
-          claimedAt: new Date()
-        },
-        select: { id: true, slug: true }
-      });
-    }
+    const claimedVendor = await tx.vendorProfile.update({
+      where: { id: unclaimedVendor.id },
+      data: {
+        userId: existingVendor ? null : session.user.id,
+        status: VendorProfileStatus.CLAIMED,
+        claimedAt: new Date()
+      },
+      select: { id: true, slug: true }
+    });
 
-    for (const category of unclaimedVendor.categories) {
-      await tx.vendorCategory.upsert({
-        where: {
-          vendorId_categoryId: {
-            vendorId: existingVendor.id,
-            categoryId: category.categoryId
-          }
-        },
-        update: {},
-        create: {
-          vendorId: existingVendor.id,
-          categoryId: category.categoryId
+    await tx.vendorProfileManager.upsert({
+      where: {
+        vendorProfileId_userId: {
+          vendorProfileId: claimedVendor.id,
+          userId: session.user.id
         }
-      });
-    }
-
-    for (const event of unclaimedVendor.taggedPartyEvents) {
-      await tx.partyEvent.update({
-        where: { id: event.id },
-        data: {
-          taggedVendors: {
-            connect: { id: existingVendor.id },
-            disconnect: { id: unclaimedVendor.id }
-          }
-        }
-      });
-    }
-
-    for (const photo of unclaimedVendor.taggedPartyPhotos) {
-      await tx.partyPhoto.update({
-        where: { id: photo.id },
-        data: {
-          taggedVendors: {
-            connect: { id: existingVendor.id },
-            disconnect: { id: unclaimedVendor.id }
-          }
-        }
-      });
-    }
-
-    for (const rating of unclaimedVendor.partyPhotoRatings) {
-      const existingRating = await tx.partyPhotoVendorRating.findUnique({
-        where: {
-          photoId_vendorId: {
-            photoId: rating.photoId,
-            vendorId: existingVendor.id
-          }
-        },
-        select: { id: true }
-      });
-      if (existingRating) {
-        await tx.partyPhotoVendorRating.delete({ where: { id: rating.id } });
-      } else {
-        await tx.partyPhotoVendorRating.update({
-          where: { id: rating.id },
-          data: { vendorId: existingVendor.id }
-        });
+      },
+      update: { role: "OWNER" },
+      create: {
+        role: "OWNER",
+        userId: session.user.id,
+        vendorProfileId: claimedVendor.id
       }
-    }
+    });
 
-    await tx.vendorProfile.delete({ where: { id: unclaimedVendor.id } });
-    return existingVendor;
+    return claimedVendor;
   });
 
   revalidatePath(`/vendor/profile/${unclaimedVendor.slug}`);
   revalidatePath(`/vendor/profile/${destination.slug}`);
   revalidatePath("/my-parties");
-  redirect(`/vendor/profile/${destination.slug}`);
+  redirect(`/vendor/dashboard/${destination.slug}`);
 }
 
 async function getAvailableVendorSlug(baseSlug: string) {
@@ -358,18 +317,58 @@ export async function upsertVendorProfileAction(formData: FormData) {
     redirectWithVendorProfileError("Please wait a minute before saving your vendor profile again.");
   }
 
-  const existingVendor = await db.vendorProfile.findUnique({
-    where: { userId: session.user.id },
-    select: { slug: true, username: true }
-  });
+  const businessId = String(formData.get("businessId") ?? "").trim();
+  const isCreatingNewBusiness = String(formData.get("newBusiness") ?? "") === "1";
+  const existingVendor = businessId
+    ? await db.vendorProfile.findFirst({
+        where: {
+          id: businessId,
+          OR: [
+            { userId: session.user.id },
+            { managers: { some: { userId: session.user.id } } }
+          ]
+        },
+        select: { id: true, slug: true, username: true, userId: true }
+      })
+    : isCreatingNewBusiness
+      ? null
+      : await db.vendorProfile.findFirst({
+        where: {
+          OR: [
+            { userId: session.user.id },
+            { managers: { some: { userId: session.user.id } } }
+          ]
+        },
+        select: { id: true, slug: true, username: true, userId: true },
+        orderBy: { createdAt: "asc" }
+      });
+  if (businessId && !existingVendor) {
+    redirectWithVendorProfileError("That business could not be found for your account.");
+  }
+  const submittedStorefrontSlug = slugifyBusinessUrl(String(formData.get("slug") ?? ""));
+  const submittedBusinessName = String(formData.get("name") ?? "");
+  const requestedSlug = submittedStorefrontSlug || slugifyBusinessUrl(submittedBusinessName);
+  if (isReservedStorefrontSlug(requestedSlug)) {
+    redirectWithVendorProfileError("That storefront URL is reserved. Choose a different ending.");
+  }
+  const slugOwner = requestedSlug
+    ? await db.vendorProfile.findFirst({
+        where: {
+          slug: requestedSlug,
+          ...(existingVendor ? { id: { not: existingVendor.id } } : {})
+        },
+        select: { id: true }
+      })
+    : null;
+  if (slugOwner) {
+    redirectWithVendorProfileError("That storefront URL is already taken.");
+  }
   const submittedVendorUsername = String(formData.get("username") ?? "")
     .trim()
     .replace(/^@/, "")
     .toLowerCase();
   const vendorUsername = submittedVendorUsername || existingVendor?.username || existingVendor?.slug || "";
-  const vendorSlug = submittedVendorUsername
-    ? slugify(submittedVendorUsername)
-    : existingVendor?.slug || slugify(vendorUsername || formData.get("name"));
+  const vendorSlug = requestedSlug || existingVendor?.slug || slugify(vendorUsername || formData.get("name"));
   const result = vendorOnboardingSchema.safeParse({
     name: formData.get("name"),
     slug: vendorSlug,
@@ -389,6 +388,8 @@ export async function upsertVendorProfileAction(formData: FormData) {
     weekendAvailable: formData.get("weekendAvailable") === "on",
     serviceAreaNotes: formData.get("serviceAreaNotes"),
     availabilityNotes: formData.get("availabilityNotes") || undefined,
+    storefrontAccentColor: formData.get("storefrontAccentColor") || undefined,
+    storefrontSectionOrder: formDataToArray(formData, "storefrontSectionOrder"),
     logoUrl: formData.get("logoUrl") || undefined,
     categoryIds: formDataToArray(formData, "categoryIds"),
     photoUrls: formDataToArray(formData, "photoUrls")
@@ -412,12 +413,21 @@ export async function upsertVendorProfileAction(formData: FormData) {
   const logoCrop = parseImageCrop(formData.get("logoUrlCrop"));
   const photoCrops = parseImageCropArray(formData.getAll("photoUrlsCrop"));
   const coverPhotoCrop = photoCrops[0] ?? logoCrop;
+  const storefrontAccentColor = normalizeStorefrontAccentColor(parsed.storefrontAccentColor);
+  const storefrontSectionOrder = sanitizeStorefrontSections(parsed.storefrontSectionOrder);
+  const existingPrimaryVendor = existingVendor
+    ? null
+    : await db.vendorProfile.findUnique({
+        where: { userId: session.user.id },
+        select: { id: true }
+      });
 
   let vendor;
   try {
-    vendor = await db.vendorProfile.upsert({
-      where: { userId: session.user.id },
-      update: {
+    vendor = existingVendor
+      ? await db.vendorProfile.update({
+          where: { id: existingVendor.id },
+          data: {
         name: parsed.name,
         status: VendorProfileStatus.CLAIMED,
         slug: parsed.slug,
@@ -437,43 +447,52 @@ export async function upsertVendorProfileAction(formData: FormData) {
         weekendAvailable: parsed.weekendAvailable,
         serviceAreaNotes: parsed.serviceAreaNotes || null,
         availabilityNotes: parsed.availabilityNotes || null,
+        storefrontAccentColor,
+        storefrontSectionOrder,
         logoUrl: parsed.logoUrl || null,
         logoCrop: logoCrop ?? Prisma.JsonNull,
         photos: parsed.photoUrls,
         photoCrops,
         coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null,
         coverPhotoCrop: coverPhotoCrop ?? Prisma.JsonNull
-      },
-      create: {
-        userId: session.user.id,
-        status: VendorProfileStatus.CLAIMED,
-        claimedAt: new Date(),
-        name: parsed.name,
-        slug: parsed.slug,
-        username: parsed.username,
-        website: parsed.website || null,
-        instagramUrl: parsed.instagramUrl || null,
-        tiktokUrl: parsed.tiktokUrl || null,
-        bio: parsed.bio || null,
-        formattedAddress: parsed.formattedAddress || null,
-        city: parsed.city,
-        state: parsed.state || null,
-        zipCode: parsed.zipCode || null,
-        locationLat: parsed.locationLat ?? null,
-        locationLng: parsed.locationLng ?? null,
-        googlePlaceId: parsed.googlePlaceId || null,
-        serviceRadiusMiles: parsed.serviceRadiusMiles,
-        weekendAvailable: parsed.weekendAvailable,
-        serviceAreaNotes: parsed.serviceAreaNotes || null,
-        availabilityNotes: parsed.availabilityNotes || null,
-        logoUrl: parsed.logoUrl || null,
-        logoCrop: logoCrop ?? Prisma.JsonNull,
-        photos: parsed.photoUrls,
-        photoCrops,
-        coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null,
-        coverPhotoCrop: coverPhotoCrop ?? Prisma.JsonNull
-      }
-    });
+          }
+        })
+      : await db.vendorProfile.create({
+          data: {
+            userId: existingPrimaryVendor ? null : session.user.id,
+            status: VendorProfileStatus.CLAIMED,
+            claimedAt: new Date(),
+            name: parsed.name,
+            slug: parsed.slug,
+            username: parsed.username,
+            website: parsed.website || null,
+            instagramUrl: parsed.instagramUrl || null,
+            tiktokUrl: parsed.tiktokUrl || null,
+            bio: parsed.bio || null,
+            formattedAddress: parsed.formattedAddress || null,
+            city: parsed.city,
+            state: parsed.state || null,
+            zipCode: parsed.zipCode || null,
+            locationLat: parsed.locationLat ?? null,
+            locationLng: parsed.locationLng ?? null,
+            googlePlaceId: parsed.googlePlaceId || null,
+            serviceRadiusMiles: parsed.serviceRadiusMiles,
+            weekendAvailable: parsed.weekendAvailable,
+            serviceAreaNotes: parsed.serviceAreaNotes || null,
+            availabilityNotes: parsed.availabilityNotes || null,
+            storefrontAccentColor,
+            storefrontSectionOrder,
+            logoUrl: parsed.logoUrl || null,
+            logoCrop: logoCrop ?? Prisma.JsonNull,
+            photos: parsed.photoUrls,
+            photoCrops,
+            coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null,
+            coverPhotoCrop: coverPhotoCrop ?? Prisma.JsonNull,
+            managers: {
+              create: { userId: session.user.id, role: "OWNER" }
+            }
+          }
+        });
   } catch (error) {
     securityLog("vendor_profile_upsert_failed", {
       code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : "unknown",
@@ -485,6 +504,21 @@ export async function upsertVendorProfileAction(formData: FormData) {
         : "Your vendor profile could not be saved. Please try again."
     );
   }
+
+  await db.vendorProfileManager.upsert({
+    where: {
+      vendorProfileId_userId: {
+        vendorProfileId: vendor.id,
+        userId: session.user.id
+      }
+    },
+    update: { role: "OWNER" },
+    create: {
+      role: "OWNER",
+      userId: session.user.id,
+      vendorProfileId: vendor.id
+    }
+  });
 
   const validVendorCategoryCount = await db.category.count({
     where: { id: { in: parsed.categoryIds }, audience: CategoryAudience.VENDOR }
@@ -520,8 +554,10 @@ export async function upsertVendorProfileAction(formData: FormData) {
 
   revalidatePath("/onboarding");
   revalidatePath("/vendor/dashboard");
+  revalidatePath(`/vendor/dashboard/${vendor.slug}`);
   revalidatePath(`/vendor/profile/${vendor.slug}`);
-  redirect("/vendor/dashboard");
+  revalidatePath(storefrontPath(vendor.slug));
+  redirect(`/vendor/dashboard/${vendor.slug}`);
 }
 
 export async function upsertOfferingAction(formData: FormData) {
@@ -535,8 +571,23 @@ export async function upsertOfferingAction(formData: FormData) {
     redirectWithOfferingError("Please wait a minute before saving another offering.");
   }
 
-  const vendor = await db.vendorProfile.findUnique({
-    where: { userId: session.user.id }
+  const businessId = String(formData.get("businessId") ?? "").trim();
+  const vendor = await db.vendorProfile.findFirst({
+    where: businessId
+      ? {
+          id: businessId,
+          OR: [
+            { userId: session.user.id },
+            { managers: { some: { userId: session.user.id } } }
+          ]
+        }
+      : {
+          OR: [
+            { userId: session.user.id },
+            { managers: { some: { userId: session.user.id } } }
+          ]
+        },
+    orderBy: { createdAt: "asc" }
   });
   if (!vendor) throw new Error("Create vendor profile first");
 
@@ -684,13 +735,72 @@ export async function upsertOfferingAction(formData: FormData) {
   });
 
   revalidatePath("/vendor/dashboard");
+  revalidatePath(`/vendor/dashboard/${vendor.slug}`);
   revalidatePath(`/vendor/offering/${offeringId}`);
   revalidatePath(`/vendor/profile/${vendor.slug}`);
+  revalidatePath(storefrontPath(vendor.slug));
   revalidatePath(`/offering/${offeringId}`);
   revalidatePath("/listings");
   revalidatePath("/explore");
   revalidatePath("/categories");
   redirect("/vendor/dashboard#services");
+}
+
+export async function submitBusinessVerificationDocumentAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
+  const session = await requireSession();
+  const vendorProfileId = String(formData.get("businessId") ?? "").trim();
+  const type = String(formData.get("type") ?? "").trim();
+  const file = formData.get("document");
+  const expiresAtValue = String(formData.get("expiresAt") ?? "").trim();
+  const allowedTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+  const maxSize = 8 * 1024 * 1024;
+
+  if (!vendorProfileId || !Object.values(VerificationDocumentType).includes(type as VerificationDocumentType)) {
+    throw new Error("Choose a valid credential type.");
+  }
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("Upload documentation before requesting verification.");
+  }
+  if (!allowedTypes.has(file.type)) {
+    throw new Error("Upload a PDF, JPG, PNG, or WebP document.");
+  }
+  if (file.size > maxSize) {
+    throw new Error("Verification documents must be 8 MB or smaller.");
+  }
+
+  const vendor = await db.vendorProfile.findFirst({
+    where: {
+      id: vendorProfileId,
+      OR: [
+        { userId: session.user.id },
+        { managers: { some: { userId: session.user.id } } }
+      ]
+    },
+    select: { id: true, slug: true }
+  });
+  if (!vendor) {
+    throw new Error("That business could not be found for your account.");
+  }
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  await db.businessVerificationDocument.create({
+    data: {
+      contentType: file.type,
+      data: bytes,
+      expiresAt: expiresAtValue ? new Date(expiresAtValue) : null,
+      originalName: file.name,
+      size: file.size,
+      status: "PENDING_REVIEW",
+      storageKey: `business-verification/${vendor.id}/${Date.now()}-${slugify(file.name)}`,
+      type: type as VerificationDocumentType,
+      uploadedById: session.user.id,
+      vendorProfileId: vendor.id
+    }
+  });
+
+  revalidatePath(`/vendor/dashboard/${vendor.slug}`);
+  revalidatePath(storefrontPath(vendor.slug));
 }
 
 export async function updateSellerMarketplaceSettingsAction(formData: FormData) {
@@ -699,8 +809,23 @@ export async function updateSellerMarketplaceSettingsAction(formData: FormData) 
   if (session.user.role === UserRole.VENDOR) {
     await requireVerifiedVendorProfile(session.user.id);
   }
-  const vendor = await db.vendorProfile.findUnique({
-    where: { userId: session.user.id }
+  const businessId = String(formData.get("businessId") ?? "").trim();
+  const vendor = await db.vendorProfile.findFirst({
+    where: businessId
+      ? {
+          id: businessId,
+          OR: [
+            { userId: session.user.id },
+            { managers: { some: { userId: session.user.id } } }
+          ]
+        }
+      : {
+          OR: [
+            { userId: session.user.id },
+            { managers: { some: { userId: session.user.id } } }
+          ]
+        },
+    orderBy: { createdAt: "asc" }
   });
   if (!vendor) throw new Error("Create vendor profile first");
 
@@ -719,4 +844,5 @@ export async function updateSellerMarketplaceSettingsAction(formData: FormData) 
   });
 
   revalidatePath("/vendor/dashboard");
+  revalidatePath(`/vendor/dashboard/${vendor.slug}`);
 }

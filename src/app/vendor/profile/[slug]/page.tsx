@@ -119,8 +119,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           photoCount: 0
         }));
   const currentUserId = session?.user?.id;
-  const isUnclaimed = vendor.status === "UNCLAIMED" || !vendor.user;
+  const isUnclaimed = vendor.status === "UNCLAIMED";
   const trustStatus = getVendorTrustStatus(vendor);
+  const verifiedCredentials = getVerifiedCredentials(vendor.verificationDocuments);
   const vendorBadge = vendor.user ? getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true }) : null;
   const verifiedReviewCount = vendor.sellerRatingAggregate?.totalReviews ?? vendor.reviewCount;
   const verifiedAverageRating = vendor.sellerRatingAggregate?.weightedAverageRating ?? vendor.averageRating;
@@ -158,9 +159,16 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                 <div className="mb-3 flex flex-wrap gap-2">
-                  <Badge variant={trustStatus.tone === "verified" ? "accent" : "default"} className="bg-white/25 text-white backdrop-blur">
-                    {trustStatus.label} Vendor
-                  </Badge>
+                  {trustStatus.label ? (
+                    <Badge variant={trustStatus.tone === "verified" ? "accent" : "default"} className="bg-white/25 text-white backdrop-blur">
+                      {trustStatus.label} Vendor
+                    </Badge>
+                  ) : null}
+                  {verifiedCredentials.map((credential) => (
+                    <Badge key={credential} className="bg-white/25 text-white backdrop-blur" variant="default">
+                      {credential}
+                    </Badge>
+                  ))}
                   {vendor.categories.slice(0, 3).map((c) => (
                     <Badge key={c.id} className="bg-white/20 text-white backdrop-blur" variant="default">
                       {c.category.name}
@@ -352,6 +360,26 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 <span>Perfect for clients who want examples first and logistics second.</span>
               </div>
+            </CardContent>
+          </Card>
+          <Card className="border-white/70 bg-white/90">
+            <CardHeader>
+              <CardTitle>Credentials & Verification</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {verifiedCredentials.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {verifiedCredentials.map((credential) => (
+                    <Badge key={credential} variant="accent">
+                      {credential}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm leading-6 text-muted-foreground">
+                  ShopFia-reviewed insurance, license, and permit badges will appear here when available.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -606,6 +634,20 @@ function NeutralVendorPlaceholder({ label }: { label: string }) {
       {label}
     </div>
   );
+}
+
+function getVerifiedCredentials(
+  documents: Array<{ expiresAt: Date | null; status: string; type: string }>
+) {
+  const now = new Date();
+  return documents
+    .filter((document) => document.status === "VERIFIED" && (!document.expiresAt || document.expiresAt > now))
+    .map((document) => {
+      if (document.type === "INSURANCE") return "Insurance Verified";
+      if (document.type === "LICENSE") return "License Verified";
+      return "Permit Verified";
+    })
+    .filter((label, index, labels) => labels.indexOf(label) === index);
 }
 
 function formatOfferingPrice(offering: { basePriceCents: number | null; messageForPricing: boolean }) {

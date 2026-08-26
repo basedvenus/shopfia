@@ -37,10 +37,11 @@ export async function sendMessageAction(formData: FormData) {
     }
     const vendorProfile = await db.vendorProfile.findUnique({
       where: { id: parsed.vendorProfileId },
-      include: { user: true }
+      include: { managers: { where: { role: "OWNER" }, select: { userId: true }, take: 1 }, user: true }
     });
     if (!vendorProfile) throw new Error("Vendor not found");
-    if (!vendorProfile.userId) {
+    const vendorUserId = vendorProfile.userId ?? vendorProfile.managers[0]?.userId ?? null;
+    if (!vendorUserId) {
       throw new Error("This business has not claimed their ShopFia profile yet");
     }
     if (!vendorProfile.verified && session.user.role !== UserRole.ADMIN) {
@@ -48,9 +49,10 @@ export async function sendMessageAction(formData: FormData) {
     }
     const convo = await db.conversation.upsert({
       where: {
-        buyerId_vendorId: {
+        buyerId_vendorId_vendorProfileId: {
           buyerId: session.user.id,
-          vendorId: vendorProfile.userId
+          vendorId: vendorUserId,
+          vendorProfileId: vendorProfile.id
         }
       },
       update: {
@@ -58,7 +60,7 @@ export async function sendMessageAction(formData: FormData) {
       },
       create: {
         buyerId: session.user.id,
-        vendorId: vendorProfile.userId,
+        vendorId: vendorUserId,
         vendorProfileId: vendorProfile.id
       }
     });
@@ -71,7 +73,18 @@ export async function sendMessageAction(formData: FormData) {
   const canAccess =
     session.user.role === UserRole.ADMIN ||
     conversation.buyerId === session.user.id ||
-    conversation.vendorId === session.user.id;
+    conversation.vendorId === session.user.id ||
+    Boolean(
+      await db.vendorProfileManager.findUnique({
+        where: {
+          vendorProfileId_userId: {
+            vendorProfileId: conversation.vendorProfileId,
+            userId: session.user.id
+          }
+        },
+        select: { id: true }
+      })
+    );
   if (!canAccess) throw new Error("Forbidden");
 
   await db.message.create({
@@ -96,6 +109,7 @@ export async function sendMessageAction(formData: FormData) {
     });
     if (vendorProfile?.slug) {
       revalidatePath(`/vendor/profile/${vendorProfile.slug}`);
+      revalidatePath(`/${vendorProfile.slug}`);
     }
   }
 }

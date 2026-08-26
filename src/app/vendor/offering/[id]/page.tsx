@@ -49,7 +49,16 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
     notFound();
   }
 
-  if (offering.vendor.userId !== session.user.id) {
+  const managerAccess = await db.vendorProfileManager.findUnique({
+    where: {
+      vendorProfileId_userId: {
+        vendorProfileId: offering.vendor.id,
+        userId: session.user.id
+      }
+    },
+    select: { id: true }
+  });
+  if (offering.vendor.userId !== session.user.id && !managerAccess && session.user.role !== "ADMIN") {
     notFound();
   }
 
@@ -59,7 +68,7 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
   return (
     <div className="space-y-6">
       <Link
-        href="/vendor/dashboard#services"
+        href={`/vendor/dashboard/${offering.vendor.slug}#services`}
         className="inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -84,6 +93,7 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
         </CardHeader>
         <CardContent>
           <OfferingSetupForm
+            businessId={offering.vendor.id}
             categories={sortedCategories.map((category) => ({
               id: category.id,
               name: displayCategoryName(category.name)

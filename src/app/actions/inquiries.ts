@@ -69,21 +69,29 @@ export async function createPublicInquiryAction(formData: FormData) {
 
   const vendor = await db.vendorProfile.findUnique({
     where: { id: parsed.vendorProfileId },
-    select: { id: true, slug: true, name: true, userId: true, user: { select: { email: true } } }
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      userId: true,
+      managers: { where: { role: "OWNER" }, select: { userId: true, user: { select: { email: true } } }, take: 1 },
+      user: { select: { email: true } }
+    }
   });
   if (!vendor) {
     return { success: false, error: "Vendor not found." };
   }
-  if (!vendor.userId || !vendor.user) {
+  const vendorUserId = vendor.userId ?? vendor.managers[0]?.userId ?? null;
+  const vendorEmail = vendor.user?.email ?? vendor.managers[0]?.user.email ?? null;
+  if (!vendorUserId) {
     return {
       success: false,
       error: "This business has not claimed their ShopFia profile yet."
     };
   }
-  if (vendor.userId === session.user.id && session.user.role !== UserRole.ADMIN) {
+  if (vendorUserId === session.user.id && session.user.role !== UserRole.ADMIN) {
     return { success: false, error: "You cannot inquire on your own listing." };
   }
-  const vendorUserId = vendor.userId;
 
   let listingId: string | null = null;
   let offeringId: string | null = null;
@@ -132,9 +140,10 @@ export async function createPublicInquiryAction(formData: FormData) {
   const result = await db.$transaction(async (tx) => {
     const conversation = await tx.conversation.upsert({
       where: {
-        buyerId_vendorId: {
+        buyerId_vendorId_vendorProfileId: {
           buyerId: session.user.id,
-          vendorId: vendorUserId
+          vendorId: vendorUserId,
+          vendorProfileId: vendor.id
         }
       },
       update: {
@@ -252,7 +261,7 @@ export async function createPublicInquiryAction(formData: FormData) {
     revalidatePath(`/offering/${offeringId}`);
   }
 
-  if (vendor.user.email) {
+  if (vendorEmail) {
     await sendNewInquiryEmail({
       budgetCents: parsed.budgetDollars != null ? Math.round(parsed.budgetDollars * 100) : null,
       buyerName: parsed.name,
@@ -261,7 +270,7 @@ export async function createPublicInquiryAction(formData: FormData) {
         ? `${parsed.locationCity}, ${parsed.locationState}`
         : parsed.eventLocation,
       inquiryUrl: `${getBaseUrl()}/messages?conversationId=${result.conversationId}`,
-      to: vendor.user.email
+      to: vendorEmail
     });
   }
 

@@ -32,15 +32,32 @@ export async function POST(request: Request) {
   if (!assertSameOrigin(request)) {
     return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
   }
+  const payload = (await request.json().catch(() => ({}))) as { businessSlug?: string };
 
-  const vendor = await db.vendorProfile.findUnique({
-    where: { userId: session.user.id },
+  const vendor = await db.vendorProfile.findFirst({
+    where: payload.businessSlug
+      ? {
+          slug: payload.businessSlug,
+          OR: [
+            { userId: session.user.id },
+            { managers: { some: { userId: session.user.id } } }
+          ]
+        }
+      : {
+          OR: [
+            { userId: session.user.id },
+            { managers: { some: { userId: session.user.id } } }
+          ]
+        },
     include: {
+      managers: { where: { role: "OWNER" }, select: { userId: true, user: { select: { email: true } } }, take: 1 },
       user: { select: { email: true } }
     }
   });
   if (!vendor) return NextResponse.json({ error: "Vendor profile not found" }, { status: 404 });
-  if (!vendor.userId || !vendor.user) {
+  const vendorUserId = vendor.userId ?? vendor.managers[0]?.userId ?? null;
+  const vendorEmail = vendor.user?.email ?? vendor.managers[0]?.user.email ?? null;
+  if (!vendorUserId) {
     return NextResponse.json({ error: "Vendor profile must be claimed before payouts can be configured" }, { status: 400 });
   }
 
@@ -48,8 +65,8 @@ export async function POST(request: Request) {
   if (!stripeAccountId) {
     const account = await createVendorConnectAccount({
       businessName: vendor.name,
-      email: vendor.user.email,
-      userId: vendor.userId,
+      email: vendorEmail,
+      userId: vendorUserId,
       vendorProfileId: vendor.id
     });
     stripeAccountId = account.id;
@@ -90,8 +107,8 @@ export async function POST(request: Request) {
 
   const link = await createConnectAccountLink(
     stripeAccountId,
-    `${expectedOrigin}/vendor/dashboard?stripe=refresh`,
-    `${expectedOrigin}/vendor/dashboard?stripe=return`
+    `${expectedOrigin}/vendor/dashboard/${vendor.slug}?stripe=refresh`,
+    `${expectedOrigin}/vendor/dashboard/${vendor.slug}?stripe=return`
   );
 
   return NextResponse.json({ url: link.url });

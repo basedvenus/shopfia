@@ -135,6 +135,25 @@ enum VendorProfileStatus {
   VERIFIED
 }
 
+enum BusinessManagerRole {
+  OWNER
+  MANAGER
+}
+
+enum VerificationDocumentType {
+  INSURANCE
+  LICENSE
+  PERMIT
+}
+
+enum VerificationReviewStatus {
+  NOT_SUBMITTED
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED_NEEDS_REVISION
+  EXPIRED
+}
+
 model User {
   id                     String            @id @default(cuid())
   name                   String?
@@ -153,6 +172,8 @@ model User {
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
   vendorProfile          VendorProfile?
+  managedBusinesses      VendorProfileManager[]
+  verificationDocuments  BusinessVerificationDocument[]
   avatar                 UserAvatar?
   partyPhotos            PartyPhoto[]
   partyEvents            PartyEvent[]
@@ -266,11 +287,15 @@ model VendorProfile {
   weekendAvailable          Boolean               @default(true)
   depositEnabled            Boolean               @default(true)
   depositPercent            Int                   @default(30)
+  storefrontAccentColor     String                @default("blush")
+  storefrontSectionOrder    String[]              @default(["about", "offerings", "portfolio", "credentials", "reviews"])
   claimedAt                 DateTime?
   createdAt                 DateTime              @default(now())
   updatedAt                 DateTime              @updatedAt
 
   user                      User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  managers                  VendorProfileManager[]
+  verificationDocuments     BusinessVerificationDocument[]
   shop                      Shop?
   offerings                 Offering[]
   categories                VendorCategory[]
@@ -288,6 +313,45 @@ model VendorProfile {
 
   @@index([locationLat, locationLng])
   @@index([googlePlaceId])
+}
+
+model VendorProfileManager {
+  id              String              @id @default(cuid())
+  vendorProfileId String
+  userId          String
+  role            BusinessManagerRole @default(MANAGER)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  vendorProfile   VendorProfile       @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorProfileId, userId])
+  @@index([userId])
+}
+
+model BusinessVerificationDocument {
+  id              String                   @id @default(cuid())
+  vendorProfileId String
+  uploadedById    String
+  type            VerificationDocumentType
+  status          VerificationReviewStatus @default(PENDING_REVIEW)
+  storageKey      String
+  originalName    String?
+  contentType     String?
+  data            Bytes
+  size            Int
+  expiresAt       DateTime?
+  reviewedAt      DateTime?
+  reviewerNote    String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  vendorProfile   VendorProfile            @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  uploadedBy      User                     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([vendorProfileId, type, status])
+  @@index([uploadedById])
 }
 
 model PartyEvent {
@@ -639,7 +703,7 @@ model Conversation {
   quoteRequests    QuoteRequest[]
   messages         Message[]
 
-  @@unique([buyerId, vendorId])
+  @@unique([buyerId, vendorId, vendorProfileId])
   @@index([listingId])
   @@index([offeringId])
 }

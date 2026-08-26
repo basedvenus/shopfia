@@ -8,24 +8,41 @@ import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { OfferingSetupForm } from "@/components/vendor/offering-setup-form";
 import { ServiceAreaPicker } from "@/components/vendor/service-area-picker";
+import { APPROVED_STOREFRONT_SECTIONS, STOREFRONT_ACCENT_COLORS } from "@/lib/businesses";
 
 export const dynamic = "force-dynamic";
 
 export default async function VendorOnboardingPage({
   searchParams
 }: {
-  searchParams?: { offeringError?: string; profileError?: string };
+  searchParams?: { business?: string; newBusiness?: string; offeringError?: string; profileError?: string };
 }) {
   const [{ requireRole }, { db }] = await Promise.all([
     import("@/lib/auth/guards"),
     import("@/lib/db")
   ]);
   const session = await requireRole([UserRole.BUYER, UserRole.VENDOR, UserRole.ADMIN]);
+  const editingBusinessSlug = searchParams?.newBusiness ? null : searchParams?.business;
   const [categories, eventCategories, existingVendor] = await Promise.all([
     db.category.findMany({ where: { audience: CategoryAudience.VENDOR }, orderBy: { name: "asc" } }),
     db.category.findMany({ where: { audience: CategoryAudience.BUYER }, orderBy: { name: "asc" } }),
-    db.vendorProfile.findUnique({
-      where: { userId: session.user.id },
+    db.vendorProfile.findFirst({
+      where: editingBusinessSlug
+        ? {
+            slug: editingBusinessSlug,
+            OR: [
+              { userId: session.user.id },
+              { managers: { some: { userId: session.user.id } } }
+            ]
+          }
+        : searchParams?.newBusiness
+          ? { id: "__new_business__" }
+          : {
+              OR: [
+                { userId: session.user.id },
+                { managers: { some: { userId: session.user.id } } }
+              ]
+            },
       include: { categories: true, offerings: { take: 1 } }
     })
   ]);
@@ -42,7 +59,7 @@ export default async function VendorOnboardingPage({
           Build your beautiful ShopFia storefront.
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Add the visual identity, social links, service areas, and first listing hosts need to understand your style.
+          Add the visual identity, social links, service areas, and first service customers need to understand your style.
         </p>
       </div>
 
@@ -56,7 +73,7 @@ export default async function VendorOnboardingPage({
               href="#profile"
               className="rounded-[8px] border border-primary/20 bg-[#fbf3f0] px-3 py-2 text-sm font-medium text-foreground transition hover:border-primary/35"
             >
-              1. Vendor profile
+              1. Business storefront
               <span className="mt-1 block text-xs font-normal text-muted-foreground">
                 Identity, photos, location, service areas, and categories.
               </span>
@@ -83,7 +100,7 @@ export default async function VendorOnboardingPage({
       <Card id="profile">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>1. Vendor Profile</CardTitle>
+            <CardTitle>1. Business Storefront</CardTitle>
             <a href="#services" className="text-sm font-medium text-primary hover:underline">
               Next: first offering
             </a>
@@ -98,8 +115,10 @@ export default async function VendorOnboardingPage({
           <ValidatedForm
             action={upsertVendorProfileAction}
             className="grid gap-4 md:grid-cols-2"
-            errorIntro="Your vendor profile is almost there. Fix the highlighted field and save again."
+            errorIntro="Your business storefront is almost there. Fix the highlighted field and save again."
           >
+            {existingVendor ? <input type="hidden" name="businessId" value={existingVendor.id} /> : null}
+            {searchParams?.newBusiness ? <input type="hidden" name="newBusiness" value="1" /> : null}
             <div className="sticky bottom-20 z-20 order-last md:col-span-2 md:bottom-4">
               <div className="flex flex-col gap-3 rounded-[1.2rem] border border-primary/20 bg-white/95 p-3 shadow-[0_12px_34px_rgba(82,55,55,0.14)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -108,8 +127,8 @@ export default async function VendorOnboardingPage({
                     Save anytime. You can come back and polish the details later.
                   </p>
                 </div>
-                <SubmitButton type="submit" pendingText="Saving vendor profile...">
-                  Save vendor profile
+                <SubmitButton type="submit" pendingText="Saving business...">
+                  Save business
                 </SubmitButton>
               </div>
             </div>
@@ -148,7 +167,7 @@ export default async function VendorOnboardingPage({
             <FieldShell
               label="Vendor Username"
               required
-              helperText="Example: solanoflora. This must be unique. Changing it updates your public profile URL."
+              helperText="Example: solanoflora. This must be unique and becomes shopfia.app/solanoflora."
             >
               <Input
                 name="username"
@@ -219,6 +238,25 @@ export default async function VendorOnboardingPage({
                 />
               </FieldShell>
             </div>
+            <FieldShell
+              label="Storefront URL"
+              required
+              helperText="Customize the ending if it is available. Reserved paths like admin, login, explore, settings, and businesses cannot be used."
+            >
+              <div className="flex overflow-hidden rounded-full border bg-white focus-within:ring-2 focus-within:ring-ring">
+                <span className="inline-flex items-center border-r bg-muted/60 px-3 text-sm text-muted-foreground">
+                  shopfia.app/
+                </span>
+                <Input
+                  name="slug"
+                  placeholder="solano-flora"
+                  defaultValue={existingVendor?.slug ?? ""}
+                  className="border-0 focus-visible:ring-0"
+                  data-required-label="Storefront URL"
+                  required
+                />
+              </div>
+            </FieldShell>
             <div>
               <FieldShell label="Travel Radius" optional helperText="We default to 25 miles if you leave this as-is.">
                 <Input
@@ -271,16 +309,57 @@ export default async function VendorOnboardingPage({
                 })}
               </div>
             </div>
+            <div className="md:col-span-2 rounded-[1.5rem] border p-4">
+              <label className="mb-1 block text-sm font-medium">Storefront customization <span className="text-xs font-normal text-muted-foreground">Optional</span></label>
+              <p className="mb-3 text-xs leading-5 text-muted-foreground">
+                Choose from ShopFia-approved accents and sections so every storefront stays cohesive.
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Accent color</div>
+                  <div className="flex flex-wrap gap-2">
+                    {STOREFRONT_ACCENT_COLORS.map((color) => (
+                      <label key={color.value} className="flex cursor-pointer items-center gap-2 rounded-full border bg-white px-3 py-2 text-xs font-medium">
+                        <input
+                          type="radio"
+                          name="storefrontAccentColor"
+                          value={color.value}
+                          defaultChecked={(existingVendor?.storefrontAccentColor ?? "blush") === color.value}
+                        />
+                        <span className={`h-4 w-4 rounded-full bg-gradient-to-br ${color.className}`} />
+                        {color.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Storefront sections</div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {APPROVED_STOREFRONT_SECTIONS.map((section) => (
+                      <label key={section} className="flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm capitalize">
+                        <input
+                          type="checkbox"
+                          name="storefrontSectionOrder"
+                          value={section}
+                          defaultChecked={(existingVendor?.storefrontSectionOrder ?? APPROVED_STOREFRONT_SECTIONS).includes(section)}
+                        />
+                        {section}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
             <div id="profile-save" className="md:col-span-2 scroll-mt-28 rounded-[1.2rem] border border-border bg-[#fbf7f5] p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold">Profile details complete?</p>
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Save this profile before moving on to your first offering.
+                    Save this business before moving on to your first offering.
                   </p>
                 </div>
-                <SubmitButton type="submit" pendingText="Saving vendor profile...">
-                  Save vendor profile
+                <SubmitButton type="submit" pendingText="Saving business...">
+                  Save business
                 </SubmitButton>
               </div>
             </div>
@@ -293,7 +372,7 @@ export default async function VendorOnboardingPage({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>2. Add First Offering</CardTitle>
             <a href="#profile" className="text-sm font-medium text-primary hover:underline">
-              Previous: vendor profile
+              Previous: business storefront
             </a>
           </div>
         </CardHeader>
@@ -305,6 +384,7 @@ export default async function VendorOnboardingPage({
           ) : null}
           {existingVendor ? (
             <OfferingSetupForm
+              businessId={existingVendor.id}
               categories={sortedCategories.map((category) => ({
                 id: category.id,
                 name: displayCategoryName(category.name)
@@ -316,9 +396,9 @@ export default async function VendorOnboardingPage({
             />
           ) : (
             <div className="rounded-[1.5rem] border bg-[#fbf7f5] p-5">
-              <h3 className="font-semibold">Save your vendor profile first.</h3>
+              <h3 className="font-semibold">Save your business first.</h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Once your business profile is tied to your account, you will land in your vendor dashboard and can add offerings from there.
+                Once this business is tied to your account, you will land in its private dashboard and can add offerings from there.
               </p>
             </div>
           )}
