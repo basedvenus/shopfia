@@ -56,7 +56,7 @@ export function AccountMenu({ initials, signOutAction }: AccountMenuProps) {
     { href: "/my-parties", label: "My Parties", icon: CalendarHeart },
     { href: "/favorites", label: "Favorites", icon: Heart },
     { href: "/messages", label: "Messages", icon: MessagesSquare },
-    ...(profile?.vendorProfile || profile?.managedBusinesses?.length
+    ...(profile?.vendorProfile
       ? [{ href: "/vendor/dashboard", label: "Vendor Dashboard", icon: Store }]
       : []),
     { href: "/account#settings", label: "Settings", icon: Settings }

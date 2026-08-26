@@ -12,12 +12,6 @@ export const userProfileSelect = {
   role: true,
   tiktokUrl: true,
   username: true,
-  managedBusinesses: {
-    select: {
-      vendorProfileId: true
-    },
-    take: 1
-  },
   vendorProfile: {
     select: {
       id: true,

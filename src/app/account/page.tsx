@@ -64,23 +64,36 @@ export default async function AccountPage({
           bio: true,
           instagramUrl: true,
           tiktokUrl: true,
-          managedBusinesses: { select: { vendorProfileId: true }, take: 1 },
           vendorProfile: { select: { id: true } }
         }
       }),
       db.order.findMany({
         where: { buyerId: userId },
-        include: {
-          vendorProfile: true,
-          review: true
+        select: {
+          id: true,
+          amountCents: true,
+          paymentSucceededAt: true,
+          status: true,
+          vendorProfile: { select: { name: true } },
+          review: { select: { id: true } }
         },
         orderBy: { createdAt: "desc" }
       }),
       db.quoteRequest.findMany({
         where: { buyerId: userId },
-        include: {
-          vendor: true,
-          quote: true
+        select: {
+          id: true,
+          eventLocation: true,
+          status: true,
+          vendor: { select: { name: true } },
+          quote: {
+            select: {
+              id: true,
+              amountCents: true,
+              expiresAt: true,
+              status: true
+            }
+          }
         },
         orderBy: { createdAt: "desc" }
       }),
@@ -89,8 +102,7 @@ export default async function AccountPage({
         where: {
           OR: [
             { buyerId: userId },
-            { vendorId: userId },
-            { vendorProfile: { managers: { some: { userId } } } }
+            { vendorId: userId }
           ]
         }
       })
@@ -135,7 +147,7 @@ export default async function AccountPage({
   }
 
   const [accountUser, orders, quoteRequests, favoriteCount, conversationCount] = accountData;
-  const hasVendorBusinesses = Boolean(accountUser?.vendorProfile || accountUser?.managedBusinesses.length);
+  const hasVendorBusinesses = Boolean(accountUser?.vendorProfile);
 
   if (!accountUser?.username || !accountUser.name) {
     redirect("/account/setup");
