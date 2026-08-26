@@ -106,20 +106,19 @@ export default async function AccountPage({
         <Card className="border-[#ead6cf] bg-white/92 shadow-soft">
           <CardHeader>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9b6b65]">
-              Database needs attention
+              Temporary account issue
             </p>
             <CardTitle>Your account data cannot load right now.</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm leading-6 text-muted-foreground">
-              ShopFia is online, but the database provider is currently refusing reads because
-              the project exceeded its data transfer quota. That is why Explore is empty and
-              your signed-in account dashboard cannot load your vendor/profile data yet.
+              ShopFia is online, but we could not load your account data. Please try again in a
+              few minutes while we check the database connection.
             </p>
             <div className="rounded-2xl border border-[#ead6cf] bg-[#fff8f5] p-4 text-sm leading-6 text-muted-foreground">
-              Fix the Neon database quota or wait for the quota reset. Once Neon allows reads
-              again, your vendors, listings, account, and messages should come back without
-              recreating them.
+              Your businesses, listings, messages, and account data are preserved. The technical
+              database error has been logged privately so we can diagnose it without exposing
+              infrastructure details.
             </div>
             <div className="flex flex-wrap gap-2">
               <Button asChild>
