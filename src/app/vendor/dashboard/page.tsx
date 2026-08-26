@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { ArrowUpRight, Plus, Store } from "lucide-react";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
-import { businessManagerWhere, storefrontPath } from "@/lib/businesses";
+import { storefrontPath } from "@/lib/businesses";
 import { db } from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
 
@@ -17,12 +17,28 @@ export default async function MyBusinessesPage() {
   }
 
   const businesses = await db.vendorProfile.findMany({
-    where: businessManagerWhere(session.user.id, session.user.role),
-    include: {
-      categories: { include: { category: true }, take: 2 },
-      offerings: { select: { id: true, active: true } },
-      inquiries: { where: { status: "NEW" }, select: { id: true } },
-      orders: { select: { id: true, amountCents: true, status: true } }
+    where: session.user.role === "ADMIN" ? {} : { userId: session.user.id },
+    select: {
+      id: true,
+      coverPhoto: true,
+      logoUrl: true,
+      name: true,
+      photos: true,
+      slug: true,
+      categories: {
+        include: { category: true },
+        take: 2
+      },
+      offerings: {
+        select: { id: true, active: true }
+      },
+      inquiries: {
+        where: { status: "NEW" },
+        select: { id: true }
+      },
+      orders: {
+        select: { id: true, amountCents: true, status: true }
+      }
     },
     orderBy: [{ updatedAt: "desc" }, { name: "asc" }]
   });
@@ -57,7 +73,7 @@ export default async function MyBusinessesPage() {
             return (
               <Link
                 key={business.id}
-                href={`/vendor/dashboard/${business.slug}`}
+                href={`/onboarding?business=${business.slug}#profile`}
                 className="group overflow-hidden rounded-[1.5rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(72,44,43,0.12)]"
               >
                 <div className="relative aspect-[16/9] bg-[#f8ece9]">
@@ -101,7 +117,7 @@ export default async function MyBusinessesPage() {
                   <div className="flex items-center justify-between gap-3 border-t border-[#f1e2dd] pt-4 text-sm">
                     <span className="text-muted-foreground">Revenue {formatCurrency(revenue)}</span>
                     <span className="inline-flex items-center gap-1 font-semibold text-primary">
-                      Manage
+                      Manage setup
                       <ArrowUpRight className="h-4 w-4" />
                     </span>
                   </div>
