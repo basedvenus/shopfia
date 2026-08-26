@@ -32,7 +32,21 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
       where: { id },
       include: {
         vendor: {
-          include: {
+          select: {
+            id: true,
+            averageRating: true,
+            city: true,
+            coverPhoto: true,
+            name: true,
+            photos: true,
+            reviewCount: true,
+            serviceAreaNotes: true,
+            serviceRadiusMiles: true,
+            slug: true,
+            state: true,
+            status: true,
+            username: true,
+            verified: true,
             user: {
               select: {
                 createdAt: true,

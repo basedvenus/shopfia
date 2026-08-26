@@ -8,7 +8,6 @@ import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { OfferingSetupForm } from "@/components/vendor/offering-setup-form";
 import { ServiceAreaPicker } from "@/components/vendor/service-area-picker";
-import { APPROVED_STOREFRONT_SECTIONS, STOREFRONT_ACCENT_COLORS } from "@/lib/businesses";
 
 export const dynamic = "force-dynamic";
 
@@ -30,20 +29,41 @@ export default async function VendorOnboardingPage({
       where: editingBusinessSlug
         ? {
             slug: editingBusinessSlug,
-            OR: [
-              { userId: session.user.id },
-              { managers: { some: { userId: session.user.id } } }
-            ]
+            userId: session.user.id
           }
         : searchParams?.newBusiness
           ? { id: "__new_business__" }
           : {
-              OR: [
-                { userId: session.user.id },
-                { managers: { some: { userId: session.user.id } } }
-              ]
+              userId: session.user.id
             },
-      include: { categories: true, offerings: { take: 1 } }
+      select: {
+        id: true,
+        availabilityNotes: true,
+        bio: true,
+        city: true,
+        coverPhoto: true,
+        coverPhotoCrop: true,
+        formattedAddress: true,
+        googlePlaceId: true,
+        instagramUrl: true,
+        locationLat: true,
+        locationLng: true,
+        logoCrop: true,
+        logoUrl: true,
+        name: true,
+        photos: true,
+        serviceAreaNotes: true,
+        serviceRadiusMiles: true,
+        slug: true,
+        state: true,
+        tiktokUrl: true,
+        username: true,
+        website: true,
+        weekendAvailable: true,
+        zipCode: true,
+        categories: { select: { categoryId: true } },
+        offerings: { select: { id: true }, take: 1 }
+      }
     })
   ]);
   const sortedCategories = sortVendorCategories(categories);
@@ -307,47 +327,6 @@ export default async function VendorOnboardingPage({
                     </label>
                   );
                 })}
-              </div>
-            </div>
-            <div className="md:col-span-2 rounded-[1.5rem] border p-4">
-              <label className="mb-1 block text-sm font-medium">Storefront customization <span className="text-xs font-normal text-muted-foreground">Optional</span></label>
-              <p className="mb-3 text-xs leading-5 text-muted-foreground">
-                Choose from ShopFia-approved accents and sections so every storefront stays cohesive.
-              </p>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Accent color</div>
-                  <div className="flex flex-wrap gap-2">
-                    {STOREFRONT_ACCENT_COLORS.map((color) => (
-                      <label key={color.value} className="flex cursor-pointer items-center gap-2 rounded-full border bg-white px-3 py-2 text-xs font-medium">
-                        <input
-                          type="radio"
-                          name="storefrontAccentColor"
-                          value={color.value}
-                          defaultChecked={(existingVendor?.storefrontAccentColor ?? "blush") === color.value}
-                        />
-                        <span className={`h-4 w-4 rounded-full bg-gradient-to-br ${color.className}`} />
-                        {color.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Storefront sections</div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {APPROVED_STOREFRONT_SECTIONS.map((section) => (
-                      <label key={section} className="flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm capitalize">
-                        <input
-                          type="checkbox"
-                          name="storefrontSectionOrder"
-                          value={section}
-                          defaultChecked={(existingVendor?.storefrontSectionOrder ?? APPROVED_STOREFRONT_SECTIONS).includes(section)}
-                        />
-                        {section}
-                      </label>
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
             <div id="profile-save" className="md:col-span-2 scroll-mt-28 rounded-[1.2rem] border border-border bg-[#fbf7f5] p-4">

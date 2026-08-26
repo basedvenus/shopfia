@@ -2,7 +2,7 @@ export async function getVendorProfileBySlug(slug: string) {
   const { db } = await import("@/lib/db");
   const normalizedSlug = decodeURIComponent(slug).trim();
 
-  return db.vendorProfile.findFirst({
+  const vendor = await db.vendorProfile.findFirst({
     where: {
       OR: [
         { slug: normalizedSlug },
@@ -10,7 +10,34 @@ export async function getVendorProfileBySlug(slug: string) {
         { id: normalizedSlug }
       ]
     },
-    include: {
+    select: {
+      id: true,
+      availabilityNotes: true,
+      averageRating: true,
+      bio: true,
+      city: true,
+      coverPhoto: true,
+      createdAt: true,
+      depositEnabled: true,
+      depositPercent: true,
+      formattedAddress: true,
+      instagramUrl: true,
+      logoUrl: true,
+      name: true,
+      photos: true,
+      reviewCount: true,
+      serviceAreaNotes: true,
+      serviceRadiusMiles: true,
+      slug: true,
+      startingPriceCents: true,
+      state: true,
+      status: true,
+      tiktokUrl: true,
+      userId: true,
+      username: true,
+      verified: true,
+      website: true,
+      weekendAvailable: true,
       user: {
         select: {
           id: true,
@@ -22,16 +49,6 @@ export async function getVendorProfileBySlug(slug: string) {
       sellerRatingAggregate: true,
       rankingScore: true,
       categories: { include: { category: true } },
-      verificationDocuments: {
-        where: { status: "VERIFIED" },
-        orderBy: { updatedAt: "desc" },
-        select: {
-          expiresAt: true,
-          id: true,
-          status: true,
-          type: true
-        }
-      },
       offerings: {
         where: { active: true },
         include: {
@@ -92,4 +109,6 @@ export async function getVendorProfileBySlug(slug: string) {
       }
     }
   });
+
+  return vendor ? { ...vendor, verificationDocuments: [] } : null;
 }

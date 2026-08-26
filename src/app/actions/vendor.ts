@@ -13,8 +13,6 @@ import { vendorOnboardingSchema, offeringSchema } from "@/lib/validators/vendor"
 import { friendlyValidationMessage } from "@/lib/validators/messages";
 import {
   isReservedStorefrontSlug,
-  normalizeStorefrontAccentColor,
-  sanitizeStorefrontSections,
   slugifyBusinessUrl,
   storefrontPath
 } from "@/lib/businesses";
@@ -320,25 +318,17 @@ export async function upsertVendorProfileAction(formData: FormData) {
   const businessId = String(formData.get("businessId") ?? "").trim();
   const isCreatingNewBusiness = String(formData.get("newBusiness") ?? "") === "1";
   const existingVendor = businessId
-    ? await db.vendorProfile.findFirst({
+      ? await db.vendorProfile.findFirst({
         where: {
           id: businessId,
-          OR: [
-            { userId: session.user.id },
-            { managers: { some: { userId: session.user.id } } }
-          ]
+          userId: session.user.id
         },
         select: { id: true, slug: true, username: true, userId: true }
       })
     : isCreatingNewBusiness
       ? null
       : await db.vendorProfile.findFirst({
-        where: {
-          OR: [
-            { userId: session.user.id },
-            { managers: { some: { userId: session.user.id } } }
-          ]
-        },
+        where: { userId: session.user.id },
         select: { id: true, slug: true, username: true, userId: true },
         orderBy: { createdAt: "asc" }
       });
@@ -413,8 +403,6 @@ export async function upsertVendorProfileAction(formData: FormData) {
   const logoCrop = parseImageCrop(formData.get("logoUrlCrop"));
   const photoCrops = parseImageCropArray(formData.getAll("photoUrlsCrop"));
   const coverPhotoCrop = photoCrops[0] ?? logoCrop;
-  const storefrontAccentColor = normalizeStorefrontAccentColor(parsed.storefrontAccentColor);
-  const storefrontSectionOrder = sanitizeStorefrontSections(parsed.storefrontSectionOrder);
   const existingPrimaryVendor = existingVendor
     ? null
     : await db.vendorProfile.findUnique({
@@ -447,8 +435,6 @@ export async function upsertVendorProfileAction(formData: FormData) {
         weekendAvailable: parsed.weekendAvailable,
         serviceAreaNotes: parsed.serviceAreaNotes || null,
         availabilityNotes: parsed.availabilityNotes || null,
-        storefrontAccentColor,
-        storefrontSectionOrder,
         logoUrl: parsed.logoUrl || null,
         logoCrop: logoCrop ?? Prisma.JsonNull,
         photos: parsed.photoUrls,
@@ -480,17 +466,12 @@ export async function upsertVendorProfileAction(formData: FormData) {
             weekendAvailable: parsed.weekendAvailable,
             serviceAreaNotes: parsed.serviceAreaNotes || null,
             availabilityNotes: parsed.availabilityNotes || null,
-            storefrontAccentColor,
-            storefrontSectionOrder,
             logoUrl: parsed.logoUrl || null,
             logoCrop: logoCrop ?? Prisma.JsonNull,
             photos: parsed.photoUrls,
             photoCrops,
             coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null,
-            coverPhotoCrop: coverPhotoCrop ?? Prisma.JsonNull,
-            managers: {
-              create: { userId: session.user.id, role: "OWNER" }
-            }
+            coverPhotoCrop: coverPhotoCrop ?? Prisma.JsonNull
           }
         });
   } catch (error) {
@@ -504,21 +485,6 @@ export async function upsertVendorProfileAction(formData: FormData) {
         : "Your vendor profile could not be saved. Please try again."
     );
   }
-
-  await db.vendorProfileManager.upsert({
-    where: {
-      vendorProfileId_userId: {
-        vendorProfileId: vendor.id,
-        userId: session.user.id
-      }
-    },
-    update: { role: "OWNER" },
-    create: {
-      role: "OWNER",
-      userId: session.user.id,
-      vendorProfileId: vendor.id
-    }
-  });
 
   const validVendorCategoryCount = await db.category.count({
     where: { id: { in: parsed.categoryIds }, audience: CategoryAudience.VENDOR }
@@ -557,7 +523,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
   revalidatePath(`/vendor/dashboard/${vendor.slug}`);
   revalidatePath(`/vendor/profile/${vendor.slug}`);
   revalidatePath(storefrontPath(vendor.slug));
-  redirect(`/vendor/dashboard/${vendor.slug}`);
+  redirect("/vendor/dashboard");
 }
 
 export async function upsertOfferingAction(formData: FormData) {
@@ -576,17 +542,9 @@ export async function upsertOfferingAction(formData: FormData) {
     where: businessId
       ? {
           id: businessId,
-          OR: [
-            { userId: session.user.id },
-            { managers: { some: { userId: session.user.id } } }
-          ]
+          userId: session.user.id
         }
-      : {
-          OR: [
-            { userId: session.user.id },
-            { managers: { some: { userId: session.user.id } } }
-          ]
-        },
+      : { userId: session.user.id },
     orderBy: { createdAt: "asc" }
   });
   if (!vendor) throw new Error("Create vendor profile first");
