@@ -1,9 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpRight, Plus, Store } from "lucide-react";
+import { ArrowUpRight, ExternalLink, Plus, Store } from "lucide-react";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
+import { CopyStorefrontLinkButton } from "@/components/vendor/copy-storefront-link-button";
 import { storefrontPath } from "@/lib/businesses";
 import { db } from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
@@ -71,9 +72,8 @@ export default async function MyBusinessesPage() {
               .reduce((sum, order) => sum + order.amountCents, 0);
 
             return (
-              <Link
+              <article
                 key={business.id}
-                href={`/onboarding?business=${business.slug}#profile`}
                 className="group overflow-hidden rounded-[1.5rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(72,44,43,0.12)]"
               >
                 <div className="relative aspect-[16/9] bg-[#f8ece9]">
@@ -98,6 +98,9 @@ export default async function MyBusinessesPage() {
                   </div>
                 </div>
                 <div className="space-y-4 p-5">
+                  <div className="rounded-[1rem] border border-[#eadbd8] bg-[#fbf7f5] px-3 py-2 text-xs font-semibold text-muted-foreground">
+                    {storefrontPath(business.slug).replace("/", "shopfia.app/")}
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {business.categories.length ? (
                       business.categories.map((item) => (
@@ -116,13 +119,24 @@ export default async function MyBusinessesPage() {
                   </div>
                   <div className="flex items-center justify-between gap-3 border-t border-[#f1e2dd] pt-4 text-sm">
                     <span className="text-muted-foreground">Revenue {formatCurrency(revenue)}</span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-primary">
-                      Manage setup
-                      <ArrowUpRight className="h-4 w-4" />
-                    </span>
+                    <Button asChild size="sm">
+                      <Link href={`/vendor/business/${business.slug}`}>
+                        Manage Business
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button asChild variant="secondary" size="sm" className="w-full">
+                      <Link href={storefrontPath(business.slug)}>
+                        <ExternalLink className="h-4 w-4" />
+                        View Storefront
+                      </Link>
+                    </Button>
+                    <CopyStorefrontLinkButton url={`https://www.shopfia.app${storefrontPath(business.slug)}`} />
                   </div>
                 </div>
-              </Link>
+              </article>
             );
           })}
         </div>

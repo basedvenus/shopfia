@@ -49,16 +49,7 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
     notFound();
   }
 
-  const managerAccess = await db.vendorProfileManager.findUnique({
-    where: {
-      vendorProfileId_userId: {
-        vendorProfileId: offering.vendor.id,
-        userId: session.user.id
-      }
-    },
-    select: { id: true }
-  });
-  if (offering.vendor.userId !== session.user.id && !managerAccess && session.user.role !== "ADMIN") {
+  if (offering.vendor.userId !== session.user.id && session.user.role !== "ADMIN") {
     notFound();
   }
 
@@ -68,7 +59,7 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
   return (
     <div className="space-y-6">
       <Link
-        href={`/vendor/dashboard/${offering.vendor.slug}#services`}
+        href={`/vendor/business/${offering.vendor.slug}#services`}
         className="inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
