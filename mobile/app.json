@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "ShopFia",
+    "description": "Native ShopFia mobile app sharing the same marketplace backend as the ShopFia website.",
+    "slug": "shopfia-mobile",
+    "scheme": "shopfia",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "jsEngine": "jsc",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#faf7f5"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "bundleIdentifier": "app.shopfia.mobile"
+    },
+    "android": {
+      "versionCode": 1,
+      "package": "app.shopfia.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#faf7f5"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "shopfiaApiUrl": "http://localhost:3000"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-font"
+    ]
+  }
+}
