@@ -95,7 +95,8 @@ export async function POST(request: Request) {
         url
       };
     });
-  } catch {
+  } catch (error) {
+    console.error("ShopFia avatar upload persistence failed", error);
     return NextResponse.json(
       { error: "That image could not be saved. Please retry the upload." },
       { status: 500 }

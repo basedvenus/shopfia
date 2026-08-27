@@ -440,7 +440,25 @@ export async function getExploreData(input: Record<string, string | string[] | u
       where,
       take: 30,
       orderBy,
-      include: {
+      select: {
+        id: true,
+        averageRating: true,
+        city: true,
+        coverPhoto: true,
+        createdAt: true,
+        locationLat: true,
+        locationLng: true,
+        name: true,
+        photos: true,
+        reviewCount: true,
+        serviceRadiusMiles: true,
+        slug: true,
+        startingPriceCents: true,
+        state: true,
+        status: true,
+        username: true,
+        verified: true,
+        zipCode: true,
         user: {
           select: {
             createdAt: true,
@@ -463,11 +481,33 @@ export async function getExploreData(input: Record<string, string | string[] | u
       where: offeringWhere,
       take: 36,
       orderBy: parsed.sort === "newest" ? { createdAt: "desc" } : { updatedAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        basePriceCents: true,
+        messageForPricing: true,
+        photos: true,
+        title: true,
+        type: true,
         category: true,
         categories: { include: { category: true } },
         vendor: {
-          include: {
+          select: {
+            id: true,
+            city: true,
+            coverPhoto: true,
+            locationLat: true,
+            locationLng: true,
+            name: true,
+            photos: true,
+            reviewCount: true,
+            serviceRadiusMiles: true,
+            slug: true,
+            startingPriceCents: true,
+            state: true,
+            status: true,
+            username: true,
+            verified: true,
+            zipCode: true,
             user: { select: { createdAt: true, email: true, username: true } },
             rankingScore: true
           }

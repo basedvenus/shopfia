@@ -42,7 +42,7 @@ type FeedTab = (typeof feedTabs)[number];
 export default async function PartiesPage({
   searchParams
 }: {
-  searchParams?: Promise<{ feed?: string; friend?: string }> | { feed?: string; friend?: string };
+  searchParams?: Promise<{ feed?: string; friend?: string; q?: string }> | { feed?: string; friend?: string; q?: string };
 }) {
   const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
   const [session, originalMemberCutoff] = await Promise.all([
@@ -57,7 +57,28 @@ export default async function PartiesPage({
   ]);
   const selectedFeed = getSelectedFeed(resolvedSearchParams.feed);
   const friendQuery = normalizeFriendQuery(resolvedSearchParams.friend);
+  const partyQuery = normalizeFriendQuery(resolvedSearchParams.q);
   const parties = await db.partyEvent.findMany({
+    where: partyQuery
+      ? {
+          OR: [
+            { title: { contains: partyQuery, mode: "insensitive" } },
+            { theme: { contains: partyQuery, mode: "insensitive" } },
+            { description: { contains: partyQuery, mode: "insensitive" } },
+            { location: { contains: partyQuery, mode: "insensitive" } },
+            { formattedAddress: { contains: partyQuery, mode: "insensitive" } },
+            { city: { contains: partyQuery, mode: "insensitive" } },
+            { tags: { has: partyQuery.toLowerCase() } },
+            {
+              taggedVendors: {
+                some: {
+                  name: { contains: partyQuery, mode: "insensitive" }
+                }
+              }
+            }
+          ]
+        }
+      : undefined,
     include: {
       user: {
         select: {

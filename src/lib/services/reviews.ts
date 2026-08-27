@@ -32,7 +32,7 @@ export async function assertReviewEligibility(
     throw new Error("Review allowed only for completed orders");
   }
   if (!order.paymentSucceededAt) {
-    throw new Error("Reviews are only collected for bookings made through Fia");
+    throw new Error("Reviews are only collected for bookings made through ShopFia");
   }
 
   return order;

@@ -298,7 +298,7 @@ export default async function AccountPage({
                       <input type="hidden" name="orderId" value={order.id} />
                       <div className="text-sm font-medium">Leave a review</div>
                       <div className="text-xs text-muted-foreground">
-                        Reviews are only collected for bookings made through Fia.
+                        Reviews are only collected for bookings made through ShopFia.
                       </div>
                       <Input name="rating" type="number" min={1} max={5} placeholder="Rating (1-5)" required />
                       <Textarea name="body" placeholder="Leave a review" className="min-h-[80px]" />
@@ -307,7 +307,7 @@ export default async function AccountPage({
                   ) : null}
                   {order.status === "completed" && !order.paymentSucceededAt ? (
                     <div className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">
-                      Reviews unlock only after payment is successfully processed through Fia.
+                      Reviews unlock only after payment is successfully processed through ShopFia.
                     </div>
                   ) : null}
                 </div>

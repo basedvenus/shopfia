@@ -151,10 +151,11 @@ export function ImageUploadField({
       uploadData.set("file", croppedFile);
       uploadData.set("crop", JSON.stringify(DEFAULT_IMAGE_CROP));
       const response = await fetch(uploadEndpoint!, {
+        credentials: "same-origin",
         method: "POST",
         body: uploadData
       });
-      const result = (await response.json()) as UploadResult;
+      const result = (await response.json().catch(() => ({ error: "That image could not be uploaded." }))) as UploadResult;
 
       if (!response.ok || !result.url) {
         throw new Error(result.error ?? "Upload failed.");

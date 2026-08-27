@@ -111,7 +111,6 @@ export function AccountMenu({ initials, signOutAction }: AccountMenuProps) {
                   href={item.href}
                   className="flex items-center gap-2 rounded-2xl px-3 py-2 hover:bg-muted"
                   role="menuitem"
-                  onClick={() => setOpen(false)}
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}

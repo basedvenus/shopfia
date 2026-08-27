@@ -146,7 +146,7 @@ export function AccountProfileEditor({
             Profile goals
           </div>
           <p>Make your account feel social, trusted, and creator-led. Use a clear handle, a warm bio, and visual links that show your event style.</p>
-          <p className="text-xs">Uploads preview immediately and save with your profile for this MVP; cloud media storage can be layered in later.</p>
+          <p className="text-xs">Profile photos upload immediately and appear across your ShopFia account after saving.</p>
         </div>
       </div>
     </>
