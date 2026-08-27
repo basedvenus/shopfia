@@ -158,7 +158,7 @@ export async function getMessagesPayload({
             OR: [
               { buyerId: currentUserId },
               { vendorId: currentUserId },
-              { vendorProfile: { managers: { some: { userId: currentUserId } } } }
+              { vendorProfile: { userId: currentUserId } }
             ]
           },
     include: conversationInclude,

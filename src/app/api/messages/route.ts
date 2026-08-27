@@ -72,13 +72,22 @@ export async function POST(request: Request) {
 
     const vendorProfile = await db.vendorProfile.findUnique({
       where: { id: parsed.data.vendorProfileId },
-      include: {
-        managers: { where: { role: "OWNER" }, select: { userId: true }, take: 1 },
-        user: true
+      select: {
+        id: true,
+        userId: true,
+        verified: true,
+        user: {
+          select: {
+            email: true,
+            id: true,
+            name: true,
+            username: true
+          }
+        }
       }
     });
     if (!vendorProfile) return NextResponse.json({ error: "Vendor not found." }, { status: 404 });
-    const vendorUserId = vendorProfile.userId ?? vendorProfile.managers[0]?.userId ?? null;
+    const vendorUserId = vendorProfile.userId ?? null;
     if (!vendorUserId) {
       return NextResponse.json(
         { error: "This business has not claimed their ShopFia profile yet." },
@@ -126,17 +135,15 @@ export async function POST(request: Request) {
     session.user.role === UserRole.ADMIN ||
     conversation.buyerId === session.user.id ||
     conversation.vendorId === session.user.id ||
-    Boolean(
-      await db.vendorProfileManager.findUnique({
-        where: {
-          vendorProfileId_userId: {
-            vendorProfileId: conversation.vendorProfileId,
+    Boolean(conversation.vendorProfileId
+      ? await db.vendorProfile.findFirst({
+          where: {
+            id: conversation.vendorProfileId,
             userId: session.user.id
-          }
-        },
-        select: { id: true }
-      })
-    );
+          },
+          select: { id: true }
+        })
+      : null);
   if (!canAccess) return NextResponse.json({ error: "Forbidden." }, { status: 403 });
 
   const now = new Date();
