@@ -48,6 +48,30 @@ export const vendorOnboardingSchema = z.object({
   photoUrls: z.array(imageValueSchema).max(8, "Add up to 8 photos.").default([])
 });
 
+export const storefrontCustomizationSchema = z.object({
+  businessId: z.string().cuid(),
+  name: z.string().min(2, "Business name is required.").max(80, "Business name is a little too long."),
+  tagline: z.string().max(140, "Tagline is a little too long.").optional().or(z.literal("")),
+  bio: z.string().max(1200, "About description is a little too long.").optional().or(z.literal("")),
+  aboutHeading: z.string().max(90, "About heading is a little too long.").optional().or(z.literal("")),
+  aboutImage: imageValueSchema.optional().or(z.literal("")),
+  logoUrl: imageValueSchema.optional().or(z.literal("")),
+  coverPhoto: imageValueSchema.optional().or(z.literal("")),
+  photoUrls: z.array(imageValueSchema).max(12, "Add up to 12 portfolio photos.").default([]),
+  serviceAreaNotes: z.string().max(500, "Service area notes are a little too long.").optional().or(z.literal("")),
+  availabilityNotes: z.string().max(300, "Inquiry settings are a little too long.").optional().or(z.literal("")),
+  website: z.string().url("Enter a valid website link.").optional().or(z.literal("")),
+  instagramUrl: z.string().url("Enter a valid Instagram link.").optional().or(z.literal("")),
+  tiktokUrl: z.string().url("Enter a valid TikTok link.").optional().or(z.literal("")),
+  layout: z.enum(["EDITORIAL", "PORTFOLIO", "SERVICES"]),
+  fontStyle: z.enum(["MODERN", "EDITORIAL", "ROMANTIC", "PLAYFUL"]),
+  palette: z.enum(["BLUSH", "WARM_NEUTRAL", "SAGE", "LAVENDER", "CHAMPAGNE", "MIDNIGHT"]),
+  buttonStyle: z.enum(["PILL", "SOFT", "OUTLINE"]),
+  imageShape: z.enum(["ROUNDED", "SOFT", "SQUARE"]),
+  sectionOrder: z.array(z.string().max(40)).max(9).default([]),
+  hiddenSections: z.array(z.string().max(40)).max(8).default([])
+});
+
 const pricedOptionSchema = z.object({
   name: z.string().min(1, "Add a package or add-on name.").max(80, "Package name is a little too long."),
   description: z.string().max(240, "Description is a little too long.").optional().or(z.literal("")),

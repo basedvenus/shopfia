@@ -28,7 +28,75 @@ export const STOREFRONT_ACCENT_COLORS = [
   { value: "lilac", label: "Lilac", className: "from-[#e8def6] to-[#fbf8ff]" }
 ] as const;
 
-export const APPROVED_STOREFRONT_SECTIONS = ["about", "offerings", "portfolio", "credentials", "reviews"] as const;
+export const STOREFRONT_LAYOUTS = [
+  {
+    value: "EDITORIAL",
+    label: "Editorial",
+    description: "Large hero image, elegant About section, then portfolio and services."
+  },
+  {
+    value: "PORTFOLIO",
+    label: "Portfolio",
+    description: "Image grid first, best for florists, decorators, photographers, and bakers."
+  },
+  {
+    value: "SERVICES",
+    label: "Services",
+    description: "Packages and starting prices first, best for rentals, entertainment, and caterers."
+  }
+] as const;
+
+export const STOREFRONT_FONT_STYLES = [
+  { value: "MODERN", label: "Modern", description: "Clean sans-serif." },
+  { value: "EDITORIAL", label: "Editorial", description: "Elegant serif with simple body text." },
+  { value: "ROMANTIC", label: "Romantic", description: "Soft serif with subtle script accents." },
+  { value: "PLAYFUL", label: "Playful", description: "Rounded, friendly typography." }
+] as const;
+
+export const STOREFRONT_PALETTES = [
+  { value: "BLUSH", label: "Blush", description: "Soft pinks and airy warm whites.", className: "from-[#fff7f6] via-[#fde8e8] to-[#fffaf8]", accent: "#c9828a" },
+  { value: "WARM_NEUTRAL", label: "Warm Neutral", description: "Cream, taupe, and quiet clay accents.", className: "from-[#fbf5ef] via-[#efe4d9] to-[#fffdf9]", accent: "#9c7661" },
+  { value: "SAGE", label: "Sage", description: "Fresh greens with natural light backgrounds.", className: "from-[#f6faf3] via-[#dfe9d8] to-[#fbfff8]", accent: "#6f8a63" },
+  { value: "LAVENDER", label: "Lavender", description: "Soft purple tones with polished neutrals.", className: "from-[#faf7ff] via-[#e8def6] to-[#fffaff]", accent: "#8873a7" },
+  { value: "CHAMPAGNE", label: "Champagne", description: "Golden neutrals for a warm premium feel.", className: "from-[#fff9ed] via-[#f6e4be] to-[#fffdf6]", accent: "#b38a45" },
+  { value: "MIDNIGHT", label: "Midnight", description: "Deep contrast with elegant warm accents.", className: "from-[#201e2a] via-[#343044] to-[#f9efe9]", accent: "#d7b98f" }
+] as const;
+
+export const STOREFRONT_BUTTON_STYLES = [
+  { value: "PILL", label: "Pill" },
+  { value: "SOFT", label: "Soft" },
+  { value: "OUTLINE", label: "Outline" }
+] as const;
+
+export const STOREFRONT_IMAGE_SHAPES = [
+  { value: "ROUNDED", label: "Rounded" },
+  { value: "SOFT", label: "Soft" },
+  { value: "SQUARE", label: "Square" }
+] as const;
+
+export const APPROVED_STOREFRONT_SECTIONS = [
+  "hero",
+  "about",
+  "portfolio",
+  "services",
+  "featured-parties",
+  "reviews",
+  "service-area",
+  "inquiry-form",
+  "social-links"
+] as const;
+
+export const STOREFRONT_SECTION_LABELS: Record<(typeof APPROVED_STOREFRONT_SECTIONS)[number], string> = {
+  hero: "Hero",
+  about: "About Our Business",
+  portfolio: "Portfolio",
+  services: "Services and Packages",
+  "featured-parties": "Featured Parties",
+  reviews: "Reviews",
+  "service-area": "Service Area",
+  "inquiry-form": "Inquiry Form",
+  "social-links": "Social Links"
+};
 
 export function slugifyBusinessUrl(value: string) {
   return value
@@ -77,4 +145,10 @@ export function sanitizeStorefrontSections(sections: string[]) {
 export function normalizeStorefrontAccentColor(value: string | null | undefined) {
   const requested = value?.trim();
   return STOREFRONT_ACCENT_COLORS.some((color) => color.value === requested) ? requested : "blush";
+}
+
+export function sanitizeHiddenStorefrontSections(sections: string[]) {
+  const required = new Set(["hero"]);
+  const approved = new Set<string>(APPROVED_STOREFRONT_SECTIONS);
+  return Array.from(new Set(sections.filter((section) => approved.has(section) && !required.has(section))));
 }

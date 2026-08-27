@@ -36,9 +36,13 @@ describe("business storefront utilities", () => {
     expect(sanitizeStorefrontSections(["portfolio", "custom-html", "about"])).toEqual([
       "portfolio",
       "about",
-      "offerings",
-      "credentials",
-      "reviews"
+      "hero",
+      "services",
+      "featured-parties",
+      "reviews",
+      "service-area",
+      "inquiry-form",
+      "social-links"
     ]);
   });
 });

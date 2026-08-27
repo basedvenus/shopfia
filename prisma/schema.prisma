@@ -154,6 +154,40 @@ enum VerificationReviewStatus {
   EXPIRED
 }
 
+enum StorefrontLayout {
+  EDITORIAL
+  PORTFOLIO
+  SERVICES
+}
+
+enum StorefrontFontStyle {
+  MODERN
+  EDITORIAL
+  ROMANTIC
+  PLAYFUL
+}
+
+enum StorefrontPalette {
+  BLUSH
+  WARM_NEUTRAL
+  SAGE
+  LAVENDER
+  CHAMPAGNE
+  MIDNIGHT
+}
+
+enum StorefrontButtonStyle {
+  PILL
+  SOFT
+  OUTLINE
+}
+
+enum StorefrontImageShape {
+  ROUNDED
+  SOFT
+  SQUARE
+}
+
 model User {
   id                     String            @id @default(cuid())
   name                   String?
@@ -288,7 +322,16 @@ model VendorProfile {
   depositEnabled            Boolean               @default(true)
   depositPercent            Int                   @default(30)
   storefrontAccentColor     String                @default("blush")
-  storefrontSectionOrder    String[]              @default(["about", "offerings", "portfolio", "credentials", "reviews"])
+  storefrontSectionOrder    String[]              @default(["hero", "about", "portfolio", "services", "featured-parties", "reviews", "service-area", "inquiry-form", "social-links"])
+  storefrontHiddenSections  String[]              @default([])
+  storefrontTagline         String?
+  storefrontAboutHeading    String?
+  storefrontAboutImage      String?
+  storefrontLayout          StorefrontLayout      @default(EDITORIAL)
+  storefrontFontStyle       StorefrontFontStyle   @default(MODERN)
+  storefrontPalette         StorefrontPalette     @default(BLUSH)
+  storefrontButtonStyle     StorefrontButtonStyle @default(PILL)
+  storefrontImageShape      StorefrontImageShape  @default(ROUNDED)
   claimedAt                 DateTime?
   createdAt                 DateTime              @default(now())
   updatedAt                 DateTime              @updatedAt

@@ -9,10 +9,13 @@ import { parseImageCrop, parseImageCropArray } from "@/lib/image-crop";
 import { securityLog } from "@/lib/security/audit-log";
 import { checkServerActionRateLimit } from "@/lib/security/request";
 import { createListing, ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
-import { vendorOnboardingSchema, offeringSchema } from "@/lib/validators/vendor";
+import { storefrontCustomizationSchema, vendorOnboardingSchema, offeringSchema } from "@/lib/validators/vendor";
 import { friendlyValidationMessage } from "@/lib/validators/messages";
 import {
   isReservedStorefrontSlug,
+  normalizeStorefrontAccentColor,
+  sanitizeHiddenStorefrontSections,
+  sanitizeStorefrontSections,
   slugifyBusinessUrl,
   storefrontPath
 } from "@/lib/businesses";
@@ -302,6 +305,104 @@ function firstValidationMessage(
   labels: Record<string, string>
 ) {
   return friendlyValidationMessage(error.issues, labels);
+}
+
+export async function updateStorefrontCustomizationAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
+  const session = await requireSession();
+  const rate = await checkServerActionRateLimit([
+    { key: "storefront-customize:ip:{ip}", limit: 24, intervalMs: 60_000 },
+    { key: `storefront-customize:user:${session.user.id}`, limit: 10, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    redirect("/vendor/dashboard?customizeError=Please%20wait%20a%20minute%20before%20publishing%20again.");
+  }
+
+  const result = storefrontCustomizationSchema.safeParse({
+    businessId: formData.get("businessId"),
+    name: formData.get("name"),
+    tagline: formData.get("tagline") || undefined,
+    bio: formData.get("bio") || undefined,
+    aboutHeading: formData.get("aboutHeading") || undefined,
+    aboutImage: formData.get("aboutImage") || undefined,
+    logoUrl: formData.get("logoUrl") || undefined,
+    coverPhoto: formData.get("coverPhoto") || undefined,
+    photoUrls: formDataToArray(formData, "photoUrls"),
+    serviceAreaNotes: formData.get("serviceAreaNotes") || undefined,
+    availabilityNotes: formData.get("availabilityNotes") || undefined,
+    website: formData.get("website") || undefined,
+    instagramUrl: formData.get("instagramUrl") || undefined,
+    tiktokUrl: formData.get("tiktokUrl") || undefined,
+    layout: formData.get("layout"),
+    fontStyle: formData.get("fontStyle"),
+    palette: formData.get("palette"),
+    buttonStyle: formData.get("buttonStyle"),
+    imageShape: formData.get("imageShape"),
+    sectionOrder: formDataToArray(formData, "sectionOrder"),
+    hiddenSections: formDataToArray(formData, "hiddenSections")
+  });
+  if (!result.success) {
+    const message = firstValidationMessage(result.error, {
+      name: "Business name",
+      tagline: "Tagline",
+      bio: "About Our Business",
+      aboutHeading: "About heading",
+      aboutImage: "About image",
+      logoUrl: "Logo",
+      coverPhoto: "Cover image",
+      photoUrls: "Portfolio photos",
+      website: "Website",
+      instagramUrl: "Instagram Link",
+      tiktokUrl: "TikTok Link"
+    });
+    redirect(`/vendor/dashboard?customizeError=${encodeURIComponent(message)}`);
+  }
+
+  const parsed = result.data;
+  const vendor = await db.vendorProfile.findFirst({
+    where: {
+      id: parsed.businessId,
+      ...(session.user.role === UserRole.ADMIN ? {} : { userId: session.user.id })
+    },
+    select: { id: true, slug: true }
+  });
+  if (!vendor) {
+    redirect("/vendor/dashboard?customizeError=That%20business%20could%20not%20be%20found.");
+  }
+
+  await db.vendorProfile.update({
+    where: { id: vendor.id },
+    data: {
+      name: parsed.name,
+      bio: parsed.bio || null,
+      logoUrl: parsed.logoUrl || null,
+      coverPhoto: parsed.coverPhoto || null,
+      photos: parsed.photoUrls,
+      serviceAreaNotes: parsed.serviceAreaNotes || null,
+      availabilityNotes: parsed.availabilityNotes || null,
+      website: parsed.website || null,
+      instagramUrl: parsed.instagramUrl || null,
+      tiktokUrl: parsed.tiktokUrl || null,
+      storefrontTagline: parsed.tagline || null,
+      storefrontAboutHeading: parsed.aboutHeading || null,
+      storefrontAboutImage: parsed.aboutImage || null,
+      storefrontLayout: parsed.layout,
+      storefrontFontStyle: parsed.fontStyle,
+      storefrontPalette: parsed.palette,
+      storefrontButtonStyle: parsed.buttonStyle,
+      storefrontImageShape: parsed.imageShape,
+      storefrontAccentColor: normalizeStorefrontAccentColor(parsed.palette.toLowerCase().replace("_", "-")),
+      storefrontSectionOrder: sanitizeStorefrontSections(parsed.sectionOrder),
+      storefrontHiddenSections: sanitizeHiddenStorefrontSections(parsed.hiddenSections)
+    }
+  });
+
+  revalidatePath("/vendor/dashboard");
+  revalidatePath(`/vendor/business/${vendor.slug}`);
+  revalidatePath(`/vendor/business/${vendor.slug}/storefront`);
+  revalidatePath(`/vendor/profile/${vendor.slug}`);
+  revalidatePath(storefrontPath(vendor.slug));
+  redirect(`/vendor/business/${vendor.slug}/storefront?published=1`);
 }
 
 export async function upsertVendorProfileAction(formData: FormData) {

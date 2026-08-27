@@ -25,6 +25,7 @@ import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorProfileBySlug } from "@/lib/data/vendor";
 import { getVendorTrustStatus } from "@/lib/vendor-status";
+import { STOREFRONT_PALETTES, sanitizeStorefrontSections } from "@/lib/businesses";
 
 export const dynamic = "force-dynamic";
 
@@ -125,6 +126,14 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   const vendorBadge = vendor.user ? getProfileBadge(vendor.user, originalMemberCutoff, { vendorContext: true }) : null;
   const verifiedReviewCount = vendor.sellerRatingAggregate?.totalReviews ?? vendor.reviewCount;
   const verifiedAverageRating = vendor.sellerRatingAggregate?.weightedAverageRating ?? vendor.averageRating;
+  const palette = STOREFRONT_PALETTES.find((item) => item.value === vendor.storefrontPalette) ?? STOREFRONT_PALETTES[0];
+  const aboutHeading = vendor.storefrontAboutHeading ?? `About ${vendor.name}`;
+  const tagline = vendor.storefrontTagline ?? vendor.bio;
+  const sectionOrder = sanitizeStorefrontSections(vendor.storefrontSectionOrder).filter(
+    (section) => !vendor.storefrontHiddenSections.includes(section)
+  );
+  const sectionPriority = (section: string) => sectionOrder.indexOf(section) === -1 ? 999 : sectionOrder.indexOf(section);
+  const showSection = (section: string) => sectionOrder.includes(section as never);
   const isFollowingVendor =
     currentUserId && vendor.user && currentUserId !== vendor.user.id
       ? Boolean(
@@ -146,7 +155,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className="space-y-8">
+    <div className={`space-y-8 rounded-[2rem] bg-gradient-to-br ${palette.className} p-0 md:p-2`}>
       <section className="grid gap-5 lg:grid-cols-[1.6fr_0.9fr]">
         <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
           <div className="grid gap-3 p-3 md:grid-cols-[1.45fr_0.75fr]">
@@ -213,8 +222,16 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                   </div>
                 </div>
                     <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">
-                      {vendor.bio ?? (isUnclaimed ? "This business has been tagged by the ShopFia community." : null)}
+                      {tagline ?? (isUnclaimed ? "This business has been tagged by the ShopFia community." : null)}
                     </p>
+                    {!isUnclaimed ? (
+                      <a
+                        href="#inquiry"
+                        className="mt-4 inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-[#3d302d] shadow-soft transition hover:bg-white/90"
+                      >
+                        Request a Quote
+                      </a>
+                    ) : null}
                     {isUnclaimed ? (
                       <form action={claimUnclaimedVendorAction} className="mt-4">
                         <input type="hidden" name="vendorId" value={vendor.id} />
@@ -299,22 +316,22 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               </div>
             </div>
 
+            {showSection("about") ? (
             <div className="grid gap-3 rounded-[1.5rem] bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(253,236,230,0.92))] p-4">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Sparkles className="h-4 w-4 text-primary" />
-                What this profile should feel like
+                {aboutHeading}
               </div>
               <p className="text-sm leading-6 text-muted-foreground">
-                A portfolio-first storefront where community credits show real event work today,
-                and completed ShopFia bookings can become verified reviews later.
+                {vendor.bio ?? "This storefront is being prepared with business details, services, and recent work."}
               </p>
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <span className="rounded-full bg-white px-3 py-1">Pinterest mood-board energy</span>
-                <span className="rounded-full bg-white px-3 py-1">Instagram-style portfolio</span>
-                <span className="rounded-full bg-white px-3 py-1">Etsy-style trust signals</span>
+                <span className="rounded-full bg-white px-3 py-1">{vendor.storefrontLayout.toLowerCase()} layout</span>
+                <span className="rounded-full bg-white px-3 py-1">{vendor.storefrontFontStyle.toLowerCase()} typography</span>
                 {vendor.rankingScore ? <span className="rounded-full bg-white px-3 py-1">{vendor.rankingScore.tierLabel}</span> : null}
               </div>
             </div>
+            ) : null}
           </div>
         </div>
 
@@ -335,14 +352,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 </form>
               </CardContent>
             </Card>
-          ) : (
-            <ListingInquiryPanel
-              defaultName={session?.user?.name}
-              description="Share what you are planning and this vendor can reply inside ShopFia messages."
-              vendorProfileId={vendor.id}
-            />
-          )}
+          ) : null}
 
+          {showSection("service-area") ? (
           <Card className="border-white/70 bg-white/90">
             <CardHeader>
               <CardTitle>Booking Snapshot</CardTitle>
@@ -358,10 +370,11 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               </div>
               <div className="flex items-start gap-2">
                 <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span>Perfect for clients who want examples first and logistics second.</span>
+                <span>Share your date, location, guest count, and inspiration when you request a quote.</span>
               </div>
             </CardContent>
           </Card>
+          ) : null}
           <Card className="border-white/70 bg-white/90">
             <CardHeader>
               <CardTitle>Credentials & Verification</CardTitle>
@@ -385,7 +398,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         </div>
       </section>
 
-      <section className="space-y-4">
+      {showSection("featured-parties") ? (
+      <section className="space-y-4" style={{ order: sectionPriority("featured-parties") }}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Tagged In Real Events</h2>
@@ -445,11 +459,13 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           </Card>
         )}
       </section>
+      ) : null}
 
-      <section className="space-y-4">
+      {showSection("services") ? (
+      <section className="space-y-4" style={{ order: sectionPriority("services") }}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Portfolio</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Services and Packages</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Click a tile to see the work, pricing anchor, and what the client booked.
             </p>
@@ -521,27 +537,23 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           </Card>
         ) : null}
       </section>
+      ) : null}
 
       <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-        <Card className="border-white/70 bg-white/95">
-          <CardHeader>
-            <CardTitle>Why Buyers Trust This Page</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <div className="rounded-[1.2rem] bg-muted/70 p-4">
-              Pricing is visible early, so the profile feels more like shopping than cold outreach.
-            </div>
-            <div className="rounded-[1.2rem] bg-muted/70 p-4">
-              Each project tile opens into a dedicated detail page, which is where “what it was” and
-              “how much it was” becomes concrete.
-            </div>
-            <div className="rounded-[1.2rem] bg-muted/70 p-4">
-              Community credits show where this vendor has been tagged. Verified reviews stay reserved for completed ShopFia bookings.
-            </div>
-          </CardContent>
-        </Card>
+        {showSection("inquiry-form") ? (
+        <div id="inquiry" className="scroll-mt-28">
+          {!isUnclaimed ? (
+            <ListingInquiryPanel
+              defaultName={session?.user?.name}
+              description="Share what you are planning and this vendor can reply inside ShopFia messages."
+              vendorProfileId={vendor.id}
+            />
+          ) : null}
+        </div>
+        ) : <div />}
 
-        <div className="space-y-4">
+        {showSection("reviews") ? (
+        <div className="space-y-4" style={{ order: sectionPriority("reviews") }}>
             <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold tracking-tight">Verified Reviews</h2>
             <div className="text-sm text-muted-foreground">
@@ -552,7 +564,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="accent">Verified reviews only</Badge>
-            <Badge variant="outline">Reviews are only collected for bookings made through Fia</Badge>
+            <Badge variant="outline">Reviews are only collected for bookings made through ShopFia</Badge>
           </div>
 
           {vendor.reviews.length === 0 ? (
@@ -605,6 +617,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             </div>
           )}
         </div>
+        ) : null}
       </section>
     </div>
   );
