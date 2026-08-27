@@ -8,6 +8,7 @@ function getEnvValue(...names: string[]) {
 
 const googleClientId = getEnvValue("AUTH_GOOGLE_ID", "GOOGLE_CLIENT_ID");
 const googleClientSecret = getEnvValue("AUTH_GOOGLE_SECRET", "GOOGLE_CLIENT_SECRET");
+const googleIosClientId = getEnvValue("AUTH_GOOGLE_IOS_ID", "GOOGLE_IOS_CLIENT_ID");
 const authSecret = getEnvValue("AUTH_SECRET", "NEXTAUTH_SECRET");
 
 const emailServerHost = getEnvValue("EMAIL_SERVER_HOST");
@@ -20,6 +21,7 @@ export const authProviderConfig = {
   authSecret,
   googleClientId,
   googleClientSecret,
+  googleIosClientId,
   googleEnabled: Boolean(authSecret && googleClientId && googleClientSecret),
   email: {
     host: emailServerHost,

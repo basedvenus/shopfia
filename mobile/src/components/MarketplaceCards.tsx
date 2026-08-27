@@ -4,7 +4,7 @@ import {
   absoluteImageUrl,
   formatCurrency,
 } from "../api/client";
-import { colors, radii, spacing } from "../theme";
+import { colors, fonts, radii, spacing } from "../theme";
 import { FavoriteButton } from "./FavoriteButton";
 import type { Offering, Party, Vendor } from "../types/shopfia";
 
@@ -178,8 +178,9 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: colors.foreground,
+    fontFamily: fonts.sans,
     fontSize: 11,
-    fontWeight: "800"
+    fontWeight: "600"
   },
   badgeTextVerified: {
     color: colors.primaryForeground
@@ -190,8 +191,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.foreground,
+    fontFamily: fonts.sans,
     fontSize: 17,
-    fontWeight: "800"
+    fontWeight: "600"
   },
   metaRow: {
     alignItems: "center",
@@ -201,8 +203,9 @@ const styles = StyleSheet.create({
   meta: {
     color: colors.mutedForeground,
     flex: 1,
+    fontFamily: fonts.sans,
     fontSize: 13,
-    fontWeight: "600"
+    fontWeight: "400"
   },
   chipRow: {
     flexDirection: "row",
@@ -213,8 +216,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.muted,
     borderRadius: radii.sm,
     color: colors.foreground,
+    fontFamily: fonts.sans,
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "500",
     maxWidth: 135,
     paddingHorizontal: spacing.sm,
     paddingVertical: 5
@@ -226,13 +230,15 @@ const styles = StyleSheet.create({
   },
   price: {
     color: colors.foreground,
+    fontFamily: fonts.sans,
     fontSize: 14,
-    fontWeight: "800"
+    fontWeight: "600"
   },
   rating: {
     color: colors.warning,
+    fontFamily: fonts.sans,
     fontSize: 12,
-    fontWeight: "800"
+    fontWeight: "600"
   },
   partyCard: {
     backgroundColor: colors.card,

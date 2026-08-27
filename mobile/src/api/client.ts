@@ -5,7 +5,7 @@ import type { ExplorePayload, FavoritesPayload, FavoriteTargetType, MessagesPayl
 const configuredBaseUrl =
   process.env.EXPO_PUBLIC_SHOPFIA_API_URL ||
   (Constants.expoConfig?.extra?.shopfiaApiUrl as string | undefined) ||
-  "http://localhost:3000";
+  "https://www.shopfia.app";
 
 export const API_BASE_URL = configuredBaseUrl.replace(/\/$/, "");
 
@@ -19,6 +19,13 @@ export type ApiResult<T> = {
   setCookie: string | null;
 };
 
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<ApiResult<T>> {
   const url = new URL(path, API_BASE_URL);
   Object.entries(options.query ?? {}).forEach(([key, value]) => {
@@ -31,17 +38,27 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   headers.set("Accept", "application/json");
   if (options.cookie) headers.set("Cookie", options.cookie);
 
-  const response = await fetch(url.toString(), {
-    ...options,
-    headers
-  });
+  const timeoutController = options.signal ? null : new AbortController();
+  const timeout = timeoutController
+    ? setTimeout(() => timeoutController.abort(), 15_000)
+    : null;
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      ...options,
+      headers,
+      signal: options.signal ?? timeoutController?.signal
+    });
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
   const setCookie = response.headers.get("set-cookie");
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
     const message = typeof data?.error === "string" ? data.error : `Request failed with ${response.status}`;
-    throw new Error(message);
+    throw new ApiError(message, response.status);
   }
 
   return { data: data as T, setCookie };
@@ -91,6 +108,17 @@ export async function getOfferingDetail(cookie: string | null, id: string) {
 
 export async function getMessages(cookie: string | null) {
   return apiRequest<MessagesPayload>("/api/messages", { cookie });
+}
+
+export async function exchangeGoogleIdToken(idToken: string) {
+  return apiRequest<{
+    session: import("../types/shopfia").ShopFiaSession;
+    sessionCookie: string;
+  }>("/api/mobile/auth/google", {
+    body: JSON.stringify({ idToken }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST"
+  });
 }
 
 export async function getFavorites(cookie: string | null) {

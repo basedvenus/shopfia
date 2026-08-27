@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -14,7 +15,7 @@ import { EmptyState } from "../components/EmptyState";
 import { OfferingCard, PartyCard, VendorCard } from "../components/MarketplaceCards";
 import { Pill } from "../components/Pill";
 import { ShopFiaLogo } from "../components/ShopFiaLogo";
-import { colors, radii, screen, spacing } from "../theme";
+import { colors, fonts, screen, spacing } from "../theme";
 import type { ExplorePayload } from "../types/shopfia";
 import type { Offering, Vendor } from "../types/shopfia";
 
@@ -61,21 +62,29 @@ export function BrowseScreen({
   return (
     <ScrollView
       contentContainerStyle={styles.container}
+      contentInsetAdjustmentBehavior="automatic"
+      keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={loading && Boolean(data)} onRefresh={load} tintColor={colors.primary} />}
     >
       <ShopFiaLogo />
 
       <View style={styles.hero}>
-        <Text style={styles.eyebrow}>Discover local celebrations</Text>
-        <Text style={styles.heading}>Find vendors, services, and real party inspiration.</Text>
+        <View style={styles.eyebrowPill}>
+          <Text style={styles.eyebrow}>Discover local celebrations</Text>
+        </View>
+        <Text style={styles.heading}>Discover local vendors, offerings, and real party inspiration.</Text>
+        <Text style={styles.intro}>
+          Search by business, service, category, location, or style, then browse party posts for extra inspiration.
+        </Text>
         <View style={styles.searchRow}>
+          <Ionicons color={colors.mutedForeground} name="search-outline" size={18} />
           <TextInput
             autoCapitalize="none"
             clearButtonMode="while-editing"
             onChangeText={setQuery}
             onSubmitEditing={() => setSubmittedQuery(query.trim())}
-            placeholder="Search balloons, cakes, themes..."
+            placeholder="Search vendors, services, themes, or events..."
             placeholderTextColor={colors.mutedForeground}
             returnKeyType="search"
             style={styles.searchInput}
@@ -84,32 +93,34 @@ export function BrowseScreen({
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow}>
-        <Pill label="All services" onPress={() => setCategoryId(undefined)} selected={!categoryId} />
-        {data?.categories.slice(0, 12).map((category) => (
-          <Pill
-            key={category.id}
-            label={category.name}
-            onPress={() => setCategoryId(category.id)}
-            selected={category.id === categoryId}
-          />
-        ))}
-      </ScrollView>
+      {data ? (
+        <>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow}>
+            <Pill label="All services" onPress={() => setCategoryId(undefined)} selected={!categoryId} />
+            {data.categories.slice(0, 12).map((category) => (
+              <Pill
+                key={category.id}
+                label={category.name}
+                onPress={() => setCategoryId(category.id)}
+                selected={category.id === categoryId}
+              />
+            ))}
+          </ScrollView>
 
-      <View style={styles.segmented}>
-        <Pill label={`Vendors ${data?.vendors.length ?? 0}`} onPress={() => setMode("vendors")} selected={mode === "vendors"} />
-        <Pill label={`Offerings ${data?.offerings.length ?? 0}`} onPress={() => setMode("offerings")} selected={mode === "offerings"} />
-        <Pill label={`Parties ${data?.parties.length ?? 0}`} onPress={() => setMode("parties")} selected={mode === "parties"} />
-      </View>
+          <View style={styles.segmented}>
+            <Pill label={`Vendors ${data.vendors.length}`} onPress={() => setMode("vendors")} selected={mode === "vendors"} />
+            <Pill label={`Offerings ${data.offerings.length}`} onPress={() => setMode("offerings")} selected={mode === "offerings"} />
+            <Pill label={`Parties ${data.parties.length}`} onPress={() => setMode("parties")} selected={mode === "parties"} />
+          </View>
+        </>
+      ) : null}
 
       {selectedCategory ? (
         <Text style={styles.filterText}>Filtered by {selectedCategory.name}</Text>
       ) : null}
 
       {loading && !data ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <ExploreSkeleton />
       ) : null}
 
       {error ? <EmptyState title="Marketplace unavailable" body={error} /> : null}
@@ -139,43 +150,70 @@ export function BrowseScreen({
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.md,
+    gap: spacing.lg,
     padding: screen.horizontal,
     paddingBottom: spacing.xl
   },
   hero: {
-    backgroundColor: "rgba(255, 250, 247, 0.86)",
+    backgroundColor: "rgba(255, 255, 255, 0.55)",
     borderColor: colors.border,
-    borderRadius: radii.lg,
+    borderRadius: 32,
     borderWidth: 1,
-    gap: spacing.md,
-    padding: spacing.lg
+    gap: 16,
+    padding: 24
+  },
+  eyebrowPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    borderColor: "rgba(230, 175, 173, 0.2)",
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 5
   },
   eyebrow: {
     color: colors.primary,
+    fontFamily: fonts.sans,
     fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0.6,
+    fontWeight: "500",
+    letterSpacing: 2.16,
+    lineHeight: 16,
     textTransform: "uppercase"
   },
   heading: {
     color: colors.foreground,
-    fontSize: 28,
-    fontWeight: "900",
-    lineHeight: 34
+    fontFamily: fonts.sans,
+    fontSize: 30,
+    fontWeight: "600",
+    letterSpacing: -0.75,
+    lineHeight: 36
+  },
+  intro: {
+    color: colors.mutedForeground,
+    fontFamily: fonts.sans,
+    fontSize: 16,
+    fontWeight: "400",
+    lineHeight: 24
   },
   searchRow: {
-    backgroundColor: colors.card,
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1
+    borderRadius: 24,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 48,
+    paddingHorizontal: 16
   },
   searchInput: {
     color: colors.foreground,
-    fontSize: 15,
-    fontWeight: "600",
-    minHeight: 48,
-    paddingHorizontal: spacing.md
+    flex: 1,
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 20,
+    paddingVertical: 0
   },
   pillRow: {
     gap: spacing.sm,
@@ -187,11 +225,72 @@ const styles = StyleSheet.create({
   },
   filterText: {
     color: colors.mutedForeground,
+    fontFamily: fonts.sans,
     fontSize: 13,
-    fontWeight: "700"
+    fontWeight: "500"
   },
-  center: {
+  skeletonWrap: {
     alignItems: "center",
-    padding: spacing.xl
+    gap: spacing.md
+  },
+  skeletonPills: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    width: "100%"
+  },
+  skeletonLine: {
+    backgroundColor: colors.muted
+  },
+  skeletonPill: {
+    borderRadius: 999,
+    height: 34,
+    width: 92
+  },
+  skeletonCard: {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: "hidden",
+    width: "100%"
+  },
+  skeletonImage: {
+    aspectRatio: 1.12,
+    backgroundColor: colors.muted,
+    width: "100%"
+  },
+  skeletonBody: {
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  skeletonTitle: {
+    borderRadius: 6,
+    height: 20,
+    width: "64%"
+  },
+  skeletonMeta: {
+    borderRadius: 6,
+    height: 14,
+    width: "42%"
   }
 });
+
+function ExploreSkeleton() {
+  return (
+    <View accessibilityLabel="Loading ShopFia Explore" style={styles.skeletonWrap}>
+      <View style={styles.skeletonPills}>
+        <View style={[styles.skeletonLine, styles.skeletonPill]} />
+        <View style={[styles.skeletonLine, styles.skeletonPill]} />
+        <View style={[styles.skeletonLine, styles.skeletonPill]} />
+      </View>
+      <View style={styles.skeletonCard}>
+        <View style={styles.skeletonImage} />
+        <View style={styles.skeletonBody}>
+          <View style={[styles.skeletonLine, styles.skeletonTitle]} />
+          <View style={[styles.skeletonLine, styles.skeletonMeta]} />
+        </View>
+      </View>
+      <ActivityIndicator color={colors.primary} />
+    </View>
+  );
+}

@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 export const colors = {
   background: "#faf7f5",
   foreground: "#2d2825",
@@ -14,6 +16,14 @@ export const colors = {
   danger: "#cc3b3b",
   shadow: "rgba(45, 39, 36, 0.12)"
 };
+
+export const fonts = {
+  sans: Platform.select({
+    android: "sans-serif",
+    default: "system-ui",
+    ios: "System"
+  }) ?? "System"
+} as const;
 
 export const spacing = {
   xs: 4,

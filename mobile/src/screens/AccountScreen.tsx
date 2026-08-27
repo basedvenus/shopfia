@@ -1,156 +1,253 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { API_BASE_URL, openWebsitePath } from "../api/client";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useAuth } from "../api/auth";
-import { EmptyState } from "../components/EmptyState";
 import { ShopFiaLogo } from "../components/ShopFiaLogo";
-import { colors, radii, screen, spacing } from "../theme";
+import { colors, fonts, radii, screen, spacing } from "../theme";
 
 export function AccountScreen() {
-  const { error, loading, session, signIn, signOut } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const {
+    error,
+    googleAvailable,
+    googleConfigurationMessage,
+    loading,
+    refreshSession,
+    session,
+    signInWithGoogle,
+    signOut
+  } = useAuth();
   const [localError, setLocalError] = useState<string | null>(null);
 
-  async function submit() {
+  async function startGoogleSignIn() {
     setLocalError(null);
     try {
-      await signIn(email.trim(), password);
+      await signInWithGoogle();
     } catch (reason) {
-      setLocalError(reason instanceof Error ? reason.message : "Unable to sign in.");
+      setLocalError(reason instanceof Error ? reason.message : "Google sign-in could not be completed.");
+    }
+  }
+
+  async function retrySession() {
+    setLocalError(null);
+    try {
+      await refreshSession();
+    } catch {
+      setLocalError("ShopFia still cannot reach the hosted account service.");
     }
   }
 
   if (session?.user) {
     return (
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
         <ShopFiaLogo />
         <View style={styles.card}>
+          <View style={styles.accountIcon}>
+            <Ionicons color={colors.primary} name="person-outline" size={24} />
+          </View>
           <Text style={styles.title}>{session.user.name || session.user.username || "ShopFia member"}</Text>
           <Text style={styles.subtitle}>{session.user.email}</Text>
-          <Text style={styles.detail}>Signed in with the existing ShopFia account system.</Text>
-          <Pressable style={styles.secondaryButton} onPress={() => openWebsitePath("/account")}>
-            <Text style={styles.secondaryButtonText}>Open account settings</Text>
-          </Pressable>
-          <Pressable style={styles.button} onPress={signOut} disabled={loading}>
-            {loading ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={styles.buttonText}>Sign out</Text>}
+          <Text style={styles.detail}>Signed in with your existing ShopFia Google account.</Text>
+          <Pressable accessibilityRole="button" disabled={loading} onPress={signOut} style={styles.primaryButton}>
+            {loading ? (
+              <ActivityIndicator color={colors.primaryForeground} />
+            ) : (
+              <Text style={styles.primaryButtonText}>Sign out</Text>
+            )}
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
     );
   }
 
+  const visibleError = localError || error;
+
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
       <ShopFiaLogo />
       <View style={styles.card}>
         <Text style={styles.title}>Sign in to ShopFia</Text>
-        <Text style={styles.subtitle}>Use the same email and password you use on {API_BASE_URL}.</Text>
-        <TextInput
-          autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
-          onChangeText={setEmail}
-          placeholder="Email"
-          placeholderTextColor={colors.mutedForeground}
-          style={styles.input}
-          value={email}
-        />
-        <TextInput
-          autoComplete="password"
-          onChangeText={setPassword}
-          placeholder="Password"
-          placeholderTextColor={colors.mutedForeground}
-          secureTextEntry
-          style={styles.input}
-          value={password}
-        />
-        {localError || error ? <Text style={styles.error}>{localError ?? error}</Text> : null}
-        <Pressable style={styles.button} onPress={submit} disabled={loading}>
-          {loading ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={styles.buttonText}>Sign in</Text>}
+        <Text style={styles.subtitle}>
+          Sign in to favorite vendors, message, request quotes, and book.
+        </Text>
+        <View style={styles.introPanel}>
+          <Text style={styles.introText}>
+            Continue with the same Google account you already use on the ShopFia website.
+          </Text>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={!googleAvailable || loading}
+          onPress={startGoogleSignIn}
+          style={({ pressed }) => [
+            styles.googleButton,
+            (!googleAvailable || loading) && styles.buttonDisabled,
+            pressed && googleAvailable && styles.buttonPressed
+          ]}
+        >
+          {loading ? (
+            <ActivityIndicator color={colors.foreground} />
+          ) : (
+            <>
+              <Ionicons color={colors.foreground} name="logo-google" size={18} />
+              <Text style={styles.googleButtonText}>Continue with Google</Text>
+            </>
+          )}
         </Pressable>
-        <Pressable style={styles.secondaryButton} onPress={() => openWebsitePath("/account")}>
-          <Text style={styles.secondaryButtonText}>Create account or reset password</Text>
-        </Pressable>
+
+        {googleConfigurationMessage ? (
+          <View style={styles.configurationNotice}>
+            <Ionicons color={colors.mutedForeground} name="information-circle-outline" size={20} />
+            <Text style={styles.configurationText}>{googleConfigurationMessage}</Text>
+          </View>
+        ) : null}
+
+        {visibleError ? (
+          <View style={styles.errorPanel}>
+            <Text style={styles.error}>{visibleError}</Text>
+            <Pressable accessibilityRole="button" onPress={retrySession} style={styles.retryButton}>
+              <Text style={styles.retryText}>Retry connection</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
-      <EmptyState
-        title="Connected foundation"
-        body="Marketplace browsing uses ShopFia data, messages use the existing protected API, and accepted quote checkout can continue through the current Stripe-backed web flow."
-      />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background,
-    flex: 1,
-    gap: spacing.md,
-    padding: screen.horizontal
+    flexGrow: 1,
+    gap: spacing.lg,
+    padding: screen.horizontal,
+    paddingBottom: spacing.xl
   },
   card: {
     backgroundColor: colors.card,
     borderColor: colors.border,
-    borderRadius: radii.lg,
+    borderRadius: 24,
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.lg
   },
+  accountIcon: {
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    borderRadius: 22,
+    height: 44,
+    justifyContent: "center",
+    width: 44
+  },
   title: {
     color: colors.foreground,
-    fontSize: 24,
-    fontWeight: "900"
+    fontFamily: fonts.sans,
+    fontSize: 18,
+    fontWeight: "600",
+    lineHeight: 28
   },
   subtitle: {
     color: colors.mutedForeground,
+    fontFamily: fonts.sans,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "400",
     lineHeight: 20
   },
   detail: {
     color: colors.foreground,
-    fontSize: 15,
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    fontWeight: "400",
     lineHeight: 22
   },
-  input: {
-    backgroundColor: "#fff",
+  introPanel: {
+    backgroundColor: "#fff8f5",
+    borderRadius: 24,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12
+  },
+  introText: {
+    color: colors.mutedForeground,
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 24
+  },
+  googleButton: {
+    alignItems: "center",
+    backgroundColor: colors.muted,
     borderColor: colors.border,
     borderRadius: radii.md,
     borderWidth: 1,
-    color: colors.foreground,
-    fontSize: 15,
-    minHeight: 50,
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "center",
+    minHeight: 48,
     paddingHorizontal: spacing.md
   },
-  button: {
+  googleButtonText: {
+    color: colors.foreground,
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 20
+  },
+  primaryButton: {
     alignItems: "center",
     backgroundColor: colors.primary,
     borderRadius: radii.md,
-    minHeight: 50,
-    justifyContent: "center"
-  },
-  buttonText: {
-    color: colors.primaryForeground,
-    fontSize: 15,
-    fontWeight: "900"
-  },
-  secondaryButton: {
-    alignItems: "center",
-    backgroundColor: colors.accent,
-    borderRadius: radii.md,
-    minHeight: 48,
     justifyContent: "center",
-    paddingHorizontal: spacing.md
+    minHeight: 48
   },
-  secondaryButtonText: {
-    color: colors.foreground,
+  primaryButtonText: {
+    color: colors.primaryForeground,
+    fontFamily: fonts.sans,
     fontSize: 14,
-    fontWeight: "800",
-    textAlign: "center"
+    fontWeight: "500"
+  },
+  buttonDisabled: {
+    opacity: 0.55
+  },
+  buttonPressed: {
+    opacity: 0.78
+  },
+  configurationNotice: {
+    alignItems: "flex-start",
+    backgroundColor: colors.muted,
+    borderRadius: radii.md,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  configurationText: {
+    color: colors.mutedForeground,
+    flex: 1,
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    fontWeight: "400",
+    lineHeight: 20
+  },
+  errorPanel: {
+    backgroundColor: "#fff1f1",
+    borderRadius: radii.md,
+    gap: spacing.sm,
+    padding: spacing.md
   },
   error: {
     color: colors.danger,
+    fontFamily: fonts.sans,
     fontSize: 13,
-    fontWeight: "700"
+    fontWeight: "400",
+    lineHeight: 20
+  },
+  retryButton: {
+    alignSelf: "flex-start",
+    paddingVertical: spacing.xs
+  },
+  retryText: {
+    color: colors.foreground,
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    fontWeight: "600"
   }
 });

@@ -34,11 +34,12 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "shopfiaApiUrl": "http://localhost:3000"
+      "shopfiaApiUrl": "https://www.shopfia.app"
     },
     "plugins": [
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "expo-web-browser"
     ]
   }
 }

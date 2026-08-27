@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { colors, radii, spacing } from "../theme";
+import { colors, fonts, radii, spacing } from "../theme";
 
 export function EmptyState({ title, body }: { title: string; body: string }) {
   return (
@@ -21,12 +21,15 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.foreground,
+    fontFamily: fonts.sans,
     fontSize: 16,
-    fontWeight: "800"
+    fontWeight: "600"
   },
   body: {
     color: colors.mutedForeground,
+    fontFamily: fonts.sans,
     fontSize: 14,
+    fontWeight: "400",
     lineHeight: 20
   }
 });

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,7 +10,8 @@ import { FavoritesScreen } from "./src/screens/FavoritesScreen";
 import { MarketplaceDetailScreen } from "./src/screens/MarketplaceDetailScreen";
 import { MessagesScreen } from "./src/screens/MessagesScreen";
 import { FavoritesProvider } from "./src/api/favorites";
-import { colors, radii, spacing } from "./src/theme";
+import { ShopFiaLogo } from "./src/components/ShopFiaLogo";
+import { colors, fonts, spacing } from "./src/theme";
 import type { Offering, Vendor } from "./src/types/shopfia";
 
 type TabKey = "browse" | "favorites" | "messages" | "account";
@@ -28,7 +29,12 @@ const tabs: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }
 function Shell() {
   const [activeTab, setActiveTab] = useState<TabKey>("browse");
   const [detailTarget, setDetailTarget] = useState<DetailTarget | null>(null);
-  const { booting } = useAuth();
+  const { booting, session } = useAuth();
+
+  useEffect(() => {
+    setDetailTarget(null);
+    setActiveTab("browse");
+  }, [session?.user?.id]);
 
   function openVendor(vendor: Pick<Vendor, "name" | "slug">) {
     setActiveTab("browse");
@@ -68,8 +74,16 @@ function Shell() {
   if (booting) {
     return (
       <SafeAreaView style={styles.loading}>
+        <ShopFiaLogo />
         <ActivityIndicator color={colors.primary} />
-        <Text style={styles.loadingText}>Opening ShopFia</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <SafeAreaView style={styles.shell}>
+        <AccountScreen />
       </SafeAreaView>
     );
   }
@@ -89,13 +103,15 @@ function Shell() {
                 setDetailTarget(null);
                 setActiveTab(tab.key);
               }}
-              style={[styles.tab, selected && styles.tabSelected]}
+              style={styles.tab}
             >
-              <Ionicons
-                color={selected ? colors.primaryForeground : colors.mutedForeground}
-                name={tab.icon}
-                size={21}
-              />
+              <View style={[styles.iconWrap, selected && styles.iconWrapSelected]}>
+                <Ionicons
+                  color={selected ? colors.primary : colors.mutedForeground}
+                  name={tab.icon}
+                  size={19}
+                />
+              </View>
               <Text style={[styles.tabText, selected && styles.tabTextSelected]}>{tab.label}</Text>
             </Pressable>
           );
@@ -133,37 +149,39 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     justifyContent: "center"
   },
-  loadingText: {
-    color: colors.foreground,
-    fontSize: 16,
-    fontWeight: "700"
-  },
   tabBar: {
     backgroundColor: "rgba(255, 255, 255, 0.94)",
     borderTopColor: colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm
+    minHeight: 64,
+    paddingHorizontal: spacing.sm,
+    paddingTop: 6
   },
   tab: {
     alignItems: "center",
-    borderRadius: radii.md,
     flex: 1,
     gap: 3,
-    minHeight: 54,
+    minHeight: 58,
     justifyContent: "center"
   },
-  tabSelected: {
-    backgroundColor: colors.primary
+  iconWrap: {
+    alignItems: "center",
+    borderRadius: 18,
+    height: 32,
+    justifyContent: "center",
+    width: 32
+  },
+  iconWrapSelected: {
+    backgroundColor: "rgba(230, 175, 173, 0.16)",
   },
   tabText: {
+    fontFamily: fonts.sans,
     color: colors.mutedForeground,
     fontSize: 11,
-    fontWeight: "700"
+    fontWeight: "600"
   },
   tabTextSelected: {
-    color: colors.primaryForeground
+    color: colors.primary
   }
 });

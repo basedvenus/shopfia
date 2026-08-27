@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text } from "react-native";
-import { colors, radii, spacing } from "../theme";
+import { colors, fonts, spacing } from "../theme";
 
 type PillProps = {
   label: string;
@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
   pill: {
     backgroundColor: colors.card,
     borderColor: colors.border,
-    borderRadius: radii.md,
+    borderRadius: 999,
     borderWidth: 1,
     maxWidth: 190,
     paddingHorizontal: spacing.md,
@@ -33,8 +33,9 @@ const styles = StyleSheet.create({
   },
   text: {
     color: colors.foreground,
+    fontFamily: fonts.sans,
     fontSize: 13,
-    fontWeight: "700"
+    fontWeight: "500"
   },
   selectedText: {
     color: colors.primaryForeground
