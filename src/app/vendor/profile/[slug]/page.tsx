@@ -203,8 +203,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
   return (
     <div className={`flex flex-col gap-8 rounded-[1.25rem] bg-gradient-to-br ${palette.className} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
-      <header className="overflow-hidden rounded-[1rem] border border-[#2f2626]/15 bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]">
-        <div className="flex items-center justify-between gap-3 border-b border-[#eadbd7] bg-[#fffaf8] px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7a625b]">
+      <header className="overflow-hidden rounded-[1rem] border bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]" style={theme.headerShellStyle}>
+        <div className="flex items-center justify-between gap-3 border-b px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]" style={theme.platformBarStyle}>
           <span>ShopFia Storefront</span>
           <span className="hidden sm:inline">Verified identity, saved services, quotes, and bookings</span>
         </div>
@@ -215,7 +215,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             ) : hero ? (
               <Image src={hero} alt={vendor.name} fill className="object-cover" />
             ) : (
-              <div className="grid h-full place-items-center text-xl font-semibold text-primary">
+              <div className="grid h-full place-items-center text-xl font-semibold" style={theme.accentTextStyle}>
                 {vendor.name.slice(0, 1)}
               </div>
             )}
@@ -225,7 +225,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-semibold tracking-tight md:text-2xl" style={theme.headingStyle}>{vendor.name}</h1>
               {trustStatus.tone === "verified" || vendor.verified ? (
-                <Badge variant="accent" className="gap-1 rounded-full">
+                <Badge variant="accent" className="gap-1 rounded-full" style={theme.badgeStyle}>
                   <BadgeCheck className="h-3.5 w-3.5" />
                   Verified
                 </Badge>
@@ -244,9 +244,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               ) : null}
             </div>
             {tagline ? (
-              <p className="mt-1 line-clamp-1 max-w-3xl text-sm leading-6 text-[#5f5550]">{tagline}</p>
+              <p className={`mt-1 line-clamp-1 max-w-3xl text-sm leading-6 ${theme.copyClass}`}>{tagline}</p>
             ) : null}
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#4b403c]">
+            <div className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm ${theme.profileMetricClass}`}>
               <span className="inline-flex items-center gap-1.5">
                 <Star className="h-4 w-4 fill-current text-amber-500" />
                 {verifiedReviewCount > 0 ? `${verifiedAverageRating.toFixed(1)} (${verifiedReviewCount})` : "No reviews yet"}
@@ -261,13 +261,13 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             {session?.user?.id && vendor.user && session.user.id !== vendor.user.id ? (
               <form action={toggleFollow}>
                 <input type="hidden" name="followingId" value={vendor.user.id} />
-                <Button type="submit" variant={isFollowingVendor ? "secondary" : "default"} size="sm" className="min-w-[108px]">
+                <Button type="submit" variant={isFollowingVendor ? "secondary" : "default"} size="sm" className="min-w-[108px]" style={isFollowingVendor ? undefined : theme.ctaStyle}>
                   {isFollowingVendor ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}
                   {isFollowingVendor ? "Following" : "Follow"}
                 </Button>
               </form>
             ) : !session?.user?.id && vendor.user ? (
-              <Button asChild size="sm" className="min-w-[108px]">
+              <Button asChild size="sm" className="min-w-[108px]" style={theme.ctaStyle}>
                 <Link href={`/account?redirectTo=${encodeURIComponent(`/${vendor.slug}`)}`}>
                   <UserPlus className="h-4 w-4" />
                   Follow
@@ -277,7 +277,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             <CopyStorefrontLinkButton label="Share" url={publicStorefrontUrl} className="h-9 bg-white/92 px-3" />
             <FavoriteToggle targetType="vendor" targetId={vendor.id} isSaved={isSavedVendor} variant="pill" label={isSavedVendor ? "Saved" : "Save"} />
             {!isUnclaimed ? (
-              <Button asChild size="sm">
+              <Button asChild size="sm" style={theme.ctaStyle}>
                 <a href="#inquiry">
                   <Send className="h-4 w-4" />
                   Get a quote
@@ -286,7 +286,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             ) : null}
           </div>
         </div>
-        <nav className="sticky top-16 z-10 flex gap-1 overflow-x-auto border-t border-[#eadbd7] bg-white px-3 py-1.5 text-sm font-medium backdrop-blur">
+        <nav className="sticky top-16 z-10 flex gap-1 overflow-x-auto border-t bg-white px-3 py-1.5 text-sm font-medium backdrop-blur" style={theme.navStyle}>
           {[
             ["#storefront-home", "Home"],
             ["#services", "Services"],
@@ -298,7 +298,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             <a
               key={href}
               href={href}
-              className="whitespace-nowrap rounded-full px-3 py-2 text-muted-foreground transition hover:bg-[#f8ece9] hover:text-foreground"
+              className="whitespace-nowrap rounded-full px-3 py-2 text-muted-foreground transition hover:text-foreground"
+              style={label === "Home" ? theme.activeNavItemStyle : undefined}
             >
               {label}
             </a>
@@ -319,7 +320,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <div className="max-w-4xl">
             <div className="mb-6 flex flex-wrap gap-2">
               {vendor.categories.slice(0, 3).map((c) => (
-                <span key={c.id} className="rounded-full border border-white/30 bg-white/12 px-3 py-1 text-xs font-semibold backdrop-blur">
+                <span key={c.id} className="rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur" style={theme.heroChipStyle}>
                   {c.category.name}
                 </span>
               ))}
@@ -333,7 +334,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               {!isUnclaimed ? (
-                <a href="#services" className="inline-flex h-12 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#211815] transition hover:bg-white/90">
+                <a href="#services" className="inline-flex h-12 items-center rounded-full px-5 text-sm font-semibold transition" style={theme.heroCtaStyle}>
                   Browse services
                 </a>
               ) : (
@@ -358,7 +359,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             {verifiedCredentials.length ? (
               <div className="flex flex-wrap gap-2 pt-2">
                 {verifiedCredentials.map((credential) => (
-                  <span key={credential} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#211815]">
+                  <span key={credential} className="rounded-full px-3 py-1 text-xs font-semibold" style={theme.heroCtaStyle}>
                     {credential}
                   </span>
                 ))}
@@ -369,9 +370,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       </section>
 
       {showSection("about") ? (
-        <section id="about" className={`grid scroll-mt-28 gap-5 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-8 ${theme.cardClass} ${theme.sectionRadius}`} style={{ order: sectionPriority("about") }}>
+        <section id="about" className={`grid scroll-mt-28 gap-5 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-8 ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: sectionPriority("about") }}>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/75">About</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={theme.accentTextStyle}>About</p>
             <h2 className="mt-3 text-4xl font-normal tracking-normal" style={theme.headingStyle}>
               {aboutHeading}
             </h2>
@@ -381,9 +382,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               {vendor.bio ?? "This storefront is being prepared with business details, services, and recent work."}
             </p>
             <div className="grid gap-3 sm:grid-cols-3">
-              <EditorialStat label={verifiedReviewCount > 0 ? "Verified rating" : "Event credits"} value={verifiedReviewCount > 0 ? verifiedAverageRating.toFixed(1) : String(taggedEvents.length)} />
-              <EditorialStat label="Completed events" value={String(completedOrderCount)} />
-              <EditorialStat label="Theme" value={vendor.storefrontLayout.toLowerCase()} />
+              <EditorialStat label={verifiedReviewCount > 0 ? "Verified rating" : "Event credits"} value={verifiedReviewCount > 0 ? verifiedAverageRating.toFixed(1) : String(taggedEvents.length)} theme={theme} />
+              <EditorialStat label="Completed events" value={String(completedOrderCount)} theme={theme} />
+              <EditorialStat label="Theme" value={vendor.storefrontLayout.toLowerCase()} theme={theme} />
             </div>
           </div>
         </section>
@@ -398,7 +399,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               A curated first look at the services this vendor wants customers to discover first.
             </p>
           </div>
-          <Badge variant="outline">{displayedFeaturedOfferings.length} featured</Badge>
+          <Badge variant="outline" style={theme.outlineBadgeStyle}>{displayedFeaturedOfferings.length} featured</Badge>
         </div>
 
         {displayedFeaturedOfferings.length > 0 ? (
@@ -428,7 +429,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               Customer-tagged parties create authentic proof of how this vendor shows up in celebrations.
             </p>
           </div>
-          <Badge variant="outline">{taggedEvents.length} party credits</Badge>
+          <Badge variant="outline" style={theme.outlineBadgeStyle}>{taggedEvents.length} party credits</Badge>
         </div>
 
         {taggedEvents.length > 0 ? (
@@ -437,14 +438,14 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               const photo = event.coverImageUrl;
               return (
                 <Link key={event.slug} href={`/events/${event.slug}`}>
-                  <article className={`group overflow-hidden shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${theme.cardClass} ${theme.sectionRadius}`}>
+                  <article className={`group overflow-hidden shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
                     <div className="relative aspect-[4/3] bg-muted">
                       <Image src={photo} alt={event.title} fill className="object-cover transition duration-500 group-hover:scale-[1.03]" />
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold" style={theme.headingStyle}>{event.title}</h3>
                       {event.theme ? (
-                        <span className="mt-2 inline-flex h-7 max-w-full items-center rounded-full bg-[#fff7f4] px-2.5 text-[13px] text-muted-foreground">
+                        <span className="mt-2 inline-flex h-7 max-w-full items-center rounded-full px-2.5 text-[13px]" style={theme.softChipStyle}>
                           <span className="truncate">{event.theme}</span>
                         </span>
                       ) : null}
@@ -491,7 +492,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               Click a tile to see the work, pricing anchor, and what the client booked.
             </p>
           </div>
-          <Badge variant="outline">{orderedOfferings.length} listing{orderedOfferings.length === 1 ? "" : "s"}</Badge>
+          <Badge variant="outline" style={theme.outlineBadgeStyle}>{orderedOfferings.length} listing{orderedOfferings.length === 1 ? "" : "s"}</Badge>
         </div>
 
         {orderedOfferings.length > 0 ? (
@@ -515,13 +516,13 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       ) : null}
 
       {showSection("how-it-works") ? (
-        <section id="how-it-works" className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ order: sectionPriority("how-it-works") }}>
+        <section id="how-it-works" className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: sectionPriority("how-it-works") }}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/75">Booking</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={theme.accentTextStyle}>Booking</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={theme.headingStyle}>How It Works</h2>
             </div>
-            <Badge variant="outline" className="rounded-full">ShopFia-supported quotes</Badge>
+            <Badge variant="outline" className="rounded-full" style={theme.outlineBadgeStyle}>ShopFia-supported quotes</Badge>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <TrustFaqItem title="Process" body={bookingInfo.process} theme={theme} />
@@ -565,8 +566,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Badge variant="accent">Verified reviews only</Badge>
-            <Badge variant="outline">Reviews are only collected for bookings made through ShopFia</Badge>
+            <Badge variant="accent" style={theme.badgeStyle}>Verified reviews only</Badge>
+            <Badge variant="outline" style={theme.outlineBadgeStyle}>Reviews are only collected for bookings made through ShopFia</Badge>
           </div>
 
           {vendor.reviews.length === 0 ? (
@@ -581,11 +582,11 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 const reviewerBadge = getProfileBadge(review.buyer, originalMemberCutoff);
 
                 return (
-                <Card key={review.id} className={`${theme.cardClass} ${theme.sectionRadius}`}>
+                <Card key={review.id} className={`${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
                   <CardContent className="space-y-4 p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-sm font-semibold">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold" style={theme.badgeStyle}>
                           {getInitials(review.buyer.name)}
                         </div>
                         <div>
@@ -623,7 +624,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       </section>
 
       {showSection("faq") ? (
-      <section id="faq" className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ order: sectionPriority("faq") }}>
+      <section id="faq" className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: sectionPriority("faq") }}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>FAQ</h2>
@@ -631,7 +632,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               ShopFia keeps quoting, messaging, saved services, reviews, and booking records connected to your account.
             </p>
           </div>
-          <Badge variant="outline" className="rounded-full">Powered by ShopFia</Badge>
+          <Badge variant="outline" className="rounded-full" style={theme.outlineBadgeStyle}>Powered by ShopFia</Badge>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           {faqItems.map((faq) => (
@@ -641,7 +642,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       </section>
       ) : null}
 
-      <footer className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm ${theme.mutedClass} ${theme.cardClass} ${theme.sectionRadius}`} style={{ order: 999 }}>
+      <footer className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm ${theme.mutedClass} ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: 999 }}>
         <span>{vendor.name} storefront, powered by ShopFia.</span>
         <span>Verified vendors, quote requests, messaging, payments, and booking support.</span>
       </footer>
@@ -651,7 +652,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
 function TrustFaqItem({ body, theme, title }: { body: string; theme: StorefrontTheme; title: string }) {
   return (
-    <div className={`p-4 ${theme.cardClass} ${theme.sectionRadius}`}>
+    <div className={`p-4 ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
       <h3 className="font-semibold" style={theme.headingStyle}>{title}</h3>
       <p className={`mt-2 text-sm leading-6 ${theme.copyClass}`}>{body}</p>
     </div>
@@ -686,7 +687,7 @@ function ServiceListingGrid({
         const photo = offering.photos[0] ?? null;
 
         return (
-          <article key={offering.id} className={`group relative overflow-hidden shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${theme.cardClass} ${theme.sectionRadius}`}>
+          <article key={offering.id} className={`group relative overflow-hidden shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
             <Link href={`/offering/${offering.id}`} className="block">
               <div className="relative aspect-[4/3] bg-muted">
                 {photo ? (
@@ -718,7 +719,7 @@ function ServiceListingGrid({
                   </p>
                 </div>
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="font-semibold">
+                  <span className="font-semibold" style={theme.accentTextStyle}>
                     {offering.messageForPricing ? "Custom quote" : formatOfferingPrice(offering)}
                   </span>
                   {verifiedReviewCount > 0 ? (
@@ -754,10 +755,10 @@ function EditorialFact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function EditorialStat({ label, value }: { label: string; value: string }) {
+function EditorialStat({ label, theme, value }: { label: string; theme: StorefrontTheme; value: string }) {
   return (
-    <div className="border-l border-[#eadbd7] pl-4">
-      <div className="text-2xl font-semibold text-[#2f2626]">{value}</div>
+    <div className="border-l pl-4" style={theme.accentBorderStyle}>
+      <div className="text-2xl font-semibold" style={theme.accentTextStyle}>{value}</div>
       <div className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
     </div>
   );
@@ -834,18 +835,37 @@ function getStorefrontTheme({
           ? "'Avenir Next Rounded', 'Nunito', system-ui, sans-serif"
           : "Inter, ui-sans-serif, system-ui, sans-serif";
   const headingFamily = fontStyle === "MODERN" ? "Inter, ui-sans-serif, system-ui, sans-serif" : fontFamily;
+  const paletteConfig = STOREFRONT_PALETTES.find((item) => item.value === palette) ?? STOREFRONT_PALETTES[0];
+  const accent = paletteConfig.accent;
+  const accentSoft = `${accent}24`;
+  const accentWash = `${accent}14`;
 
   return {
+    accent,
+    accentBorderStyle: { borderColor: accent } as CSSProperties,
+    accentTextStyle: { color: accent } as CSSProperties,
+    activeNavItemStyle: { backgroundColor: accentSoft, color: isDark ? "#ffffff" : "#2f2626" } as CSSProperties,
     bodyStyle: { fontFamily } as CSSProperties,
-    cardClass: isDark ? "border border-white/15 bg-[#201b1e]/88 text-white" : "border border-white/80 bg-white/88 text-[#2f2626]",
+    badgeStyle: { backgroundColor: accent, borderColor: accent, color: palette === "MIDNIGHT" ? "#201815" : "#ffffff" } as CSSProperties,
+    cardStyle: { borderColor: isDark ? `${accent}44` : `${accent}40` } as CSSProperties,
+    cardClass: isDark ? "border border-white/15 bg-[#201b1e]/88 text-white" : "border bg-white/88 text-[#2f2626]",
+    ctaStyle: { backgroundColor: accent, borderColor: accent, color: palette === "MIDNIGHT" ? "#201815" : "#ffffff" } as CSSProperties,
     copyClass: isDark ? "text-white/86" : "text-[#5f5550]",
+    headerShellStyle: { borderColor: `${accent}55` } as CSSProperties,
     headingStyle: { fontFamily: headingFamily } as CSSProperties,
+    heroChipStyle: { backgroundColor: `${accent}33`, borderColor: `${accent}99`, color: "#ffffff" } as CSSProperties,
+    heroCtaStyle: { backgroundColor: accent, borderColor: accent, color: palette === "MIDNIGHT" ? "#201815" : "#ffffff" } as CSSProperties,
     heroRadius: imageRadius,
     imageRadius,
     logoRadius,
     mutedClass: isDark ? "text-white/62" : "text-muted-foreground",
+    navStyle: { borderColor: `${accent}33` } as CSSProperties,
+    outlineBadgeStyle: { backgroundColor: accentWash, borderColor: `${accent}66`, color: isDark ? "#ffffff" : "#4b403c" } as CSSProperties,
+    platformBarStyle: { backgroundColor: accentWash, borderColor: `${accent}33`, color: isDark ? "#ffffffcc" : "#5f5550" } as CSSProperties,
+    profileMetricClass: isDark ? "text-white/78" : "text-[#4b403c]",
     sectionRadius,
-    shellClass: isDark ? "text-white" : "text-[#2f2626]"
+    shellClass: isDark ? "text-white" : "text-[#2f2626]",
+    softChipStyle: { backgroundColor: accentSoft, color: isDark ? "#ffffffcc" : "#5f5550" } as CSSProperties
   };
 }
 

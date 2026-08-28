@@ -164,6 +164,15 @@ export function normalizeStorefrontAccentColor(value: string | null | undefined)
   return STOREFRONT_ACCENT_COLORS.some((color) => color.value === requested) ? requested : "blush";
 }
 
+export function storefrontAccentColorFromPalette(value: string | null | undefined) {
+  const palette = STOREFRONT_PALETTES.find((item) => item.value === value);
+  if (!palette) return "blush";
+  if (palette.value === "SAGE") return "sage";
+  if (palette.value === "LAVENDER") return "lilac";
+  if (palette.value === "CHAMPAGNE" || palette.value === "MIDNIGHT") return "champagne";
+  return palette.value === "BLUSH" ? "blush" : "champagne";
+}
+
 export function sanitizeHiddenStorefrontSections(sections: string[]) {
   const required = new Set(["hero"]);
   const approved = new Set<string>(APPROVED_STOREFRONT_SECTIONS);

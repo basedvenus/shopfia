@@ -13,10 +13,10 @@ import { storefrontCustomizationSchema, vendorOnboardingSchema, offeringSchema }
 import { friendlyValidationMessage } from "@/lib/validators/messages";
 import {
   isReservedStorefrontSlug,
-  normalizeStorefrontAccentColor,
   sanitizeHiddenStorefrontSections,
   sanitizeStorefrontSections,
   slugifyBusinessUrl,
+  storefrontAccentColorFromPalette,
   storefrontPath
 } from "@/lib/businesses";
 
@@ -608,7 +608,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
       storefrontButtonStyle: parsed.buttonStyle,
       storefrontImageShape: parsed.imageShape,
       storefrontTextTone: parsed.textTone,
-      storefrontAccentColor: normalizeStorefrontAccentColor(parsed.palette.toLowerCase().replace("_", "-")),
+      storefrontAccentColor: storefrontAccentColorFromPalette(parsed.palette),
       storefrontSectionOrder: sanitizedSectionOrder,
       storefrontHiddenSections: sanitizedHiddenSections,
       storefrontDraftJson: Prisma.JsonNull,

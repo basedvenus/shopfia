@@ -650,6 +650,8 @@ function DesignControls({
   form: FormState;
   update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
 }) {
+  const theme = getPreviewTheme(form);
+
   return (
     <PanelStack>
       <div className="flex items-center gap-2">
@@ -662,8 +664,9 @@ function DesignControls({
             key={palette.value}
             type="button"
             onClick={() => update("palette", palette.value)}
+            style={form.palette === palette.value ? { borderColor: palette.accent, backgroundColor: `${palette.accent}12` } : undefined}
             className={`flex items-center gap-3 rounded-[0.9rem] border p-3 text-left text-sm transition ${
-              form.palette === palette.value ? "border-primary bg-[#fffaf8]" : "border-[#eadbd7] hover:bg-[#fffaf8]"
+              form.palette === palette.value ? "" : "border-[#eadbd7] hover:bg-[#fffaf8]"
             }`}
           >
             <span className={`h-8 w-8 rounded-full bg-gradient-to-br ${palette.className}`} />
@@ -679,6 +682,16 @@ function DesignControls({
           {STOREFRONT_FONT_STYLES.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
         </select>
       </Field>
+      <div className={`overflow-hidden border p-3 text-sm ${theme.cardClass} ${theme.sectionRadius}`} style={theme.previewCardStyle}>
+        <div className={`mb-3 h-16 ${theme.imageRadius}`} style={theme.accentBlockStyle} />
+        <div className="text-lg font-semibold" style={theme.headingStyle}>Live theme sample</div>
+        <p className={`mt-1 ${theme.copyClass}`}>
+          This sample uses the selected font, text color, accent color, and image shape.
+        </p>
+        <span className="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>
+          Accent preview
+        </span>
+      </div>
       <Field label="Text color">
         <div className="grid grid-cols-3 gap-2">
           {[
@@ -690,8 +703,9 @@ function DesignControls({
               key={tone.value}
               type="button"
               onClick={() => update("textTone", tone.value)}
+              style={form.textTone === tone.value ? theme.selectedControlStyle : undefined}
               className={`rounded-[0.75rem] border px-3 py-2 text-sm font-semibold ${
-                form.textTone === tone.value ? "border-primary bg-[#fffaf8]" : "border-[#eadbd7]"
+                form.textTone === tone.value ? "" : "border-[#eadbd7]"
               } ${tone.value === "LIGHT" ? "bg-[#241c1a] text-white" : ""}`}
             >
               {tone.label}
@@ -706,8 +720,9 @@ function DesignControls({
               key={shape.value}
               type="button"
               onClick={() => update("imageShape", shape.value)}
+              style={form.imageShape === shape.value ? theme.selectedControlStyle : undefined}
               className={`rounded-[0.75rem] border px-3 py-2 text-sm font-semibold ${
-                form.imageShape === shape.value ? "border-primary bg-[#fffaf8]" : "border-[#eadbd7]"
+                form.imageShape === shape.value ? "" : "border-[#eadbd7]"
               }`}
             >
               {shape.label}
@@ -746,17 +761,18 @@ function StorefrontPreview({
   return (
     <div className={`overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={theme.bodyStyle}>
       <button type="button" onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
-        <div className={`border-b px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] ${theme.headerClass}`}>ShopFia Storefront</div>
+        <div className={`border-b px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] ${theme.headerClass}`} style={theme.platformBarStyle}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
-          {form.logoUrl ? <img src={form.logoUrl} alt="" className={`h-14 w-14 object-cover ${theme.logoRadius}`} /> : <div className={`grid h-14 w-14 place-items-center bg-[#f8ece9] font-semibold ${theme.logoRadius}`}>{form.name.slice(0, 1)}</div>}
+          {form.logoUrl ? <img src={form.logoUrl} alt="" className={`h-14 w-14 object-cover ${theme.logoRadius}`} /> : <div className={`grid h-14 w-14 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
           <div>
             <div className="text-lg font-semibold" style={theme.headingStyle}>{form.name}</div>
             <div className={`text-sm ${theme.mutedClass}`}>@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
             <p className={`mt-1 line-clamp-2 text-sm ${theme.copyClass}`}>{form.tagline}</p>
+            <span className="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>Follow</span>
           </div>
         </div>
         <div className={`flex gap-1 overflow-x-auto border-t px-3 py-2 text-sm ${theme.navClass}`}>
-          {["Home", "Services", "Portfolio", "About", "Reviews", "FAQ"].map((item) => <span key={item} className="rounded-full px-3 py-1">{item}</span>)}
+          {["Home", "Services", "Portfolio", "About", "Reviews", "FAQ"].map((item) => <span key={item} className="rounded-full px-3 py-1" style={item === "Home" ? theme.activeNavItemStyle : undefined}>{item}</span>)}
         </div>
         <section className={`relative m-4 grid min-h-[390px] overflow-hidden bg-[#211815] text-white ${theme.heroRadius} ${isMobile ? "" : "md:grid-cols-[1fr_0.55fr]"}`}>
           {form.coverPhoto ? <img src={form.coverPhoto} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
@@ -765,6 +781,7 @@ function StorefrontPreview({
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/70">Featured storefront</p>
             <h2 className="mt-4 text-5xl font-semibold leading-[0.9] tracking-normal" style={theme.headingStyle}>{form.aboutHeading || form.name}</h2>
             <p className="mt-4 line-clamp-3 text-sm leading-6 text-white/80">{form.tagline || form.bio}</p>
+            <span className="mt-5 inline-flex rounded-full px-4 py-2 text-xs font-semibold" style={theme.heroCtaStyle}>Browse services</span>
           </div>
         </section>
       </button>
@@ -796,7 +813,7 @@ function ServiceGrid({ services, theme }: { services: EditorService[]; theme: Pr
             <div className="line-clamp-1 font-semibold" style={theme.headingStyle}>{service.title}</div>
             <p className={`mt-1 line-clamp-2 text-sm ${theme.mutedClass}`}>{service.description}</p>
             <div className="mt-2 flex items-center justify-between text-sm">
-              <span>{service.messageForPricing || service.basePriceCents == null ? "Custom quote" : `From ${formatCurrency(service.basePriceCents)}`}</span>
+              <span style={theme.accentTextStyle}>{service.messageForPricing || service.basePriceCents == null ? "Custom quote" : `From ${formatCurrency(service.basePriceCents)}`}</span>
               <span className={`inline-flex items-center gap-1 ${theme.mutedClass}`}><Star className="h-3.5 w-3.5 fill-current text-amber-500" />Verified</span>
             </div>
           </div>
@@ -808,7 +825,7 @@ function ServiceGrid({ services, theme }: { services: EditorService[]; theme: Pr
 
 function PreviewSection({ active, children, onClick, theme, title }: { active: boolean; children: ReactNode; onClick: () => void; theme: PreviewTheme; title: string }) {
   return (
-    <button type="button" onClick={onClick} className={previewButtonClass(active, `mb-5 block w-full p-5 text-left transition ${theme.cardClass} ${theme.sectionRadius}`)}>
+    <button type="button" onClick={onClick} className={previewButtonClass(active, `mb-5 block w-full p-5 text-left transition ${theme.cardClass} ${theme.sectionRadius}`)} style={active ? theme.activeSectionStyle : theme.previewCardStyle}>
       <h3 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{title}</h3>
       <div className={`mt-3 text-sm leading-6 ${theme.copyClass}`}>{children}</div>
     </button>
@@ -816,13 +833,15 @@ function PreviewSection({ active, children, onClick, theme, title }: { active: b
 }
 
 function previewButtonClass(active: boolean, base: string) {
-  return `${base} ${active ? "ring-2 ring-primary ring-offset-2" : "ring-1 ring-transparent hover:ring-primary/35"}`;
+  return `${base} ${active ? "ring-2 ring-offset-2" : "ring-1 ring-transparent"}`;
 }
 
 type PreviewTheme = ReturnType<typeof getPreviewTheme>;
 
 function getPreviewTheme(form: FormState) {
   const isDark = form.textTone === "LIGHT" || (form.textTone === "AUTO" && form.palette === "MIDNIGHT");
+  const palette = STOREFRONT_PALETTES.find((item) => item.value === form.palette) ?? STOREFRONT_PALETTES[0];
+  const accent = palette.accent;
   const imageRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.75rem]" : "rounded-[0.9rem]";
   const sectionRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.5rem]" : "rounded-[1rem]";
   const logoRadius = form.imageShape === "SQUARE" ? "rounded-[0.35rem]" : form.imageShape === "SOFT" ? "rounded-[1rem]" : "rounded-full";
@@ -840,19 +859,30 @@ function getPreviewTheme(form: FormState) {
       : fontFamily;
 
   return {
+    accent,
+    accentBlockStyle: { background: `linear-gradient(135deg, ${accent}, ${accent}55)` } as CSSProperties,
+    accentTextStyle: { color: accent } as CSSProperties,
+    activeNavItemStyle: { backgroundColor: `${accent}24`, color: isDark ? "#ffffff" : "#2f2626" } as CSSProperties,
+    activeSectionStyle: { borderColor: `${accent}88`, boxShadow: `0 0 0 2px ${accent}` } as CSSProperties,
+    badgeStyle: { backgroundColor: accent, borderColor: accent, color: form.palette === "MIDNIGHT" ? "#201815" : "#ffffff" } as CSSProperties,
     bodyStyle: { fontFamily } as CSSProperties,
     cardClass: isDark ? "border border-white/15 bg-[#201b1e]/88 text-white" : "border border-white/80 bg-white/88 text-[#2f2626]",
     copyClass: isDark ? "text-white/86" : "text-[#5f5550]",
     headerClass: isDark ? "border-white/15 bg-[#171315] text-white/70" : "border-[#eadbd7] bg-[#fffaf8] text-[#7a625b]",
     headingStyle: { fontFamily: headingFamily } as CSSProperties,
+    heroCtaStyle: { backgroundColor: accent, color: form.palette === "MIDNIGHT" ? "#201815" : "#ffffff" } as CSSProperties,
     heroRadius: imageRadius,
     imageRadius,
     logoRadius,
     mutedClass: isDark ? "text-white/62" : "text-muted-foreground",
     navClass: isDark ? "border-white/15 bg-[#201b1e] text-white/72" : "border-[#eadbd7] bg-white text-muted-foreground",
+    platformBarStyle: { backgroundColor: `${accent}14`, borderColor: `${accent}33` } as CSSProperties,
     profileClass: isDark ? "bg-[#201b1e] text-white" : "bg-white text-[#2f2626]",
+    previewCardStyle: { borderColor: `${accent}44` } as CSSProperties,
     sectionRadius,
-    shellClass: isDark ? "bg-[#151113] text-white" : "bg-white text-[#2f2626]"
+    selectedControlStyle: { borderColor: accent, backgroundColor: `${accent}14` } as CSSProperties,
+    shellClass: isDark ? "bg-[#151113] text-white" : "bg-white text-[#2f2626]",
+    softSurfaceStyle: { backgroundColor: `${accent}18`, color: accent } as CSSProperties
   };
 }
 
