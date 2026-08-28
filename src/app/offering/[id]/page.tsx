@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   CalendarDays,
   Clock3,
-  Heart,
   Images,
   MapPin,
   Star,
@@ -14,6 +13,7 @@ import {
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { ProfileBadge } from "@/components/badges/profile-badge";
+import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { ListingInquiryPanel } from "@/components/inquiries/listing-inquiry-form";
 import { Badge } from "@/components/ui/badge";
 import { storefrontPath } from "@/lib/businesses";
@@ -103,6 +103,35 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
     ].filter((tag, index, tags) => tags.indexOf(tag) === index),
     ...offering.eventCategories.map((eventCategory) => eventCategory.category.name),
   ];
+  const [isSavedOffering, serviceReviews] = await Promise.all([
+    session?.user?.id
+      ? db.favorite.findUnique({
+          where: {
+            buyerId_offeringId: {
+              buyerId: session.user.id,
+              offeringId: offering.id
+            }
+          },
+          select: { id: true }
+        })
+      : Promise.resolve(null),
+    db.review.findMany({
+      where: {
+        vendorId: offering.vendorId,
+        order: {
+          offeringId: offering.id
+        }
+      },
+      include: {
+        buyer: {
+          select: { createdAt: true, email: true, name: true, username: true }
+        },
+        response: true
+      },
+      orderBy: { createdAt: "desc" },
+      take: 8
+    })
+  ]);
 
   return (
     <div className="space-y-7">
@@ -131,13 +160,9 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
               ) : (
                 <NeutralOfferingPlaceholder label={offering.category.name} />
               )}
-              <button
-                type="button"
-                className="absolute right-3 top-3 grid h-[34px] w-[34px] place-items-center rounded-full border border-white/75 bg-white/90 text-primary shadow-[0_4px_14px_rgba(47,38,38,0.16)] backdrop-blur transition hover:bg-white sm:h-9 sm:w-9"
-                aria-label="Save listing"
-              >
-                <Heart className="h-[17px] w-[17px] sm:h-[18px] sm:w-[18px]" />
-              </button>
+              <div className="absolute right-3 top-3">
+                <FavoriteToggle targetType="offering" targetId={offering.id} isSaved={Boolean(isSavedOffering)} variant="floating" />
+              </div>
             </div>
             <div className="grid gap-3">
               {galleryPhotos.slice(1).map((photo, index) => (
@@ -203,6 +228,20 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
               ) : null}
             </div>
             <p className="max-w-4xl text-lg leading-8 text-[#5f5550]">{offering.description}</p>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="#inquiry"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[0_10px_24px_rgba(230,176,174,0.28)] transition hover:bg-primary/90"
+              >
+                Request this service
+              </a>
+              <Link
+                href={storefrontPath(offering.vendor.slug)}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#eadbd7] bg-white px-5 text-sm font-semibold transition hover:bg-muted"
+              >
+                Visit storefront
+              </Link>
+            </div>
           </div>
 
           <div className="grid gap-4 rounded-[1.4rem] border border-[#eadbd7] bg-white/75 p-5 shadow-[0_18px_55px_rgba(80,55,45,0.06)] md:grid-cols-3">
@@ -250,6 +289,31 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
               </div>
             </div>
 
+            {serviceComponents.length > 0 ? (
+              <div className="rounded-[1.4rem] border border-[#eadbd7] bg-white/70 p-5">
+                <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-3xl font-normal">
+                  What is included
+                </h2>
+                <div className="mt-4 grid gap-3">
+                  {serviceComponents.slice(0, 8).map((component) => (
+                    <div key={component.id} className="rounded-[1rem] bg-[#fffaf8] p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold">{component.title}</div>
+                          {component.description ? (
+                            <p className="mt-1 text-sm leading-6 text-muted-foreground">{component.description}</p>
+                          ) : null}
+                        </div>
+                        {component.priceCents ? (
+                          <div className="whitespace-nowrap text-sm font-semibold">{formatCurrency(component.priceCents)}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {packages.length > 0 ? (
               <div className="rounded-[1.4rem] border border-[#eadbd7] bg-white/70 p-5 md:col-span-2">
                 <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-3xl font-normal">
@@ -263,11 +327,51 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
               </div>
             ) : null}
           </div>
+
+          <section className="rounded-[1.4rem] border border-[#eadbd7] bg-white/70 p-5">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-3xl font-normal">
+                  Service reviews
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Reviews here come from completed ShopFia bookings for this specific service.
+                </p>
+              </div>
+              <Badge variant="outline">{serviceReviews.length} service-specific</Badge>
+            </div>
+            {serviceReviews.length > 0 ? (
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                {serviceReviews.map((review) => (
+                  <div key={review.id} className="rounded-[1rem] bg-white/85 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-semibold">{review.buyer.name ?? "ShopFia customer"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {review.reviewerDisplayLabel} · {formatReviewDate(review.createdAt)}
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#f8ece9] px-3 py-1 text-sm">
+                        <Star className="h-4 w-4 fill-current text-amber-500" />
+                        {review.rating}
+                      </span>
+                    </div>
+                    {review.body ? <p className="mt-3 text-sm leading-6 text-muted-foreground">{review.body}</p> : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 rounded-[1rem] bg-[#fffaf8] p-4 text-sm leading-6 text-muted-foreground">
+                Vendor-level verified reviews are shown above until this service has its own completed booking reviews.
+              </p>
+            )}
+          </section>
         </section>
 
         <aside className="xl:sticky xl:top-24">
           <ListingInquiryPanel
             defaultName={session?.user?.name}
+            title="Request this service"
             listingId={offering.listing?.id}
             offeringId={offering.id}
             vendorProfileId={offering.vendorId}
@@ -334,6 +438,14 @@ function NeutralOfferingPlaceholder({ label }: { label: string }) {
       {label}
     </div>
   );
+}
+
+function formatReviewDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(date);
 }
 
 function getPricedOptions(value: unknown): PricedOption[] {

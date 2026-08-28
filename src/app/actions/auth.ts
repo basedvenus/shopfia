@@ -967,5 +967,13 @@ export async function toggleFollowAction(formData: FormData) {
   revalidatePath("/parties");
   revalidatePath("/explore");
   revalidatePath("/");
+  const vendorProfiles = await db.vendorProfile.findMany({
+    where: { userId: followingId },
+    select: { slug: true }
+  });
+  vendorProfiles.forEach((vendorProfile) => {
+    revalidatePath(`/vendor/profile/${vendorProfile.slug}`);
+    revalidatePath(`/${vendorProfile.slug}`);
+  });
   return { ok: true };
 }

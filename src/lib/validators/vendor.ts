@@ -50,7 +50,10 @@ export const vendorOnboardingSchema = z.object({
 
 export const storefrontCustomizationSchema = z.object({
   businessId: z.string().cuid(),
+  intent: z.enum(["draft", "publish"]).default("publish"),
   name: z.string().min(2, "Business name is required.").max(80, "Business name is a little too long."),
+  city: z.string().min(2, "City is required.").max(80, "City is a little too long."),
+  state: z.string().max(40, "State is a little too long.").optional().or(z.literal("")),
   tagline: z.string().max(140, "Tagline is a little too long.").optional().or(z.literal("")),
   bio: z.string().max(1200, "About description is a little too long.").optional().or(z.literal("")),
   aboutHeading: z.string().max(90, "About heading is a little too long.").optional().or(z.literal("")),
@@ -69,7 +72,13 @@ export const storefrontCustomizationSchema = z.object({
   buttonStyle: z.enum(["PILL", "SOFT", "OUTLINE"]),
   imageShape: z.enum(["ROUNDED", "SOFT", "SQUARE"]),
   sectionOrder: z.array(z.string().max(40)).max(9).default([]),
-  hiddenSections: z.array(z.string().max(40)).max(8).default([])
+  hiddenSections: z.array(z.string().max(40)).max(8).default([]),
+  faqJson: z.string().max(25000).optional().or(z.literal("")),
+  policiesJson: z.string().max(25000).optional().or(z.literal("")),
+  bookingJson: z.string().max(25000).optional().or(z.literal("")),
+  featuredOfferingIds: z.array(z.string().max(80)).max(24).default([]),
+  offeringOrder: z.array(z.string().max(80)).max(80).default([]),
+  servicesJson: z.string().max(100000).optional().or(z.literal(""))
 });
 
 const pricedOptionSchema = z.object({

@@ -80,7 +80,7 @@ async function readAcceptQuoteBody(request: Request) {
     contentType.includes("application/x-www-form-urlencoded") ||
     contentType.includes("multipart/form-data")
   ) {
-    const formData = await request.formData().catch(() => null);
+    const formData = await request.formData().catch(() => null) as unknown as globalThis.FormData | null;
     return { quoteId: formData?.get("quoteId") };
   }
   return {};

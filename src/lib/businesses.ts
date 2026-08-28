@@ -76,26 +76,26 @@ export const STOREFRONT_IMAGE_SHAPES = [
 
 export const APPROVED_STOREFRONT_SECTIONS = [
   "hero",
+  "featured-services",
+  "all-services",
   "about",
+  "how-it-works",
   "portfolio",
-  "services",
-  "featured-parties",
   "reviews",
-  "service-area",
-  "inquiry-form",
-  "social-links"
+  "faq",
+  "final-quote"
 ] as const;
 
 export const STOREFRONT_SECTION_LABELS: Record<(typeof APPROVED_STOREFRONT_SECTIONS)[number], string> = {
   hero: "Hero",
-  about: "About Our Business",
+  "featured-services": "Featured Services",
+  "all-services": "All Services",
+  about: "About Us",
+  "how-it-works": "How It Works",
   portfolio: "Portfolio",
-  services: "Services and Packages",
-  "featured-parties": "Featured Parties",
   reviews: "Reviews",
-  "service-area": "Service Area",
-  "inquiry-form": "Inquiry Form",
-  "social-links": "Social Links"
+  faq: "FAQ",
+  "final-quote": "Final Quote Section"
 };
 
 export function slugifyBusinessUrl(value: string) {
@@ -137,8 +137,25 @@ export function businessManagerWhere(userId: string, role?: UserRole | string | 
 
 export function sanitizeStorefrontSections(sections: string[]) {
   const approved = new Set<string>(APPROVED_STOREFRONT_SECTIONS);
-  const requested = sections.filter((section) => approved.has(section));
-  const combined = [...requested, ...APPROVED_STOREFRONT_SECTIONS];
+  const aliases: Record<string, string> = {
+    services: "all-services",
+    offerings: "all-services",
+    "featured-parties": "portfolio",
+    "service-area": "how-it-works",
+    "inquiry-form": "final-quote",
+    "social-links": "final-quote",
+    credentials: "how-it-works"
+  };
+  const hasLegacySections = sections.some((section) => section in aliases);
+  const requested = sections
+    .map((section) => aliases[section] ?? section)
+    .filter((section) => approved.has(section));
+  const ordered = hasLegacySections
+    ? APPROVED_STOREFRONT_SECTIONS
+    : requested.includes("hero")
+      ? requested
+      : ["hero", ...requested];
+  const combined = [...ordered, ...APPROVED_STOREFRONT_SECTIONS];
   return Array.from(new Set(combined));
 }
 
@@ -150,5 +167,5 @@ export function normalizeStorefrontAccentColor(value: string | null | undefined)
 export function sanitizeHiddenStorefrontSections(sections: string[]) {
   const required = new Set(["hero"]);
   const approved = new Set<string>(APPROVED_STOREFRONT_SECTIONS);
-  return Array.from(new Set(sections.filter((section) => approved.has(section) && !required.has(section))));
+  return Array.from(new Set(sections.map((section) => section === "services" ? "all-services" : section).filter((section) => approved.has(section) && !required.has(section))));
 }

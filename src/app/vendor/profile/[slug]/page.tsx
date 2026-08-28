@@ -1,12 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Calendar,
-  Clock,
+  BadgeCheck,
   ExternalLink,
   Heart,
   MapPin,
-  Sparkles,
+  Send,
   Star,
   UserPlus
 } from "lucide-react";
@@ -16,16 +15,18 @@ import { toggleFollowAction } from "@/app/actions/auth";
 import { claimUnclaimedVendorAction } from "@/app/actions/vendor";
 import { ListingInquiryPanel } from "@/components/inquiries/listing-inquiry-form";
 import { ProfileBadge } from "@/components/badges/profile-badge";
+import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { CopyStorefrontLinkButton } from "@/components/vendor/copy-storefront-link-button";
 import { db } from "@/lib/db";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorProfileBySlug } from "@/lib/data/vendor";
 import { getVendorTrustStatus } from "@/lib/vendor-status";
-import { STOREFRONT_PALETTES, sanitizeStorefrontSections } from "@/lib/businesses";
+import { STOREFRONT_PALETTES, sanitizeStorefrontSections, storefrontUrl } from "@/lib/businesses";
 
 export const dynamic = "force-dynamic";
 
@@ -129,11 +130,27 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   const palette = STOREFRONT_PALETTES.find((item) => item.value === vendor.storefrontPalette) ?? STOREFRONT_PALETTES[0];
   const aboutHeading = vendor.storefrontAboutHeading ?? `About ${vendor.name}`;
   const tagline = vendor.storefrontTagline ?? vendor.bio;
+  const heroHeadline = vendor.storefrontAboutHeading ?? vendor.name;
+  const primaryCategory = vendor.categories[0]?.category.name ?? "Event vendor";
+  const followerCount = vendor.user?._count.followers ?? 0;
+  const savedVendorCount = vendor._count.favorites;
+  const serviceAreaLabel = [vendor.city, vendor.state].filter(Boolean).join(", ");
+  const publicStorefrontUrl = storefrontUrl(vendor.slug);
   const sectionOrder = sanitizeStorefrontSections(vendor.storefrontSectionOrder).filter(
     (section) => !vendor.storefrontHiddenSections.includes(section)
   );
   const sectionPriority = (section: string) => sectionOrder.indexOf(section) === -1 ? 999 : sectionOrder.indexOf(section);
   const showSection = (section: string) => sectionOrder.includes(section as never);
+  const orderedOfferings = [...vendor.offerings].sort((a, b) => {
+    const aIndex = vendor.storefrontOfferingOrder.indexOf(a.id);
+    const bIndex = vendor.storefrontOfferingOrder.indexOf(b.id);
+    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+  });
+  const featuredOfferings = orderedOfferings.filter((offering) => vendor.storefrontFeaturedOfferingIds.includes(offering.id));
+  const displayedFeaturedOfferings = featuredOfferings.length ? featuredOfferings : orderedOfferings.slice(0, 3);
+  const faqItems = readStorefrontFaqs(vendor.storefrontFaqJson);
+  const bookingInfo = readStorefrontBooking(vendor.storefrontBookingJson);
+  const policies = readStorefrontPolicies(vendor.storefrontPoliciesJson);
   const isFollowingVendor =
     currentUserId && vendor.user && currentUserId !== vendor.user.id
       ? Boolean(
@@ -147,6 +164,29 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           })
         )
       : false;
+  const [savedFavorites, completedOrderCount] = await Promise.all([
+    currentUserId
+      ? db.favorite.findMany({
+          where: {
+            buyerId: currentUserId,
+            OR: [
+              { vendorId: vendor.id },
+              { offeringId: { in: vendor.offerings.map((offering) => offering.id) } }
+            ]
+          },
+          select: { offeringId: true, vendorId: true }
+        })
+      : Promise.resolve([]),
+    db.order.count({
+      where: {
+        vendorProfileId: vendor.id,
+        status: { in: ["paid", "in_progress", "completed"] },
+        paymentSucceededAt: { not: null }
+      }
+    })
+  ]);
+  const savedOfferingIds = new Set(savedFavorites.map((favorite) => favorite.offeringId).filter((id): id is string => Boolean(id)));
+  const isSavedVendor = savedFavorites.some((favorite) => favorite.vendorId === vendor.id);
 
   async function toggleFollow(formData: FormData) {
     "use server";
@@ -155,251 +195,224 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className={`space-y-8 rounded-[2rem] bg-gradient-to-br ${palette.className} p-0 md:p-2`}>
-      <section className="grid gap-5 lg:grid-cols-[1.6fr_0.9fr]">
-        <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
-          <div className="grid gap-3 p-3 md:grid-cols-[1.45fr_0.75fr]">
-            <div className="relative min-h-[380px] overflow-hidden rounded-[1.6rem] bg-muted">
-              {hero ? (
-                <Image src={hero} alt={vendor.name} fill className="object-cover" />
-              ) : (
-                <NeutralVendorPlaceholder label={vendor.categories[0]?.category.name ?? "ShopFia vendor"} />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {trustStatus.label ? (
-                    <Badge variant={trustStatus.tone === "verified" ? "accent" : "default"} className="bg-white/25 text-white backdrop-blur">
-                      {trustStatus.label} Vendor
-                    </Badge>
-                  ) : null}
-                  {verifiedCredentials.map((credential) => (
-                    <Badge key={credential} className="bg-white/25 text-white backdrop-blur" variant="default">
-                      {credential}
-                    </Badge>
-                  ))}
-                  {vendor.categories.slice(0, 3).map((c) => (
-                    <Badge key={c.id} className="bg-white/20 text-white backdrop-blur" variant="default">
-                      {c.category.name}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-end gap-3">
-                  {vendor.logoUrl ? (
-                    <div
-                      className="h-16 w-16 rounded-full border-2 border-white bg-white bg-cover bg-center shadow-soft"
-                      style={{ backgroundImage: `url(${vendor.logoUrl})` }}
-                    />
-                  ) : null}
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">
-                        {vendor.name}
-                      </h1>
-                      <ProfileBadge badge={vendorBadge} light />
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/80">
-                      {vendor.username ? <span>@{vendor.username}</span> : null}
-                      {vendor.website ? (
-                        <Link href={vendor.website} target="_blank" className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
-                          Website
-                          <ExternalLink className="h-3 w-3" />
-                        </Link>
-                      ) : null}
-                      {vendor.instagramUrl ? (
-                        <Link href={vendor.instagramUrl} target="_blank" className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
-                          Instagram
-                          <ExternalLink className="h-3 w-3" />
-                        </Link>
-                      ) : null}
-                      {vendor.tiktokUrl ? (
-                        <Link href={vendor.tiktokUrl} target="_blank" className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
-                          TikTok
-                          <ExternalLink className="h-3 w-3" />
-                        </Link>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-                    <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">
-                      {tagline ?? (isUnclaimed ? "This business has been tagged by the ShopFia community." : null)}
-                    </p>
-                    {!isUnclaimed ? (
-                      <a
-                        href="#inquiry"
-                        className="mt-4 inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-[#3d302d] shadow-soft transition hover:bg-white/90"
-                      >
-                        Request a Quote
-                      </a>
-                    ) : null}
-                    {isUnclaimed ? (
-                      <form action={claimUnclaimedVendorAction} className="mt-4">
-                        <input type="hidden" name="vendorId" value={vendor.id} />
-                        <Button type="submit" size="sm" variant="secondary">
-                          Claim This Business
-                        </Button>
-                      </form>
-                    ) : session?.user?.id && vendor.user && session.user.id !== vendor.user.id ? (
-                      <form action={toggleFollow} className="mt-4">
-                        <input type="hidden" name="followingId" value={vendor.user.id} />
-                        <Button type="submit" size="sm" variant="secondary">
-                          {isFollowingVendor ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}
-                          {isFollowingVendor ? "Following" : "Follow vendor"}
-                        </Button>
-                      </form>
-                    ) : null}
-                  </div>
-                </div>
+    <div className={`flex flex-col gap-8 rounded-[1.25rem] bg-gradient-to-br ${palette.className} p-0 md:p-2`}>
+      <header className="overflow-hidden rounded-[1rem] border border-[#2f2626]/15 bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]">
+        <div className="flex items-center justify-between gap-3 border-b border-[#eadbd7] bg-[#fffaf8] px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7a625b]">
+          <span>ShopFia Storefront</span>
+          <span className="hidden sm:inline">Verified identity, saved services, quotes, and bookings</span>
+        </div>
+        <div className="grid gap-3 p-3 md:grid-cols-[auto_1fr_auto] md:items-center md:p-4">
+          <div className="relative h-14 w-14 overflow-hidden rounded-full border border-[#eadbd7] bg-[#f8ece9] md:h-16 md:w-16">
+            {vendor.logoUrl ? (
+              <Image src={vendor.logoUrl} alt={`${vendor.name} logo`} fill className="object-cover" />
+            ) : hero ? (
+              <Image src={hero} alt={vendor.name} fill className="object-cover" />
+            ) : (
+              <div className="grid h-full place-items-center text-xl font-semibold text-primary">
+                {vendor.name.slice(0, 1)}
+              </div>
+            )}
+          </div>
 
-            <div className="grid gap-3 md:grid-rows-3">
-              {gallery.slice(0, 3).map((photo, index) => (
-                <div key={`${photo}-${index}`} className="relative min-h-[116px] overflow-hidden rounded-[1.35rem] bg-muted">
-                  <Image
-                    src={photo}
-                    alt={`${vendor.name} portfolio image ${index + 1}`}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              ))}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{vendor.name}</h1>
+              {trustStatus.tone === "verified" || vendor.verified ? (
+                <Badge variant="accent" className="gap-1 rounded-full">
+                  <BadgeCheck className="h-3.5 w-3.5" />
+                  Verified
+                </Badge>
+              ) : null}
+              <ProfileBadge badge={vendorBadge} />
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              {vendor.username ? <span>@{vendor.username}</span> : null}
+              <span>{primaryCategory}</span>
+              {serviceAreaLabel ? (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {serviceAreaLabel}
+                  {vendor.serviceRadiusMiles ? ` + ${vendor.serviceRadiusMiles} mi` : ""}
+                </span>
+              ) : null}
+            </div>
+            {tagline ? (
+              <p className="mt-1 line-clamp-1 max-w-3xl text-sm leading-6 text-[#5f5550]">{tagline}</p>
+            ) : null}
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#4b403c]">
+              <span className="inline-flex items-center gap-1.5">
+                <Star className="h-4 w-4 fill-current text-amber-500" />
+                {verifiedReviewCount > 0 ? `${verifiedAverageRating.toFixed(1)} (${verifiedReviewCount})` : "No reviews yet"}
+              </span>
+              <span>{completedOrderCount} completed ShopFia event{completedOrderCount === 1 ? "" : "s"}</span>
+              <span>{followerCount} follower{followerCount === 1 ? "" : "s"}</span>
+              <span>{savedVendorCount} save{savedVendorCount === 1 ? "" : "s"}</span>
             </div>
           </div>
 
-          <div className="grid gap-4 border-t border-border/60 p-5 md:grid-cols-[1.2fr_0.8fr]">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[1.5rem] bg-accent/60 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  {verifiedReviewCount > 0 ? "Verified Reviews" : "Event Credits"}
-                </div>
-                {verifiedReviewCount > 0 ? (
-                  <div className="mt-2 flex items-center gap-2 text-2xl font-semibold">
-                    <Star className="h-5 w-5 fill-current text-amber-500" />
-                    {verifiedAverageRating.toFixed(1)}
-                  </div>
-                ) : (
-                  <div className="mt-2 text-2xl font-semibold">{taggedEvents.length}</div>
-                )}
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {verifiedReviewCount > 0
-                    ? `${verifiedReviewCount} booking-based review${verifiedReviewCount === 1 ? "" : "s"}`
-                    : "community vendor credits"}
-                </p>
-              </div>
-              <div className="rounded-[1.5rem] bg-muted/70 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Starting At
-                </div>
-                <div className="mt-2 text-2xl font-semibold">
-                  {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Message for pricing"}
-                </div>
-                {!vendor.startingPriceCents && !isUnclaimed ? (
-                  <Button asChild size="sm" className="mt-3">
-                    <a href="#inquiry">Send inquiry</a>
-                  </Button>
-                ) : null}
-                {!vendor.startingPriceCents && isUnclaimed ? (
-                  <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                    Messaging opens after this business claims its ShopFia profile.
-                  </p>
-                ) : null}
-                <p className="mt-1 text-sm text-muted-foreground">Custom scope and delivery options</p>
-              </div>
-              <div className="rounded-[1.5rem] bg-muted/70 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Service Area
-                </div>
-                <div className="mt-2 text-2xl font-semibold">{vendor.serviceRadiusMiles} mi</div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {vendor.city}
-                  {vendor.state ? `, ${vendor.state}` : ""}
-                </p>
-              </div>
-            </div>
-
-            {showSection("about") ? (
-            <div className="grid gap-3 rounded-[1.5rem] bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(253,236,230,0.92))] p-4">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Sparkles className="h-4 w-4 text-primary" />
-                {aboutHeading}
-              </div>
-              <p className="text-sm leading-6 text-muted-foreground">
-                {vendor.bio ?? "This storefront is being prepared with business details, services, and recent work."}
-              </p>
-              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <span className="rounded-full bg-white px-3 py-1">{vendor.storefrontLayout.toLowerCase()} layout</span>
-                <span className="rounded-full bg-white px-3 py-1">{vendor.storefrontFontStyle.toLowerCase()} typography</span>
-                {vendor.rankingScore ? <span className="rounded-full bg-white px-3 py-1">{vendor.rankingScore.tierLabel}</span> : null}
-              </div>
-            </div>
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
+            {session?.user?.id && vendor.user && session.user.id !== vendor.user.id ? (
+              <form action={toggleFollow}>
+                <input type="hidden" name="followingId" value={vendor.user.id} />
+                <Button type="submit" variant={isFollowingVendor ? "secondary" : "default"} size="sm" className="min-w-[108px]">
+                  {isFollowingVendor ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}
+                  {isFollowingVendor ? "Following" : "Follow"}
+                </Button>
+              </form>
+            ) : !session?.user?.id && vendor.user ? (
+              <Button asChild size="sm" className="min-w-[108px]">
+                <Link href={`/account?redirectTo=${encodeURIComponent(`/${vendor.slug}`)}`}>
+                  <UserPlus className="h-4 w-4" />
+                  Follow
+                </Link>
+              </Button>
+            ) : null}
+            <CopyStorefrontLinkButton label="Share" url={publicStorefrontUrl} className="h-9 bg-white/92 px-3" />
+            <FavoriteToggle targetType="vendor" targetId={vendor.id} isSaved={isSavedVendor} variant="pill" label={isSavedVendor ? "Saved" : "Save"} />
+            {!isUnclaimed ? (
+              <Button asChild size="sm">
+                <a href="#inquiry">
+                  <Send className="h-4 w-4" />
+                  Get a quote
+                </a>
+              </Button>
             ) : null}
           </div>
         </div>
+        <nav className="sticky top-16 z-10 flex gap-1 overflow-x-auto border-t border-[#eadbd7] bg-white px-3 py-1.5 text-sm font-medium backdrop-blur">
+          {[
+            ["#storefront-home", "Home"],
+            ["#services", "Services"],
+            ["#portfolio", "Portfolio"],
+            ["#about", "About"],
+            ["#reviews", "Reviews"],
+            ["#faq", "FAQ"]
+          ].map(([href, label]) => (
+            <a
+              key={href}
+              href={href}
+              className="whitespace-nowrap rounded-full px-3 py-2 text-muted-foreground transition hover:bg-[#f8ece9] hover:text-foreground"
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+      </header>
 
-        <div className="space-y-4">
-          {isUnclaimed ? (
-            <Card className="border-white/70 bg-white/90">
-              <CardHeader>
-                <Badge variant="outline" className="w-fit">Unclaimed Vendor</Badge>
-                <CardTitle>Own this business?</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 text-sm text-muted-foreground">
-                <p>
-                  Claim this ShopFia profile to manage your storefront and keep the parties and photos already tagged by the community.
-                </p>
+      <section id="storefront-home" className="relative left-1/2 right-1/2 -mx-[50vw] w-screen scroll-mt-28 overflow-hidden bg-[#211815] text-white" style={{ order: sectionPriority("hero") }}>
+        <div className="absolute inset-0">
+          {hero ? (
+            <Image src={hero} alt={vendor.name} fill priority className="object-cover opacity-58" />
+          ) : (
+            <NeutralVendorPlaceholder label={primaryCategory} />
+          )}
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,17,15,0.92)_0%,rgba(24,17,15,0.74)_42%,rgba(24,17,15,0.18)_100%)]" />
+        </div>
+        <div className="container relative grid min-h-[560px] items-center gap-10 py-12 md:grid-cols-[minmax(0,0.9fr)_minmax(360px,0.45fr)] md:py-16">
+          <div className="max-w-4xl">
+            <div className="mb-6 flex flex-wrap gap-2">
+              {vendor.categories.slice(0, 3).map((c) => (
+                <span key={c.id} className="rounded-full border border-white/30 bg-white/12 px-3 py-1 text-xs font-semibold backdrop-blur">
+                  {c.category.name}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">Featured storefront</p>
+            <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] mt-4 max-w-4xl text-5xl font-normal leading-[0.94] tracking-normal md:text-6xl lg:text-7xl">
+              {heroHeadline}
+            </h2>
+            <p className="mt-7 max-w-2xl text-lg leading-8 text-white/82">
+              {tagline ?? vendor.bio ?? "Explore services, real event credits, and booking details before starting a ShopFia quote."}
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              {!isUnclaimed ? (
+                <a href="#services" className="inline-flex h-12 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#211815] transition hover:bg-white/90">
+                  Browse services
+                </a>
+              ) : (
                 <form action={claimUnclaimedVendorAction}>
                   <input type="hidden" name="vendorId" value={vendor.id} />
                   <Button type="submit">Claim This Business</Button>
                 </form>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {showSection("service-area") ? (
-          <Card className="border-white/70 bg-white/90">
-            <CardHeader>
-              <CardTitle>Booking Snapshot</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 text-sm text-muted-foreground">
-              <div className="flex items-start gap-2">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span>{vendor.serviceAreaNotes ?? "Service details are confirmed during quote review."}</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span>{vendor.availabilityNotes ?? "Availability is confirmed directly in chat."}</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span>Share your date, location, guest count, and inspiration when you request a quote.</span>
-              </div>
-            </CardContent>
-          </Card>
-          ) : null}
-          <Card className="border-white/70 bg-white/90">
-            <CardHeader>
-              <CardTitle>Credentials & Verification</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {verifiedCredentials.length ? (
-                <div className="flex flex-wrap gap-2">
-                  {verifiedCredentials.map((credential) => (
-                    <Badge key={credential} variant="accent">
-                      {credential}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm leading-6 text-muted-foreground">
-                  ShopFia-reviewed insurance, license, and permit badges will appear here when available.
-                </p>
               )}
-            </CardContent>
-          </Card>
+              {vendor.website ? (
+                <Link href={vendor.website} target="_blank" className="inline-flex h-12 items-center gap-2 rounded-full border border-white/35 px-5 text-sm font-semibold text-white transition hover:bg-white/10">
+                  Website
+                  <ExternalLink className="h-4 w-4" />
+                </Link>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-4 border-y border-white/20 py-5 text-sm text-white/82 md:border-l md:border-y-0 md:pl-7">
+            <EditorialFact label="Starting at" value={vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Custom quote"} />
+            <EditorialFact label="Service area" value={vendor.serviceAreaNotes ?? `${serviceAreaLabel || "Local events"} within ${vendor.serviceRadiusMiles} miles`} />
+            <EditorialFact label="Lead time" value={vendor.availabilityNotes ?? "Availability confirmed in ShopFia messages"} />
+            {verifiedCredentials.length ? (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {verifiedCredentials.map((credential) => (
+                  <span key={credential} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#211815]">
+                    {credential}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
       </section>
 
-      {showSection("featured-parties") ? (
-      <section className="space-y-4" style={{ order: sectionPriority("featured-parties") }}>
+      {showSection("about") ? (
+        <section id="about" className="grid scroll-mt-28 gap-5 bg-white/82 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-8" style={{ order: sectionPriority("about") }}>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/75">About</p>
+            <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] mt-3 text-4xl font-normal tracking-normal">
+              {aboutHeading}
+            </h2>
+          </div>
+          <div className="grid gap-4">
+            <p className="text-base leading-8 text-[#5f5550]">
+              {vendor.bio ?? "This storefront is being prepared with business details, services, and recent work."}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <EditorialStat label={verifiedReviewCount > 0 ? "Verified rating" : "Event credits"} value={verifiedReviewCount > 0 ? verifiedAverageRating.toFixed(1) : String(taggedEvents.length)} />
+              <EditorialStat label="Completed events" value={String(completedOrderCount)} />
+              <EditorialStat label="Theme" value={vendor.storefrontLayout.toLowerCase()} />
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {showSection("featured-services") ? (
+      <section id="featured-services" className="scroll-mt-28 space-y-4" style={{ order: sectionPriority("featured-services") }}>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">Featured Services</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              A curated first look at the services this vendor wants customers to discover first.
+            </p>
+          </div>
+          <Badge variant="outline">{displayedFeaturedOfferings.length} featured</Badge>
+        </div>
+
+        {displayedFeaturedOfferings.length > 0 ? (
+          <ServiceListingGrid
+            offerings={displayedFeaturedOfferings}
+            savedOfferingIds={savedOfferingIds}
+            verifiedAverageRating={verifiedAverageRating}
+            verifiedReviewCount={verifiedReviewCount}
+          />
+        ) : (
+          <Card>
+            <CardContent className="p-4 text-sm text-muted-foreground">
+              Featured services will appear here once the vendor publishes services.
+            </CardContent>
+          </Card>
+        )}
+      </section>
+      ) : null}
+
+      {showSection("portfolio") ? (
+      <section id="portfolio" className="scroll-mt-28 space-y-4" style={{ order: sectionPriority("portfolio") }}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Tagged In Real Events</h2>
@@ -461,8 +474,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       </section>
       ) : null}
 
-      {showSection("services") ? (
-      <section className="space-y-4" style={{ order: sectionPriority("services") }}>
+      {showSection("all-services") ? (
+      <section id="services" className="scroll-mt-28 space-y-4" style={{ order: sectionPriority("all-services") }}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Services and Packages</h2>
@@ -470,63 +483,16 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               Click a tile to see the work, pricing anchor, and what the client booked.
             </p>
           </div>
-          <Badge variant="outline">{vendor.offerings.length} featured examples</Badge>
+          <Badge variant="outline">{orderedOfferings.length} listing{orderedOfferings.length === 1 ? "" : "s"}</Badge>
         </div>
 
-        {vendor.offerings.length > 0 ? (
-        <div className="grid auto-rows-[220px] gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {vendor.offerings.map((offering, index) => {
-            const photo = offering.photos[0] ?? null;
-            const featured = index === 0;
-
-            return (
-              <Link
-                key={offering.id}
-                href={`/offering/${offering.id}`}
-                className={featured ? "md:row-span-2" : ""}
-              >
-                <article className="group relative h-full overflow-hidden rounded-[1.75rem] border border-white/70 bg-white shadow-soft">
-                  <div className="absolute inset-0">
-                    {photo ? (
-                      <Image
-                        src={photo}
-                        alt={offering.title}
-                        fill
-                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                      />
-                    ) : (
-                      <NeutralVendorPlaceholder label={offering.category.name} />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  </div>
-                  <div className="relative flex h-full flex-col justify-between p-4 text-white">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex flex-wrap gap-2">
-                        <Badge className="bg-white/15 text-white backdrop-blur" variant="default">
-                          {offering.category.name}
-                        </Badge>
-                        {offering.eventCategories.slice(0, 2).map((eventCategory) => (
-                          <Badge key={eventCategory.id} className="bg-white/15 text-white backdrop-blur" variant="default">
-                            {eventCategory.category.name}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="rounded-full bg-white/15 px-3 py-1 text-xs backdrop-blur">
-                        {offering.messageForPricing ? "Message for pricing" : formatOfferingPrice(offering)}
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold">{offering.title}</h3>
-                      <p className="mt-2 max-w-md text-sm leading-6 text-white/80">
-                        {offering.description}
-                      </p>
-                    </div>
-                  </div>
-                </article>
-              </Link>
-            );
-          })}
-        </div>
+        {orderedOfferings.length > 0 ? (
+        <ServiceListingGrid
+          offerings={orderedOfferings}
+          savedOfferingIds={savedOfferingIds}
+          verifiedAverageRating={verifiedAverageRating}
+          verifiedReviewCount={verifiedReviewCount}
+        />
         ) : null}
 
         {portfolio.length === 0 ? (
@@ -539,9 +505,36 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       </section>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-        {showSection("inquiry-form") ? (
-        <div id="inquiry" className="scroll-mt-28">
+      {showSection("how-it-works") ? (
+        <section id="how-it-works" className="scroll-mt-28 rounded-[1.5rem] border border-white/80 bg-white/90 p-5 shadow-sm" style={{ order: sectionPriority("how-it-works") }}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/75">Booking</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight">How It Works</h2>
+            </div>
+            <Badge variant="outline" className="rounded-full">ShopFia-supported quotes</Badge>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <TrustFaqItem title="Process" body={bookingInfo.process} />
+            <TrustFaqItem title="Lead time" body={bookingInfo.leadTime || vendor.availabilityNotes || "Availability is confirmed in ShopFia messages."} />
+            <TrustFaqItem title="Payment details" body={bookingInfo.deposit || "Deposit and payment details are confirmed in the quote."} />
+          </div>
+          <p className="mt-4 text-sm leading-6 text-muted-foreground">
+            {vendor.serviceAreaNotes ?? `${vendor.name} serves ${serviceAreaLabel || "local events"} within ${vendor.serviceRadiusMiles} miles.`}
+          </p>
+          {policies.length ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {policies.slice(0, 4).map((policy) => (
+                <TrustFaqItem key={policy.id} title={policy.title} body={policy.body} />
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]" style={{ order: Math.min(sectionPriority("final-quote"), sectionPriority("reviews")) }}>
+        {showSection("final-quote") ? (
+        <div id="inquiry" className="scroll-mt-28" style={{ order: sectionPriority("final-quote") }}>
           {!isUnclaimed ? (
             <ListingInquiryPanel
               defaultName={session?.user?.name}
@@ -553,7 +546,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         ) : <div />}
 
         {showSection("reviews") ? (
-        <div className="space-y-4" style={{ order: sectionPriority("reviews") }}>
+        <div id="reviews" className="space-y-4 scroll-mt-28" style={{ order: sectionPriority("reviews") }}>
             <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold tracking-tight">Verified Reviews</h2>
             <div className="text-sm text-muted-foreground">
@@ -619,6 +612,142 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         </div>
         ) : null}
       </section>
+
+      {showSection("faq") ? (
+      <section id="faq" className="scroll-mt-28 rounded-[1.5rem] border border-white/80 bg-white/90 p-5 shadow-sm" style={{ order: sectionPriority("faq") }}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">FAQ</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              ShopFia keeps quoting, messaging, saved services, reviews, and booking records connected to your account.
+            </p>
+          </div>
+          <Badge variant="outline" className="rounded-full">Powered by ShopFia</Badge>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          {faqItems.map((faq) => (
+            <TrustFaqItem key={faq.id} title={faq.question} body={faq.answer} />
+          ))}
+        </div>
+      </section>
+      ) : null}
+
+      <footer className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] bg-white/70 px-5 py-4 text-sm text-muted-foreground" style={{ order: 999 }}>
+        <span>{vendor.name} storefront, powered by ShopFia.</span>
+        <span>Verified vendors, quote requests, messaging, payments, and booking support.</span>
+      </footer>
+    </div>
+  );
+}
+
+function TrustFaqItem({ body, title }: { body: string; title: string }) {
+  return (
+    <div className="rounded-[1rem] border border-[#eadbd7] bg-white/80 p-4">
+      <h3 className="font-semibold">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{body}</p>
+    </div>
+  );
+}
+
+function ServiceListingGrid({
+  offerings,
+  savedOfferingIds,
+  verifiedAverageRating,
+  verifiedReviewCount
+}: {
+  offerings: Array<{
+    basePriceCents: number | null;
+    category: { name: string };
+    description: string;
+    eventCategories: Array<{ id: string; category: { name: string } }>;
+    id: string;
+    messageForPricing: boolean;
+    photos: string[];
+    title: string;
+  }>;
+  savedOfferingIds: Set<string>;
+  verifiedAverageRating: number;
+  verifiedReviewCount: number;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {offerings.map((offering) => {
+        const photo = offering.photos[0] ?? null;
+
+        return (
+          <article key={offering.id} className="group relative overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft">
+            <Link href={`/offering/${offering.id}`} className="block">
+              <div className="relative aspect-[4/3] bg-muted">
+                {photo ? (
+                  <Image
+                    src={photo}
+                    alt={offering.title}
+                    fill
+                    className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <NeutralVendorPlaceholder label={offering.category.name} />
+                )}
+              </div>
+              <div className="grid gap-3 p-4">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="rounded-full">
+                    {offering.category.name}
+                  </Badge>
+                  {offering.eventCategories.slice(0, 1).map((eventCategory) => (
+                    <Badge key={eventCategory.id} variant="outline" className="rounded-full">
+                      {eventCategory.category.name}
+                    </Badge>
+                  ))}
+                </div>
+                <div>
+                  <h3 className="line-clamp-1 text-lg font-semibold">{offering.title}</h3>
+                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">
+                    {offering.description}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-semibold">
+                    {offering.messageForPricing ? "Custom quote" : formatOfferingPrice(offering)}
+                  </span>
+                  {verifiedReviewCount > 0 ? (
+                    <span className="inline-flex items-center gap-1 text-muted-foreground">
+                      <Star className="h-4 w-4 fill-current text-amber-500" />
+                      {verifiedAverageRating.toFixed(1)}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </Link>
+            <div className="absolute right-3 top-3">
+              <FavoriteToggle
+                targetType="offering"
+                targetId={offering.id}
+                isSaved={savedOfferingIds.has(offering.id)}
+                variant="floating"
+              />
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function EditorialFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-b border-white/15 pb-4 last:border-b-0 last:pb-0">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/50">{label}</div>
+      <div className="mt-2 text-base font-semibold leading-6 text-white">{value}</div>
+    </div>
+  );
+}
+
+function EditorialStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-l border-[#eadbd7] pl-4">
+      <div className="text-2xl font-semibold text-[#2f2626]">{value}</div>
+      <div className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
     </div>
   );
 }
@@ -666,4 +795,60 @@ function getVerifiedCredentials(
 function formatOfferingPrice(offering: { basePriceCents: number | null; messageForPricing: boolean }) {
   if (offering.messageForPricing) return "Message for pricing";
   return offering.basePriceCents ? `From ${formatCurrency(offering.basePriceCents)}` : "Message for pricing";
+}
+
+function readStorefrontFaqs(value: unknown) {
+  if (Array.isArray(value)) {
+    const faqs = value
+      .filter((item): item is { answer: string; id?: string; question: string } => Boolean(item) && typeof item === "object" && "question" in item && "answer" in item)
+      .map((item, index) => ({
+        answer: String(item.answer),
+        id: item.id ?? `faq-${index}`,
+        question: String(item.question)
+      }));
+    if (faqs.length) return faqs;
+  }
+  return [
+    {
+      id: "quotes",
+      question: "How do quotes work?",
+      answer: "Send your event details through ShopFia. The vendor can reply in messages with a custom quote tied to this storefront."
+    },
+    {
+      id: "reviews",
+      question: "Are reviews verified?",
+      answer: "Public reviews are collected from completed ShopFia bookings, so ratings stay tied to real orders."
+    },
+    {
+      id: "saves",
+      question: "Can I save services?",
+      answer: "Yes. Saved vendors and services stay connected to your ShopFia account for future planning."
+    }
+  ];
+}
+
+function readStorefrontBooking(value: unknown) {
+  const fallback = {
+    deposit: "Deposit and payment details are confirmed in the quote.",
+    leadTime: "Availability is confirmed in ShopFia messages.",
+    process: "Request a quote, confirm details in messages, then book securely through ShopFia when supported."
+  };
+  if (!value || typeof value !== "object" || Array.isArray(value)) return fallback;
+  const record = value as Partial<typeof fallback>;
+  return {
+    deposit: record.deposit || fallback.deposit,
+    leadTime: record.leadTime || fallback.leadTime,
+    process: record.process || fallback.process
+  };
+}
+
+function readStorefrontPolicies(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is { body: string; id?: string; title: string } => Boolean(item) && typeof item === "object" && "title" in item && "body" in item)
+    .map((item, index) => ({
+      body: String(item.body),
+      id: item.id ?? `policy-${index}`,
+      title: String(item.title)
+    }));
 }

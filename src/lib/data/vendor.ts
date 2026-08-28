@@ -35,11 +35,16 @@ export async function getVendorProfileBySlug(slug: string) {
       storefrontAboutHeading: true,
       storefrontAboutImage: true,
       storefrontButtonStyle: true,
+      storefrontBookingJson: true,
+      storefrontFaqJson: true,
+      storefrontFeaturedOfferingIds: true,
       storefrontFontStyle: true,
       storefrontHiddenSections: true,
       storefrontImageShape: true,
       storefrontLayout: true,
+      storefrontOfferingOrder: true,
       storefrontPalette: true,
+      storefrontPoliciesJson: true,
       storefrontSectionOrder: true,
       storefrontTagline: true,
       tiktokUrl: true,
@@ -53,7 +58,12 @@ export async function getVendorProfileBySlug(slug: string) {
           id: true,
           createdAt: true,
           email: true,
-          username: true
+          username: true,
+          _count: {
+            select: {
+              followers: true
+            }
+          }
         }
       },
       sellerRatingAggregate: true,
@@ -116,6 +126,12 @@ export async function getVendorProfileBySlug(slug: string) {
         },
         orderBy: { createdAt: "desc" },
         take: 18
+      },
+      _count: {
+        select: {
+          favorites: true,
+          orders: true
+        }
       }
     }
   });

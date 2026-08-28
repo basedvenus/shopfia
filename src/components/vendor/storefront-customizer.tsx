@@ -1,8 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, GripVertical, Monitor, Smartphone, Wand2 } from "lucide-react";
+import { useMemo, useState, type DragEvent, type ReactNode } from "react";
+import {
+  ArrowLeft,
+  Check,
+  Eye,
+  EyeOff,
+  GripVertical,
+  ImagePlus,
+  Monitor,
+  Palette,
+  Plus,
+  Save,
+  Send,
+  Smartphone,
+  Star,
+  Trash2,
+  Wand2
+} from "lucide-react";
 import { updateStorefrontCustomizationAction } from "@/app/actions/vendor";
 import { Button } from "@/components/ui/button";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
@@ -11,27 +27,53 @@ import { Textarea } from "@/components/ui/textarea";
 import { CopyStorefrontLinkButton } from "@/components/vendor/copy-storefront-link-button";
 import {
   APPROVED_STOREFRONT_SECTIONS,
-  STOREFRONT_BUTTON_STYLES,
   STOREFRONT_FONT_STYLES,
   STOREFRONT_IMAGE_SHAPES,
-  STOREFRONT_LAYOUTS,
   STOREFRONT_PALETTES,
   STOREFRONT_SECTION_LABELS,
-  sanitizeStorefrontSections,
-  storefrontPath
+  sanitizeStorefrontSections
 } from "@/lib/businesses";
 import { formatCurrency } from "@/lib/utils";
+
+type EditorService = {
+  active: boolean;
+  basePriceCents: number | null;
+  categoryId: string | null;
+  description: string;
+  featured: boolean;
+  id: string;
+  isNew?: boolean;
+  messageForPricing: boolean;
+  photos: string[];
+  title: string;
+  turnaroundDays: number | null;
+};
+
+type FaqItem = { id: string; answer: string; question: string };
+type PolicyItem = { id: string; body: string; title: string };
+type BookingInfo = { deposit: string; leadTime: string; process: string };
 
 type CustomizerBusiness = {
   availabilityNotes: string | null;
   bio: string | null;
+  categories: Array<{ categoryId: string; category: { name: string } }>;
   city: string;
   coverPhoto: string | null;
   id: string;
   instagramUrl: string | null;
   logoUrl: string | null;
   name: string;
-  offerings: Array<{ basePriceCents: number | null; id: string; title: string }>;
+  offerings: Array<{
+    active: boolean;
+    basePriceCents: number | null;
+    categoryId: string;
+    description: string;
+    id: string;
+    messageForPricing: boolean;
+    photos: string[];
+    title: string;
+    turnaroundDays: number | null;
+  }>;
   photos: string[];
   serviceAreaNotes: string | null;
   serviceRadiusMiles: number;
@@ -40,12 +82,18 @@ type CustomizerBusiness = {
   state: string | null;
   storefrontAboutHeading: string | null;
   storefrontAboutImage: string | null;
+  storefrontBookingJson: unknown;
   storefrontButtonStyle: string;
+  storefrontDraftJson: unknown;
+  storefrontFaqJson: unknown;
+  storefrontFeaturedOfferingIds: string[];
   storefrontFontStyle: string;
   storefrontHiddenSections: string[];
   storefrontImageShape: string;
   storefrontLayout: string;
+  storefrontOfferingOrder: string[];
   storefrontPalette: string;
+  storefrontPoliciesJson: unknown;
   storefrontSectionOrder: string[];
   storefrontTagline: string | null;
   tiktokUrl: string | null;
@@ -57,93 +105,155 @@ type FormState = {
   aboutImage: string;
   availabilityNotes: string;
   bio: string;
-  buttonStyle: string;
+  booking: BookingInfo;
   coverPhoto: string;
+  city: string;
+  faqs: FaqItem[];
   fontStyle: string;
   hiddenSections: string[];
   imageShape: string;
   instagramUrl: string;
-  layout: string;
   logoUrl: string;
   name: string;
   palette: string;
   photoUrls: string[];
+  policies: PolicyItem[];
   sectionOrder: string[];
   serviceAreaNotes: string;
+  services: EditorService[];
+  state: string;
   tagline: string;
   tiktokUrl: string;
   website: string;
 };
 
-const categories = ["Page", "Design", "Sections", "Settings"] as const;
+const editableSections = APPROVED_STOREFRONT_SECTIONS;
 
 export function StorefrontCustomizer({
   business,
+  draftSaved,
   publicUrl,
   saved
 }: {
   business: CustomizerBusiness;
+  draftSaved?: boolean;
   publicUrl: string;
   saved?: boolean;
 }) {
-  const [activeCategory, setActiveCategory] = useState<(typeof categories)[number]>("Page");
-  const [mode, setMode] = useState<"edit" | "preview">("edit");
+  const [activeSection, setActiveSection] = useState<string>("hero");
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
+  const [intent, setIntent] = useState<"draft" | "publish">("publish");
   const [dirty, setDirty] = useState(false);
-  const [status, setStatus] = useState(saved ? "Saved" : "Published");
-  const [form, setForm] = useState<FormState>(() => ({
-    aboutHeading: business.storefrontAboutHeading ?? `About ${business.name}`,
-    aboutImage: business.storefrontAboutImage ?? "",
-    availabilityNotes: business.availabilityNotes ?? "",
-    bio: business.bio ?? "",
-    buttonStyle: business.storefrontButtonStyle,
-    coverPhoto: business.coverPhoto ?? business.photos[0] ?? "",
-    fontStyle: business.storefrontFontStyle,
-    hiddenSections: business.storefrontHiddenSections,
-    imageShape: business.storefrontImageShape,
-    instagramUrl: business.instagramUrl ?? "",
-    layout: business.storefrontLayout,
-    logoUrl: business.logoUrl ?? "",
-    name: business.name,
-    palette: business.storefrontPalette,
-    photoUrls: [...business.photos, "", "", "", "", "", ""].slice(0, 8),
-    sectionOrder: sanitizeStorefrontSections(business.storefrontSectionOrder),
-    serviceAreaNotes: business.serviceAreaNotes ?? "",
-    tagline: business.storefrontTagline ?? "",
-    tiktokUrl: business.tiktokUrl ?? "",
-    website: business.website ?? ""
-  }));
-
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (!dirty) return;
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [dirty]);
-
-  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((current) => ({ ...current, [key]: value }));
-    setDirty(true);
-    setStatus("Unpublished changes");
-  }
-
-  function updatePhoto(index: number, value: string) {
-    const next = [...form.photoUrls];
-    next[index] = value;
-    update("photoUrls", next);
-  }
+  const [status, setStatus] = useState(draftSaved ? "Draft saved" : saved ? "Published" : "Live");
+  const [draggedSection, setDraggedSection] = useState<string | null>(null);
+  const [form, setForm] = useState<FormState>(() => createInitialState(business));
 
   const visibleSections = useMemo(
     () => form.sectionOrder.filter((section) => !form.hiddenSections.includes(section)),
     [form.hiddenSections, form.sectionOrder]
   );
+  const activeSectionLabel = STOREFRONT_SECTION_LABELS[activeSection as keyof typeof STOREFRONT_SECTION_LABELS] ?? "Section";
+  const servicesJson = useMemo(
+    () =>
+      JSON.stringify(
+        form.services.map((service) => ({
+          active: service.active,
+          basePriceCents: service.basePriceCents,
+          categoryId: service.categoryId,
+          clientId: service.id,
+          description: service.description,
+          featured: service.featured,
+          id: service.isNew ? undefined : service.id,
+          messageForPricing: service.messageForPricing,
+          photos: service.photos.filter(Boolean),
+          title: service.title,
+          turnaroundDays: service.turnaroundDays
+        }))
+      ),
+    [form.services]
+  );
+
+  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+    markDirty();
+  }
+
+  function markDirty() {
+    setDirty(true);
+    setStatus("Unpublished changes");
+  }
+
+  function moveSection(section: string, targetSection: string) {
+    if (section === targetSection) return;
+    const without = form.sectionOrder.filter((item) => item !== section);
+    const targetIndex = without.indexOf(targetSection);
+    update("sectionOrder", [...without.slice(0, targetIndex), section, ...without.slice(targetIndex)]);
+  }
+
+  function onSectionDrop(event: DragEvent<HTMLButtonElement>, targetSection: string) {
+    event.preventDefault();
+    if (draggedSection) moveSection(draggedSection, targetSection);
+    setDraggedSection(null);
+  }
+
+  function toggleSection(section: string) {
+    if (section === "hero") return;
+    update(
+      "hiddenSections",
+      form.hiddenSections.includes(section)
+        ? form.hiddenSections.filter((item) => item !== section)
+        : [...form.hiddenSections, section]
+    );
+  }
+
+  function updateService(id: string, patch: Partial<EditorService>) {
+    update(
+      "services",
+      form.services.map((service) => (service.id === id ? { ...service, ...patch } : service))
+    );
+  }
+
+  function moveService(id: string, direction: -1 | 1) {
+    const index = form.services.findIndex((service) => service.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= form.services.length) return;
+    const next = [...form.services];
+    [next[index], next[target]] = [next[target], next[index]];
+    update("services", next);
+  }
+
+  function addService() {
+    const categoryId = business.categories[0]?.categoryId ?? null;
+    update("services", [
+      ...form.services,
+      {
+        active: true,
+        basePriceCents: null,
+        categoryId,
+        description: "Describe what is included, who this service is best for, and what customers can customize.",
+        featured: true,
+        id: `draft-${crypto.randomUUID()}`,
+        isNew: true,
+        messageForPricing: true,
+        photos: [],
+        title: "New service",
+        turnaroundDays: null
+      }
+    ]);
+    setActiveSection("all-services");
+  }
+
+  function removeService(id: string) {
+    update("services", form.services.map((service) => (service.id === id ? { ...service, active: false, featured: false } : service)));
+  }
 
   return (
-    <form action={updateStorefrontCustomizationAction} className="min-h-[calc(100vh-130px)] overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]">
+    <form action={updateStorefrontCustomizationAction} className="overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]">
       <input type="hidden" name="businessId" value={business.id} />
+      <input type="hidden" name="intent" value={intent} />
       <input type="hidden" name="name" value={form.name} />
+      <input type="hidden" name="city" value={form.city} />
+      <input type="hidden" name="state" value={form.state} />
       <input type="hidden" name="tagline" value={form.tagline} />
       <input type="hidden" name="bio" value={form.bio} />
       <input type="hidden" name="aboutHeading" value={form.aboutHeading} />
@@ -155,14 +265,20 @@ export function StorefrontCustomizer({
       <input type="hidden" name="website" value={form.website} />
       <input type="hidden" name="instagramUrl" value={form.instagramUrl} />
       <input type="hidden" name="tiktokUrl" value={form.tiktokUrl} />
-      <input type="hidden" name="layout" value={form.layout} />
+      <input type="hidden" name="layout" value="EDITORIAL" />
       <input type="hidden" name="fontStyle" value={form.fontStyle} />
       <input type="hidden" name="palette" value={form.palette} />
-      <input type="hidden" name="buttonStyle" value={form.buttonStyle} />
+      <input type="hidden" name="buttonStyle" value="PILL" />
       <input type="hidden" name="imageShape" value={form.imageShape} />
+      <input type="hidden" name="faqJson" value={JSON.stringify(form.faqs)} />
+      <input type="hidden" name="policiesJson" value={JSON.stringify(form.policies)} />
+      <input type="hidden" name="bookingJson" value={JSON.stringify(form.booking)} />
+      <input type="hidden" name="servicesJson" value={servicesJson} />
       {form.sectionOrder.map((section) => <input key={`order-${section}`} type="hidden" name="sectionOrder" value={section} />)}
       {form.hiddenSections.map((section) => <input key={`hidden-${section}`} type="hidden" name="hiddenSections" value={section} />)}
       {form.photoUrls.filter(Boolean).map((photo, index) => <input key={`${photo}-${index}`} type="hidden" name="photoUrls" value={photo} />)}
+      {form.services.map((service) => <input key={`offering-order-${service.id}`} type="hidden" name="offeringOrder" value={service.id} />)}
+      {form.services.filter((service) => service.featured && service.active).map((service) => <input key={`featured-${service.id}`} type="hidden" name="featuredOfferingIds" value={service.id} />)}
 
       <div className="flex flex-col gap-3 border-b border-[#eadbd8] p-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-center gap-3">
@@ -170,7 +286,7 @@ export function StorefrontCustomizer({
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Edit Storefront</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Customize Storefront</p>
             <h1 className="truncate text-xl font-semibold">{form.name}</h1>
           </div>
         </div>
@@ -179,209 +295,467 @@ export function StorefrontCustomizer({
             <Check className="h-3.5 w-3.5" />
             {status}
           </span>
-          <Button type="button" variant="secondary" onClick={() => setMode(mode === "preview" ? "edit" : "preview")}>Preview</Button>
-          <Button type="submit" variant="secondary" onClick={() => setStatus("Saving")}>Save</Button>
-          <Button type="submit" onClick={() => setStatus("Publishing")}>Publish</Button>
+          <Button type="button" variant="secondary" onClick={() => setPreviewMode(previewMode === "desktop" ? "mobile" : "desktop")}>
+            {previewMode === "desktop" ? <Monitor className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
+            {previewMode === "desktop" ? "Desktop" : "Mobile"}
+          </Button>
+          <Button type="submit" variant="secondary" onClick={() => { setIntent("draft"); setStatus("Saving draft"); }}>
+            <Save className="h-4 w-4" />
+            Save draft
+          </Button>
+          <Button type="submit" onClick={() => { setIntent("publish"); setStatus("Publishing"); }}>
+            <Send className="h-4 w-4" />
+            Publish
+          </Button>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[340px_1fr]">
-        <aside className={`${mode === "preview" ? "hidden lg:block" : "block"} border-b border-[#eadbd8] bg-[#fbf7f5] lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto lg:border-b-0 lg:border-r`}>
-          <nav className="flex gap-2 overflow-x-auto p-3 lg:grid lg:grid-cols-2">
-            {categories.map((category) => (
-              <button
-                key={category}
-                type="button"
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${activeCategory === category ? "bg-foreground text-background" : "bg-white text-muted-foreground hover:text-foreground"}`}
-                onClick={() => setActiveCategory(category)}
-              >
-                {category}
-              </button>
-            ))}
-          </nav>
-          <div className="space-y-4 p-4">
-            {activeCategory === "Page" ? <PageControls form={form} update={update} updatePhoto={updatePhoto} /> : null}
-            {activeCategory === "Design" ? <DesignControls form={form} update={update} /> : null}
-            {activeCategory === "Sections" ? <SectionControls form={form} update={update} /> : null}
-            {activeCategory === "Settings" ? <SettingsControls publicUrl={publicUrl} /> : null}
+      <div className="grid min-h-[calc(100vh-190px)] lg:grid-cols-[260px_minmax(0,1fr)_360px]">
+        <aside className="border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:border-b-0 lg:border-r">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Sections</h2>
+            <CopyStorefrontLinkButton url={publicUrl} label="Copy link" className="h-8 bg-white px-3 text-xs" />
+          </div>
+          <div className="grid gap-2">
+            {form.sectionOrder.map((section) => {
+              const hidden = form.hiddenSections.includes(section);
+              const active = activeSection === section;
+              return (
+                <button
+                  key={section}
+                  type="button"
+                  draggable
+                  onClick={() => setActiveSection(section)}
+                  onDragStart={() => setDraggedSection(section)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => onSectionDrop(event, section)}
+                  className={`grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-[0.9rem] border p-3 text-left text-sm transition ${
+                    active ? "border-primary bg-white text-foreground shadow-sm" : "border-transparent bg-white/70 text-muted-foreground hover:bg-white"
+                  } ${hidden ? "opacity-55" : ""}`}
+                >
+                  <GripVertical className="h-4 w-4" />
+                  <span className="font-semibold">{STOREFRONT_SECTION_LABELS[section as keyof typeof STOREFRONT_SECTION_LABELS]}</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="rounded-full p-1 hover:bg-[#fbf7f5]"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleSection(section);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        toggleSection(section);
+                      }
+                    }}
+                  >
+                    {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </aside>
 
-        <section className={`${mode === "edit" ? "hidden lg:block" : "block"} bg-[#f6efec] p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto`}>
-          <div className="mb-3 flex items-center justify-between">
-            <div className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-              <Monitor className="hidden h-4 w-4 sm:block" />
-              Live preview
-            </div>
-            <div className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-              <Smartphone className="h-4 w-4" />
-              Responsive
-            </div>
+        <main className="bg-[#efe7e3] p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
+          <div className="mb-3 flex items-center justify-between text-sm text-muted-foreground">
+            <span>Click a section in the preview to edit it.</span>
+            <Link href={publicUrl.replace(/^https?:\/\/[^/]+/, "")} target="_blank" className="font-semibold text-foreground underline-offset-4 hover:underline">
+              View live
+            </Link>
           </div>
-          <StorefrontPreview business={business} form={form} visibleSections={visibleSections} />
-        </section>
+          <div className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
+            <StorefrontPreview
+              activeSection={activeSection}
+              business={business}
+              form={form}
+              previewMode={previewMode}
+              setActiveSection={setActiveSection}
+              visibleSections={visibleSections}
+            />
+          </div>
+        </main>
+
+        <aside className="border-t border-[#eadbd8] bg-white p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto lg:border-l lg:border-t-0">
+          <div className="mb-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Editing</p>
+            <h2 className="text-xl font-semibold">{activeSectionLabel}</h2>
+          </div>
+          <SectionEditor
+            activeSection={activeSection}
+            business={business}
+            form={form}
+            markDirty={markDirty}
+            update={update}
+            updateService={updateService}
+            moveService={moveService}
+            removeService={removeService}
+            addService={addService}
+          />
+          <div className="mt-6 border-t border-[#eadbd7] pt-5">
+            <DesignControls form={form} update={update} />
+          </div>
+        </aside>
       </div>
     </form>
   );
 }
 
-function PageControls({ form, update, updatePhoto }: { form: FormState; update: <K extends keyof FormState>(key: K, value: FormState[K]) => void; updatePhoto: (index: number, value: string) => void }) {
-  return (
-    <>
-      <ControlGroup title="Business identity">
+function createInitialState(business: CustomizerBusiness): FormState {
+  const draft = readDraft(business.storefrontDraftJson);
+  const orderedServices = orderServices(
+    business.offerings.map((offering) => ({
+      active: offering.active,
+      basePriceCents: offering.basePriceCents,
+      categoryId: offering.categoryId,
+      description: offering.description,
+      featured: business.storefrontFeaturedOfferingIds.includes(offering.id),
+      id: offering.id,
+      messageForPricing: offering.messageForPricing,
+      photos: offering.photos,
+      title: offering.title,
+      turnaroundDays: offering.turnaroundDays
+    })),
+    business.storefrontOfferingOrder
+  );
+  return {
+    aboutHeading: draft?.aboutHeading ?? business.storefrontAboutHeading ?? `About ${business.name}`,
+    aboutImage: draft?.aboutImage ?? business.storefrontAboutImage ?? "",
+    availabilityNotes: draft?.availabilityNotes ?? business.availabilityNotes ?? "",
+    bio: draft?.bio ?? business.bio ?? "",
+    booking: draft?.booking ?? readBooking(business.storefrontBookingJson),
+    city: draft?.city ?? business.city,
+    coverPhoto: draft?.coverPhoto ?? business.coverPhoto ?? business.photos[0] ?? "",
+    faqs: draft?.faqs ?? readFaqs(business.storefrontFaqJson),
+    fontStyle: draft?.fontStyle ?? business.storefrontFontStyle,
+    hiddenSections: draft?.hiddenSections ?? business.storefrontHiddenSections,
+    imageShape: draft?.imageShape ?? business.storefrontImageShape,
+    instagramUrl: draft?.instagramUrl ?? business.instagramUrl ?? "",
+    logoUrl: draft?.logoUrl ?? business.logoUrl ?? "",
+    name: draft?.name ?? business.name,
+    palette: draft?.palette ?? business.storefrontPalette,
+    photoUrls: draft?.photoUrls ?? [...business.photos, "", "", "", "", "", ""].slice(0, 10),
+    policies: draft?.policies ?? readPolicies(business.storefrontPoliciesJson),
+    sectionOrder: draft?.sectionOrder ?? sanitizeStorefrontSections(business.storefrontSectionOrder),
+    serviceAreaNotes: draft?.serviceAreaNotes ?? business.serviceAreaNotes ?? "",
+    services: draft?.services?.length ? mergeDraftServices(draft.services, orderedServices) : orderedServices,
+    state: draft?.state ?? business.state ?? "",
+    tagline: draft?.tagline ?? business.storefrontTagline ?? "",
+    tiktokUrl: draft?.tiktokUrl ?? business.tiktokUrl ?? "",
+    website: draft?.website ?? business.website ?? ""
+  };
+}
+
+function SectionEditor({
+  activeSection,
+  business,
+  form,
+  markDirty,
+  update,
+  updateService,
+  moveService,
+  removeService,
+  addService
+}: {
+  activeSection: string;
+  business: CustomizerBusiness;
+  form: FormState;
+  markDirty: () => void;
+  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+  updateService: (id: string, patch: Partial<EditorService>) => void;
+  moveService: (id: string, direction: -1 | 1) => void;
+  removeService: (id: string) => void;
+  addService: () => void;
+}) {
+  if (activeSection === "hero") {
+    return (
+      <PanelStack>
+        <Field label="Headline"><Input value={form.aboutHeading} onChange={(event) => update("aboutHeading", event.target.value)} /></Field>
+        <Field label="Tagline"><Input value={form.tagline} onChange={(event) => update("tagline", event.target.value)} /></Field>
         <Field label="Business name"><Input value={form.name} onChange={(event) => update("name", event.target.value)} /></Field>
-        <Field label="Short tagline"><Input value={form.tagline} onChange={(event) => update("tagline", event.target.value)} /></Field>
-        <Field label="Primary call-to-action text"><Input value="Request a Quote" readOnly /></Field>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="City"><Input value={form.city} onChange={(event) => update("city", event.target.value)} /></Field>
+          <Field label="State"><Input value={form.state} onChange={(event) => update("state", event.target.value)} /></Field>
+        </div>
         <ImageUploadField name="editorLogo" label="Logo" value={form.logoUrl} onChangePreview={(value) => update("logoUrl", value)} rounded="full" />
-        <ImageUploadField name="editorCover" label="Cover / hero image" value={form.coverPhoto} onChangePreview={(value) => update("coverPhoto", value)} />
-      </ControlGroup>
-      <ControlGroup title="About the business">
-        <Field label="About Us heading"><Input value={form.aboutHeading} onChange={(event) => update("aboutHeading", event.target.value)} /></Field>
-        <Field label="About Us description"><Textarea value={form.bio} className="min-h-[120px]" onChange={(event) => update("bio", event.target.value)} /></Field>
-        <ImageUploadField name="editorAboutImage" label="Company or founder headshot" value={form.aboutImage} onChangePreview={(value) => update("aboutImage", value)} />
-      </ControlGroup>
-      <ControlGroup title="Business information">
-        <Field label="Service areas"><Textarea value={form.serviceAreaNotes} onChange={(event) => update("serviceAreaNotes", event.target.value)} /></Field>
-        <Field label="Booking notes"><Textarea value={form.availabilityNotes} onChange={(event) => update("availabilityNotes", event.target.value)} /></Field>
-        <Field label="Website"><Input value={form.website} onChange={(event) => update("website", event.target.value)} /></Field>
-        <Field label="Instagram"><Input value={form.instagramUrl} onChange={(event) => update("instagramUrl", event.target.value)} /></Field>
-        <Field label="TikTok"><Input value={form.tiktokUrl} onChange={(event) => update("tiktokUrl", event.target.value)} /></Field>
-      </ControlGroup>
-      <ControlGroup title="Portfolio">
-        <p className="text-xs text-muted-foreground">Upload, replace, remove, and reorder portfolio images by moving images between slots.</p>
-        {form.photoUrls.map((photo, index) => (
-          <ImageUploadField key={index} name={`editorPhoto${index}`} label={`Portfolio image ${index + 1}`} value={photo} onChangePreview={(value) => updatePhoto(index, value)} />
-        ))}
-      </ControlGroup>
-    </>
-  );
-}
-
-function DesignControls({ form, update }: { form: FormState; update: <K extends keyof FormState>(key: K, value: FormState[K]) => void }) {
-  return (
-    <>
-      <ChoiceGrid title="Layout" name="layout" current={form.layout} options={STOREFRONT_LAYOUTS} update={(value) => update("layout", value)} />
-      <ChoiceGrid title="Font pairing" name="fontStyle" current={form.fontStyle} options={STOREFRONT_FONT_STYLES} update={(value) => update("fontStyle", value)} />
-      <ChoiceGrid title="Color theme" name="palette" current={form.palette} options={STOREFRONT_PALETTES} update={(value) => update("palette", value)} palette />
-      <CompactChoice title="Button style" current={form.buttonStyle} options={STOREFRONT_BUTTON_STYLES} update={(value) => update("buttonStyle", value)} />
-      <CompactChoice title="Image shape" current={form.imageShape} options={STOREFRONT_IMAGE_SHAPES} update={(value) => update("imageShape", value)} />
-      <CompactChoice title="Section spacing" current="BALANCED" options={[{ value: "COMPACT", label: "Compact" }, { value: "BALANCED", label: "Balanced" }, { value: "AIRY", label: "Airy" }]} update={() => undefined} />
-    </>
-  );
-}
-
-function SectionControls({ form, update }: { form: FormState; update: <K extends keyof FormState>(key: K, value: FormState[K]) => void }) {
-  function move(section: string, direction: -1 | 1) {
-    const index = form.sectionOrder.indexOf(section);
-    const target = index + direction;
-    if (index < 0 || target < 0 || target >= form.sectionOrder.length) return;
-    const next = [...form.sectionOrder];
-    [next[index], next[target]] = [next[target], next[index]];
-    update("sectionOrder", next);
-  }
-
-  function toggle(section: string) {
-    if (section === "hero") return;
-    update(
-      "hiddenSections",
-      form.hiddenSections.includes(section)
-        ? form.hiddenSections.filter((item) => item !== section)
-        : [...form.hiddenSections, section]
+        <ImageUploadField name="editorCover" label="Cover image" value={form.coverPhoto} onChangePreview={(value) => update("coverPhoto", value)} />
+      </PanelStack>
     );
   }
-
+  if (activeSection === "featured-services" || activeSection === "all-services") {
+    return (
+      <PanelStack>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Edit, reorder, hide, feature, and add service photos.</p>
+          <Button type="button" size="sm" onClick={addService}><Plus className="h-4 w-4" />Add</Button>
+        </div>
+        {form.services.map((service, index) => (
+          <ServiceEditor
+            key={service.id}
+            business={business}
+            index={index}
+            service={service}
+            updateService={updateService}
+            moveService={moveService}
+            removeService={removeService}
+            markDirty={markDirty}
+          />
+        ))}
+      </PanelStack>
+    );
+  }
+  if (activeSection === "portfolio") {
+    return (
+      <PanelStack>
+        <p className="text-sm text-muted-foreground">Replace images or reorder them by moving content between slots.</p>
+        {form.photoUrls.map((photo, index) => (
+          <div key={index} className="rounded-[1rem] border border-[#eadbd7] p-3">
+            <ImageUploadField name={`portfolio-${index}`} label={`Portfolio image ${index + 1}`} value={photo} onChangePreview={(value) => {
+              const next = [...form.photoUrls];
+              next[index] = value;
+              update("photoUrls", next);
+            }} />
+          </div>
+        ))}
+      </PanelStack>
+    );
+  }
+  if (activeSection === "about") {
+    return (
+      <PanelStack>
+        <Field label="About heading"><Input value={form.aboutHeading} onChange={(event) => update("aboutHeading", event.target.value)} /></Field>
+        <Field label="About Us text"><Textarea className="min-h-[150px]" value={form.bio} onChange={(event) => update("bio", event.target.value)} /></Field>
+        <ImageUploadField name="founderPhoto" label="Founder or team photo" value={form.aboutImage} onChangePreview={(value) => update("aboutImage", value)} />
+      </PanelStack>
+    );
+  }
+  if (activeSection === "how-it-works" || activeSection === "final-quote") {
+    return (
+      <PanelStack>
+        <Field label="Service area"><Textarea value={form.serviceAreaNotes} onChange={(event) => update("serviceAreaNotes", event.target.value)} /></Field>
+        <Field label="Lead time"><Input value={form.booking.leadTime} onChange={(event) => update("booking", { ...form.booking, leadTime: event.target.value })} /></Field>
+        <Field label="Deposit or payment note"><Input value={form.booking.deposit} onChange={(event) => update("booking", { ...form.booking, deposit: event.target.value })} /></Field>
+        <Field label="Booking process"><Textarea value={form.booking.process} onChange={(event) => update("booking", { ...form.booking, process: event.target.value })} /></Field>
+        <Field label="Availability notes"><Textarea value={form.availabilityNotes} onChange={(event) => update("availabilityNotes", event.target.value)} /></Field>
+      </PanelStack>
+    );
+  }
+  if (activeSection === "faq") {
+    return (
+      <PanelStack>
+        <Button type="button" variant="secondary" onClick={() => update("faqs", [...form.faqs, { id: crypto.randomUUID(), question: "New question", answer: "Answer this in your own words." }])}>
+          <Plus className="h-4 w-4" />Add FAQ
+        </Button>
+        {form.faqs.map((faq) => (
+          <div key={faq.id} className="rounded-[1rem] border border-[#eadbd7] p-3">
+            <Field label="Question"><Input value={faq.question} onChange={(event) => update("faqs", form.faqs.map((item) => item.id === faq.id ? { ...item, question: event.target.value } : item))} /></Field>
+            <Field label="Answer"><Textarea value={faq.answer} onChange={(event) => update("faqs", form.faqs.map((item) => item.id === faq.id ? { ...item, answer: event.target.value } : item))} /></Field>
+          </div>
+        ))}
+      </PanelStack>
+    );
+  }
+  if (activeSection === "reviews") {
+    return <PanelStack><p className="text-sm leading-6 text-muted-foreground">Reviews are verified ShopFia booking records, so vendors can choose placement/visibility but cannot edit review content.</p></PanelStack>;
+  }
   return (
-    <ControlGroup title="Storefront sections">
-      {form.sectionOrder.map((section) => (
-        <div key={section} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-[1rem] bg-white p-3">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-          <button type="button" className="text-left text-sm font-semibold" onClick={() => update("hiddenSections", form.hiddenSections.filter((item) => item !== section))}>
-            {STOREFRONT_SECTION_LABELS[section as keyof typeof STOREFRONT_SECTION_LABELS]}
+    <PanelStack>
+      <Field label="Website"><Input value={form.website} onChange={(event) => update("website", event.target.value)} /></Field>
+      <Field label="Instagram"><Input value={form.instagramUrl} onChange={(event) => update("instagramUrl", event.target.value)} /></Field>
+      <Field label="TikTok"><Input value={form.tiktokUrl} onChange={(event) => update("tiktokUrl", event.target.value)} /></Field>
+      <Button type="button" variant="secondary" onClick={() => update("policies", [...form.policies, { id: crypto.randomUUID(), title: "New policy", body: "Describe the policy clearly." }])}>
+        <Plus className="h-4 w-4" />Add policy
+      </Button>
+    </PanelStack>
+  );
+}
+
+function ServiceEditor({
+  business,
+  index,
+  markDirty,
+  moveService,
+  removeService,
+  service,
+  updateService
+}: {
+  business: CustomizerBusiness;
+  index: number;
+  markDirty: () => void;
+  moveService: (id: string, direction: -1 | 1) => void;
+  removeService: (id: string) => void;
+  service: EditorService;
+  updateService: (id: string, patch: Partial<EditorService>) => void;
+}) {
+  if (!service.active) {
+    return (
+      <div className="rounded-[1rem] border border-dashed border-[#eadbd7] p-3 text-sm text-muted-foreground">
+        {service.title} will be hidden after publishing.
+        <Button type="button" size="sm" variant="secondary" className="mt-2" onClick={() => updateService(service.id, { active: true })}>Restore</Button>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3 rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-semibold">Service {index + 1}</div>
+        <div className="flex gap-1">
+          <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveService(service.id, -1)}>Up</button>
+          <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveService(service.id, 1)}>Down</button>
+          <button type="button" className="rounded-full border p-1 text-muted-foreground hover:text-foreground" onClick={() => removeService(service.id)}><Trash2 className="h-4 w-4" /></button>
+        </div>
+      </div>
+      <Field label="Service name"><Input value={service.title} onChange={(event) => updateService(service.id, { title: event.target.value })} /></Field>
+      <Field label="Description"><Textarea value={service.description} onChange={(event) => updateService(service.id, { description: event.target.value })} /></Field>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Field label="Starting price"><Input inputMode="decimal" value={service.basePriceCents == null ? "" : String(service.basePriceCents / 100)} onChange={(event) => updateService(service.id, { basePriceCents: dollarsToCents(event.target.value), messageForPricing: false })} /></Field>
+        <Field label="Lead time days"><Input inputMode="numeric" value={service.turnaroundDays ?? ""} onChange={(event) => updateService(service.id, { turnaroundDays: event.target.value ? Number(event.target.value) : null })} /></Field>
+      </div>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={service.messageForPricing} onChange={(event) => updateService(service.id, { messageForPricing: event.target.checked })} />Custom quote instead of public price</label>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={service.featured} onChange={(event) => updateService(service.id, { featured: event.target.checked })} />Feature this service</label>
+      {business.categories.length > 0 ? (
+        <Field label="Category">
+          <select className="h-10 rounded-[0.75rem] border border-[#eadbd7] bg-white px-3 text-sm" value={service.categoryId ?? ""} onChange={(event) => updateService(service.id, { categoryId: event.target.value })}>
+            {business.categories.map((category) => <option key={category.categoryId} value={category.categoryId}>{category.category.name}</option>)}
+          </select>
+        </Field>
+      ) : null}
+      <div className="grid gap-2 sm:grid-cols-2">
+        {[0, 1, 2].map((photoIndex) => (
+          <ImageUploadField
+            key={photoIndex}
+            name={`service-${service.id}-${photoIndex}`}
+            label={`Photo ${photoIndex + 1}`}
+            value={service.photos[photoIndex] ?? ""}
+            onChangePreview={(value) => {
+              const photos = [...service.photos];
+              photos[photoIndex] = value;
+              updateService(service.id, { photos });
+              markDirty();
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DesignControls({
+  form,
+  update
+}: {
+  form: FormState;
+  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+}) {
+  return (
+    <PanelStack>
+      <div className="flex items-center gap-2">
+        <Palette className="h-4 w-4 text-primary" />
+        <h3 className="text-sm font-semibold">Theme System</h3>
+      </div>
+      <div className="grid gap-2">
+        {STOREFRONT_PALETTES.map((palette) => (
+          <button
+            key={palette.value}
+            type="button"
+            onClick={() => update("palette", palette.value)}
+            className={`flex items-center gap-3 rounded-[0.9rem] border p-3 text-left text-sm transition ${
+              form.palette === palette.value ? "border-primary bg-[#fffaf8]" : "border-[#eadbd7] hover:bg-[#fffaf8]"
+            }`}
+          >
+            <span className={`h-8 w-8 rounded-full bg-gradient-to-br ${palette.className}`} />
+            <span>
+              <span className="block font-semibold">{palette.label}</span>
+              <span className="block text-xs text-muted-foreground">{palette.description}</span>
+            </span>
           </button>
-          <div className="flex items-center gap-1">
-            <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => move(section, -1)}>Up</button>
-            <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => move(section, 1)}>Down</button>
-            <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => toggle(section)}>
-              {form.hiddenSections.includes(section) ? "Show" : "Hide"}
+        ))}
+      </div>
+      <Field label="Font pairing">
+        <select className="h-10 rounded-[0.75rem] border border-[#eadbd7] bg-white px-3 text-sm" value={form.fontStyle} onChange={(event) => update("fontStyle", event.target.value)}>
+          {STOREFRONT_FONT_STYLES.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+        </select>
+      </Field>
+      <Field label="Image shape">
+        <div className="grid grid-cols-3 gap-2">
+          {STOREFRONT_IMAGE_SHAPES.map((shape) => (
+            <button
+              key={shape.value}
+              type="button"
+              onClick={() => update("imageShape", shape.value)}
+              className={`rounded-[0.75rem] border px-3 py-2 text-sm font-semibold ${
+                form.imageShape === shape.value ? "border-primary bg-[#fffaf8]" : "border-[#eadbd7]"
+              }`}
+            >
+              {shape.label}
             </button>
+          ))}
+        </div>
+      </Field>
+      <div className="rounded-[1rem] border border-[#eadbd7] bg-[#fbf7f5] p-3 text-xs leading-5 text-muted-foreground">
+        <Wand2 className="mb-2 h-4 w-4 text-primary" />
+        ShopFia locks spacing, navigation, trust actions, and responsive structure while letting you tune content, media, section order, and polished theme choices.
+      </div>
+    </PanelStack>
+  );
+}
+
+function StorefrontPreview({
+  activeSection,
+  business,
+  form,
+  previewMode,
+  setActiveSection,
+  visibleSections
+}: {
+  activeSection: string;
+  business: CustomizerBusiness;
+  form: FormState;
+  previewMode: "desktop" | "mobile";
+  setActiveSection: (section: string) => void;
+  visibleSections: string[];
+}) {
+  const palette = STOREFRONT_PALETTES.find((item) => item.value === form.palette) ?? STOREFRONT_PALETTES[0];
+  const imageRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.5rem]" : "rounded-[0.75rem]";
+  const activeServices = form.services.filter((service) => service.active);
+  const featuredServices = activeServices.filter((service) => service.featured).slice(0, 3);
+  const isMobile = previewMode === "mobile";
+  return (
+    <div className={`overflow-hidden rounded-[1rem] bg-white shadow-soft ${isMobile ? "text-[12px]" : ""}`}>
+      <button type="button" onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
+        <div className="border-b border-[#eadbd7] bg-[#fffaf8] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7a625b]">ShopFia Storefront</div>
+        <div className="flex gap-3 p-4">
+          {form.logoUrl ? <img src={form.logoUrl} alt="" className="h-14 w-14 rounded-full object-cover" /> : <div className="grid h-14 w-14 place-items-center rounded-full bg-[#f8ece9] font-semibold">{form.name.slice(0, 1)}</div>}
+          <div>
+            <div className="text-lg font-semibold">{form.name}</div>
+            <div className="text-sm text-muted-foreground">@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
+            <p className="mt-1 line-clamp-2 text-sm text-[#5f5550]">{form.tagline}</p>
           </div>
         </div>
-      ))}
-    </ControlGroup>
-  );
-}
-
-function SettingsControls({ publicUrl }: { publicUrl: string }) {
-  return (
-    <ControlGroup title="Publishing">
-      <p className="text-sm leading-6 text-muted-foreground">Preview, save, publish, and copy the storefront link from this editor.</p>
-      <CopyStorefrontLinkButton url={publicUrl} label="Copy Link" className="w-full bg-white" />
-    </ControlGroup>
-  );
-}
-
-function ControlGroup({ children, title }: { children: React.ReactNode; title: string }) {
-  return <section className="space-y-3 rounded-[1rem] bg-white p-4"><h2 className="text-sm font-semibold">{title}</h2>{children}</section>;
-}
-
-function Field({ children, label }: { children: React.ReactNode; label: string }) {
-  return <label className="grid gap-2 text-sm font-medium">{label}{children}</label>;
-}
-
-function ChoiceGrid({ current, options, palette = false, title, update }: { current: string; options: ReadonlyArray<{ className?: string; description: string; label: string; value: string }>; palette?: boolean; title: string; name: string; update: (value: string) => void }) {
-  return (
-    <ControlGroup title={title}>
-      <div className="grid gap-2">
-        {options.map((option) => (
-          <button key={option.value} type="button" className={`rounded-[1rem] border p-3 text-left text-sm transition ${current === option.value ? "border-primary bg-[#fff8f6]" : "bg-white"}`} onClick={() => update(option.value)}>
-            {palette && option.className ? <span className={`mb-2 block h-8 rounded-lg bg-gradient-to-r ${option.className}`} /> : <span className="mb-2 block h-8 rounded-lg bg-[#fbf7f5]" />}
-            <span className="font-semibold">{option.label}</span>
-            <span className="mt-1 block text-xs leading-5 text-muted-foreground">{option.description}</span>
-          </button>
-        ))}
-      </div>
-    </ControlGroup>
-  );
-}
-
-function CompactChoice({ current, options, title, update }: { current: string; options: ReadonlyArray<{ label: string; value: string }>; title: string; update: (value: string) => void }) {
-  return (
-    <ControlGroup title={title}>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => (
-          <button key={option.value} type="button" className={`rounded-full border px-3 py-2 text-xs font-semibold ${current === option.value ? "border-primary bg-[#fff8f6]" : "bg-white"}`} onClick={() => update(option.value)}>
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </ControlGroup>
-  );
-}
-
-function StorefrontPreview({ business, form, visibleSections }: { business: CustomizerBusiness; form: FormState; visibleSections: string[] }) {
-  const palette = STOREFRONT_PALETTES.find((item) => item.value === form.palette) ?? STOREFRONT_PALETTES[0];
-  const imageRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[2rem]" : "rounded-[1rem]";
-  const portfolio = form.photoUrls.filter(Boolean);
-  return (
-    <div className={`mx-auto max-w-5xl overflow-hidden rounded-[1.5rem] bg-gradient-to-br ${palette.className} shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
-      <section className="relative min-h-[420px] p-6 sm:p-10">
-        {form.coverPhoto ? <img src={form.coverPhoto} alt="" className={`absolute inset-0 h-full w-full object-cover ${imageRadius}`} /> : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="relative z-10 flex min-h-[340px] flex-col justify-end text-white">
-          {form.logoUrl ? <img src={form.logoUrl} alt="" className="mb-4 h-16 w-16 rounded-full object-cover" /> : null}
-          <h2 className="max-w-2xl text-4xl font-semibold tracking-[-0.04em]">{form.name}</h2>
-          {form.tagline ? <p className="mt-3 max-w-xl text-base leading-7 text-white/88">{form.tagline}</p> : null}
-          <a href="#preview-inquiry" className="mt-5 inline-flex w-fit rounded-full bg-white px-5 py-3 text-sm font-semibold text-foreground">Request a Quote</a>
+        <div className="flex gap-1 overflow-x-auto border-t border-[#eadbd7] px-3 py-2 text-sm">
+          {["Home", "Services", "Portfolio", "About", "Reviews", "FAQ"].map((item) => <span key={item} className="rounded-full px-3 py-1">{item}</span>)}
         </div>
-      </section>
-      <div className="space-y-10 bg-white/78 p-6 sm:p-10">
-        {visibleSections.map((section) => {
-          if (section === "about") return <PreviewSection key={section} title={form.aboutHeading}><p>{form.bio || "Add a warm description of your work and what clients can expect."}</p>{form.aboutImage ? <img src={form.aboutImage} alt="" className={`mt-4 h-56 w-full object-cover ${imageRadius}`} /> : null}</PreviewSection>;
-          if (section === "portfolio" && portfolio.length) return <PreviewSection key={section} title="Portfolio"><div className="grid grid-cols-2 gap-3 md:grid-cols-3">{portfolio.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-square object-cover ${imageRadius}`} />)}</div></PreviewSection>;
-          if (section === "services" && business.offerings.length) return <PreviewSection key={section} title="Services"><div className="grid gap-3 md:grid-cols-3">{business.offerings.map((offering) => <div key={offering.id} className="rounded-[1rem] bg-white p-4 shadow-sm"><div className="font-semibold">{offering.title}</div><div className="mt-2 text-sm text-muted-foreground">{offering.basePriceCents ? `From ${formatCurrency(offering.basePriceCents)}` : "Message for pricing"}</div></div>)}</div></PreviewSection>;
-          if (section === "service-area") return <PreviewSection key={section} title="Service Area"><p>{form.serviceAreaNotes || `${business.city}${business.state ? `, ${business.state}` : ""} and nearby areas within ${business.serviceRadiusMiles} miles.`}</p></PreviewSection>;
-          if (section === "inquiry-form") return <PreviewSection key={section} title="Request a Quote"><div id="preview-inquiry" className="rounded-[1rem] bg-white p-4 text-sm text-muted-foreground">Inquiry form appears here on the live storefront.</div></PreviewSection>;
-          if (section === "social-links" && (form.instagramUrl || form.tiktokUrl || form.website)) return <PreviewSection key={section} title="Social Links"><p>{[form.instagramUrl, form.tiktokUrl, form.website].filter(Boolean).join(" · ")}</p></PreviewSection>;
+        <section className={`relative grid min-h-[390px] overflow-hidden bg-[#211815] text-white ${isMobile ? "" : "md:grid-cols-[1fr_0.55fr]"}`}>
+          {form.coverPhoto ? <img src={form.coverPhoto} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,17,15,0.9),rgba(24,17,15,0.2))]" />
+          <div className="relative p-6">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/70">Featured storefront</p>
+            <h2 className="mt-4 text-5xl font-semibold leading-[0.9] tracking-normal">{form.aboutHeading || form.name}</h2>
+            <p className="mt-4 line-clamp-3 text-sm leading-6 text-white/80">{form.tagline || form.bio}</p>
+          </div>
+        </section>
+      </button>
+      <div className={`bg-gradient-to-br ${palette.className} p-5`}>
+        {visibleSections.filter((section) => section !== "hero").map((section) => {
+          if (section === "featured-services") return <PreviewSection key={section} active={activeSection === section} title="Featured services" onClick={() => setActiveSection(section)}><ServiceGrid services={featuredServices} /></PreviewSection>;
+          if (section === "all-services") return <PreviewSection key={section} active={activeSection === section} title="All services" onClick={() => setActiveSection(section)}><ServiceGrid services={activeServices} /></PreviewSection>;
+          if (section === "portfolio") return <PreviewSection key={section} active={activeSection === section} title="Portfolio" onClick={() => setActiveSection(section)}><div className="grid grid-cols-3 gap-2">{form.photoUrls.filter(Boolean).slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-square object-cover ${imageRadius}`} />)}</div></PreviewSection>;
+          if (section === "about") return <PreviewSection key={section} active={activeSection === section} title={form.aboutHeading || "About Us"} onClick={() => setActiveSection(section)}><div className="grid gap-3 md:grid-cols-2"><p>{form.bio}</p>{form.aboutImage ? <img src={form.aboutImage} alt="" className={`h-44 w-full object-cover ${imageRadius}`} /> : null}</div></PreviewSection>;
+          if (section === "how-it-works") return <PreviewSection key={section} active={activeSection === section} title="How it works" onClick={() => setActiveSection(section)}><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p></PreviewSection>;
+          if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} title="Verified reviews" onClick={() => setActiveSection(section)}><p>Reviews are synced from completed ShopFia bookings.</p></PreviewSection>;
+          if (section === "faq") return <PreviewSection key={section} active={activeSection === section} title="FAQ" onClick={() => setActiveSection(section)}>{form.faqs.slice(0, 3).map((faq) => <div key={faq.id} className="mt-2"><div className="font-semibold">{faq.question}</div><p>{faq.answer}</p></div>)}</PreviewSection>;
+          if (section === "final-quote") return <PreviewSection key={section} active={activeSection === section} title="Ready for a quote?" onClick={() => setActiveSection(section)}><Button type="button"><Send className="h-4 w-4" />Get a quote</Button></PreviewSection>;
           return null;
         })}
       </div>
@@ -389,6 +763,107 @@ function StorefrontPreview({ business, form, visibleSections }: { business: Cust
   );
 }
 
-function PreviewSection({ children, title }: { children: React.ReactNode; title: string }) {
-  return <section><h3 className="text-2xl font-semibold tracking-[-0.03em]">{title}</h3><div className="mt-3 text-sm leading-6 text-muted-foreground">{children}</div></section>;
+function ServiceGrid({ services }: { services: EditorService[] }) {
+  if (!services.length) return <p className="text-sm text-muted-foreground">No services selected.</p>;
+  return (
+    <div className="grid gap-3 md:grid-cols-3">
+      {services.map((service) => (
+        <div key={service.id} className="overflow-hidden rounded-[0.9rem] bg-white shadow-sm">
+          {service.photos[0] ? <img src={service.photos[0]} alt="" className="aspect-[4/3] w-full object-cover" /> : <div className="grid aspect-[4/3] place-items-center bg-[#f8ece9]"><ImagePlus className="h-6 w-6 text-primary" /></div>}
+          <div className="p-3">
+            <div className="line-clamp-1 font-semibold">{service.title}</div>
+            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{service.description}</p>
+            <div className="mt-2 flex items-center justify-between text-sm">
+              <span>{service.messageForPricing || service.basePriceCents == null ? "Custom quote" : `From ${formatCurrency(service.basePriceCents)}`}</span>
+              <span className="inline-flex items-center gap-1 text-muted-foreground"><Star className="h-3.5 w-3.5 fill-current text-amber-500" />Verified</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PreviewSection({ active, children, onClick, title }: { active: boolean; children: ReactNode; onClick: () => void; title: string }) {
+  return (
+    <button type="button" onClick={onClick} className={previewButtonClass(active, "mb-5 block w-full rounded-[1rem] bg-white/86 p-5 text-left")}>
+      <h3 className="text-2xl font-semibold tracking-tight">{title}</h3>
+      <div className="mt-3 text-sm leading-6 text-muted-foreground">{children}</div>
+    </button>
+  );
+}
+
+function previewButtonClass(active: boolean, base: string) {
+  return `${base} ${active ? "ring-2 ring-primary ring-offset-2" : "ring-1 ring-transparent hover:ring-primary/35"}`;
+}
+
+function Field({ children, label }: { children: ReactNode; label: string }) {
+  return <label className="grid gap-2 text-sm font-semibold text-[#4b403c]">{label}{children}</label>;
+}
+
+function PanelStack({ children }: { children: ReactNode }) {
+  return <div className="grid gap-4">{children}</div>;
+}
+
+function readDraft(value: unknown): Partial<FormState> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Partial<FormState> : null;
+}
+
+function readFaqs(value: unknown): FaqItem[] {
+  return Array.isArray(value) && value.length
+    ? value.filter(isFaqItem)
+    : [
+        { id: "quote", question: "How do I request a quote?", answer: "Share your date, location, guest count, and inspiration through ShopFia." },
+        { id: "custom", question: "Can this be customized?", answer: "Yes. The vendor will confirm options, pricing, and timing in messages." }
+      ];
+}
+
+function readPolicies(value: unknown): PolicyItem[] {
+  return Array.isArray(value) && value.length
+    ? value.filter(isPolicyItem)
+    : [{ id: "changes", title: "Changes", body: "Final scope, timing, and changes are confirmed before booking." }];
+}
+
+function readBooking(value: unknown): BookingInfo {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Partial<BookingInfo>;
+    return {
+      deposit: record.deposit ?? "Deposit details are confirmed in the quote.",
+      leadTime: record.leadTime ?? "Availability is confirmed in messages.",
+      process: record.process ?? "Request a quote, confirm details in messages, then book securely through ShopFia when supported."
+    };
+  }
+  return {
+    deposit: "Deposit details are confirmed in the quote.",
+    leadTime: "Availability is confirmed in messages.",
+    process: "Request a quote, confirm details in messages, then book securely through ShopFia when supported."
+  };
+}
+
+function isFaqItem(item: unknown): item is FaqItem {
+  return item != null && typeof item === "object" && "question" in item && "answer" in item;
+}
+
+function isPolicyItem(item: unknown): item is PolicyItem {
+  return item != null && typeof item === "object" && "title" in item && "body" in item;
+}
+
+function orderServices(services: EditorService[], order: string[]) {
+  return [...services].sort((a, b) => {
+    const aIndex = order.indexOf(a.id);
+    const bIndex = order.indexOf(b.id);
+    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+  });
+}
+
+function mergeDraftServices(draftServices: EditorService[], liveServices: EditorService[]) {
+  const liveById = new Map(liveServices.map((service) => [service.id, service]));
+  return draftServices.map((service) => ({ ...liveById.get(service.id), ...service }));
+}
+
+function dollarsToCents(value: string) {
+  const normalized = value.replace(/[$,]/g, "").trim();
+  if (!normalized) return null;
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? Math.round(amount * 100) : null;
 }

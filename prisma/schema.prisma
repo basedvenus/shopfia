@@ -332,6 +332,12 @@ model VendorProfile {
   storefrontPalette         StorefrontPalette     @default(BLUSH)
   storefrontButtonStyle     StorefrontButtonStyle @default(PILL)
   storefrontImageShape      StorefrontImageShape  @default(ROUNDED)
+  storefrontDraftJson       Json?
+  storefrontFaqJson         Json?
+  storefrontPoliciesJson    Json?
+  storefrontBookingJson     Json?
+  storefrontFeaturedOfferingIds String[]           @default([])
+  storefrontOfferingOrder   String[]              @default([])
   claimedAt                 DateTime?
   createdAt                 DateTime              @default(now())
   updatedAt                 DateTime              @updatedAt

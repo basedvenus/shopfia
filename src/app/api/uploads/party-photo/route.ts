@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   ]);
   if (limited) return limited;
 
-  const formData = await request.formData();
+  const formData = await request.formData() as unknown as globalThis.FormData;
   const file = formData.get("file");
   const crop = parseImageCrop(formData.get("crop"));
 

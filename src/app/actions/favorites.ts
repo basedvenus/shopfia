@@ -46,6 +46,7 @@ export async function toggleFavoriteAction(targetTypeOrVendorId: FavoriteTargetT
     }
 
     revalidatePath(`/vendor/profile/${vendor.slug}`);
+    revalidatePath(`/${vendor.slug}`);
   }
 
   if (target.targetType === "party") {
@@ -92,6 +93,7 @@ export async function toggleFavoriteAction(targetTypeOrVendorId: FavoriteTargetT
 
     revalidatePath(`/offering/${offering.id}`);
     revalidatePath(`/vendor/profile/${offering.vendor.slug}`);
+    revalidatePath(`/${offering.vendor.slug}`);
   }
 
   revalidatePath("/favorites");

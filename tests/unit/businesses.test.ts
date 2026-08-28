@@ -34,15 +34,15 @@ describe("business storefront utilities", () => {
 
   it("keeps only approved storefront sections", () => {
     expect(sanitizeStorefrontSections(["portfolio", "custom-html", "about"])).toEqual([
+      "hero",
       "portfolio",
       "about",
-      "hero",
-      "services",
-      "featured-parties",
+      "featured-services",
+      "all-services",
+      "how-it-works",
       "reviews",
-      "service-area",
-      "inquiry-form",
-      "social-links"
+      "faq",
+      "final-quote"
     ]);
   });
 });

@@ -11,11 +11,11 @@ export default async function StorefrontCustomizerPage({
   searchParams
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ published?: string }>;
+  searchParams?: Promise<{ draft?: string; published?: string }>;
 }) {
   const [{ slug }, resolvedSearchParams] = await Promise.all([
     params,
-    Promise.resolve(searchParams ?? ({} as { published?: string }))
+    searchParams ?? Promise.resolve({} as { draft?: string; published?: string })
   ]);
   const session = await auth();
   if (!session?.user?.id) redirect("/account?next=login");
@@ -47,13 +47,28 @@ export default async function StorefrontCustomizerPage({
       storefrontPalette: true,
       storefrontSectionOrder: true,
       storefrontTagline: true,
+      storefrontDraftJson: true,
+      storefrontFaqJson: true,
+      storefrontPoliciesJson: true,
+      storefrontBookingJson: true,
+      storefrontFeaturedOfferingIds: true,
+      storefrontOfferingOrder: true,
       tiktokUrl: true,
       website: true,
+      categories: { select: { categoryId: true, category: { select: { name: true } } } },
       offerings: {
-        where: { active: true },
         orderBy: { createdAt: "desc" },
-        select: { basePriceCents: true, id: true, title: true },
-        take: 6
+        select: {
+          active: true,
+          basePriceCents: true,
+          categoryId: true,
+          description: true,
+          id: true,
+          messageForPricing: true,
+          photos: true,
+          title: true,
+          turnaroundDays: true
+        }
       }
     }
   });
@@ -68,6 +83,7 @@ export default async function StorefrontCustomizerPage({
       }}
       publicUrl={storefrontUrl(business.slug)}
       saved={Boolean(resolvedSearchParams.published)}
+      draftSaved={Boolean(resolvedSearchParams.draft)}
     />
   );
 }

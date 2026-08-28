@@ -252,6 +252,52 @@ function parseJsonStringArray(value: FormDataEntryValue | null) {
   }
 }
 
+function parseEditorJson(value: string | undefined) {
+  if (!value) return undefined;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+}
+
+type StorefrontEditorService = {
+  active?: boolean;
+  basePriceCents?: number | null;
+  categoryId?: string | null;
+  description?: string;
+  featured?: boolean;
+  id?: string;
+  clientId?: string;
+  messageForPricing?: boolean;
+  photos?: string[];
+  title?: string;
+  turnaroundDays?: number | null;
+};
+
+function parseEditorServices(value: string | undefined): StorefrontEditorService[] {
+  const parsed = parseEditorJson(value);
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+    .map((item) => ({
+      active: item.active !== false,
+      basePriceCents: typeof item.basePriceCents === "number" ? Math.max(0, Math.round(item.basePriceCents)) : null,
+      categoryId: typeof item.categoryId === "string" ? item.categoryId : null,
+      clientId: typeof item.clientId === "string" ? item.clientId : undefined,
+      description: typeof item.description === "string" ? item.description.trim().slice(0, 4000) : "",
+      featured: item.featured === true,
+      id: typeof item.id === "string" && item.id.startsWith("cm") ? item.id : undefined,
+      messageForPricing: Boolean(item.messageForPricing),
+      photos: Array.isArray(item.photos)
+        ? item.photos.filter((photo): photo is string => typeof photo === "string" && photo.trim().length > 0).slice(0, 10)
+        : [],
+      title: typeof item.title === "string" ? item.title.trim().slice(0, 120) : "",
+      turnaroundDays: typeof item.turnaroundDays === "number" ? Math.max(0, Math.round(item.turnaroundDays)) : null
+    }))
+    .filter((item) => item.title && item.description.length >= 10);
+}
+
 function formDataToPricedOptions(formData: FormData, prefix: "package" | "addon") {
   const names = formData.getAll(`${prefix}Names`).map((value) => String(value).trim());
   const descriptions = formData.getAll(`${prefix}Descriptions`).map((value) => String(value).trim());
@@ -320,7 +366,10 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
 
   const result = storefrontCustomizationSchema.safeParse({
     businessId: formData.get("businessId"),
+    intent: formData.get("intent") || "publish",
     name: formData.get("name"),
+    city: formData.get("city"),
+    state: formData.get("state") || undefined,
     tagline: formData.get("tagline") || undefined,
     bio: formData.get("bio") || undefined,
     aboutHeading: formData.get("aboutHeading") || undefined,
@@ -339,7 +388,13 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     buttonStyle: formData.get("buttonStyle"),
     imageShape: formData.get("imageShape"),
     sectionOrder: formDataToArray(formData, "sectionOrder"),
-    hiddenSections: formDataToArray(formData, "hiddenSections")
+    hiddenSections: formDataToArray(formData, "hiddenSections"),
+    faqJson: formData.get("faqJson") || undefined,
+    policiesJson: formData.get("policiesJson") || undefined,
+    bookingJson: formData.get("bookingJson") || undefined,
+    featuredOfferingIds: formDataToArray(formData, "featuredOfferingIds"),
+    offeringOrder: formDataToArray(formData, "offeringOrder"),
+    servicesJson: formData.get("servicesJson") || undefined
   });
   if (!result.success) {
     const message = firstValidationMessage(result.error, {
@@ -348,6 +403,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
       bio: "About Our Business",
       aboutHeading: "About heading",
       aboutImage: "About image",
+      city: "City",
       logoUrl: "Logo",
       coverPhoto: "Cover image",
       photoUrls: "Portfolio photos",
@@ -364,16 +420,166 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
       id: parsed.businessId,
       ...(session.user.role === UserRole.ADMIN ? {} : { userId: session.user.id })
     },
-    select: { id: true, slug: true }
+    select: {
+      id: true,
+      city: true,
+      formattedAddress: true,
+      locationLat: true,
+      locationLng: true,
+      googlePlaceId: true,
+      slug: true,
+      state: true,
+      zipCode: true,
+      categories: { select: { categoryId: true } }
+    }
   });
   if (!vendor) {
     redirect("/vendor/dashboard?customizeError=That%20business%20could%20not%20be%20found.");
   }
+  const vendorId = vendor.id;
+
+  const sanitizedSectionOrder = sanitizeStorefrontSections(parsed.sectionOrder);
+  const sanitizedHiddenSections = sanitizeHiddenStorefrontSections(parsed.hiddenSections);
+  const editorServices = parseEditorServices(parsed.servicesJson);
+  const draftPayload = {
+    aboutHeading: parsed.aboutHeading || "",
+    aboutImage: parsed.aboutImage || "",
+    availabilityNotes: parsed.availabilityNotes || "",
+    bio: parsed.bio || "",
+    booking: parseEditorJson(parsed.bookingJson),
+    buttonStyle: parsed.buttonStyle,
+    city: parsed.city,
+    coverPhoto: parsed.coverPhoto || "",
+    faqs: parseEditorJson(parsed.faqJson),
+    featuredOfferingIds: parsed.featuredOfferingIds,
+    fontStyle: parsed.fontStyle,
+    hiddenSections: sanitizedHiddenSections,
+    imageShape: parsed.imageShape,
+    instagramUrl: parsed.instagramUrl || "",
+    layout: parsed.layout,
+    logoUrl: parsed.logoUrl || "",
+    name: parsed.name,
+    offeringOrder: parsed.offeringOrder,
+    palette: parsed.palette,
+    photoUrls: parsed.photoUrls,
+    policies: parseEditorJson(parsed.policiesJson),
+    sectionOrder: sanitizedSectionOrder,
+    serviceAreaNotes: parsed.serviceAreaNotes || "",
+    services: editorServices.map((service) => ({
+      ...service,
+      featured: parsed.featuredOfferingIds.includes(service.clientId ?? service.id ?? ""),
+      id: service.id ?? service.clientId,
+      isNew: !service.id
+    })),
+    state: parsed.state || "",
+    tagline: parsed.tagline || "",
+    tiktokUrl: parsed.tiktokUrl || "",
+    website: parsed.website || "",
+    savedAt: new Date().toISOString()
+  };
+
+  if (parsed.intent === "draft") {
+    await db.vendorProfile.update({
+      where: { id: vendor.id },
+      data: { storefrontDraftJson: draftPayload }
+    });
+    revalidatePath(`/vendor/business/${vendor.slug}/storefront`);
+    redirect(`/vendor/business/${vendor.slug}/storefront?draft=1`);
+  }
+
+  const fallbackCategoryId = vendor.categories[0]?.categoryId;
+  const publishedServiceIds: string[] = [];
+  const clientIdToPublishedId = new Map<string, string>();
+
+  async function nextOfferingSlug(baseSlug: string, existingId?: string) {
+    const base = baseSlug || `service-${Date.now().toString(36)}`;
+    for (let index = 0; index < 25; index += 1) {
+      const candidate = index === 0 ? base : `${base}-${index + 1}`;
+      const existing = await db.offering.findUnique({
+        where: { vendorId_slug: { vendorId, slug: candidate } },
+        select: { id: true }
+      });
+      if (!existing || existing.id === existingId) return candidate;
+    }
+    return `${base}-${Date.now().toString(36)}`;
+  }
+
+  for (const service of editorServices) {
+    const categoryId = service.categoryId || fallbackCategoryId;
+    if (!categoryId) continue;
+    const existingService = service.id
+      ? await db.offering.findFirst({ where: { id: service.id, vendorId: vendor.id }, select: { id: true } })
+      : null;
+    const serviceSlug = await nextOfferingSlug(slugify(service.title ?? ""), existingService?.id);
+    const payload = {
+      active: service.active !== false,
+      basePriceCents: service.messageForPricing ? null : service.basePriceCents ?? null,
+      categoryId,
+      description: service.description || `${service.title} from ${parsed.name}.`,
+      messageForPricing: service.messageForPricing || service.basePriceCents == null,
+      photos: service.photos ?? [],
+      slug: serviceSlug || `service-${Date.now()}`,
+      tags: [],
+      title: service.title || "Untitled service",
+      turnaroundDays: service.turnaroundDays ?? null,
+      type: "SERVICE" as const,
+      vendorId: vendor.id
+    };
+
+    const offering = existingService
+      ? await db.offering.update({
+          where: { id: existingService.id },
+          data: payload,
+          select: { id: true, title: true, description: true, basePriceCents: true, messageForPricing: true, category: { select: { name: true } } }
+        })
+      : await db.offering.create({
+          data: payload,
+          select: { id: true, title: true, description: true, basePriceCents: true, messageForPricing: true, category: { select: { name: true } } }
+        });
+
+    publishedServiceIds.push(offering.id);
+    if (service.clientId) clientIdToPublishedId.set(service.clientId, offering.id);
+    if (service.id) clientIdToPublishedId.set(service.id, offering.id);
+    await db.offeringCategory.deleteMany({ where: { offeringId: offering.id } });
+    await db.offeringCategory.createMany({ data: [{ offeringId: offering.id, categoryId }], skipDuplicates: true });
+    await createListing({
+      autoRenew: true,
+      category: offering.category.name,
+      city: parsed.city,
+      description: offering.description,
+      formattedAddress: vendor.formattedAddress,
+      googlePlaceId: vendor.googlePlaceId,
+      locationLat: vendor.locationLat,
+      locationLng: vendor.locationLng,
+      offeringId: offering.id,
+      priceFrom: offering.messageForPricing ? null : offering.basePriceCents,
+      publish: payload.active,
+      quantity: 1,
+      state: parsed.state || null,
+      title: offering.title,
+      vendorProfileId: vendor.id,
+      zipCode: vendor.zipCode
+    });
+  }
+
+  await db.offering.updateMany({
+    where: { vendorId: vendor.id, id: { notIn: publishedServiceIds } },
+    data: { active: false }
+  });
+
+  const orderedOfferingIds = parsed.offeringOrder
+    .map((id) => clientIdToPublishedId.get(id) ?? id)
+    .filter((id) => publishedServiceIds.includes(id));
+  const featuredOfferingIds = parsed.featuredOfferingIds
+    .map((id) => clientIdToPublishedId.get(id) ?? id)
+    .filter((id) => publishedServiceIds.includes(id));
 
   await db.vendorProfile.update({
     where: { id: vendor.id },
     data: {
       name: parsed.name,
+      city: parsed.city,
+      state: parsed.state || null,
       bio: parsed.bio || null,
       logoUrl: parsed.logoUrl || null,
       coverPhoto: parsed.coverPhoto || null,
@@ -392,8 +598,14 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
       storefrontButtonStyle: parsed.buttonStyle,
       storefrontImageShape: parsed.imageShape,
       storefrontAccentColor: normalizeStorefrontAccentColor(parsed.palette.toLowerCase().replace("_", "-")),
-      storefrontSectionOrder: sanitizeStorefrontSections(parsed.sectionOrder),
-      storefrontHiddenSections: sanitizeHiddenStorefrontSections(parsed.hiddenSections)
+      storefrontSectionOrder: sanitizedSectionOrder,
+      storefrontHiddenSections: sanitizedHiddenSections,
+      storefrontDraftJson: Prisma.JsonNull,
+      storefrontFaqJson: parseEditorJson(parsed.faqJson) ?? Prisma.JsonNull,
+      storefrontPoliciesJson: parseEditorJson(parsed.policiesJson) ?? Prisma.JsonNull,
+      storefrontBookingJson: parseEditorJson(parsed.bookingJson) ?? Prisma.JsonNull,
+      storefrontFeaturedOfferingIds: featuredOfferingIds,
+      storefrontOfferingOrder: [...orderedOfferingIds, ...publishedServiceIds.filter((id) => !orderedOfferingIds.includes(id))]
     }
   });
 
