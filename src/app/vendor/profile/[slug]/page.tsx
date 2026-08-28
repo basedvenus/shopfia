@@ -3,8 +3,10 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import {
   BadgeCheck,
+  Edit3,
   ExternalLink,
   Heart,
+  LayoutDashboard,
   MapPin,
   Send,
   Star,
@@ -219,6 +221,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   ]);
   const savedOfferingIds = new Set(savedFavorites.map((favorite) => favorite.offeringId).filter((id): id is string => Boolean(id)));
   const isSavedVendor = savedFavorites.some((favorite) => favorite.vendorId === vendor.id);
+  const isOwnerViewing =
+    Boolean(currentUserId) &&
+    (vendor.userId === currentUserId || vendor.managers.some((manager) => manager.userId === currentUserId) || session?.user?.role === "ADMIN");
 
   async function toggleFollow(formData: FormData) {
     "use server";
@@ -228,6 +233,28 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
   return (
     <div className={`flex flex-col gap-8 rounded-[1.25rem] bg-gradient-to-br ${palette.className} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
+      {isOwnerViewing ? (
+        <div className="sticky top-0 z-30 flex flex-col gap-2 rounded-[1rem] border border-[#eadbd7] bg-white/95 px-3 py-2 shadow-[0_12px_34px_rgba(47,38,38,0.10)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Owner view</p>
+            <p className="truncate text-xs text-muted-foreground">You are viewing your live ShopFia storefront.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm">
+              <Link href={`/vendor/business/${vendor.slug}/storefront`}>
+                <Edit3 className="h-4 w-4" />
+                Edit Storefront
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="secondary">
+              <Link href={`/vendor/business/${vendor.slug}`}>
+                <LayoutDashboard className="h-4 w-4" />
+                Business Dashboard
+              </Link>
+            </Button>
+          </div>
+        </div>
+      ) : null}
       <header className="overflow-hidden rounded-[1rem] border bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]" style={theme.headerShellStyle}>
         <div className="flex items-center justify-between gap-3 border-b px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]" style={theme.platformBarStyle}>
           <span>ShopFia Storefront</span>

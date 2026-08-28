@@ -55,6 +55,11 @@ export async function getVendorProfileBySlug(slug: string) {
       verified: true,
       website: true,
       weekendAvailable: true,
+      managers: {
+        select: {
+          userId: true
+        }
+      },
       user: {
         select: {
           id: true,
