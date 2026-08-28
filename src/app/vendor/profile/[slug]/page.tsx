@@ -63,9 +63,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   ]);
   if (!vendor) return notFound();
 
-  const gallery = vendor.photos;
-  const hero = vendor.coverPhoto ?? gallery[0] ?? null;
-  const portfolio = vendor.offerings.filter((offering) => offering.photos.length > 0);
+  const portfolioPhotos = vendor.photos;
+  const hero = vendor.coverPhoto ?? portfolioPhotos[0] ?? null;
   const photoTaggedEventMap = new Map<
     string,
     {
@@ -428,18 +427,47 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       ) : null}
 
       {showSection("portfolio") ? (
-      <section id="portfolio" className="scroll-mt-28 space-y-4" style={{ order: sectionPriority("portfolio") }}>
+      <section id="portfolio" className="scroll-mt-28 space-y-5" style={{ order: sectionPriority("portfolio") }}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Tagged In Real Events</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Portfolio</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Customer-tagged parties create authentic proof of how this vendor shows up in celebrations.
+              A browsable look at this vendor&apos;s uploaded work, styled and ordered from the storefront editor.
             </p>
           </div>
-          <Badge variant="outline" style={theme.outlineBadgeStyle}>{taggedEvents.length} party credits</Badge>
+          <Badge variant="outline" style={theme.outlineBadgeStyle}>{portfolioPhotos.length} photo{portfolioPhotos.length === 1 ? "" : "s"}</Badge>
         </div>
 
+        {portfolioPhotos.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {portfolioPhotos.map((photo, index) => (
+              <div key={`${photo}-${index}`} className={`relative aspect-[4/3] overflow-hidden bg-white shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
+                <Image
+                  src={photo}
+                  alt={`${vendor.name} portfolio photo ${index + 1}`}
+                  fill
+                  sizes="(min-width: 1280px) 31vw, (min-width: 640px) 48vw, 100vw"
+                  className="object-contain p-2"
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Card className="border-white/70 bg-white/90">
+            <CardContent className="p-4 text-sm text-muted-foreground">
+              Portfolio images will appear here once this vendor publishes photos from the storefront editor.
+            </CardContent>
+          </Card>
+        )}
+
         {taggedEvents.length > 0 ? (
+          <div className="space-y-4 pt-2">
+            <div>
+              <h3 className="text-lg font-semibold" style={theme.headingStyle}>Tagged In Real Events</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Customer-tagged parties create authentic proof of how this vendor shows up in celebrations.
+              </p>
+            </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {taggedEvents.filter((event) => event.coverImageUrl).map((event) => {
               const photo = event.coverImageUrl;
@@ -480,13 +508,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               );
             })}
           </div>
-        ) : (
-          <Card className="border-white/70 bg-white/90">
-            <CardContent className="p-4 text-sm text-muted-foreground">
-              Real event credits will appear here when hosts tag this vendor in parties.
-            </CardContent>
-          </Card>
-        )}
+          </div>
+        ) : null}
       </section>
       ) : null}
 
@@ -512,13 +535,6 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         />
         ) : null}
 
-        {portfolio.length === 0 ? (
-          <Card>
-            <CardContent className="p-4 text-sm text-muted-foreground">
-              Portfolio examples will appear here once the vendor adds project photos.
-            </CardContent>
-          </Card>
-        ) : null}
       </section>
       ) : null}
 

@@ -225,7 +225,14 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   await expect(page.getByRole("heading", { name: "Browser-audited celebrations" }).first()).toBeVisible();
   await expect(page.getByText("Live editor changes should draft and publish cleanly.").first()).toBeVisible();
   await expect(page.getByAltText("Codex Storefront Studio founder or team photo")).toBeVisible();
+  await page.getByRole("link", { name: "Portfolio" }).click();
+  await expect(page.locator("#portfolio")).toBeVisible();
+  await expect(page.locator("#portfolio").getByRole("heading", { name: "Portfolio" })).toBeVisible();
+  await expect(page.getByAltText("Codex Storefront Studio portfolio photo 1")).toBeVisible();
   await expect(page.getByText("25 mile standard range")).toBeVisible();
+  const publicPortfolioBox = await page.locator("#portfolio").boundingBox();
+  const publicServicesBox = await page.locator("#services").boundingBox();
+  expect(publicPortfolioBox?.y).toBeLessThan(publicServicesBox?.y ?? Number.POSITIVE_INFINITY);
 
   const savedVendor = await prisma.vendorProfile.findUnique({
     where: { slug },

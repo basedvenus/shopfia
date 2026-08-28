@@ -42,7 +42,7 @@ export const vendorOnboardingSchema = z.object({
   serviceAreaNotes: z.string().max(500, "Service area notes are a little too long.").optional().or(z.literal("")),
   availabilityNotes: z.string().max(300, "Availability notes are a little too long.").optional().or(z.literal("")),
   storefrontAccentColor: z.string().max(40).optional().or(z.literal("")),
-  storefrontSectionOrder: z.array(z.string().max(40)).max(8).default([]),
+  storefrontSectionOrder: z.array(z.string().max(40)).max(9).default([]),
   logoUrl: imageValueSchema.optional().or(z.literal("")),
   categoryIds: z.array(z.string().cuid()).max(12, "Choose up to 12 categories.").default([]),
   photoUrls: z.array(imageValueSchema).max(8, "Add up to 8 photos.").default([])

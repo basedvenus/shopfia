@@ -782,7 +782,7 @@ function SectionEditor({
               }}
               className="grid gap-3 rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3 sm:grid-cols-[96px_1fr]"
             >
-              <img src={photo} alt="" className="aspect-square w-full rounded-[0.8rem] object-cover" />
+              <img src={photo} alt="" className="aspect-[4/3] w-full rounded-[0.8rem] bg-white object-contain p-1" />
               <div className="grid gap-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="inline-flex items-center gap-2 text-sm font-semibold"><GripVertical className="h-4 w-4 text-muted-foreground" />Image {index + 1}</span>
@@ -1264,7 +1264,7 @@ function StorefrontPreview({
                         className={`group overflow-hidden border ${theme.imageRadius}`}
                         style={theme.previewCardStyle}
                       >
-                        <img src={photo} alt="" className="aspect-square w-full object-cover" />
+                        <img src={photo} alt="" className="aspect-[4/3] w-full bg-white object-contain p-1" />
                         <div className="grid gap-2 bg-white/90 p-2 text-[#2f2626]">
                           <div className="flex items-center justify-between gap-2">
                             <span className="inline-flex items-center gap-1 text-xs font-semibold"><GripVertical className="h-3.5 w-3.5" />Image {index + 1}</span>
