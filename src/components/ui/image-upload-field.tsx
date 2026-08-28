@@ -142,11 +142,17 @@ export function ImageUploadField({
 
   async function uploadEditedImage(file: File, nextCrop: ImageCrop) {
     try {
-      const croppedFile = await cropImageFile(file, nextCrop, {
-        aspectRatio: isRound ? 1 : 4 / 3,
-        maxSize: isRound ? 900 : 1600,
-        outputType: "image/jpeg"
-      });
+      const croppedFile = isRound
+        ? await cropImageFile(file, nextCrop, {
+            aspectRatio: 1,
+            maxSize: 900,
+            outputType: "image/jpeg"
+          })
+        : await containImageFile(file, {
+            aspectRatio: 4 / 3,
+            maxSize: 1600,
+            outputType: "image/jpeg"
+          });
       const uploadData = new FormData();
       uploadData.set("file", croppedFile);
       uploadData.set("crop", JSON.stringify(DEFAULT_IMAGE_CROP));
@@ -308,6 +314,48 @@ async function resizeImageFile(file: File, maxSize: number) {
     context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
 
     return canvas.toDataURL("image/jpeg", 0.82);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function containImageFile(
+  file: File,
+  options: { aspectRatio: number; maxSize: number; outputType?: string }
+) {
+  const objectUrl = URL.createObjectURL(file);
+  const sourceImage = await loadImage(objectUrl);
+  const canvas = document.createElement("canvas");
+
+  try {
+    const outputWidth = Math.max(1, Math.min(options.maxSize, sourceImage.naturalWidth));
+    const outputHeight = Math.max(1, Math.round(outputWidth / options.aspectRatio));
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Canvas is unavailable.");
+    }
+
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, outputWidth, outputHeight);
+
+    const sourceRatio = sourceImage.naturalWidth / sourceImage.naturalHeight;
+    const drawWidth = sourceRatio > options.aspectRatio
+      ? outputWidth
+      : Math.round(outputHeight * sourceRatio);
+    const drawHeight = sourceRatio > options.aspectRatio
+      ? Math.round(outputWidth / sourceRatio)
+      : outputHeight;
+    const drawX = Math.round((outputWidth - drawWidth) / 2);
+    const drawY = Math.round((outputHeight - drawHeight) / 2);
+
+    context.drawImage(sourceImage, drawX, drawY, drawWidth, drawHeight);
+
+    const mimeType = options.outputType ?? (SUPPORTED_IMAGE_TYPES.includes(file.type) ? file.type : "image/jpeg");
+    const blob = await canvasToBlob(canvas, mimeType);
+    return new File([blob], imageFileName(file.name, blob.type || mimeType), { type: blob.type || mimeType });
   } finally {
     URL.revokeObjectURL(objectUrl);
   }

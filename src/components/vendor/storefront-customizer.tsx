@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Check,
   GripVertical,
+  Eye,
   ImagePlus,
   Monitor,
   Palette,
@@ -454,6 +455,12 @@ export function StorefrontCustomizer({
               );
             })}
           </div>
+          <Button asChild variant="secondary">
+            <Link href={publicUrl.replace(/^https?:\/\/[^/]+/, "")} target="_blank">
+              <Eye className="h-4 w-4" />
+              View live
+            </Link>
+          </Button>
           <Button type="button" name="intent" value="draft" variant="secondary" onClick={() => saveDraftSnapshot(autosavePayload)} disabled={isAutosaving}>
             <Save className="h-4 w-4" />
             Save draft
@@ -547,9 +554,6 @@ export function StorefrontCustomizer({
         <main className="min-w-0 bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
           <div className="mb-3 flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>Click a section in the preview to edit it.</span>
-            <Link href={publicUrl.replace(/^https?:\/\/[^/]+/, "")} target="_blank" className="font-semibold text-foreground underline-offset-4 hover:underline">
-              View live
-            </Link>
           </div>
           <div data-testid="storefront-preview-frame" className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
             <StorefrontPreview
@@ -1305,14 +1309,14 @@ function StorefrontPreview({
                     <InlineTextarea ariaLabel="About Us text" className={`mt-3 text-sm leading-6 ${theme.copyClass}`} onChange={(value) => update("bio", value)} placeholder="Tell customers about your business" value={form.bio} />
                   </div>
                   <div>
-                    {form.aboutImage ? <img src={form.aboutImage} alt="" className={`h-44 w-full object-cover ${theme.imageRadius}`} /> : null}
+                    {form.aboutImage ? <img src={form.aboutImage} alt="" className={`aspect-[4/3] w-full bg-white object-contain p-2 ${theme.imageRadius}`} /> : null}
                     <div className="mt-3">
                       <ImageUploadField name="previewFounderPhoto" label="Founder or team photo" value={form.aboutImage} onChangePreview={(value) => update("aboutImage", value)} uploadEndpoint={mediaUploadEndpoint} />
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="grid gap-3 md:grid-cols-2"><p>{form.bio}</p>{form.aboutImage ? <img src={form.aboutImage} alt="" className={`h-44 w-full object-cover ${theme.imageRadius}`} /> : null}</div>
+                <div className="grid gap-3 md:grid-cols-2"><p>{form.bio}</p>{form.aboutImage ? <img src={form.aboutImage} alt="" className={`aspect-[4/3] w-full bg-white object-contain p-2 ${theme.imageRadius}`} /> : null}</div>
               )}
             </PreviewSection>
           );
@@ -1322,9 +1326,10 @@ function StorefrontPreview({
                 <div className="grid gap-3">
                   <InlineTextarea ariaLabel="Booking process" onChange={(value) => update("booking", { ...form.booking, process: value })} placeholder="Describe how booking works" value={form.booking.process} />
                   <InlineTextarea ariaLabel="Service area" onChange={(value) => update("serviceAreaNotes", value)} placeholder="Describe where you serve customers" value={form.serviceAreaNotes} />
+                  <PreviewRadiusMap city={[form.city, form.state].filter(Boolean).join(", ") || "Service area"} radiusMiles={business.serviceRadiusMiles} theme={theme} />
                 </div>
               ) : (
-                <><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p></>
+                <><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p><PreviewRadiusMap city={[form.city, form.state].filter(Boolean).join(", ") || "Service area"} radiusMiles={business.serviceRadiusMiles} theme={theme} /></>
               )}
             </PreviewSection>
           );
@@ -1523,6 +1528,25 @@ function PreviewSection({ active, children, onClick, testId, theme, title }: { a
       {title ? <h3 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{title}</h3> : null}
       <div className={`${title ? "mt-3" : ""} text-sm leading-6 ${theme.copyClass}`}>{children}</div>
     </section>
+  );
+}
+
+function PreviewRadiusMap({ city, radiusMiles, theme }: { city: string; radiusMiles: number; theme: PreviewTheme }) {
+  return (
+    <div className={`mt-3 grid gap-3 rounded-[1rem] p-3 sm:grid-cols-[104px_1fr] sm:items-center ${theme.cardClass}`} style={theme.previewCardStyle}>
+      <div className="relative mx-auto grid aspect-square w-24 place-items-center rounded-full border border-current/15" style={theme.softSurfaceStyle}>
+        <div className="absolute inset-[12%] rounded-full border border-dashed border-current/25" />
+        <div className="absolute inset-[29%] rounded-full border border-current/20 bg-white/50" />
+        <div className="relative grid h-10 w-10 place-items-center rounded-full text-[10px] font-semibold" style={theme.badgeStyle}>
+          Base
+        </div>
+      </div>
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-[0.18em]" style={theme.accentTextStyle}>Service radius</div>
+        <div className="mt-1 font-semibold" style={theme.headingStyle}>{radiusMiles} miles from {city}</div>
+        <p className={theme.mutedClass}>Customers can request travel beyond this range in their quote.</p>
+      </div>
+    </div>
   );
 }
 

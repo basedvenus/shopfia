@@ -208,6 +208,12 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   await page.getByRole("button", { name: "Save positioning" }).click();
   await expect(portfolioPreview.getByText(/photo uploaded/i).first()).toBeVisible({ timeout: 10_000 });
 
+  const aboutPreview = page.getByTestId("preview-section-about");
+  await aboutPreview.click();
+  await aboutPreview.locator('input[type="file"]').first().setInputFiles(imagePath);
+  await page.getByRole("button", { name: "Save positioning" }).click();
+  await expect(aboutPreview.getByText(/photo uploaded/i).first()).toBeVisible({ timeout: 10_000 });
+
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByText(/draft saved|draft autosaved/i).first()).toBeVisible({ timeout: 10_000 });
 
@@ -218,6 +224,8 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   await page.goto(`${baseUrl}/${slug}`);
   await expect(page.getByRole("heading", { name: "Browser-audited celebrations" }).first()).toBeVisible();
   await expect(page.getByText("Live editor changes should draft and publish cleanly.").first()).toBeVisible();
+  await expect(page.getByAltText("Codex Storefront Studio founder or team photo")).toBeVisible();
+  await expect(page.getByText("25 mile standard range")).toBeVisible();
 
   const savedVendor = await prisma.vendorProfile.findUnique({
     where: { slug },
@@ -229,6 +237,7 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
       storefrontFontStyle: true,
       storefrontHiddenSections: true,
       storefrontImageShape: true,
+      storefrontAboutImage: true,
       storefrontPalette: true,
       storefrontSectionOrder: true,
       storefrontTagline: true
@@ -241,6 +250,7 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   expect(savedVendor?.storefrontFontStyle).toBe("BOLD");
   expect(savedVendor?.storefrontHiddenSections).not.toContain("reviews");
   expect(savedVendor?.storefrontImageShape).toBe("SQUARE");
+  expect(savedVendor?.storefrontAboutImage).toMatch(/^\/api\/vendor-media\/.+\?v=\d+$/);
   expect(savedVendor?.storefrontPalette).toBe("CITRUS");
   expect(savedVendor?.storefrontSectionOrder[2]).toBe("portfolio");
   expect(savedVendor?.storefrontSectionOrder[3]).toBe("all-services");

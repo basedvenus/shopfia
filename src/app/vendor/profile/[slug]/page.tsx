@@ -378,6 +378,11 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             <h2 className="mt-3 text-4xl font-normal tracking-normal" style={theme.headingStyle}>
               {aboutHeading}
             </h2>
+            {vendor.storefrontAboutImage ? (
+              <div className={`relative mt-5 aspect-[4/3] overflow-hidden bg-white ${theme.imageRadius}`}>
+                <Image src={vendor.storefrontAboutImage} alt={`${vendor.name} founder or team photo`} fill sizes="(min-width: 768px) 32vw, 100vw" className="object-contain p-2" />
+              </div>
+            ) : null}
           </div>
           <div className="grid gap-4">
             <p className={`text-base leading-8 ${theme.copyClass}`}>
@@ -534,6 +539,12 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <p className={`mt-4 text-sm leading-6 ${theme.copyClass}`}>
             {vendor.serviceAreaNotes ?? `${vendor.name} serves ${serviceAreaLabel || "local events"} within ${vendor.serviceRadiusMiles} miles.`}
           </p>
+          <ServiceAreaRadiusCard
+            city={serviceAreaLabel || vendor.city || "Local events"}
+            radiusMiles={vendor.serviceRadiusMiles}
+            serviceAreaNotes={vendor.serviceAreaNotes}
+            theme={theme}
+          />
           {policies.length ? (
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {policies.slice(0, 4).map((policy) => (
@@ -657,6 +668,39 @@ function TrustFaqItem({ body, theme, title }: { body: string; theme: StorefrontT
     <div className={`p-4 ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
       <h3 className="font-semibold" style={theme.headingStyle}>{title}</h3>
       <p className={`mt-2 text-sm leading-6 ${theme.copyClass}`}>{body}</p>
+    </div>
+  );
+}
+
+function ServiceAreaRadiusCard({
+  city,
+  radiusMiles,
+  serviceAreaNotes,
+  theme
+}: {
+  city: string;
+  radiusMiles: number;
+  serviceAreaNotes: string | null;
+  theme: StorefrontTheme;
+}) {
+  return (
+    <div className={`mt-4 grid gap-4 p-4 md:grid-cols-[180px_1fr] md:items-center ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
+      <div className="relative mx-auto grid aspect-square w-full max-w-[180px] place-items-center rounded-full border border-current/15" style={theme.softChipStyle}>
+        <div className="absolute inset-[11%] rounded-full border border-dashed border-current/25" />
+        <div className="absolute inset-[24%] rounded-full border border-current/20 bg-white/45" />
+        <div className="relative grid h-16 w-16 place-items-center rounded-full text-center text-xs font-semibold shadow-sm" style={theme.badgeStyle}>
+          {city}
+        </div>
+      </div>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={theme.accentTextStyle}>Service radius</p>
+        <h3 className="mt-2 text-2xl font-semibold tracking-tight" style={theme.headingStyle}>
+          {radiusMiles} mile standard range
+        </h3>
+        <p className={`mt-2 text-sm leading-6 ${theme.copyClass}`}>
+          Based around {city}. {serviceAreaNotes ? "Travel details and expanded coverage are confirmed in the quote." : "For events beyond this range, request a quote and the vendor can confirm travel availability."}
+        </p>
+      </div>
     </div>
   );
 }
