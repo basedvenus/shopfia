@@ -242,6 +242,7 @@ model User {
   reports                Report[]          @relation("ReporterReports")
   accounts               Account[]
   sessions               Session[]
+  uploadedVendorMedia    VendorStorefrontMedia[]
 }
 
 model UserAvatar {
@@ -254,6 +255,23 @@ model UserAvatar {
   updatedAt   DateTime @updatedAt
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VendorStorefrontMedia {
+  id              String        @id @default(cuid())
+  vendorProfileId String
+  uploadedById    String
+  contentType     String
+  data            Bytes
+  size            Int
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  vendorProfile   VendorProfile @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  uploadedBy       User          @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([vendorProfileId])
+  @@index([uploadedById])
 }
 
 model Seller {
@@ -373,6 +391,7 @@ model VendorProfile {
   taggedPartyEvents         PartyEvent[]            @relation("PartyEventTaggedVendors")
   taggedPartyPhotos         PartyPhoto[]            @relation("PartyPhotoTaggedVendors")
   partyPhotoRatings         PartyPhotoVendorRating[]
+  storefrontMedia           VendorStorefrontMedia[]
 
   @@index([locationLat, locationLng])
   @@index([googlePlaceId])

@@ -167,7 +167,7 @@ export function ImageUploadField({
       setMessage(
         result.persisted
           ? "Photo uploaded and saved."
-          : "Photo uploaded. Positioning will save with this form."
+          : "Photo uploaded. Save draft or publish to keep it on this storefront."
       );
       return true;
     } catch (error) {
@@ -184,7 +184,7 @@ export function ImageUploadField({
     try {
       const nextValue = await resizeImageFile(file, isRound ? 900 : 1600);
       updateValue(nextValue);
-      setMessage("Image added. Positioning will save with this form.");
+      setMessage("Image added. Save draft or publish to keep it.");
       return true;
     } catch {
       setUploadPreviewValue(null);

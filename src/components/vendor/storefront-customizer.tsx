@@ -159,6 +159,7 @@ export function StorefrontCustomizer({
     [form.hiddenSections, form.sectionOrder]
   );
   const activeSectionLabel = STOREFRONT_SECTION_LABELS[activeSection as keyof typeof STOREFRONT_SECTION_LABELS] ?? "Section";
+  const mediaUploadEndpoint = `/api/vendor/business/${business.id}/media`;
   const servicesJson = useMemo(
     () =>
       JSON.stringify(
@@ -398,6 +399,7 @@ export function StorefrontCustomizer({
             activeSection={activeSection}
             business={business}
             form={form}
+            mediaUploadEndpoint={mediaUploadEndpoint}
             markDirty={markDirty}
             update={update}
             updateService={updateService}
@@ -464,6 +466,7 @@ function SectionEditor({
   activeSection,
   business,
   form,
+  mediaUploadEndpoint,
   markDirty,
   update,
   updateService,
@@ -474,6 +477,7 @@ function SectionEditor({
   activeSection: string;
   business: CustomizerBusiness;
   form: FormState;
+  mediaUploadEndpoint: string;
   markDirty: () => void;
   update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
   updateService: (id: string, patch: Partial<EditorService>) => void;
@@ -491,8 +495,8 @@ function SectionEditor({
           <Field label="City"><Input value={form.city} onChange={(event) => update("city", event.target.value)} /></Field>
           <Field label="State"><Input value={form.state} onChange={(event) => update("state", event.target.value)} /></Field>
         </div>
-        <ImageUploadField name="editorLogo" label="Logo" value={form.logoUrl} onChangePreview={(value) => update("logoUrl", value)} rounded="full" />
-        <ImageUploadField name="editorCover" label="Cover image" value={form.coverPhoto} onChangePreview={(value) => update("coverPhoto", value)} />
+        <ImageUploadField name="editorLogo" label="Logo" value={form.logoUrl} onChangePreview={(value) => update("logoUrl", value)} rounded="full" uploadEndpoint={mediaUploadEndpoint} />
+        <ImageUploadField name="editorCover" label="Cover image" value={form.coverPhoto} onChangePreview={(value) => update("coverPhoto", value)} uploadEndpoint={mediaUploadEndpoint} />
       </PanelStack>
     );
   }
@@ -513,6 +517,7 @@ function SectionEditor({
             moveService={moveService}
             removeService={removeService}
             markDirty={markDirty}
+            mediaUploadEndpoint={mediaUploadEndpoint}
           />
         ))}
       </PanelStack>
@@ -524,7 +529,7 @@ function SectionEditor({
         <p className="text-sm text-muted-foreground">Replace images or reorder them by moving content between slots.</p>
         {form.photoUrls.map((photo, index) => (
           <div key={index} className="rounded-[1rem] border border-[#eadbd7] p-3">
-            <ImageUploadField name={`portfolio-${index}`} label={`Portfolio image ${index + 1}`} value={photo} onChangePreview={(value) => {
+            <ImageUploadField name={`portfolio-${index}`} label={`Portfolio image ${index + 1}`} value={photo} uploadEndpoint={mediaUploadEndpoint} onChangePreview={(value) => {
               const next = [...form.photoUrls];
               next[index] = value;
               update("photoUrls", next);
@@ -539,7 +544,7 @@ function SectionEditor({
       <PanelStack>
         <Field label="About heading"><Input value={form.aboutHeading} onChange={(event) => update("aboutHeading", event.target.value)} /></Field>
         <Field label="About Us text"><Textarea className="min-h-[150px]" value={form.bio} onChange={(event) => update("bio", event.target.value)} /></Field>
-        <ImageUploadField name="founderPhoto" label="Founder or team photo" value={form.aboutImage} onChangePreview={(value) => update("aboutImage", value)} />
+        <ImageUploadField name="founderPhoto" label="Founder or team photo" value={form.aboutImage} onChangePreview={(value) => update("aboutImage", value)} uploadEndpoint={mediaUploadEndpoint} />
       </PanelStack>
     );
   }
@@ -588,6 +593,7 @@ function ServiceEditor({
   business,
   index,
   markDirty,
+  mediaUploadEndpoint,
   moveService,
   removeService,
   service,
@@ -596,6 +602,7 @@ function ServiceEditor({
   business: CustomizerBusiness;
   index: number;
   markDirty: () => void;
+  mediaUploadEndpoint: string;
   moveService: (id: string, direction: -1 | 1) => void;
   removeService: (id: string) => void;
   service: EditorService;
@@ -641,6 +648,7 @@ function ServiceEditor({
             name={`service-${service.id}-${photoIndex}`}
             label={`Photo ${photoIndex + 1}`}
             value={service.photos[photoIndex] ?? ""}
+            uploadEndpoint={mediaUploadEndpoint}
             onChangePreview={(value) => {
               const photos = [...service.photos];
               photos[photoIndex] = value;
