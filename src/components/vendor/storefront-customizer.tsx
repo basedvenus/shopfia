@@ -474,12 +474,17 @@ export function StorefrontCustomizer({
         className="grid min-h-[calc(100vh-190px)] lg:grid-cols-[260px_minmax(0,1fr)_var(--editor-panel-width)]"
         style={{ "--editor-panel-width": panelCollapsed ? "64px" : "430px" } as CSSProperties}
       >
-        <aside className="border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:border-b-0 lg:border-r">
+        <aside className="sticky top-0 z-20 border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:static lg:z-auto lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Sections</h2>
             <CopyStorefrontLinkButton url={publicUrl} label="Copy link" className="h-8 bg-white px-3 text-xs" />
           </div>
-          <div className="mb-3 rounded-[1rem] border border-white/80 bg-white p-3 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-[1rem] border border-white/80 bg-white p-3 text-xs shadow-sm lg:hidden">
+            <span className="font-semibold text-[#4b403c]">Checklist</span>
+            <span className="rounded-full bg-[#fbf7f5] px-2 py-1 font-semibold text-[#4b403c]">{completionCount}/{completionItems.length}</span>
+            {autosaveMessage ? <span className="min-w-0 flex-1 truncate text-right text-muted-foreground">{autosaveMessage}</span> : null}
+          </div>
+          <div className="mb-3 hidden rounded-[1rem] border border-white/80 bg-white p-3 shadow-sm lg:block">
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Storefront checklist</span>
               <span className="rounded-full bg-[#fbf7f5] px-2 py-1 text-xs font-semibold text-[#4b403c]">{completionCount}/{completionItems.length}</span>
@@ -496,7 +501,7 @@ export function StorefrontCustomizer({
             </div>
             {autosaveMessage ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{autosaveMessage}</p> : null}
           </div>
-          <div className="grid gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:overflow-visible lg:pb-0">
             {form.sectionOrder.map((section) => {
               const hidden = form.hiddenSections.includes(section);
               const active = activeSection === section;
@@ -509,7 +514,7 @@ export function StorefrontCustomizer({
                   onDragStart={() => setDraggedSection(section)}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => onSectionDrop(event, section)}
-                  className={`grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-[0.9rem] border p-3 text-left text-sm transition ${
+                  className={`grid min-w-[210px] shrink-0 grid-cols-[auto_1fr_auto] items-center gap-2 rounded-[0.9rem] border p-3 text-left text-sm transition lg:min-w-0 lg:shrink ${
                     active ? "border-primary bg-white text-foreground shadow-sm" : "border-transparent bg-white/70 text-muted-foreground hover:bg-white"
                   } ${hidden ? "opacity-55" : ""}`}
                 >
@@ -538,8 +543,8 @@ export function StorefrontCustomizer({
           </div>
         </aside>
 
-        <main className="bg-[#efe7e3] p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
-          <div className="mb-3 flex items-center justify-between text-sm text-muted-foreground">
+        <main className="bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
+          <div className="mb-3 flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>Click a section in the preview to edit it.</span>
             <Link href={publicUrl.replace(/^https?:\/\/[^/]+/, "")} target="_blank" className="font-semibold text-foreground underline-offset-4 hover:underline">
               View live
