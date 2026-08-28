@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { PrismaClient, UserRole } from "@prisma/client";
 import { encode } from "@auth/core/jwt";
+import { writeFileSync } from "node:fs";
 
 const prisma = new PrismaClient();
 const runId = `${Date.now()}`;
@@ -154,15 +155,51 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   await page.getByRole("button", { name: "Add FAQ" }).first().click();
   await page.getByLabel("FAQ question").last().fill("Can I preview before publishing?");
   await page.getByLabel("FAQ answer").last().fill("Yes. Draft changes stay in the editor until publish.");
+  const editorPanel = page.locator("aside").last();
+  await editorPanel.getByRole("button", { name: "Collapse" }).nth(1).click();
+  await expect(editorPanel.getByRole("button", { name: "Expand" })).toBeVisible();
+  await editorPanel.getByRole("button", { name: "Expand" }).click();
+  await editorPanel.getByRole("button", { name: "Up" }).last().click();
 
   await page.getByRole("button", { name: "Mobile" }).click();
+  await page.setViewportSize({ width: 390, height: 900 });
   await expect(page.getByTestId("storefront-preview-frame")).toHaveCSS("max-width", "390px");
+  await expect(page.getByText("Checklist", { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("button", { name: "Desktop" }).click();
+
+  await page.getByRole("button", { name: "Design" }).click();
+  await page.getByRole("button", { name: "Change theme" }).click();
+  await page.getByRole("button", { name: /Citrus/ }).click();
+  await page.getByLabel("Font pairing").selectOption("BOLD");
+  await page.getByRole("button", { exact: true, name: "Light" }).click();
+  await page.getByRole("button", { exact: true, name: "Square" }).click();
+  await expect(page.getByText("Live theme sample")).toBeVisible();
+
+  await editorPanel.getByRole("button", { name: "Collapse" }).first().click();
+  await expect(editorPanel.getByRole("button", { name: "Edit" })).toBeVisible();
+  await editorPanel.getByRole("button", { name: "Edit" }).click();
 
   await page.getByTestId("storefront-section-reviews").getByText("Visible").click();
   await expect(page.getByTestId("storefront-section-reviews")).toContainText("Hidden");
   await page.getByTestId("storefront-section-reviews").getByText("Hidden").click();
   await expect(page.getByTestId("storefront-section-reviews")).toContainText("Visible");
+  await page.getByTestId("storefront-section-portfolio").dragTo(page.getByTestId("storefront-section-all-services"));
+  await expect(page.getByTestId("storefront-section-all-services")).toBeVisible();
+
+  const imagePath = test.info().outputPath("portfolio-upload.png");
+  writeFileSync(
+    imagePath,
+    Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAGElEQVR4nGP8z8AARLJgwiM3gqUBAQBNDgQH9cz5PwAAAABJRU5ErkJggg==",
+      "base64"
+    )
+  );
+  const portfolioPreview = page.getByTestId("preview-section-portfolio");
+  await portfolioPreview.click();
+  await portfolioPreview.locator('input[type="file"]').first().setInputFiles(imagePath);
+  await page.getByRole("button", { name: "Save positioning" }).click();
+  await expect(portfolioPreview.getByText(/photo uploaded/i).first()).toBeVisible({ timeout: 10_000 });
 
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByText(/draft saved|draft autosaved/i).first()).toBeVisible({ timeout: 10_000 });
@@ -179,15 +216,26 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
     where: { slug },
     select: {
       city: true,
+      photos: true,
       storefrontDraftJson: true,
       storefrontFeaturedOfferingIds: true,
+      storefrontFontStyle: true,
       storefrontHiddenSections: true,
+      storefrontImageShape: true,
+      storefrontPalette: true,
+      storefrontSectionOrder: true,
       storefrontTagline: true
     }
   });
   expect(savedVendor?.city).toBe("Vacaville");
+  expect(savedVendor?.photos.length).toBeGreaterThanOrEqual(4);
   expect(savedVendor?.storefrontDraftJson).toBeNull();
   expect(savedVendor?.storefrontFeaturedOfferingIds).toHaveLength(1);
+  expect(savedVendor?.storefrontFontStyle).toBe("BOLD");
   expect(savedVendor?.storefrontHiddenSections).not.toContain("reviews");
+  expect(savedVendor?.storefrontImageShape).toBe("SQUARE");
+  expect(savedVendor?.storefrontPalette).toBe("CITRUS");
+  expect(savedVendor?.storefrontSectionOrder[2]).toBe("portfolio");
+  expect(savedVendor?.storefrontSectionOrder[3]).toBe("all-services");
   expect(savedVendor?.storefrontTagline).toBe("Live editor changes should draft and publish cleanly.");
 });
