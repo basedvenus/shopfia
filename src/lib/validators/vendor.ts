@@ -35,6 +35,11 @@ const imageCropSchema = z.preprocess(
   }).optional()
 );
 
+const booleanValueSchema = z.preprocess(
+  (value) => value === true || value === "true" || value === "on" || value === "1",
+  z.boolean()
+);
+
 const databaseIdSchema = z.string().trim().min(1, "Choose a valid option.").max(120, "Choose a valid option.");
 
 export const vendorOnboardingSchema = z.object({
@@ -47,6 +52,8 @@ export const vendorOnboardingSchema = z.object({
     .regex(/^[a-z0-9._-]+$/, "Use letters, numbers, dots, dashes, or underscores."),
   website: z.string().url("Enter a valid website link.").optional().or(z.literal("")),
   instagramUrl: z.string().url("Enter a valid Instagram link.").optional().or(z.literal("")),
+  instagramFeedEnabled: booleanValueSchema.default(false),
+  instagramFeedUrl: z.string().url("Enter a valid Instagram feed link.").optional().or(z.literal("")),
   tiktokUrl: z.string().url("Enter a valid TikTok link.").optional().or(z.literal("")),
   bio: z.string().max(600, "Business description is a little too long.").optional().or(z.literal("")),
   formattedAddress: z.string().max(240, "Business location is a little too long.").optional().or(z.literal("")),
@@ -90,6 +97,8 @@ export const storefrontCustomizationSchema = z.object({
   availabilityNotes: z.string().max(300, "Inquiry settings are a little too long.").optional().or(z.literal("")),
   website: z.string().url("Enter a valid website link.").optional().or(z.literal("")),
   instagramUrl: z.string().url("Enter a valid Instagram link.").optional().or(z.literal("")),
+  instagramFeedEnabled: booleanValueSchema.default(false),
+  instagramFeedUrl: z.string().url("Enter a valid Instagram feed link.").optional().or(z.literal("")),
   tiktokUrl: z.string().url("Enter a valid TikTok link.").optional().or(z.literal("")),
   layout: z.enum(["EDITORIAL", "PORTFOLIO", "SERVICES"]),
   fontStyle: z.enum(["MODERN", "EDITORIAL", "ROMANTIC", "BOLD", "FASHION", "PLAYFUL", "RETRO", "COOL"]),

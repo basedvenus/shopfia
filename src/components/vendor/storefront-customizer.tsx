@@ -102,6 +102,8 @@ type CustomizerBusiness = {
   storefrontHiddenSections: string[];
   storefrontHiddenOfferingIds: string[];
   storefrontImageShape: string;
+  storefrontInstagramFeedEnabled: boolean;
+  storefrontInstagramFeedUrl: string | null;
   storefrontLayout: string;
   storefrontOfferingOrder: string[];
   storefrontPalette: string;
@@ -128,6 +130,8 @@ type FormState = {
   hiddenSections: string[];
   imageShape: string;
   instagramUrl: string;
+  instagramFeedEnabled: boolean;
+  instagramFeedUrl: string;
   logoCrop: ImageCrop;
   logoUrl: string;
   name: string;
@@ -243,6 +247,8 @@ export function StorefrontCustomizer({
       hiddenSections: form.hiddenSections,
       imageShape: form.imageShape,
       sectionLabelsJson: JSON.stringify(form.sectionLabels),
+      instagramFeedEnabled: form.instagramFeedEnabled,
+      instagramFeedUrl: form.instagramFeedUrl,
       instagramUrl: form.instagramUrl,
       intent: "draft",
       layout: "EDITORIAL",
@@ -447,6 +453,8 @@ export function StorefrontCustomizer({
       <input type="hidden" name="buttonStyle" value="PILL" />
       <input type="hidden" name="imageShape" value={form.imageShape} />
       <input type="hidden" name="textTone" value={form.textTone} />
+      <input type="hidden" name="instagramFeedEnabled" value={String(form.instagramFeedEnabled)} />
+      <input type="hidden" name="instagramFeedUrl" value={form.instagramFeedUrl} />
       <input type="hidden" name="sectionLabelsJson" value={JSON.stringify(form.sectionLabels)} />
       <input type="hidden" name="faqJson" value={faqJson} />
       <input type="hidden" name="policiesJson" value={policiesJson} />
@@ -717,6 +725,8 @@ function createInitialState(business: CustomizerBusiness): FormState {
     fontStyle: draft?.fontStyle ?? business.storefrontFontStyle,
     hiddenSections: sanitizeHiddenStorefrontSections(draft?.hiddenSections ?? business.storefrontHiddenSections),
     imageShape: draft?.imageShape ?? business.storefrontImageShape,
+    instagramFeedEnabled: Boolean(draft?.instagramFeedEnabled ?? business.storefrontInstagramFeedEnabled),
+    instagramFeedUrl: draft?.instagramFeedUrl ?? business.storefrontInstagramFeedUrl ?? business.instagramUrl ?? "",
     instagramUrl: draft?.instagramUrl ?? business.instagramUrl ?? "",
     logoCrop: normalizeImageCrop(draft?.logoCrop ?? business.logoCrop ?? DEFAULT_IMAGE_CROP),
     logoUrl: draft?.logoUrl ?? business.logoUrl ?? "",
@@ -854,6 +864,32 @@ function SectionEditor({
     return (
       <PanelStack>
         <p className="text-sm leading-6 text-muted-foreground">Build the visual story for this storefront. Drag photos to reorder, replace any image, or remove images that no longer fit.</p>
+        <div className="grid gap-3 rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold">Instagram feed</h3>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">Show a live Instagram profile entry inside Portfolio while keeping uploaded photos available.</p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-semibold">
+              <input
+                type="checkbox"
+                checked={form.instagramFeedEnabled}
+                onChange={(event) => update("instagramFeedEnabled", event.target.checked)}
+              />
+              Sync
+            </label>
+          </div>
+          {form.instagramFeedEnabled ? (
+            <Field label="Instagram profile URL">
+              <Input
+                type="url"
+                placeholder="https://instagram.com/yourbusiness"
+                value={form.instagramFeedUrl}
+                onChange={(event) => update("instagramFeedUrl", event.target.value)}
+              />
+            </Field>
+          ) : null}
+        </div>
         <ImageUploadField
           name="portfolio-new"
           label="Add portfolio image"
@@ -1412,6 +1448,7 @@ function StorefrontPreview({
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-portfolio" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               {activeSection === section ? (
                 <div className="grid gap-3">
+                  <InstagramFeedPreview form={form} theme={theme} update={update} />
                   <ImageUploadField
                     name="previewPortfolioNew"
                     label="Add portfolio image"
@@ -1461,7 +1498,10 @@ function StorefrontPreview({
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2">{photos.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] bg-white object-contain p-1 ${theme.imageRadius}`} />)}</div>
+                <div className="grid gap-3">
+                  {form.instagramFeedEnabled && form.instagramFeedUrl ? <InstagramFeedCallout href={form.instagramFeedUrl} theme={theme} /> : null}
+                  <div className="grid grid-cols-3 gap-2">{photos.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] bg-white object-contain p-1 ${theme.imageRadius}`} />)}</div>
+                </div>
               )}
             </PreviewSection>
           );
@@ -1718,6 +1758,73 @@ function ServiceGrid({
       ))}
     </div>
   );
+}
+
+function InstagramFeedPreview({
+  form,
+  theme,
+  update
+}: {
+  form: FormState;
+  theme: PreviewTheme;
+  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+}) {
+  return (
+    <div className={`grid gap-3 border p-3 ${theme.cardClass} ${theme.sectionRadius}`} style={theme.previewCardStyle}>
+      <label className="inline-flex cursor-pointer items-center justify-between gap-3 text-sm font-semibold">
+        <span>Instagram feed</span>
+        <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs">
+          <input
+            type="checkbox"
+            checked={form.instagramFeedEnabled}
+            onChange={(event) => update("instagramFeedEnabled", event.target.checked)}
+          />
+          Sync
+        </span>
+      </label>
+      {form.instagramFeedEnabled ? (
+        <>
+          <Input
+            type="url"
+            value={form.instagramFeedUrl}
+            placeholder="https://instagram.com/yourbusiness"
+            onChange={(event) => update("instagramFeedUrl", event.target.value)}
+            onClick={(event) => event.stopPropagation()}
+          />
+          {form.instagramFeedUrl ? <InstagramFeedCallout href={form.instagramFeedUrl} theme={theme} /> : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function InstagramFeedCallout({ href, theme }: { href: string; theme: PreviewTheme }) {
+  return (
+    <Link
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className={`relative z-20 flex items-center justify-between gap-3 rounded-[1rem] border bg-white p-3 text-sm transition hover:-translate-y-0.5 ${theme.cardClass}`}
+      style={theme.previewCardStyle}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <span className="min-w-0">
+        <span className="block font-semibold" style={theme.headingStyle}>Instagram feed</span>
+        <span className={`block truncate text-xs ${theme.mutedClass}`}>{instagramHandleFromUrl(href)}</span>
+      </span>
+      <span className="rounded-full px-3 py-1.5 text-xs font-semibold" style={theme.heroCtaStyle}>Open</span>
+    </Link>
+  );
+}
+
+function instagramHandleFromUrl(href: string) {
+  try {
+    const url = new URL(href);
+    const handle = url.pathname.split("/").filter(Boolean)[0];
+    return handle ? `@${handle}` : url.hostname;
+  } catch {
+    return href;
+  }
 }
 
 function PreviewSection({ active, children, onClick, testId, theme, title }: { active: boolean; children: ReactNode; onClick: () => void; testId?: string; theme: PreviewTheme; title: string }) {

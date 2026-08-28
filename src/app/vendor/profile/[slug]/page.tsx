@@ -69,6 +69,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
   const portfolioPhotos = vendor.photos;
   const hero = vendor.coverPhoto ?? portfolioPhotos[0] ?? null;
+  const instagramFeedUrl = vendor.storefrontInstagramFeedEnabled
+    ? vendor.storefrontInstagramFeedUrl ?? vendor.instagramUrl
+    : null;
   const coverCrop = normalizeImageCrop(vendor.coverPhotoCrop);
   const logoCrop = normalizeImageCrop(vendor.logoCrop);
   const photoTaggedEventMap = new Map<
@@ -526,6 +529,25 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             </CardContent>
           </Card>
         )}
+        {instagramFeedUrl ? (
+          <a
+            href={instagramFeedUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={`flex flex-wrap items-center justify-between gap-3 p-4 shadow-sm transition hover:-translate-y-0.5 ${theme.cardClass} ${theme.sectionRadius}`}
+            style={theme.cardStyle}
+          >
+            <span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.2em]" style={theme.accentTextStyle}>Instagram</span>
+              <span className="mt-1 block text-lg font-semibold" style={theme.headingStyle}>Live Instagram portfolio</span>
+              <span className={`mt-1 block text-sm ${theme.copyClass}`}>{instagramHandleFromUrl(instagramFeedUrl)}</span>
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold" style={theme.ctaStyle}>
+              Open feed
+              <ExternalLink className="h-4 w-4" />
+            </span>
+          </a>
+        ) : null}
 
       </section>
       ) : null}
@@ -1057,4 +1079,14 @@ function readStorefrontPolicies(value: unknown) {
       id: item.id ?? `policy-${index}`,
       title: String(item.title)
     }));
+}
+
+function instagramHandleFromUrl(href: string) {
+  try {
+    const url = new URL(href);
+    const handle = url.pathname.split("/").filter(Boolean)[0];
+    return handle ? `@${handle}` : url.hostname;
+  } catch {
+    return href;
+  }
 }

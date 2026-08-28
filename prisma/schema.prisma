@@ -369,6 +369,8 @@ model VendorProfile {
   storefrontPoliciesJson    Json?
   storefrontBookingJson     Json?
   storefrontSectionLabels    Json?
+  storefrontInstagramFeedEnabled Boolean             @default(false)
+  storefrontInstagramFeedUrl String?
   storefrontFeaturedOfferingIds String[]           @default([])
   storefrontHiddenOfferingIds String[]             @default([])
   storefrontOfferingOrder   String[]              @default([])

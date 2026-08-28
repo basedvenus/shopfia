@@ -44,6 +44,8 @@ export async function getVendorProfileBySlug(slug: string) {
       storefrontFontStyle: true,
       storefrontHiddenSections: true,
       storefrontImageShape: true,
+      storefrontInstagramFeedEnabled: true,
+      storefrontInstagramFeedUrl: true,
       storefrontLayout: true,
       storefrontOfferingOrder: true,
       storefrontPalette: true,

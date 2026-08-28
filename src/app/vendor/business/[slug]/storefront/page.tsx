@@ -55,6 +55,8 @@ export default async function StorefrontCustomizerPage({
       storefrontHiddenSections: true,
       storefrontHiddenOfferingIds: true,
       storefrontImageShape: true,
+      storefrontInstagramFeedEnabled: true,
+      storefrontInstagramFeedUrl: true,
       storefrontLayout: true,
       storefrontPalette: true,
       storefrontSectionOrder: true,
