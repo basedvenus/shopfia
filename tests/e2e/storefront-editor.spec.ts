@@ -194,6 +194,11 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   await page.getByTestId("storefront-section-portfolio").dragTo(page.getByTestId("storefront-section-all-services"));
   await expect(page.getByTestId("storefront-section-all-services")).toBeVisible();
 
+  const howItWorksPreview = page.getByTestId("preview-section-how-it-works");
+  await howItWorksPreview.click();
+  await howItWorksPreview.getByLabel("Service area").fill("Napa County, Sonoma County, Solano County");
+  await expect(howItWorksPreview.locator("span", { hasText: "Napa County" })).toBeVisible();
+
   const imagePath = test.info().outputPath("portfolio-upload.png");
   writeFileSync(
     imagePath,
@@ -229,7 +234,13 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   await expect(page.locator("#portfolio")).toBeVisible();
   await expect(page.locator("#portfolio").getByRole("heading", { name: "Portfolio" })).toBeVisible();
   await expect(page.getByAltText("Codex Storefront Studio portfolio photo 1")).toBeVisible();
+  await page.locator("#portfolio").getByRole("button").first().click();
+  await expect(page.getByRole("dialog", { name: "Portfolio photo viewer" })).toBeVisible();
+  await page.getByRole("button", { name: "Close portfolio photo" }).click();
   await expect(page.getByText("25 mile standard range")).toBeVisible();
+  await expect(page.getByText("Napa County").first()).toBeVisible();
+  await expect(page.getByText("Sonoma County").first()).toBeVisible();
+  await expect(page.getByText("Solano County").first()).toBeVisible();
   const publicPortfolioBox = await page.locator("#portfolio").boundingBox();
   const publicServicesBox = await page.locator("#services").boundingBox();
   expect(publicPortfolioBox?.y).toBeLessThan(publicServicesBox?.y ?? Number.POSITIVE_INFINITY);
@@ -239,6 +250,7 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
     select: {
       city: true,
       photos: true,
+      serviceAreaNotes: true,
       storefrontDraftJson: true,
       storefrontFeaturedOfferingIds: true,
       storefrontFontStyle: true,
@@ -252,6 +264,7 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   });
   expect(savedVendor?.city).toBe("Vacaville");
   expect(savedVendor?.photos.length).toBeGreaterThanOrEqual(4);
+  expect(savedVendor?.serviceAreaNotes).toBe("Napa County, Sonoma County, Solano County");
   expect(savedVendor?.storefrontDraftJson).toBeNull();
   expect(savedVendor?.storefrontFeaturedOfferingIds).toHaveLength(1);
   expect(savedVendor?.storefrontFontStyle).toBe("BOLD");

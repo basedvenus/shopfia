@@ -31,6 +31,7 @@ import {
   STOREFRONT_IMAGE_SHAPES,
   STOREFRONT_PALETTES,
   STOREFRONT_SECTION_LABELS,
+  coverageAreaLabels,
   getStorefrontFontFamilies,
   normalizeStorefrontPalette,
   sanitizeStorefrontSections
@@ -820,7 +821,7 @@ function SectionEditor({
   if (activeSection === "how-it-works" || activeSection === "final-quote") {
     return (
       <PanelStack>
-        <Field label="Service area"><Textarea value={form.serviceAreaNotes} onChange={(event) => update("serviceAreaNotes", event.target.value)} /></Field>
+        <Field label="Counties/cities covered"><Textarea placeholder="Example: Napa County, Sonoma County, Solano County" value={form.serviceAreaNotes} onChange={(event) => update("serviceAreaNotes", event.target.value)} /></Field>
         <Field label="Lead time"><Input value={form.booking.leadTime} onChange={(event) => update("booking", { ...form.booking, leadTime: event.target.value })} /></Field>
         <Field label="Deposit or payment note"><Input value={form.booking.deposit} onChange={(event) => update("booking", { ...form.booking, deposit: event.target.value })} /></Field>
         <Field label="Booking process"><Textarea value={form.booking.process} onChange={(event) => update("booking", { ...form.booking, process: event.target.value })} /></Field>
@@ -1118,7 +1119,7 @@ function StorefrontPreview({
         <div className={`border-b px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] ${theme.headerClass}`} style={theme.platformBarStyle}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           <div className="shrink-0">
-            {form.logoUrl ? <img src={form.logoUrl} alt="" className={`h-14 w-14 bg-white object-contain p-1.5 ${theme.logoRadius}`} /> : <div className={`grid h-14 w-14 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
+            {form.logoUrl ? <img src={form.logoUrl} alt="" className={`h-20 w-20 bg-white object-cover ${theme.logoRadius}`} /> : <div className={`grid h-20 w-20 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
             {activeSection === "hero" ? (
               <div className="mt-2 w-32">
                 <ImageUploadField name="previewLogo" label="Logo" value={form.logoUrl} onChangePreview={(value) => update("logoUrl", value)} rounded="full" uploadEndpoint={mediaUploadEndpoint} />
@@ -1289,7 +1290,7 @@ function StorefrontPreview({
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2">{photos.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-square object-cover ${theme.imageRadius}`} />)}</div>
+                <div className="grid grid-cols-3 gap-2">{photos.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] bg-white object-contain p-1 ${theme.imageRadius}`} />)}</div>
               )}
             </PreviewSection>
           );
@@ -1325,11 +1326,11 @@ function StorefrontPreview({
               {activeSection === section ? (
                 <div className="grid gap-3">
                   <InlineTextarea ariaLabel="Booking process" onChange={(value) => update("booking", { ...form.booking, process: value })} placeholder="Describe how booking works" value={form.booking.process} />
-                  <InlineTextarea ariaLabel="Service area" onChange={(value) => update("serviceAreaNotes", value)} placeholder="Describe where you serve customers" value={form.serviceAreaNotes} />
-                  <PreviewRadiusMap city={[form.city, form.state].filter(Boolean).join(", ") || "Service area"} radiusMiles={business.serviceRadiusMiles} theme={theme} />
+                  <InlineTextarea ariaLabel="Service area" onChange={(value) => update("serviceAreaNotes", value)} placeholder="Napa County, Sonoma County, Solano County" value={form.serviceAreaNotes} />
+                  <PreviewRadiusMap city={[form.city, form.state].filter(Boolean).join(", ") || "Service area"} coverageAreas={coverageAreaLabels(form.serviceAreaNotes, [form.city, form.state].filter(Boolean).join(", "))} radiusMiles={business.serviceRadiusMiles} theme={theme} />
                 </div>
               ) : (
-                <><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p><PreviewRadiusMap city={[form.city, form.state].filter(Boolean).join(", ") || "Service area"} radiusMiles={business.serviceRadiusMiles} theme={theme} /></>
+                <><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p><PreviewRadiusMap city={[form.city, form.state].filter(Boolean).join(", ") || "Service area"} coverageAreas={coverageAreaLabels(form.serviceAreaNotes, [form.city, form.state].filter(Boolean).join(", "))} radiusMiles={business.serviceRadiusMiles} theme={theme} /></>
               )}
             </PreviewSection>
           );
@@ -1531,13 +1532,14 @@ function PreviewSection({ active, children, onClick, testId, theme, title }: { a
   );
 }
 
-function PreviewRadiusMap({ city, radiusMiles, theme }: { city: string; radiusMiles: number; theme: PreviewTheme }) {
+function PreviewRadiusMap({ city, coverageAreas, radiusMiles, theme }: { city: string; coverageAreas: string[]; radiusMiles: number; theme: PreviewTheme }) {
   return (
     <div className={`mt-3 grid gap-3 rounded-[1rem] p-3 sm:grid-cols-[104px_1fr] sm:items-center ${theme.cardClass}`} style={theme.previewCardStyle}>
-      <div className="relative mx-auto grid aspect-square w-24 place-items-center rounded-full border border-current/15" style={theme.softSurfaceStyle}>
-        <div className="absolute inset-[12%] rounded-full border border-dashed border-current/25" />
+      <div className="relative mx-auto grid aspect-square w-24 place-items-center overflow-hidden rounded-[0.9rem] border border-current/15" style={theme.softSurfaceStyle}>
+        <div className="absolute inset-0 opacity-55 [background-image:linear-gradient(90deg,currentColor_1px,transparent_1px),linear-gradient(currentColor_1px,transparent_1px)] [background-size:18px_18px]" />
+        <div className="absolute inset-[12%] rounded-full border border-dashed border-current/25 bg-white/20" />
         <div className="absolute inset-[29%] rounded-full border border-current/20 bg-white/50" />
-        <div className="relative grid h-10 w-10 place-items-center rounded-full text-[10px] font-semibold" style={theme.badgeStyle}>
+        <div className="relative grid h-9 w-9 place-items-center rounded-full text-[10px] font-semibold" style={theme.badgeStyle}>
           Base
         </div>
       </div>
@@ -1545,6 +1547,13 @@ function PreviewRadiusMap({ city, radiusMiles, theme }: { city: string; radiusMi
         <div className="text-xs font-semibold uppercase tracking-[0.18em]" style={theme.accentTextStyle}>Service radius</div>
         <div className="mt-1 font-semibold" style={theme.headingStyle}>{radiusMiles} miles from {city}</div>
         <p className={theme.mutedClass}>Customers can request travel beyond this range in their quote.</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {coverageAreas.slice(0, 5).map((area) => (
+            <span key={area} className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={theme.softSurfaceStyle}>
+              {area}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );

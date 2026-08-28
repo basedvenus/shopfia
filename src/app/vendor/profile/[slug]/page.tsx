@@ -20,6 +20,7 @@ import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { StorefrontPortfolioGallery } from "@/components/vendor/storefront-portfolio-gallery";
 import { CopyStorefrontLinkButton } from "@/components/vendor/copy-storefront-link-button";
 import { db } from "@/lib/db";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
@@ -27,7 +28,7 @@ import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorProfileBySlug } from "@/lib/data/vendor";
 import { getVendorTrustStatus } from "@/lib/vendor-status";
-import { STOREFRONT_PALETTES, getStorefrontFontFamilies, getStorefrontPalette, sanitizeStorefrontSections, storefrontUrl } from "@/lib/businesses";
+import { STOREFRONT_PALETTES, coverageAreaLabels, getStorefrontFontFamilies, getStorefrontPalette, sanitizeStorefrontSections, storefrontUrl } from "@/lib/businesses";
 
 export const dynamic = "force-dynamic";
 
@@ -135,6 +136,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   const followerCount = vendor.user?._count.followers ?? 0;
   const savedVendorCount = vendor._count.favorites;
   const serviceAreaLabel = [vendor.city, vendor.state].filter(Boolean).join(", ");
+  const coverageAreas = coverageAreaLabels(vendor.serviceAreaNotes, serviceAreaLabel || vendor.city);
   const publicStorefrontUrl = storefrontUrl(vendor.slug);
   const sectionOrder = sanitizeStorefrontSections(vendor.storefrontSectionOrder).filter(
     (section) => !vendor.storefrontHiddenSections.includes(section)
@@ -209,11 +211,11 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <span className="hidden sm:inline">Verified identity, saved services, quotes, and bookings</span>
         </div>
         <div className="grid gap-3 p-3 md:grid-cols-[auto_1fr_auto] md:items-center md:p-4">
-          <div className={`relative h-14 w-14 overflow-hidden border border-[#eadbd7] bg-[#f8ece9] md:h-16 md:w-16 ${theme.logoRadius}`}>
+          <div className={`relative h-20 w-20 overflow-hidden border border-[#eadbd7] bg-[#f8ece9] md:h-24 md:w-24 ${theme.logoRadius}`}>
             {vendor.logoUrl ? (
-              <Image src={vendor.logoUrl} alt={`${vendor.name} logo`} fill sizes="64px" className="object-contain p-1.5" />
+              <Image src={vendor.logoUrl} alt={`${vendor.name} logo`} fill sizes="96px" className="object-cover" />
             ) : hero ? (
-              <Image src={hero} alt={vendor.name} fill sizes="64px" className="object-cover" />
+              <Image src={hero} alt={vendor.name} fill sizes="96px" className="object-cover" />
             ) : (
               <div className="grid h-full place-items-center text-xl font-semibold" style={theme.accentTextStyle}>
                 {vendor.name.slice(0, 1)}
@@ -439,19 +441,13 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         </div>
 
         {portfolioPhotos.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {portfolioPhotos.map((photo, index) => (
-              <div key={`${photo}-${index}`} className={`relative aspect-[4/3] overflow-hidden bg-white shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
-                <Image
-                  src={photo}
-                  alt={`${vendor.name} portfolio photo ${index + 1}`}
-                  fill
-                  sizes="(min-width: 1280px) 31vw, (min-width: 640px) 48vw, 100vw"
-                  className="object-contain p-2"
-                />
-              </div>
-            ))}
-          </div>
+          <StorefrontPortfolioGallery
+            businessName={vendor.name}
+            cardClass={`${theme.cardClass} ${theme.sectionRadius}`}
+            cardStyle={theme.cardStyle}
+            imageRadius={theme.sectionRadius}
+            photos={portfolioPhotos}
+          />
         ) : (
           <Card className="border-white/70 bg-white/90">
             <CardContent className="p-4 text-sm text-muted-foreground">
@@ -557,6 +553,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           </p>
           <ServiceAreaRadiusCard
             city={serviceAreaLabel || vendor.city || "Local events"}
+            coverageAreas={coverageAreas}
             radiusMiles={vendor.serviceRadiusMiles}
             serviceAreaNotes={vendor.serviceAreaNotes}
             theme={theme}
@@ -690,22 +687,27 @@ function TrustFaqItem({ body, theme, title }: { body: string; theme: StorefrontT
 
 function ServiceAreaRadiusCard({
   city,
+  coverageAreas,
   radiusMiles,
   serviceAreaNotes,
   theme
 }: {
   city: string;
+  coverageAreas: string[];
   radiusMiles: number;
   serviceAreaNotes: string | null;
   theme: StorefrontTheme;
 }) {
   return (
-    <div className={`mt-4 grid gap-4 p-4 md:grid-cols-[180px_1fr] md:items-center ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
-      <div className="relative mx-auto grid aspect-square w-full max-w-[180px] place-items-center rounded-full border border-current/15" style={theme.softChipStyle}>
-        <div className="absolute inset-[11%] rounded-full border border-dashed border-current/25" />
-        <div className="absolute inset-[24%] rounded-full border border-current/20 bg-white/45" />
-        <div className="relative grid h-16 w-16 place-items-center rounded-full text-center text-xs font-semibold shadow-sm" style={theme.badgeStyle}>
-          {city}
+    <div className={`mt-4 grid gap-4 p-4 md:grid-cols-[220px_1fr] md:items-center ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
+      <div className="relative min-h-[180px] overflow-hidden rounded-[1rem] border border-current/15" style={theme.softChipStyle}>
+        <div className="absolute inset-0 opacity-55 [background-image:linear-gradient(90deg,currentColor_1px,transparent_1px),linear-gradient(currentColor_1px,transparent_1px)] [background-size:34px_34px]" />
+        <div className="absolute left-[12%] top-[18%] h-28 w-40 rotate-[-18deg] rounded-full border border-current/20" />
+        <div className="absolute bottom-[8%] right-[10%] h-24 w-32 rotate-[18deg] rounded-full border border-current/20" />
+        <div className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-current/35 bg-white/20" />
+        <div className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-current/25 bg-white/35" />
+        <div className="absolute left-1/2 top-1/2 grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-center text-[10px] font-semibold shadow-sm" style={theme.badgeStyle}>
+          Base
         </div>
       </div>
       <div>
@@ -716,6 +718,18 @@ function ServiceAreaRadiusCard({
         <p className={`mt-2 text-sm leading-6 ${theme.copyClass}`}>
           Based around {city}. {serviceAreaNotes ? "Travel details and expanded coverage are confirmed in the quote." : "For events beyond this range, request a quote and the vendor can confirm travel availability."}
         </p>
+        {coverageAreas.length ? (
+          <div className="mt-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={theme.accentTextStyle}>Counties/cities covered</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {coverageAreas.map((area) => (
+                <span key={area} className="rounded-full px-3 py-1 text-xs font-semibold" style={theme.softChipStyle}>
+                  {area}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

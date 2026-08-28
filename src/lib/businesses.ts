@@ -207,6 +207,17 @@ export function storefrontUrl(slug: string, baseUrl?: string | null) {
   return `${normalizedBase}${storefrontPath(slug)}`;
 }
 
+export function coverageAreaLabels(serviceAreaNotes: string | null | undefined, fallback?: string | null) {
+  const labels = (serviceAreaNotes ?? "")
+    .split(/[\n;,•]+/)
+    .map((label) => label.replace(/^[-–—\s]+/, "").trim())
+    .filter((label) => label.length >= 2 && label.length <= 42)
+    .slice(0, 10);
+  const fallbackLabel = fallback?.trim();
+
+  return Array.from(new Set([...labels, ...(fallbackLabel ? [fallbackLabel] : [])])).slice(0, 10);
+}
+
 export function businessManagerWhere(userId: string, role?: UserRole | string | null): Prisma.VendorProfileWhereInput {
   if (role === "ADMIN") return {};
   return {
