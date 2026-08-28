@@ -1753,22 +1753,30 @@ function PreviewHeroTemplate({
 
   if (layout === "STOREFRONT_CLASSIC") {
     return (
-      <section className={`m-4 grid gap-4 p-4 ${theme.cardClass} ${theme.sectionRadius} ${isMobile ? "" : "md:grid-cols-[0.34fr_1fr]"}`} style={theme.previewCardStyle}>
+      <section className={`m-4 grid max-h-[520px] gap-4 overflow-hidden p-4 ${theme.cardClass} ${theme.sectionRadius} ${isMobile ? "" : "md:grid-cols-[minmax(190px,0.42fr)_minmax(0,1fr)]"}`} style={theme.previewCardStyle}>
         <aside className="grid content-start gap-3 border-b pb-4 md:border-b-0 md:border-r md:pr-4" style={theme.navStyle}>
           <Logo />
-          <h2 className="text-2xl font-semibold" style={theme.headingStyle}>{form.name}</h2>
-          <p className={`text-sm leading-6 ${theme.copyClass}`}>{copy}</p>
+          <h2 className="break-words text-2xl font-semibold leading-tight" style={theme.headingStyle}>{form.name}</h2>
+          <p className={`line-clamp-5 text-sm leading-6 ${theme.copyClass}`}>{copy}</p>
           <span className="rounded-full px-4 py-2 text-center text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
         </aside>
-        <div className="grid gap-4">
+        <div className="grid min-w-0 content-start gap-4">
           <div>
             <h3 className="text-sm font-semibold">Featured services</h3>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              {activeServices.slice(0, 3).map((service) => <span key={service.id} className="rounded-[0.75rem] border p-3 text-sm font-semibold" style={theme.previewCardStyle}>{service.title}</span>)}
+              {activeServices.length ? (
+                activeServices.slice(0, 3).map((service) => <span key={service.id} className="rounded-[0.75rem] border p-3 text-sm font-semibold" style={theme.previewCardStyle}>{service.title}</span>)
+              ) : (
+                <span className={`rounded-[0.75rem] border p-3 text-sm ${theme.mutedClass}`} style={theme.previewCardStyle}>Services will appear here.</span>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {photos.slice(0, 3).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] w-full object-cover ${theme.imageRadius}`} />)}
+            {photos.length ? (
+              photos.slice(0, 3).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] w-full object-cover ${theme.imageRadius}`} />)
+            ) : (
+              <span className={`col-span-3 grid aspect-[4/3] place-items-center text-sm ${theme.mutedClass}`} style={theme.softSurfaceStyle}>Portfolio photos will appear here.</span>
+            )}
           </div>
         </div>
       </section>
