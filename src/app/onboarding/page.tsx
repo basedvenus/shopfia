@@ -143,19 +143,6 @@ export default async function VendorOnboardingPage({
           >
             {existingVendor ? <input type="hidden" name="businessId" value={existingVendor.id} /> : null}
             {resolvedSearchParams?.newBusiness ? <input type="hidden" name="newBusiness" value="1" /> : null}
-            <div className="sticky bottom-20 z-20 order-last md:col-span-2 md:bottom-4">
-              <div className="flex flex-col gap-3 rounded-[1.2rem] border border-primary/20 bg-white/95 p-3 shadow-[0_12px_34px_rgba(82,55,55,0.14)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold">Ready to keep your progress?</p>
-                  <p className="text-xs leading-5 text-muted-foreground">
-                    Save anytime. You can come back and polish the details later.
-                  </p>
-                </div>
-                <SubmitButton type="submit" pendingText="Saving business...">
-                  Save business
-                </SubmitButton>
-              </div>
-            </div>
             <div>
               <ImageUploadField
                 name="logoUrl"
