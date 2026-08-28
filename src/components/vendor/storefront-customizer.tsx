@@ -144,7 +144,6 @@ export function StorefrontCustomizer({
 }) {
   const [activeSection, setActiveSection] = useState<string>("hero");
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
-  const [intent, setIntent] = useState<"draft" | "publish">("publish");
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState(draftSaved ? "Draft saved" : saved ? "Published" : "Live");
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
@@ -252,7 +251,6 @@ export function StorefrontCustomizer({
   return (
     <form action={updateStorefrontCustomizationAction} className="overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]">
       <input type="hidden" name="businessId" value={business.id} />
-      <input type="hidden" name="intent" value={intent} />
       <input type="hidden" name="name" value={form.name} />
       <input type="hidden" name="city" value={form.city} />
       <input type="hidden" name="state" value={form.state} />
@@ -302,11 +300,11 @@ export function StorefrontCustomizer({
             {previewMode === "desktop" ? <Monitor className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
             {previewMode === "desktop" ? "Desktop" : "Mobile"}
           </Button>
-          <Button type="submit" variant="secondary" onClick={() => { setIntent("draft"); setStatus("Saving draft"); }}>
+          <Button type="submit" name="intent" value="draft" variant="secondary" onClick={() => setStatus("Saving draft")}>
             <Save className="h-4 w-4" />
             Save draft
           </Button>
-          <Button type="submit" onClick={() => { setIntent("publish"); setStatus("Publishing"); }}>
+          <Button type="submit" name="intent" value="publish" onClick={() => setStatus("Publishing")}>
             <Send className="h-4 w-4" />
             Publish
           </Button>

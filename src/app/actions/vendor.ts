@@ -442,16 +442,16 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
   const sanitizedSectionOrder = sanitizeStorefrontSections(parsed.sectionOrder);
   const sanitizedHiddenSections = sanitizeHiddenStorefrontSections(parsed.hiddenSections);
   const editorServices = parseEditorServices(parsed.servicesJson);
-  const draftPayload = {
+  const draftPayload = JSON.parse(JSON.stringify({
     aboutHeading: parsed.aboutHeading || "",
     aboutImage: parsed.aboutImage || "",
     availabilityNotes: parsed.availabilityNotes || "",
     bio: parsed.bio || "",
-    booking: parseEditorJson(parsed.bookingJson),
+    booking: parseEditorJson(parsed.bookingJson) ?? {},
     buttonStyle: parsed.buttonStyle,
     city: parsed.city,
     coverPhoto: parsed.coverPhoto || "",
-    faqs: parseEditorJson(parsed.faqJson),
+    faqs: parseEditorJson(parsed.faqJson) ?? [],
     featuredOfferingIds: parsed.featuredOfferingIds,
     fontStyle: parsed.fontStyle,
     hiddenSections: sanitizedHiddenSections,
@@ -464,21 +464,29 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     palette: parsed.palette,
     textTone: parsed.textTone,
     photoUrls: parsed.photoUrls,
-    policies: parseEditorJson(parsed.policiesJson),
+    policies: parseEditorJson(parsed.policiesJson) ?? [],
     sectionOrder: sanitizedSectionOrder,
     serviceAreaNotes: parsed.serviceAreaNotes || "",
     services: editorServices.map((service) => ({
-      ...service,
+      active: service.active !== false,
+      basePriceCents: service.basePriceCents ?? null,
+      categoryId: service.categoryId ?? null,
+      clientId: service.clientId ?? service.id ?? "",
+      description: service.description ?? "",
       featured: parsed.featuredOfferingIds.includes(service.clientId ?? service.id ?? ""),
       id: service.id ?? service.clientId,
-      isNew: !service.id
+      isNew: !service.id,
+      messageForPricing: Boolean(service.messageForPricing),
+      photos: service.photos ?? [],
+      title: service.title ?? "",
+      turnaroundDays: service.turnaroundDays ?? null
     })),
     state: parsed.state || "",
     tagline: parsed.tagline || "",
     tiktokUrl: parsed.tiktokUrl || "",
     website: parsed.website || "",
     savedAt: new Date().toISOString()
-  };
+  }));
 
   if (parsed.intent === "draft") {
     await db.vendorProfile.update({
