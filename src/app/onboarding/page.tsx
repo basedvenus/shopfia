@@ -14,14 +14,15 @@ export const dynamic = "force-dynamic";
 export default async function VendorOnboardingPage({
   searchParams
 }: {
-  searchParams?: { business?: string; newBusiness?: string; offeringError?: string; profileError?: string };
+  searchParams?: Promise<{ business?: string; newBusiness?: string; offeringError?: string; profileError?: string }>;
 }) {
   const [{ requireRole }, { db }] = await Promise.all([
     import("@/lib/auth/guards"),
     import("@/lib/db")
   ]);
   const session = await requireRole([UserRole.BUYER, UserRole.VENDOR, UserRole.ADMIN]);
-  const editingBusinessSlug = searchParams?.newBusiness ? null : searchParams?.business;
+  const resolvedSearchParams = await searchParams;
+  const editingBusinessSlug = resolvedSearchParams?.newBusiness ? null : resolvedSearchParams?.business;
   const [categories, eventCategories, existingVendor] = await Promise.all([
     db.category.findMany({ where: { audience: CategoryAudience.VENDOR }, orderBy: { name: "asc" } }),
     db.category.findMany({ where: { audience: CategoryAudience.BUYER }, orderBy: { name: "asc" } }),
@@ -31,7 +32,7 @@ export default async function VendorOnboardingPage({
             slug: editingBusinessSlug,
             userId: session.user.id
           }
-        : searchParams?.newBusiness
+        : resolvedSearchParams?.newBusiness
           ? { id: "__new_business__" }
           : {
               userId: session.user.id
@@ -68,6 +69,9 @@ export default async function VendorOnboardingPage({
   ]);
   const sortedCategories = sortVendorCategories(categories);
   const sortedEventCategories = sortEventCategories(eventCategories);
+  const businessMediaUploadEndpoint = existingVendor ? `/api/vendor/business/${existingVendor.id}/media` : undefined;
+  const businessLogoUploadEndpoint = businessMediaUploadEndpoint ? `${businessMediaUploadEndpoint}?target=logo` : undefined;
+  const businessCoverUploadEndpoint = businessMediaUploadEndpoint ? `${businessMediaUploadEndpoint}?target=cover` : undefined;
 
   return (
     <div className="space-y-6">
@@ -127,9 +131,9 @@ export default async function VendorOnboardingPage({
           </div>
         </CardHeader>
         <CardContent>
-          {searchParams?.profileError ? (
+          {resolvedSearchParams?.profileError ? (
             <div className="mb-4 rounded-[1.2rem] border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {searchParams.profileError}
+              {resolvedSearchParams.profileError}
             </div>
           ) : null}
           <ValidatedForm
@@ -138,7 +142,7 @@ export default async function VendorOnboardingPage({
             errorIntro="Your business storefront is almost there. Fix the highlighted field and save again."
           >
             {existingVendor ? <input type="hidden" name="businessId" value={existingVendor.id} /> : null}
-            {searchParams?.newBusiness ? <input type="hidden" name="newBusiness" value="1" /> : null}
+            {resolvedSearchParams?.newBusiness ? <input type="hidden" name="newBusiness" value="1" /> : null}
             <div className="sticky bottom-20 z-20 order-last md:col-span-2 md:bottom-4">
               <div className="flex flex-col gap-3 rounded-[1.2rem] border border-primary/20 bg-white/95 p-3 shadow-[0_12px_34px_rgba(82,55,55,0.14)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -159,6 +163,7 @@ export default async function VendorOnboardingPage({
                 defaultValue={existingVendor?.logoUrl}
                 defaultCrop={existingVendor?.logoCrop as { x: number; y: number; zoom: number } | null}
                 rounded="full"
+                uploadEndpoint={businessLogoUploadEndpoint}
                 helperText="Start with the mark hosts will remember."
               />
             </div>
@@ -168,6 +173,7 @@ export default async function VendorOnboardingPage({
                 label="Cover/banner image (Optional)"
                 defaultValue={existingVendor?.coverPhoto ?? existingVendor?.photos[0]}
                 defaultCrop={existingVendor?.coverPhotoCrop as { x: number; y: number; zoom: number } | null}
+                uploadEndpoint={businessCoverUploadEndpoint}
                 helperText="Optional. This becomes the hero image on your storefront."
               />
             </div>
@@ -356,9 +362,9 @@ export default async function VendorOnboardingPage({
           </div>
         </CardHeader>
         <CardContent>
-          {searchParams?.offeringError ? (
+          {resolvedSearchParams?.offeringError ? (
             <div className="mb-4 rounded-[1.2rem] border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {searchParams.offeringError}
+              {resolvedSearchParams.offeringError}
             </div>
           ) : null}
           {existingVendor ? (

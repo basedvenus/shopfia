@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
-import { businessManagerWhere } from "@/lib/businesses";
+import { businessManagerWhere, storefrontPath } from "@/lib/businesses";
 import { db } from "@/lib/db";
+import { parseImageCrop } from "@/lib/image-crop";
 import { assertSameOrigin, enforceRequestRateLimit } from "@/lib/security/request";
 import { readVerifiedImageFile } from "@/lib/security/uploads";
 
@@ -34,7 +37,7 @@ export async function POST(
       id: businessId,
       ...businessManagerWhere(session.user.id, session.user.role)
     },
-    select: { id: true }
+    select: { id: true, slug: true }
   });
   if (!business) {
     return NextResponse.json({ error: "That business could not be found." }, { status: 404 });
@@ -42,6 +45,7 @@ export async function POST(
 
   const formData = await request.formData() as unknown as globalThis.FormData;
   const file = formData.get("file");
+  const crop = parseImageCrop(formData.get("crop"));
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Choose an image file." }, { status: 400 });
   }
@@ -70,11 +74,39 @@ export async function POST(
     select: { id: true, updatedAt: true }
   });
   const url = `/api/vendor-media/${media.id}?v=${media.updatedAt.getTime()}`;
+  const uploadTarget = new URL(request.url).searchParams.get("target");
+  let persisted = false;
+
+  if (uploadTarget === "logo") {
+    await db.vendorProfile.update({
+      where: { id: business.id },
+      data: {
+        logoCrop: crop ?? Prisma.JsonNull,
+        logoUrl: url
+      }
+    });
+    persisted = true;
+  } else if (uploadTarget === "cover") {
+    await db.vendorProfile.update({
+      where: { id: business.id },
+      data: {
+        coverPhoto: url,
+        coverPhotoCrop: crop ?? Prisma.JsonNull
+      }
+    });
+    persisted = true;
+  }
+
+  if (persisted) {
+    revalidatePath("/vendor/dashboard");
+    revalidatePath(`/vendor/business/${business.slug}`);
+    revalidatePath(storefrontPath(business.slug));
+  }
 
   return NextResponse.json({
     media: { id: media.id, url },
     path: url,
-    persisted: true,
+    persisted,
     publicUrl: url,
     url
   });
