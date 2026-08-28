@@ -212,9 +212,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <div className="grid gap-3 p-3 md:grid-cols-[auto_1fr_auto] md:items-center md:p-4">
           <div className={`relative h-14 w-14 overflow-hidden border border-[#eadbd7] bg-[#f8ece9] md:h-16 md:w-16 ${theme.logoRadius}`}>
             {vendor.logoUrl ? (
-              <Image src={vendor.logoUrl} alt={`${vendor.name} logo`} fill className="object-cover" />
+              <Image src={vendor.logoUrl} alt={`${vendor.name} logo`} fill sizes="64px" className="object-contain p-1.5" />
             ) : hero ? (
-              <Image src={hero} alt={vendor.name} fill className="object-cover" />
+              <Image src={hero} alt={vendor.name} fill sizes="64px" className="object-cover" />
             ) : (
               <div className="grid h-full place-items-center text-xl font-semibold" style={theme.accentTextStyle}>
                 {vendor.name.slice(0, 1)}

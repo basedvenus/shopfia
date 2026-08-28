@@ -1114,7 +1114,7 @@ function StorefrontPreview({
         <div className={`border-b px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] ${theme.headerClass}`} style={theme.platformBarStyle}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           <div className="shrink-0">
-            {form.logoUrl ? <img src={form.logoUrl} alt="" className={`h-14 w-14 object-cover ${theme.logoRadius}`} /> : <div className={`grid h-14 w-14 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
+            {form.logoUrl ? <img src={form.logoUrl} alt="" className={`h-14 w-14 bg-white object-contain p-1.5 ${theme.logoRadius}`} /> : <div className={`grid h-14 w-14 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
             {activeSection === "hero" ? (
               <div className="mt-2 w-32">
                 <ImageUploadField name="previewLogo" label="Logo" value={form.logoUrl} onChangePreview={(value) => update("logoUrl", value)} rounded="full" uploadEndpoint={mediaUploadEndpoint} />

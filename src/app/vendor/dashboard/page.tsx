@@ -41,7 +41,7 @@ export default async function MyBusinessesPage() {
             <div className="grid gap-4 place-items-center">
               <div className="relative grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-[#f8deda] text-2xl font-semibold text-primary shadow-[0_10px_28px_rgba(72,44,43,0.08)]">
                 {business.logoUrl ? (
-                  <img src={business.logoUrl} alt={`${business.name} logo`} className="absolute inset-0 h-full w-full object-cover" loading="lazy" decoding="async" />
+                  <img src={business.logoUrl} alt={`${business.name} logo`} className="absolute inset-0 h-full w-full bg-white object-contain p-2" loading="lazy" decoding="async" />
                 ) : (
                   initials(business.name)
                 )}

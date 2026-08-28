@@ -124,7 +124,7 @@ export default async function BusinessDashboardPage({ params }: { params: Promis
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <div className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full bg-[#f8deda] text-xl font-semibold text-primary">
-              {business.logoUrl ? <img src={business.logoUrl} alt={`${business.name} logo`} className="absolute inset-0 h-full w-full object-cover" /> : initials(business.name)}
+              {business.logoUrl ? <img src={business.logoUrl} alt={`${business.name} logo`} className="absolute inset-0 h-full w-full bg-white object-contain p-1.5" /> : initials(business.name)}
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Business dashboard</p>
