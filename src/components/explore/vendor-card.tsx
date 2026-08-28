@@ -4,9 +4,11 @@ import { MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CroppedImage } from "@/components/ui/cropped-image";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { storefrontPath } from "@/lib/businesses";
+import { normalizeImageCrop } from "@/lib/image-crop";
 import { getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorTrustStatus } from "@/lib/vendor-status";
@@ -19,6 +21,8 @@ type VendorCardProps = {
     city: string;
     state: string | null;
     coverPhoto: string | null;
+    logoCrop?: unknown;
+    logoUrl?: string | null;
     photos: string[];
     status: string;
     verified: boolean;
@@ -32,14 +36,15 @@ type VendorCardProps = {
       username: string | null;
     } | null;
     categories: { category: { name: string } }[];
-    offerings: { category: { name: string } }[];
+    offerings: { category: { name: string }; photos?: string[] }[];
   };
   isSaved?: boolean;
   originalMemberCutoff?: Date | string | null;
 };
 
 export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendor }: VendorCardProps) {
-  const image = vendor.coverPhoto ?? vendor.photos[0] ?? null;
+  const serviceImage = vendor.offerings.flatMap((offering) => offering.photos ?? [])[0] ?? null;
+  const image = serviceImage ?? vendor.coverPhoto ?? vendor.photos[0] ?? null;
   const trustStatus = getVendorTrustStatus(vendor);
   const profileBadge = vendor.user
     ? getProfileBadge(vendor.user, originalMemberCutoff, {
@@ -74,8 +79,20 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
       <CardContent className="space-y-2 p-2.5 sm:space-y-3 sm:p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="line-clamp-1 text-sm font-semibold sm:text-base">{vendor.name}</h3>
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-accent text-[11px] font-semibold text-primary">
+                {vendor.logoUrl ? (
+                  <CroppedImage
+                    src={vendor.logoUrl}
+                    alt={`${vendor.name} logo`}
+                    crop={normalizeImageCrop(vendor.logoCrop)}
+                    className="absolute inset-0 h-full w-full object-cover object-center"
+                  />
+                ) : (
+                  getInitials(vendor.name)
+                )}
+              </span>
+              <h3 className="line-clamp-1 min-w-0 text-sm font-semibold sm:text-base">{vendor.name}</h3>
               <ProfileBadge badge={profileBadge} />
             </div>
             <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
@@ -129,4 +146,13 @@ function displayCategoryName(name: string) {
 
 function unique(values: string[]) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function getInitials(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 }

@@ -448,6 +448,8 @@ export async function getExploreData(input: Record<string, string | string[] | u
         createdAt: true,
         locationLat: true,
         locationLng: true,
+        logoCrop: true,
+        logoUrl: true,
         name: true,
         photos: true,
         reviewCount: true,
@@ -471,7 +473,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
         categories: { include: { category: true } },
         offerings: {
           where: { active: true },
-          select: { id: true, basePriceCents: true, category: { select: { name: true } }, title: true, type: true },
+          select: { id: true, basePriceCents: true, category: { select: { name: true } }, photos: true, title: true, type: true },
           take: 3,
           orderBy: { createdAt: "desc" }
         }
