@@ -164,6 +164,9 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   await page.getByRole("button", { name: "Mobile" }).click();
   await page.setViewportSize({ width: 390, height: 900 });
   await expect(page.getByTestId("storefront-preview-frame")).toHaveCSS("max-width", "390px");
+  const mobilePreviewBox = await page.getByTestId("storefront-preview-frame").boundingBox();
+  expect(mobilePreviewBox?.x).toBeGreaterThanOrEqual(0);
+  expect((mobilePreviewBox?.x ?? 0) + (mobilePreviewBox?.width ?? 0)).toBeLessThanOrEqual(390);
   await expect(page.getByText("Checklist", { exact: true })).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("button", { name: "Desktop" }).click();

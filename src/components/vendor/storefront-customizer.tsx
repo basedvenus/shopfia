@@ -471,10 +471,10 @@ export function StorefrontCustomizer({
       ) : null}
 
       <div
-        className="grid min-h-[calc(100vh-190px)] lg:grid-cols-[260px_minmax(0,1fr)_var(--editor-panel-width)]"
+        className="grid min-h-[calc(100vh-190px)] min-w-0 lg:grid-cols-[260px_minmax(0,1fr)_var(--editor-panel-width)]"
         style={{ "--editor-panel-width": panelCollapsed ? "64px" : "430px" } as CSSProperties}
       >
-        <aside className="sticky top-0 z-20 border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:static lg:z-auto lg:border-b-0 lg:border-r">
+        <aside className="sticky top-0 z-20 min-w-0 border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:static lg:z-auto lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Sections</h2>
             <CopyStorefrontLinkButton url={publicUrl} label="Copy link" className="h-8 bg-white px-3 text-xs" />
@@ -544,7 +544,7 @@ export function StorefrontCustomizer({
           </div>
         </aside>
 
-        <main className="bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
+        <main className="min-w-0 bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
           <div className="mb-3 flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>Click a section in the preview to edit it.</span>
             <Link href={publicUrl.replace(/^https?:\/\/[^/]+/, "")} target="_blank" className="font-semibold text-foreground underline-offset-4 hover:underline">
@@ -572,7 +572,7 @@ export function StorefrontCustomizer({
           </div>
         </main>
 
-        <aside className="border-t border-[#eadbd8] bg-white lg:border-l lg:border-t-0">
+        <aside className="min-w-0 border-t border-[#eadbd8] bg-white lg:border-l lg:border-t-0">
           {panelCollapsed ? (
             <button
               type="button"
@@ -1177,9 +1177,9 @@ function StorefrontPreview({
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/70">Featured storefront</p>
             {activeSection === "hero" ? (
               <>
-                <InlineTextInput
+                <InlineTextarea
                   ariaLabel="Hero headline"
-                  className={`mt-4 font-semibold leading-[0.95] tracking-normal text-white ${isMobile ? "text-3xl" : "text-5xl"}`}
+                  className={`mt-4 min-h-0 resize-none font-semibold leading-[0.95] tracking-normal text-white ${isMobile ? "text-3xl" : "text-5xl"}`}
                   onChange={(value) => update("aboutHeading", value)}
                   placeholder={form.name}
                   style={theme.headingStyle}
@@ -1198,7 +1198,7 @@ function StorefrontPreview({
               </>
             ) : (
               <>
-                <h2 className={`mt-4 font-semibold leading-[0.95] tracking-normal ${isMobile ? "text-3xl" : "text-5xl"}`} style={theme.headingStyle}>{form.aboutHeading || form.name}</h2>
+                <h2 className={`mt-4 break-words font-semibold leading-[0.95] tracking-normal ${isMobile ? "text-3xl" : "text-5xl"}`} style={theme.headingStyle}>{form.aboutHeading || form.name}</h2>
                 <p className="mt-4 line-clamp-3 text-sm leading-6 text-white/80">{form.tagline || form.bio}</p>
               </>
             )}
@@ -1391,10 +1391,14 @@ function InlineTextInput({
   return (
     <input
       aria-label={ariaLabel}
-      className={`w-full rounded-[0.65rem] border border-transparent bg-white/72 px-2 py-1 outline-none ring-1 ring-transparent transition placeholder:text-current/50 focus:border-current/20 focus:bg-white/90 focus:ring-current/20 ${className}`}
+      className={`w-full rounded-[0.65rem] border px-2 py-1 outline-none ring-1 ring-transparent transition placeholder:text-current/50 focus:ring-current/20 ${className}`}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
-      style={style}
+      style={{
+        ...style,
+        backgroundColor: "color-mix(in srgb, currentColor 8%, transparent)",
+        borderColor: "color-mix(in srgb, currentColor 18%, transparent)"
+      }}
       value={value}
     />
   );
@@ -1405,20 +1409,37 @@ function InlineTextarea({
   className = "",
   onChange,
   placeholder,
+  style,
   value
 }: {
   ariaLabel: string;
   className?: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  style?: CSSProperties;
   value: string;
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value]);
+
   return (
     <textarea
       aria-label={ariaLabel}
-      className={`min-h-24 w-full resize-y rounded-[0.75rem] border border-transparent bg-white/72 px-2 py-1 outline-none ring-1 ring-transparent transition placeholder:text-current/50 focus:border-current/20 focus:bg-white/90 focus:ring-current/20 ${className}`}
+      ref={textareaRef}
+      className={`min-h-24 w-full resize-y rounded-[0.75rem] border px-2 py-1 outline-none ring-1 ring-transparent transition placeholder:text-current/50 focus:ring-current/20 ${className}`}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
+      style={{
+        ...style,
+        backgroundColor: "color-mix(in srgb, currentColor 8%, transparent)",
+        borderColor: "color-mix(in srgb, currentColor 18%, transparent)"
+      }}
       value={value}
     />
   );
