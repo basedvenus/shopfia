@@ -26,6 +26,7 @@ import { StorefrontPortfolioGallery } from "@/components/vendor/storefront-portf
 import { CopyStorefrontLinkButton } from "@/components/vendor/copy-storefront-link-button";
 import { db } from "@/lib/db";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
+import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorProfileBySlug } from "@/lib/data/vendor";
@@ -68,6 +69,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
   const portfolioPhotos = vendor.photos;
   const hero = vendor.coverPhoto ?? portfolioPhotos[0] ?? null;
+  const coverCrop = normalizeImageCrop(vendor.coverPhotoCrop);
+  const logoCrop = normalizeImageCrop(vendor.logoCrop);
   const photoTaggedEventMap = new Map<
     string,
     {
@@ -264,7 +267,17 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <div className="grid gap-3 p-3 md:grid-cols-[auto_1fr_auto] md:items-center md:p-4">
           <div className={`relative h-20 w-20 overflow-hidden border border-[#eadbd7] bg-[#f8ece9] md:h-24 md:w-24 ${theme.logoRadius}`}>
             {vendor.logoUrl ? (
-              <Image src={vendor.logoUrl} alt={`${vendor.name} logo`} fill sizes="96px" className="object-cover" />
+              <Image
+                src={vendor.logoUrl}
+                alt={`${vendor.name} logo`}
+                fill
+                sizes="96px"
+                className="object-cover"
+                style={{
+                  ...imageCropToCss(logoCrop),
+                  transformOrigin: `${logoCrop.x}% ${logoCrop.y}%`
+                }}
+              />
             ) : hero ? (
               <Image src={hero} alt={vendor.name} fill sizes="96px" className="object-cover" />
             ) : (
@@ -363,7 +376,17 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       <section id="storefront-home" className={`relative left-1/2 right-1/2 -mx-[50vw] w-screen scroll-mt-28 overflow-hidden bg-[#211815] text-white ${theme.heroRadius}`} style={{ order: sectionPriority("hero") }}>
         <div className="absolute inset-0">
           {hero ? (
-            <Image src={hero} alt={vendor.name} fill priority className="object-cover opacity-58" />
+            <Image
+              src={hero}
+              alt={vendor.name}
+              fill
+              priority
+              className="object-cover opacity-58"
+              style={{
+                ...imageCropToCss(vendor.coverPhoto ? coverCrop : null),
+                transformOrigin: `${coverCrop.x}% ${coverCrop.y}%`
+              }}
+            />
           ) : (
             <NeutralVendorPlaceholder label={primaryCategory} />
           )}

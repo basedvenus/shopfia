@@ -18,6 +18,23 @@ const optionalCoordinate = (min: number, max: number) =>
     z.coerce.number().min(min).max(max).optional()
   );
 
+const imageCropSchema = z.preprocess(
+  (value) => {
+    if (value === "" || value == null) return undefined;
+    if (typeof value !== "string") return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return undefined;
+    }
+  },
+  z.object({
+    x: z.coerce.number().min(0).max(100),
+    y: z.coerce.number().min(0).max(100),
+    zoom: z.coerce.number().min(0.25).max(3)
+  }).optional()
+);
+
 const databaseIdSchema = z.string().trim().min(1, "Choose a valid option.").max(120, "Choose a valid option.");
 
 export const vendorOnboardingSchema = z.object({
@@ -65,7 +82,9 @@ export const storefrontCustomizationSchema = z.object({
   aboutHeading: z.string().max(90, "About heading is a little too long.").optional().or(z.literal("")),
   aboutImage: imageValueSchema.optional().or(z.literal("")),
   logoUrl: imageValueSchema.optional().or(z.literal("")),
+  logoCrop: imageCropSchema,
   coverPhoto: imageValueSchema.optional().or(z.literal("")),
+  coverPhotoCrop: imageCropSchema,
   photoUrls: z.array(imageValueSchema).max(12, "Add up to 12 portfolio photos.").default([]),
   serviceAreaNotes: z.string().max(500, "Service area notes are a little too long.").optional().or(z.literal("")),
   availabilityNotes: z.string().max(300, "Inquiry settings are a little too long.").optional().or(z.literal("")),

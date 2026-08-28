@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { autosaveStorefrontDraftAction, updateStorefrontCustomizationAction } from "@/app/actions/vendor";
 import { Button } from "@/components/ui/button";
+import { CroppedImage } from "@/components/ui/cropped-image";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +40,7 @@ import {
   sanitizeStorefrontSectionLabels,
   sanitizeStorefrontSections
 } from "@/lib/businesses";
+import { DEFAULT_IMAGE_CROP, normalizeImageCrop, type ImageCrop } from "@/lib/image-crop";
 import { formatCurrency } from "@/lib/utils";
 
 type EditorService = {
@@ -66,8 +68,10 @@ type CustomizerBusiness = {
   categories: Array<{ categoryId: string; category: { name: string } }>;
   city: string;
   coverPhoto: string | null;
+  coverPhotoCrop: unknown;
   id: string;
   instagramUrl: string | null;
+  logoCrop: unknown;
   logoUrl: string | null;
   name: string;
   offerings: Array<{
@@ -117,12 +121,14 @@ type FormState = {
   bio: string;
   booking: BookingInfo;
   coverPhoto: string;
+  coverPhotoCrop: ImageCrop;
   city: string;
   faqs: FaqItem[];
   fontStyle: string;
   hiddenSections: string[];
   imageShape: string;
   instagramUrl: string;
+  logoCrop: ImageCrop;
   logoUrl: string;
   name: string;
   palette: string;
@@ -230,6 +236,7 @@ export function StorefrontCustomizer({
       buttonStyle: "PILL",
       city: form.city,
       coverPhoto: form.coverPhoto,
+      coverPhotoCrop: form.coverPhotoCrop,
       faqJson,
       featuredOfferingIds: form.services.filter((service) => service.featured && service.active).map((service) => service.id),
       fontStyle: form.fontStyle,
@@ -239,6 +246,7 @@ export function StorefrontCustomizer({
       instagramUrl: form.instagramUrl,
       intent: "draft",
       layout: "EDITORIAL",
+      logoCrop: form.logoCrop,
       logoUrl: form.logoUrl,
       name: form.name,
       offeringOrder: form.services.map((service) => service.id),
@@ -425,7 +433,9 @@ export function StorefrontCustomizer({
       <input type="hidden" name="aboutHeading" value={form.aboutHeading} />
       <input type="hidden" name="aboutImage" value={form.aboutImage} />
       <input type="hidden" name="logoUrl" value={form.logoUrl} />
+      <input type="hidden" name="logoCrop" value={JSON.stringify(form.logoCrop)} />
       <input type="hidden" name="coverPhoto" value={form.coverPhoto} />
+      <input type="hidden" name="coverPhotoCrop" value={JSON.stringify(form.coverPhotoCrop)} />
       <input type="hidden" name="serviceAreaNotes" value={form.serviceAreaNotes} />
       <input type="hidden" name="availabilityNotes" value={form.availabilityNotes} />
       <input type="hidden" name="website" value={form.website} />
@@ -702,11 +712,13 @@ function createInitialState(business: CustomizerBusiness): FormState {
     booking: draft?.booking ?? readBooking(business.storefrontBookingJson),
     city: draft?.city ?? business.city,
     coverPhoto: draft?.coverPhoto ?? business.coverPhoto ?? business.photos[0] ?? "",
+    coverPhotoCrop: normalizeImageCrop(draft?.coverPhotoCrop ?? business.coverPhotoCrop ?? DEFAULT_IMAGE_CROP),
     faqs: draft?.faqs ?? readFaqs(business.storefrontFaqJson),
     fontStyle: draft?.fontStyle ?? business.storefrontFontStyle,
     hiddenSections: sanitizeHiddenStorefrontSections(draft?.hiddenSections ?? business.storefrontHiddenSections),
     imageShape: draft?.imageShape ?? business.storefrontImageShape,
     instagramUrl: draft?.instagramUrl ?? business.instagramUrl ?? "",
+    logoCrop: normalizeImageCrop(draft?.logoCrop ?? business.logoCrop ?? DEFAULT_IMAGE_CROP),
     logoUrl: draft?.logoUrl ?? business.logoUrl ?? "",
     name: draft?.name ?? business.name,
     palette: normalizeStorefrontPalette(draft?.palette ?? business.storefrontPalette),
@@ -764,6 +776,9 @@ function SectionEditor({
   moveService: (id: string, direction: -1 | 1) => void;
   setServiceVisible: (id: string, visible: boolean) => void;
 }) {
+  const logoUploadEndpoint = `${mediaUploadEndpoint}?target=logo`;
+  const coverUploadEndpoint = `${mediaUploadEndpoint}?target=cover`;
+
   if (activeSection === "hero") {
     return (
       <PanelStack>
@@ -774,8 +789,25 @@ function SectionEditor({
           <Field label="City"><Input value={form.city} onChange={(event) => update("city", event.target.value)} /></Field>
           <Field label="State"><Input value={form.state} onChange={(event) => update("state", event.target.value)} /></Field>
         </div>
-        <ImageUploadField name="editorLogo" label="Logo" value={form.logoUrl} onChangePreview={(value) => update("logoUrl", value)} rounded="full" uploadEndpoint={mediaUploadEndpoint} />
-        <ImageUploadField name="editorCover" label="Cover image" value={form.coverPhoto} onChangePreview={(value) => update("coverPhoto", value)} uploadEndpoint={mediaUploadEndpoint} />
+        <ImageUploadField
+          name="editorLogo"
+          label="Logo"
+          value={form.logoUrl}
+          valueCrop={form.logoCrop}
+          onChangePreview={(value) => update("logoUrl", value)}
+          onCropChange={(crop) => update("logoCrop", crop)}
+          rounded="full"
+          uploadEndpoint={logoUploadEndpoint}
+        />
+        <ImageUploadField
+          name="editorCover"
+          label="Cover image"
+          value={form.coverPhoto}
+          valueCrop={form.coverPhotoCrop}
+          onChangePreview={(value) => update("coverPhoto", value)}
+          onCropChange={(crop) => update("coverPhotoCrop", crop)}
+          uploadEndpoint={coverUploadEndpoint}
+        />
       </PanelStack>
     );
   }
@@ -1182,6 +1214,8 @@ function StorefrontPreview({
   updateService: (id: string, patch: Partial<EditorService>) => void;
   visibleSections: string[];
 }) {
+  const logoUploadEndpoint = `${mediaUploadEndpoint}?target=logo`;
+  const coverUploadEndpoint = `${mediaUploadEndpoint}?target=cover`;
   const palette = getPreviewPalette(form.palette);
   const theme = getPreviewTheme(form);
   const activeServices = form.services.filter((service) => service.active);
@@ -1197,10 +1231,26 @@ function StorefrontPreview({
         <div className={`border-b px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] ${theme.headerClass}`} style={theme.platformBarStyle}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           <div className="shrink-0">
-            {form.logoUrl ? <img src={form.logoUrl} alt="" className={`h-20 w-20 bg-white object-cover ${theme.logoRadius}`} /> : <div className={`grid h-20 w-20 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
+            {form.logoUrl ? (
+              <CroppedImage
+                src={form.logoUrl}
+                alt=""
+                crop={form.logoCrop}
+                className={`h-20 w-20 bg-white object-cover object-center ${theme.logoRadius}`}
+              />
+            ) : <div className={`grid h-20 w-20 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
             {activeSection === "hero" ? (
               <div className="mt-2 w-32">
-                <ImageUploadField name="previewLogo" label="Logo" value={form.logoUrl} onChangePreview={(value) => update("logoUrl", value)} rounded="full" uploadEndpoint={mediaUploadEndpoint} />
+                <ImageUploadField
+                  name="previewLogo"
+                  label="Logo"
+                  value={form.logoUrl}
+                  valueCrop={form.logoCrop}
+                  onChangePreview={(value) => update("logoUrl", value)}
+                  onCropChange={(crop) => update("logoCrop", crop)}
+                  rounded="full"
+                  uploadEndpoint={logoUploadEndpoint}
+                />
               </div>
             ) : null}
           </div>
@@ -1261,7 +1311,14 @@ function StorefrontPreview({
           ].map(([item, defaultLabel]) => <span key={defaultLabel} className="rounded-full px-3 py-1" style={defaultLabel === "Home" ? theme.activeNavItemStyle : undefined}>{item}</span>)}
         </div>
         <section className={`relative m-4 grid min-h-[390px] overflow-hidden bg-[#211815] text-white ${theme.heroRadius} ${isMobile ? "" : "md:grid-cols-[1fr_0.55fr]"}`}>
-          {form.coverPhoto ? <img src={form.coverPhoto} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
+          {form.coverPhoto ? (
+            <CroppedImage
+              src={form.coverPhoto}
+              alt=""
+              crop={form.coverPhotoCrop}
+              className="absolute inset-0 h-full w-full object-cover opacity-55"
+            />
+          ) : null}
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,17,15,0.9),rgba(24,17,15,0.2))]" />
           <div className="relative p-6">
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/70">Featured storefront</p>
@@ -1283,7 +1340,15 @@ function StorefrontPreview({
                   value={form.tagline}
                 />
                 <div className="mt-4 max-w-sm">
-                  <ImageUploadField name="previewCover" label="Cover image" value={form.coverPhoto} onChangePreview={(value) => update("coverPhoto", value)} uploadEndpoint={mediaUploadEndpoint} />
+                  <ImageUploadField
+                    name="previewCover"
+                    label="Cover image"
+                    value={form.coverPhoto}
+                    valueCrop={form.coverPhotoCrop}
+                    onChangePreview={(value) => update("coverPhoto", value)}
+                    onCropChange={(crop) => update("coverPhotoCrop", crop)}
+                    uploadEndpoint={coverUploadEndpoint}
+                  />
                 </div>
               </>
             ) : (

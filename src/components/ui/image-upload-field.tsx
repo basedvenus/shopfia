@@ -144,15 +144,10 @@ export function ImageUploadField({
 
   async function uploadEditedImage(file: File, nextCrop: ImageCrop) {
     try {
-      const croppedFile = uploadMode === "preserve" && !isRound
+      const shouldPreserveCrop = uploadMode === "preserve" || isRound;
+      const uploadedFile = shouldPreserveCrop
         ? await resizeImageUploadFile(file, {
-            maxSize: 1800,
-            outputType: "image/jpeg"
-          })
-        : isRound
-        ? await cropImageFile(file, nextCrop, {
-            aspectRatio: 1,
-            maxSize: 900,
+            maxSize: isRound ? 1200 : 1800,
             outputType: "image/jpeg"
           })
         : await cropImageFile(file, nextCrop, {
@@ -161,8 +156,8 @@ export function ImageUploadField({
             outputType: "image/jpeg"
           });
       const uploadData = new FormData();
-      uploadData.set("file", croppedFile);
-      uploadData.set("crop", JSON.stringify(DEFAULT_IMAGE_CROP));
+      uploadData.set("file", uploadedFile);
+      uploadData.set("crop", JSON.stringify(shouldPreserveCrop ? nextCrop : DEFAULT_IMAGE_CROP));
       const response = await fetch(uploadEndpoint!, {
         credentials: "same-origin",
         method: "POST",
@@ -175,7 +170,7 @@ export function ImageUploadField({
       }
 
       updateValue(result.url);
-      updateCrop(DEFAULT_IMAGE_CROP);
+      updateCrop(shouldPreserveCrop ? nextCrop : DEFAULT_IMAGE_CROP);
       onUploadComplete?.(result);
       setMessage(
         result.persisted
