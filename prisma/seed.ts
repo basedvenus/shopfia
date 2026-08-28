@@ -14,7 +14,7 @@ const categories = [
   { name: "Backdrops", iconName: "image", audience: CategoryAudience.VENDOR },
   { name: "Balloons", iconName: "party-popper", audience: CategoryAudience.VENDOR },
   { name: "Cakes & Desserts", iconName: "cake", audience: CategoryAudience.VENDOR },
-  { name: "Catering", iconName: "utensils-crossed", audience: CategoryAudience.VENDOR },
+  { name: "Catering & Beverages", iconName: "utensils-crossed", audience: CategoryAudience.VENDOR },
   { name: "Children's Entertainment", iconName: "baby", audience: CategoryAudience.VENDOR },
   { name: "Entertainment", iconName: "music", audience: CategoryAudience.VENDOR },
   { name: "Florals", iconName: "flower-2", audience: CategoryAudience.VENDOR },

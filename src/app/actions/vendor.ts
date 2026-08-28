@@ -49,7 +49,7 @@ const UNCLAIMED_VENDOR_CATEGORIES = [
   "Backdrops",
   "Balloons",
   "Cakes & Desserts",
-  "Catering",
+  "Catering & Beverages",
   "Children's Entertainment",
   "Entertainment",
   "Florals",

@@ -83,6 +83,7 @@ export function OfferingSetupForm({
   const [title, setTitle] = useState(offering?.title ?? "");
   const [messageForPricing, setMessageForPricing] = useState(offering?.messageForPricing ?? false);
   const [hasPackages, setHasPackages] = useState(Boolean(offering?.packages.length || offering?.components?.length));
+  const [selectedEventCategoryIds, setSelectedEventCategoryIds] = useState<string[]>(offering?.eventCategoryIds ?? []);
   const [packages, setPackages] = useState<PricedRow[]>(
     offering?.packages.length ? offering.packages.map(optionToRow) : [createRow()]
   );
@@ -178,10 +179,24 @@ export function OfferingSetupForm({
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium">Event types</label>
               <p className="text-sm leading-6 text-muted-foreground">
-                Optional. Pick every event this offering fits. These tags power Shop by Event feeds automatically.
+                Leave this on All events unless the service only fits specific celebration types.
               </p>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
+              <label
+                className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-sm transition hover:border-primary/45 ${
+                  selectedEventCategoryIds.length === 0 ? "border-primary/35 bg-primary/10 text-primary" : "bg-[#fbf7f5]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="eventTypeMode"
+                  value="all"
+                  checked={selectedEventCategoryIds.length === 0}
+                  onChange={() => setSelectedEventCategoryIds([])}
+                />
+                All events
+              </label>
               {eventCategories.map((category) => (
                 <label
                   key={category.id}
@@ -191,7 +206,14 @@ export function OfferingSetupForm({
                     type="checkbox"
                     name="eventCategoryIds"
                     value={category.id}
-                    defaultChecked={offering?.eventCategoryIds.includes(category.id)}
+                    checked={selectedEventCategoryIds.includes(category.id)}
+                    onChange={(event) =>
+                      setSelectedEventCategoryIds((current) =>
+                        event.target.checked
+                          ? [...current, category.id]
+                          : current.filter((categoryId) => categoryId !== category.id)
+                      )
+                    }
                   />
                   {category.name}
                 </label>

@@ -195,7 +195,7 @@ const categoryOrder = [
   "Backdrops",
   "Balloons",
   "Cakes & Desserts",
-  "Catering",
+  "Catering & Beverages",
   "Children's Entertainment",
   "Entertainment",
   "Florals",

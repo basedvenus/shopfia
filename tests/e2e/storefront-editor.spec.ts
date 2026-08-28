@@ -18,12 +18,15 @@ test.beforeAll(async () => {
   await prisma.vendorProfile.deleteMany({ where: { slug } });
 
   const category = await prisma.category.upsert({
-    where: { name: "E2E Storefront Styling" },
-    update: {},
+    where: { name: "Catering & Beverages" },
+    update: {
+      audience: "VENDOR",
+      iconName: "utensils-crossed"
+    },
     create: {
       audience: "VENDOR",
-      iconName: "Sparkles",
-      name: "E2E Storefront Styling"
+      iconName: "utensils-crossed",
+      name: "Catering & Beverages"
     }
   });
   const user = await prisma.user.create({
