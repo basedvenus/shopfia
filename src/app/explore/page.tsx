@@ -68,7 +68,7 @@ export default async function ExplorePage({
           </Badge>
         </div>
         <div className="max-w-3xl">
-          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          <h1 className="shopfia-editorial-heading text-4xl leading-tight md:text-5xl">
             Discover local vendors, offerings, and real party inspiration.
           </h1>
           <p className="mt-2 text-muted-foreground">

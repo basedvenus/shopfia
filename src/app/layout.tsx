@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Cormorant_Garamond, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import { auth } from "@/auth";
 import { ProfileProvider } from "@/components/account/profile-provider";
@@ -14,6 +15,20 @@ import {
 const title = "ShopFia - Discover Local Vendors & Real Party Inspiration";
 const description =
   "Browse real celebrations, discover trusted vendors, and plan beautiful events.";
+
+const instrumentSans = Instrument_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-shopfia-sans"
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  display: "swap",
+  style: ["normal", "italic"],
+  variable: "--font-shopfia-serif",
+  weight: ["400", "500", "600", "700"]
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.shopfia.app"),
@@ -81,7 +96,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body>
+      <body className={`${instrumentSans.variable} ${cormorant.variable}`}>
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-foreground focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-background"

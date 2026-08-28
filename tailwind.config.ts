@@ -34,7 +34,8 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)"
       },
       fontFamily: {
-        sans: ["ui-sans-serif", "system-ui", "sans-serif"]
+        sans: ["var(--font-shopfia-sans)", "Instrument Sans", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        serif: ["var(--font-shopfia-serif)", "Canela", "Editorial New", "Iowan Old Style", "Georgia", "serif"]
       },
       boxShadow: {
         soft: "0 10px 30px rgba(0,0,0,0.08)"

@@ -155,16 +155,16 @@ const recentVendors = [
 
 export default function Page() {
   return (
-    <div className="-mt-6 space-y-20 pb-12 [font-family:Inter,ui-sans-serif,system-ui,sans-serif]">
+    <div className="-mt-6 space-y-20 pb-12 font-sans">
       <section className="grid min-h-[calc(100vh-5rem)] items-center gap-10 overflow-hidden py-8 lg:grid-cols-[0.84fr_1.16fr]">
         <div className="max-w-2xl">
           <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
             <span className="h-px w-12 bg-[#a85f5e]" />
             <span>Real celebrations, shoppable inspiration</span>
           </div>
-          <h1 className="mt-7 text-5xl font-semibold leading-[1.02] tracking-normal text-foreground md:text-6xl lg:text-7xl [font-family:'PP_Neue_Montreal','Satoshi','Instrument_Sans',Inter,ui-sans-serif,system-ui,sans-serif]">
+          <h1 className="mt-7 text-5xl font-semibold leading-[1.02] tracking-normal text-foreground md:text-6xl lg:text-7xl">
             Find the vendors behind{" "}
-            <span className="font-normal italic text-primary [font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif]">
+            <span className="shopfia-editorial-heading font-normal italic text-primary">
               every party.
             </span>
           </h1>
@@ -253,7 +253,7 @@ export default function Page() {
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
               Trending Categories
             </p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-normal md:text-4xl">
+            <h2 className="shopfia-editorial-heading mt-2 text-3xl tracking-normal md:text-4xl">
               Discover through real events, then save the look.
             </h2>
           </div>
@@ -303,7 +303,7 @@ export default function Page() {
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
             Featured Parties
           </p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-normal md:text-4xl">
+          <h2 className="shopfia-editorial-heading mt-2 text-3xl tracking-normal md:text-4xl">
             Start with the celebration, not a search form.
           </h2>
           <p className="mt-4 text-sm leading-7 text-muted-foreground">
@@ -351,7 +351,7 @@ export default function Page() {
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
             How ShopFia Works
           </p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-normal md:text-4xl">
+          <h2 className="shopfia-editorial-heading mt-2 text-3xl tracking-normal md:text-4xl">
             From saved inspiration to the vendors behind every detail.
           </h2>
         </div>
@@ -381,7 +381,7 @@ export default function Page() {
               Popular Party Styles
             </p>
           </div>
-          <h2 className="mt-4 text-3xl font-semibold tracking-normal">
+          <h2 className="shopfia-editorial-heading mt-4 text-3xl tracking-normal">
             Inspiration that feels ready to collect.
           </h2>
           <div className="mt-6 flex flex-wrap gap-2">
@@ -404,7 +404,7 @@ export default function Page() {
               Recently Added Vendors
             </p>
           </div>
-          <h2 className="mt-4 text-3xl font-semibold tracking-normal">
+          <h2 className="shopfia-editorial-heading mt-4 text-3xl tracking-normal">
             Book the people who made it happen.
           </h2>
           <div className="mt-6 grid gap-3">
@@ -427,7 +427,7 @@ export default function Page() {
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
               Seasonal Inspiration
             </p>
-            <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-normal md:text-5xl">
+            <h2 className="shopfia-editorial-heading mt-3 max-w-2xl text-3xl tracking-normal md:text-5xl">
               Plan from a real celebration, then make it your own.
             </h2>
             <p className="mt-5 max-w-xl text-sm leading-7 text-white/82">
