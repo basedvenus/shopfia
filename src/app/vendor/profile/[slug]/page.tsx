@@ -309,9 +309,6 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 </span>
               ) : null}
             </div>
-            {tagline ? (
-              <p className={`mt-1 line-clamp-1 max-w-3xl text-sm leading-6 ${theme.copyClass}`}>{tagline}</p>
-            ) : null}
             <div className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm ${theme.profileMetricClass}`}>
               <span className="inline-flex items-center gap-1.5">
                 <Star className="h-4 w-4 fill-current text-amber-500" />

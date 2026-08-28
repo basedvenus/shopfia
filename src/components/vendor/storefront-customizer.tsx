@@ -1286,17 +1286,6 @@ function StorefrontPreview({
             ) : (
               <div className={`text-sm ${theme.mutedClass}`}>@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
             )}
-            {activeSection === "hero" ? (
-              <InlineTextInput
-                ariaLabel="Tagline"
-                className={`mt-1 text-sm ${theme.copyClass}`}
-                onChange={(value) => update("tagline", value)}
-                placeholder="Add a short tagline"
-                value={form.tagline}
-              />
-            ) : (
-              <p className={`mt-1 line-clamp-2 text-sm ${theme.copyClass}`}>{form.tagline}</p>
-            )}
             <span className="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>Follow</span>
           </div>
         </div>
