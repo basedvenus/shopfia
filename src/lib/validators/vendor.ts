@@ -46,7 +46,11 @@ export const vendorOnboardingSchema = z.object({
   storefrontAccentColor: z.string().max(40).optional().or(z.literal("")),
   storefrontSectionOrder: z.array(z.string().max(40)).max(9).default([]),
   logoUrl: imageValueSchema.optional().or(z.literal("")),
-  categoryIds: z.array(databaseIdSchema).max(12, "Choose up to 12 categories.").default([]),
+  categoryIds: z
+    .array(databaseIdSchema)
+    .min(1, "Choose at least one category.")
+    .max(12, "Choose up to 12 categories.")
+    .default([]),
   photoUrls: z.array(imageValueSchema).max(8, "Add up to 8 photos.").default([])
 });
 

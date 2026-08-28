@@ -306,9 +306,9 @@ export default async function VendorOnboardingPage({
               </FieldShell>
             </div>
             <div className="md:col-span-2 rounded-[1.5rem] border p-4">
-              <label className="mb-1 block text-sm font-medium">Categories <span className="text-xs font-normal text-muted-foreground">Optional</span></label>
+              <label className="mb-1 block text-sm font-medium">Categories <span className="text-destructive">*</span></label>
               <p className="mb-3 text-xs leading-5 text-muted-foreground">
-                Pick categories now or add them later from your vendor dashboard.
+                Choose at least one category so hosts know where your storefront belongs.
               </p>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {sortedCategories.map((category) => {

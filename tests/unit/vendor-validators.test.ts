@@ -2,6 +2,19 @@ import { describe, expect, it } from "vitest";
 import { offeringSchema, vendorOnboardingSchema } from "@/lib/validators/vendor";
 
 describe("vendor validators", () => {
+  it("requires at least one vendor category during business setup", () => {
+    const result = vendorOnboardingSchema.safeParse({
+      name: "Venus & Aura",
+      slug: "venus-aura-second",
+      username: "venus.aura.second",
+      city: "Napa",
+      categoryIds: []
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["categoryIds"]);
+  });
+
   it("accepts persisted category IDs that are not Prisma cuid strings", () => {
     const result = vendorOnboardingSchema.safeParse({
       name: "Venus & Aura",

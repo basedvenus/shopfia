@@ -45,6 +45,10 @@ function slugify(value: FormDataEntryValue | null) {
     .replace(/(^-|-$)/g, "");
 }
 
+function normalizeBusinessName(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 const UNCLAIMED_VENDOR_CATEGORIES = [
   "Backdrops",
   "Balloons",
@@ -658,23 +662,42 @@ export async function upsertVendorProfileAction(formData: FormData) {
   const businessId = String(formData.get("businessId") ?? "").trim();
   const isCreatingNewBusiness = String(formData.get("newBusiness") ?? "") === "1";
   const existingVendor = businessId
-      ? await db.vendorProfile.findFirst({
+    ? await db.vendorProfile.findFirst({
         where: {
           id: businessId,
           ...businessManagerWhere(session.user.id, session.user.role)
         },
-        select: { id: true, slug: true, username: true, userId: true }
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          username: true,
+          userId: true,
+          managers: { where: { userId: session.user.id }, select: { userId: true }, take: 1 },
+          _count: { select: { managers: true } }
+        }
       })
     : isCreatingNewBusiness
       ? null
       : await db.vendorProfile.findFirst({
         where: { userId: session.user.id },
-        select: { id: true, slug: true, username: true, userId: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          username: true,
+          userId: true,
+          managers: { where: { userId: session.user.id }, select: { userId: true }, take: 1 },
+          _count: { select: { managers: true } }
+        },
         orderBy: { createdAt: "asc" }
       });
   if (businessId && !existingVendor) {
     redirectWithVendorProfileError("That business could not be found for your account.", { newBusiness: isCreatingNewBusiness });
   }
+  let targetVendor = existingVendor;
   const submittedStorefrontSlug = slugifyBusinessUrl(String(formData.get("slug") ?? ""));
   const submittedBusinessName = String(formData.get("name") ?? "");
   const requestedSlug = submittedStorefrontSlug || slugifyBusinessUrl(submittedBusinessName);
@@ -685,20 +708,43 @@ export async function upsertVendorProfileAction(formData: FormData) {
     ? await db.vendorProfile.findFirst({
         where: {
           slug: requestedSlug,
-          ...(existingVendor ? { id: { not: existingVendor.id } } : {})
+          ...(targetVendor ? { id: { not: targetVendor.id } } : {})
         },
-        select: { id: true }
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          username: true,
+          userId: true,
+          managers: { where: { userId: session.user.id }, select: { userId: true }, take: 1 },
+          _count: { select: { managers: true } }
+        }
       })
     : null;
   if (slugOwner) {
-    redirectWithVendorProfileError("That storefront URL is already taken.", { newBusiness: isCreatingNewBusiness });
+    const isManagedByUser = slugOwner.userId === session.user.id || slugOwner.managers.length > 0;
+    const isOwnerlessExactMatch =
+      isCreatingNewBusiness &&
+      !slugOwner.userId &&
+      slugOwner._count.managers === 0 &&
+      slugOwner.status === VendorProfileStatus.CLAIMED &&
+      normalizeBusinessName(slugOwner.name) === normalizeBusinessName(submittedBusinessName);
+
+    if (isManagedByUser || isOwnerlessExactMatch) {
+      targetVendor = slugOwner;
+    } else {
+      redirectWithVendorProfileError("That storefront URL is already taken by another storefront.", {
+        newBusiness: isCreatingNewBusiness
+      });
+    }
   }
   const submittedVendorUsername = String(formData.get("username") ?? "")
     .trim()
     .replace(/^@/, "")
     .toLowerCase();
-  const vendorUsername = submittedVendorUsername || existingVendor?.username || existingVendor?.slug || "";
-  const vendorSlug = requestedSlug || existingVendor?.slug || slugify(vendorUsername || formData.get("name"));
+  const vendorUsername = submittedVendorUsername || targetVendor?.username || targetVendor?.slug || "";
+  const vendorSlug = requestedSlug || targetVendor?.slug || slugify(vendorUsername || formData.get("name"));
   const result = vendorOnboardingSchema.safeParse({
     name: formData.get("name"),
     slug: vendorSlug,
@@ -756,7 +802,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
     });
   }
 
-  const existingPrimaryVendor = existingVendor
+  const existingPrimaryVendor = targetVendor
     ? null
     : await db.vendorProfile.findUnique({
         where: { userId: session.user.id },
@@ -766,9 +812,9 @@ export async function upsertVendorProfileAction(formData: FormData) {
   let vendor;
   try {
     vendor = await db.$transaction(async (tx) => {
-      const savedVendor = existingVendor
+      const savedVendor = targetVendor
         ? await tx.vendorProfile.update({
-            where: { id: existingVendor.id },
+            where: { id: targetVendor.id },
             data: {
               name: parsed.name,
               status: VendorProfileStatus.CLAIMED,
