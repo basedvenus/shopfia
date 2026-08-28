@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
+  ChevronDown,
   Check,
   Eye,
   EyeOff,
@@ -135,18 +136,20 @@ const editableSections = APPROVED_STOREFRONT_SECTIONS;
 export function StorefrontCustomizer({
   business,
   draftSaved,
+  errorMessage,
   publicUrl,
   saved
 }: {
   business: CustomizerBusiness;
   draftSaved?: boolean;
+  errorMessage?: string;
   publicUrl: string;
   saved?: boolean;
 }) {
   const [activeSection, setActiveSection] = useState<string>("hero");
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [dirty, setDirty] = useState(false);
-  const [status, setStatus] = useState(draftSaved ? "Draft saved" : saved ? "Published" : "Live");
+  const [status, setStatus] = useState(errorMessage ? "Needs attention" : draftSaved ? "Draft saved" : saved ? "Published" : "Live");
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(() => createInitialState(business));
 
@@ -252,6 +255,7 @@ export function StorefrontCustomizer({
   return (
     <form action={updateStorefrontCustomizationAction} className="overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]">
       <input type="hidden" name="businessId" value={business.id} />
+      <input type="hidden" name="businessSlug" value={business.slug} />
       <input type="hidden" name="name" value={form.name} />
       <input type="hidden" name="city" value={form.city} />
       <input type="hidden" name="state" value={form.state} />
@@ -311,6 +315,11 @@ export function StorefrontCustomizer({
           </Button>
         </div>
       </div>
+      {errorMessage ? (
+        <div className="border-b border-[#f1c8c4] bg-[#fff4f2] px-4 py-3 text-sm font-medium text-[#8a332b]">
+          {errorMessage}
+        </div>
+      ) : null}
 
       <div className="grid min-h-[calc(100vh-190px)] lg:grid-cols-[260px_minmax(0,1fr)_360px]">
         <aside className="border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:border-b-0 lg:border-r">
@@ -652,6 +661,8 @@ function DesignControls({
   update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
 }) {
   const theme = getPreviewTheme(form);
+  const selectedPalette = getPreviewPalette(form.palette);
+  const [themeOpen, setThemeOpen] = useState(false);
 
   return (
     <PanelStack>
@@ -659,29 +670,55 @@ function DesignControls({
         <Palette className="h-4 w-4 text-primary" />
         <h3 className="text-sm font-semibold">Theme System</h3>
       </div>
-      <div className="grid gap-2">
-        {STOREFRONT_PALETTES.map((palette) => (
-          <button
-            key={palette.value}
-            type="button"
-            onClick={() => update("palette", palette.value)}
-            style={form.palette === palette.value ? { borderColor: palette.accent, backgroundColor: `${palette.accent}12` } : undefined}
-            className={`flex items-center gap-3 rounded-[0.9rem] border p-3 text-left text-sm transition ${
-              form.palette === palette.value ? "" : "border-[#eadbd7] hover:bg-[#fffaf8]"
-            }`}
-          >
-            <span className={`h-8 w-8 rounded-full bg-gradient-to-br ${palette.className}`} />
-            <span>
-              <span className="block font-semibold">{palette.label}</span>
-              <span className="mt-1 flex gap-1.5">
-                {palette.swatches.map((color) => (
-                  <span key={color} className="h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: color }} />
-                ))}
-              </span>
-              <span className="block text-xs text-muted-foreground">{palette.description}</span>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setThemeOpen((open) => !open)}
+          style={{ borderColor: selectedPalette.accent, backgroundColor: `${selectedPalette.accent}12` }}
+          className="flex w-full items-center gap-3 rounded-[0.9rem] border p-3 text-left text-sm transition hover:bg-[#fffaf8]"
+          aria-expanded={themeOpen}
+        >
+          <span className={`h-9 w-9 shrink-0 rounded-full bg-gradient-to-br ${selectedPalette.className}`} />
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Change theme</span>
+            <span className="block text-xs text-muted-foreground">{selectedPalette.label}</span>
+            <span className="mt-1 flex gap-1.5">
+              {selectedPalette.swatches.map((color) => (
+                <span key={color} className="h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: color }} />
+              ))}
             </span>
-          </button>
-        ))}
+          </span>
+          <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition ${themeOpen ? "rotate-180" : ""}`} />
+        </button>
+        {themeOpen ? (
+          <div className="mt-2 grid max-h-72 gap-2 overflow-y-auto rounded-[1rem] border border-[#eadbd7] bg-white p-2 shadow-[0_14px_40px_rgba(72,44,43,0.12)]">
+            {STOREFRONT_PALETTES.map((palette) => (
+              <button
+                key={palette.value}
+                type="button"
+                onClick={() => {
+                  update("palette", palette.value);
+                  setThemeOpen(false);
+                }}
+                style={form.palette === palette.value ? { borderColor: palette.accent, backgroundColor: `${palette.accent}12` } : undefined}
+                className={`flex items-center gap-3 rounded-[0.8rem] border p-3 text-left text-sm transition ${
+                  form.palette === palette.value ? "" : "border-[#eadbd7] hover:bg-[#fffaf8]"
+                }`}
+              >
+                <span className={`h-8 w-8 shrink-0 rounded-full bg-gradient-to-br ${palette.className}`} />
+                <span className="min-w-0">
+                  <span className="block font-semibold">{palette.label}</span>
+                  <span className="mt-1 flex gap-1.5">
+                    {palette.swatches.map((color) => (
+                      <span key={color} className="h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: color }} />
+                    ))}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">{palette.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
       <Field label="Font pairing">
         <select className="h-10 rounded-[0.75rem] border border-[#eadbd7] bg-white px-3 text-sm" value={form.fontStyle} onChange={(event) => update("fontStyle", event.target.value)}>

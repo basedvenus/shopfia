@@ -357,12 +357,17 @@ function firstValidationMessage(
 export async function updateStorefrontCustomizationAction(formData: FormData) {
   const { db } = await import("@/lib/db");
   const session = await requireSession();
+  const submittedBusinessSlug = slugifyBusinessUrl(String(formData.get("businessSlug") ?? ""));
+  const customizeErrorBasePath = submittedBusinessSlug ? `/vendor/business/${submittedBusinessSlug}/storefront` : "/vendor/dashboard";
+  const redirectWithCustomizeError = (message: string): never => {
+    redirect(`${customizeErrorBasePath}?customizeError=${encodeURIComponent(message)}`);
+  };
   const rate = await checkServerActionRateLimit([
     { key: "storefront-customize:ip:{ip}", limit: 24, intervalMs: 60_000 },
     { key: `storefront-customize:user:${session.user.id}`, limit: 10, intervalMs: 60_000 }
   ]);
   if (!rate.ok) {
-    redirect("/vendor/dashboard?customizeError=Please%20wait%20a%20minute%20before%20publishing%20again.");
+    return redirectWithCustomizeError("Please wait a minute before publishing again.");
   }
 
   const result = storefrontCustomizationSchema.safeParse({
@@ -413,14 +418,21 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
       instagramUrl: "Instagram Link",
       tiktokUrl: "TikTok Link"
     });
-    redirect(`/vendor/dashboard?customizeError=${encodeURIComponent(message)}`);
+    return redirectWithCustomizeError(message);
   }
 
   const parsed = result.data;
   const vendor = await db.vendorProfile.findFirst({
     where: {
       id: parsed.businessId,
-      ...(session.user.role === UserRole.ADMIN ? {} : { userId: session.user.id })
+      ...(session.user.role === UserRole.ADMIN
+        ? {}
+        : {
+            OR: [
+              { userId: session.user.id },
+              { managers: { some: { userId: session.user.id } } }
+            ]
+          })
     },
     select: {
       id: true,
@@ -436,7 +448,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     }
   });
   if (!vendor) {
-    redirect("/vendor/dashboard?customizeError=That%20business%20could%20not%20be%20found.");
+    return redirectWithCustomizeError("That business could not be found.");
   }
   const vendorId = vendor.id;
 

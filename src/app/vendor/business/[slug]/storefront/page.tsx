@@ -11,17 +11,26 @@ export default async function StorefrontCustomizerPage({
   searchParams
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ draft?: string; published?: string }>;
+  searchParams?: Promise<{ customizeError?: string; draft?: string; published?: string }>;
 }) {
   const [{ slug }, resolvedSearchParams] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({} as { draft?: string; published?: string })
+    searchParams ?? Promise.resolve({} as { customizeError?: string; draft?: string; published?: string })
   ]);
   const session = await auth();
   if (!session?.user?.id) redirect("/account?next=login");
 
   const business = await db.vendorProfile.findFirst({
-    where: session.user.role === "ADMIN" ? { slug } : { slug, userId: session.user.id },
+    where:
+      session.user.role === "ADMIN"
+        ? { slug }
+        : {
+            slug,
+            OR: [
+              { userId: session.user.id },
+              { managers: { some: { userId: session.user.id } } }
+            ]
+          },
     select: {
       availabilityNotes: true,
       bio: true,
@@ -85,6 +94,7 @@ export default async function StorefrontCustomizerPage({
       publicUrl={storefrontUrl(business.slug)}
       saved={Boolean(resolvedSearchParams.published)}
       draftSaved={Boolean(resolvedSearchParams.draft)}
+      errorMessage={resolvedSearchParams.customizeError}
     />
   );
 }
