@@ -814,17 +814,38 @@ function SectionEditor({
   if (activeSection === "featured-services" || activeSection === "all-services") {
     return (
       <PanelStack>
-        <p className="text-sm leading-6 text-muted-foreground">Choose which existing services appear on this storefront, which are featured, and the order customers see them in. Edit service details from the Services dashboard.</p>
-        {form.services.map((service, index) => (
-          <ServiceEditor
-            key={service.id}
-            index={index}
-            service={service}
-            updateService={updateService}
-            moveService={moveService}
-            setServiceVisible={setServiceVisible}
-          />
-        ))}
+        <div className="rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">Real services and packages</h3>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Add or edit actual services here. Packages, menu items, photos, pricing, and categories live on each service.
+              </p>
+            </div>
+            <Button asChild type="button" size="sm">
+              <Link href={`/vendor/business/${business.slug}/services/new`}>
+                <Plus className="h-4 w-4" />
+                Add service
+              </Link>
+            </Button>
+          </div>
+        </div>
+        {form.services.length > 0 ? (
+          form.services.map((service, index) => (
+            <ServiceEditor
+              key={service.id}
+              index={index}
+              service={service}
+              updateService={updateService}
+              moveService={moveService}
+              setServiceVisible={setServiceVisible}
+            />
+          ))
+        ) : (
+          <div className="rounded-[1rem] border border-dashed border-[#eadbd7] bg-white/70 p-4 text-sm leading-6 text-muted-foreground">
+            No services yet. Add the first real service so it can appear on this storefront and in search.
+          </div>
+        )}
       </PanelStack>
     );
   }
@@ -1044,6 +1065,13 @@ function ServiceEditor({
             <span className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-muted-foreground">
               {service.messageForPricing || service.basePriceCents == null ? "Custom quote" : `From ${formatCurrency(service.basePriceCents)}`}
             </span>
+            {!service.isNew ? (
+              <Button asChild type="button" variant="secondary" size="sm" className="h-8 rounded-full px-3 text-xs">
+                <Link href={`/vendor/offering/${service.id}`}>
+                  Edit details/packages
+                </Link>
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -1355,6 +1383,7 @@ function StorefrontPreview({
           if (section === "featured-services") return (
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-featured-services" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               <ServiceGrid
+                businessSlug={business.slug}
                 editable={activeSection === section}
                 mode="featured"
                 moveService={moveService}
@@ -1368,6 +1397,7 @@ function StorefrontPreview({
           if (section === "all-services") return (
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               <ServiceGrid
+                businessSlug={business.slug}
                 editable={activeSection === section}
                 mode="visibility"
                 moveService={moveService}
@@ -1593,6 +1623,7 @@ function InlineTextarea({
 }
 
 function ServiceGrid({
+  businessSlug,
   editable,
   mode = "visibility",
   moveService,
@@ -1601,6 +1632,7 @@ function ServiceGrid({
   theme,
   updateService
 }: {
+  businessSlug: string;
   editable?: boolean;
   mode?: "featured" | "visibility";
   moveService?: (id: string, direction: -1 | 1) => void;
@@ -1609,7 +1641,22 @@ function ServiceGrid({
   theme: PreviewTheme;
   updateService?: (id: string, patch: Partial<EditorService>) => void;
 }) {
-  if (!services.length) return <p className={`text-sm ${theme.mutedClass}`}>No services selected.</p>;
+  if (!services.length) {
+    return (
+      <div className={`grid gap-3 rounded-[1rem] border border-dashed p-4 ${theme.mutedClass}`} style={theme.previewCardStyle}>
+        <p className="text-sm">No services selected yet.</p>
+        <Link
+          href={`/vendor/business/${businessSlug}/services/new`}
+          className="relative z-20 inline-flex w-fit items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold"
+          style={theme.heroCtaStyle}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Plus className="h-4 w-4" />
+          Add service/package
+        </Link>
+      </div>
+    );
+  }
   return (
     <div className="grid gap-3 md:grid-cols-3">
       {services.map((service) => (
@@ -1654,6 +1701,15 @@ function ServiceGrid({
                 <div className="flex gap-1.5">
                   <button type="button" className="rounded-full border bg-white px-2.5 py-1 text-xs text-[#2f2626]" onClick={(event) => { event.stopPropagation(); moveService?.(service.id, -1); }}>Up</button>
                   <button type="button" className="rounded-full border bg-white px-2.5 py-1 text-xs text-[#2f2626]" onClick={(event) => { event.stopPropagation(); moveService?.(service.id, 1); }}>Down</button>
+                  {!service.isNew ? (
+                    <Link
+                      href={`/vendor/offering/${service.id}`}
+                      className="relative z-20 rounded-full border bg-white px-2.5 py-1 text-xs font-semibold text-[#2f2626]"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      Edit
+                    </Link>
+                  ) : null}
                 </div>
               </div>
             ) : null}
