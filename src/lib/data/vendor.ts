@@ -67,6 +67,14 @@ export async function getVendorProfileBySlug(slug: string) {
           }
         }
       },
+      verificationDocuments: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          expiresAt: true,
+          status: true,
+          type: true
+        }
+      },
       sellerRatingAggregate: true,
       rankingScore: true,
       categories: { include: { category: true } },
@@ -137,5 +145,5 @@ export async function getVendorProfileBySlug(slug: string) {
     }
   });
 
-  return vendor ? { ...vendor, verificationDocuments: [] } : null;
+  return vendor;
 }

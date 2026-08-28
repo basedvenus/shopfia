@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronDown, Edit3, Eye, MessageSquare, PackagePlus, Settings, ShoppingBag, Store, Wand2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronDown, Clock3, Edit3, Eye, MessageSquare, PackagePlus, Settings, ShieldCheck, ShoppingBag, Store, Upload, Wand2 } from "lucide-react";
 import { auth } from "@/auth";
+import { submitBusinessVerificationDocumentAction } from "@/app/actions/vendor";
 import { deleteOfferingAction, duplicateOfferingAction, toggleOfferingPublishedAction } from "@/app/actions/offerings";
 import { Button } from "@/components/ui/button";
 import { ConnectStripeButton } from "@/components/vendor/connect-stripe-button";
@@ -43,6 +44,19 @@ export default async function BusinessDashboardPage({ params }: { params: Promis
       tiktokUrl: true,
       website: true,
       categories: { select: { category: { select: { name: true } }, categoryId: true }, take: 4 },
+      verificationDocuments: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          createdAt: true,
+          expiresAt: true,
+          id: true,
+          originalName: true,
+          reviewerNote: true,
+          status: true,
+          type: true
+        },
+        take: 12
+      },
       inquiries: {
         orderBy: { createdAt: "desc" },
         select: { eventLocation: true, id: true, name: true, status: true, offering: { select: { title: true } } },
@@ -256,6 +270,51 @@ export default async function BusinessDashboardPage({ params }: { params: Promis
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{paymentStatus(business)}</p>
               <div className="mt-4"><ConnectStripeButton businessSlug={business.slug} connected={business.stripeOnboardingComplete} /></div>
             </div>
+            <div className="rounded-[1rem] border border-[#eadbd8] bg-[#fbf7f5] p-4 lg:col-span-2">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                    <ShieldCheck className="h-4 w-4" />
+                    Credentials
+                  </div>
+                  <h3 className="mt-2 font-semibold">Insurance, license, and permit verification</h3>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                    Upload proof here. Once ShopFia verifies it, your public storefront shows a simple checked badge like Insured or Licensed.
+                  </p>
+                </div>
+                <CredentialSummary documents={business.verificationDocuments} />
+              </div>
+              <form action={submitBusinessVerificationDocumentAction} className="mt-4 grid gap-3 rounded-[1rem] border border-white/80 bg-white/80 p-4 md:grid-cols-[1fr_1.2fr_1fr_auto] md:items-end">
+                <input type="hidden" name="businessId" value={business.id} />
+                <label className="grid gap-1.5 text-sm font-medium">
+                  Credential type
+                  <select name="type" className="h-10 rounded-[0.75rem] border border-[#eadbd8] bg-white px-3 text-sm">
+                    <option value="INSURANCE">Insurance</option>
+                    <option value="LICENSE">License</option>
+                    <option value="PERMIT">Permit</option>
+                  </select>
+                </label>
+                <label className="grid gap-1.5 text-sm font-medium">
+                  Document
+                  <input name="document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="min-h-10 rounded-[0.75rem] border border-[#eadbd8] bg-white px-3 py-2 text-sm" />
+                </label>
+                <label className="grid gap-1.5 text-sm font-medium">
+                  Expires
+                  <input name="expiresAt" type="date" className="h-10 rounded-[0.75rem] border border-[#eadbd8] bg-white px-3 text-sm" />
+                </label>
+                <Button type="submit" className="h-10">
+                  <Upload className="h-4 w-4" />
+                  Upload
+                </Button>
+              </form>
+              {business.verificationDocuments.length ? (
+                <div className="mt-4 grid gap-2">
+                  {business.verificationDocuments.map((document) => (
+                    <CredentialRow key={document.id} document={document} />
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
         </Panel>
       </section>
@@ -292,6 +351,53 @@ function RequestList({ empty, items }: { empty: string; items: Array<{ detail: s
   return <div className="mt-4 space-y-3">{items.map((item) => <div key={item.id} className="rounded-[1rem] border border-[#eadbd8] bg-[#fbf7f5] p-4 text-sm"><div className="flex items-start justify-between gap-3"><div><div className="font-semibold">{item.title}</div><div className="mt-1 text-muted-foreground">{item.detail}</div></div><span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold">{item.status}</span></div></div>)}</div>;
 }
 
+function CredentialSummary({ documents }: { documents: Array<{ expiresAt: Date | null; status: string; type: string }> }) {
+  const verified = getVerifiedCredentialLabels(documents);
+  if (!verified.length) return <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-muted-foreground">No verified credentials yet</span>;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {verified.map((label) => (
+        <span key={label} className="inline-flex items-center gap-1.5 rounded-full bg-[#e5f4df] px-3 py-1 text-xs font-semibold text-[#507343]">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function CredentialRow({
+  document
+}: {
+  document: {
+    createdAt: Date;
+    expiresAt: Date | null;
+    originalName: string | null;
+    reviewerNote: string | null;
+    status: string;
+    type: string;
+  };
+}) {
+  const status = credentialStatus(document.status);
+  const Icon = status.icon;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[0.9rem] border border-white/80 bg-white/80 px-4 py-3 text-sm">
+      <div className="min-w-0">
+        <div className="font-semibold">{credentialTypeLabel(document.type)}</div>
+        <p className="truncate text-xs text-muted-foreground">
+          {document.originalName ?? "Uploaded document"}
+          {document.expiresAt ? ` · expires ${formatDate(document.expiresAt)}` : ""}
+        </p>
+        {document.reviewerNote ? <p className="mt-1 text-xs text-muted-foreground">{document.reviewerNote}</p> : null}
+      </div>
+      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>
+        <Icon className="h-3.5 w-3.5" />
+        {status.label}
+      </span>
+    </div>
+  );
+}
+
 function EmptyState({ action, body, href, title }: { action: string; body: string; href: string; title: string }) {
   return <div className="rounded-[1.25rem] border border-white/80 bg-white p-8 text-center shadow-[0_18px_50px_rgba(72,44,43,0.08)]"><h3 className="text-xl font-semibold tracking-[-0.02em]">{title}</h3><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">{body}</p><Button asChild className="mt-5"><Link href={href}>{action}</Link></Button></div>;
 }
@@ -319,4 +425,36 @@ function paymentStatus(business: { stripeChargesEnabled: boolean; stripeOnboardi
   if (business.stripeChargesEnabled && business.stripePayoutsEnabled) return "Ready for payments and payouts.";
   if (business.stripeOnboardingComplete) return "Stripe onboarding is complete and awaiting final readiness.";
   return "Connect Stripe to accept payments from quotes.";
+}
+
+function getVerifiedCredentialLabels(documents: Array<{ expiresAt: Date | null; status: string; type: string }>) {
+  const now = new Date();
+  return documents
+    .filter((document) => document.status === "VERIFIED" && (!document.expiresAt || document.expiresAt > now))
+    .map((document) => credentialTypeLabel(document.type))
+    .filter((label, index, labels) => labels.indexOf(label) === index);
+}
+
+function credentialTypeLabel(type: string) {
+  if (type === "INSURANCE") return "Insured";
+  if (type === "LICENSE") return "Licensed";
+  return "Permit Verified";
+}
+
+function credentialStatus(status: string) {
+  if (status === "VERIFIED") {
+    return { className: "bg-[#e5f4df] text-[#507343]", icon: CheckCircle2, label: "Verified" };
+  }
+  if (status === "REJECTED_NEEDS_REVISION") {
+    return { className: "bg-[#fff3d8] text-[#805b1d]", icon: AlertCircle, label: "Needs revision" };
+  }
+  return { className: "bg-white text-muted-foreground", icon: Clock3, label: "Pending review" };
+}
+
+function formatDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(date);
 }

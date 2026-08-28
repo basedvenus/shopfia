@@ -359,7 +359,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             {verifiedCredentials.length ? (
               <div className="flex flex-wrap gap-2 pt-2">
                 {verifiedCredentials.map((credential) => (
-                  <span key={credential} className="rounded-full px-3 py-1 text-xs font-semibold" style={theme.heroCtaStyle}>
+                  <span key={credential} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style={theme.heroCtaStyle}>
+                    <BadgeCheck className="h-3.5 w-3.5" />
                     {credential}
                   </span>
                 ))}
@@ -797,8 +798,8 @@ function getVerifiedCredentials(
   return documents
     .filter((document) => document.status === "VERIFIED" && (!document.expiresAt || document.expiresAt > now))
     .map((document) => {
-      if (document.type === "INSURANCE") return "Insurance Verified";
-      if (document.type === "LICENSE") return "License Verified";
+      if (document.type === "INSURANCE") return "Insured";
+      if (document.type === "LICENSE") return "Licensed";
       return "Permit Verified";
     })
     .filter((label, index, labels) => labels.indexOf(label) === index);
