@@ -745,6 +745,17 @@ export async function upsertVendorProfileAction(formData: FormData) {
   const logoCrop = parseImageCrop(formData.get("logoUrlCrop"));
   const photoCrops = parseImageCropArray(formData.getAll("photoUrlsCrop"));
   const coverPhotoCrop = photoCrops[0] ?? logoCrop;
+  const validVendorCategoryCount = parsed.categoryIds.length
+    ? await db.category.count({
+        where: { id: { in: parsed.categoryIds }, audience: CategoryAudience.VENDOR }
+      })
+    : 0;
+  if (validVendorCategoryCount !== parsed.categoryIds.length) {
+    redirectWithVendorProfileError("One or more selected categories are invalid for vendors.", {
+      newBusiness: isCreatingNewBusiness
+    });
+  }
+
   const existingPrimaryVendor = existingVendor
     ? null
     : await db.vendorProfile.findUnique({
@@ -754,68 +765,95 @@ export async function upsertVendorProfileAction(formData: FormData) {
 
   let vendor;
   try {
-    vendor = existingVendor
-      ? await db.vendorProfile.update({
-          where: { id: existingVendor.id },
-          data: {
-        name: parsed.name,
-        status: VendorProfileStatus.CLAIMED,
-        slug: parsed.slug,
-        username: parsed.username,
-        website: parsed.website || null,
-        instagramUrl: parsed.instagramUrl || null,
-        tiktokUrl: parsed.tiktokUrl || null,
-        bio: parsed.bio || null,
-        formattedAddress: parsed.formattedAddress || null,
-        city: parsed.city,
-        state: parsed.state || null,
-        zipCode: parsed.zipCode || null,
-        locationLat: parsed.locationLat ?? null,
-        locationLng: parsed.locationLng ?? null,
-        googlePlaceId: parsed.googlePlaceId || null,
-        serviceRadiusMiles: parsed.serviceRadiusMiles,
-        weekendAvailable: parsed.weekendAvailable,
-        serviceAreaNotes: parsed.serviceAreaNotes || null,
-        availabilityNotes: parsed.availabilityNotes || null,
-        logoUrl: parsed.logoUrl || null,
-        logoCrop: logoCrop ?? Prisma.JsonNull,
-        photos: parsed.photoUrls,
-        photoCrops,
-        coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null,
-        coverPhotoCrop: coverPhotoCrop ?? Prisma.JsonNull
+    vendor = await db.$transaction(async (tx) => {
+      const savedVendor = existingVendor
+        ? await tx.vendorProfile.update({
+            where: { id: existingVendor.id },
+            data: {
+              name: parsed.name,
+              status: VendorProfileStatus.CLAIMED,
+              slug: parsed.slug,
+              username: parsed.username,
+              website: parsed.website || null,
+              instagramUrl: parsed.instagramUrl || null,
+              tiktokUrl: parsed.tiktokUrl || null,
+              bio: parsed.bio || null,
+              formattedAddress: parsed.formattedAddress || null,
+              city: parsed.city,
+              state: parsed.state || null,
+              zipCode: parsed.zipCode || null,
+              locationLat: parsed.locationLat ?? null,
+              locationLng: parsed.locationLng ?? null,
+              googlePlaceId: parsed.googlePlaceId || null,
+              serviceRadiusMiles: parsed.serviceRadiusMiles,
+              weekendAvailable: parsed.weekendAvailable,
+              serviceAreaNotes: parsed.serviceAreaNotes || null,
+              availabilityNotes: parsed.availabilityNotes || null,
+              logoUrl: parsed.logoUrl || null,
+              logoCrop: logoCrop ?? Prisma.JsonNull,
+              photos: parsed.photoUrls,
+              photoCrops,
+              coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null,
+              coverPhotoCrop: coverPhotoCrop ?? Prisma.JsonNull
+            }
+          })
+        : await tx.vendorProfile.create({
+            data: {
+              userId: existingPrimaryVendor ? null : session.user.id,
+              status: VendorProfileStatus.CLAIMED,
+              claimedAt: new Date(),
+              name: parsed.name,
+              slug: parsed.slug,
+              username: parsed.username,
+              website: parsed.website || null,
+              instagramUrl: parsed.instagramUrl || null,
+              tiktokUrl: parsed.tiktokUrl || null,
+              bio: parsed.bio || null,
+              formattedAddress: parsed.formattedAddress || null,
+              city: parsed.city,
+              state: parsed.state || null,
+              zipCode: parsed.zipCode || null,
+              locationLat: parsed.locationLat ?? null,
+              locationLng: parsed.locationLng ?? null,
+              googlePlaceId: parsed.googlePlaceId || null,
+              serviceRadiusMiles: parsed.serviceRadiusMiles,
+              weekendAvailable: parsed.weekendAvailable,
+              serviceAreaNotes: parsed.serviceAreaNotes || null,
+              availabilityNotes: parsed.availabilityNotes || null,
+              logoUrl: parsed.logoUrl || null,
+              logoCrop: logoCrop ?? Prisma.JsonNull,
+              photos: parsed.photoUrls,
+              photoCrops,
+              coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null,
+              coverPhotoCrop: coverPhotoCrop ?? Prisma.JsonNull
+            }
+          });
+
+      await tx.vendorProfileManager.upsert({
+        where: {
+          vendorProfileId_userId: {
+            vendorProfileId: savedVendor.id,
+            userId: session.user.id
           }
-        })
-      : await db.vendorProfile.create({
-          data: {
-            userId: existingPrimaryVendor ? null : session.user.id,
-            status: VendorProfileStatus.CLAIMED,
-            claimedAt: new Date(),
-            name: parsed.name,
-            slug: parsed.slug,
-            username: parsed.username,
-            website: parsed.website || null,
-            instagramUrl: parsed.instagramUrl || null,
-            tiktokUrl: parsed.tiktokUrl || null,
-            bio: parsed.bio || null,
-            formattedAddress: parsed.formattedAddress || null,
-            city: parsed.city,
-            state: parsed.state || null,
-            zipCode: parsed.zipCode || null,
-            locationLat: parsed.locationLat ?? null,
-            locationLng: parsed.locationLng ?? null,
-            googlePlaceId: parsed.googlePlaceId || null,
-            serviceRadiusMiles: parsed.serviceRadiusMiles,
-            weekendAvailable: parsed.weekendAvailable,
-            serviceAreaNotes: parsed.serviceAreaNotes || null,
-            availabilityNotes: parsed.availabilityNotes || null,
-            logoUrl: parsed.logoUrl || null,
-            logoCrop: logoCrop ?? Prisma.JsonNull,
-            photos: parsed.photoUrls,
-            photoCrops,
-            coverPhoto: parsed.photoUrls[0] ?? parsed.logoUrl ?? null,
-            coverPhotoCrop: coverPhotoCrop ?? Prisma.JsonNull
-          }
+        },
+        update: { role: "OWNER" },
+        create: {
+          role: "OWNER",
+          userId: session.user.id,
+          vendorProfileId: savedVendor.id
+        }
+      });
+
+      await tx.vendorCategory.deleteMany({ where: { vendorId: savedVendor.id } });
+      if (parsed.categoryIds.length > 0) {
+        await tx.vendorCategory.createMany({
+          data: parsed.categoryIds.map((categoryId) => ({ vendorId: savedVendor.id, categoryId })),
+          skipDuplicates: true
         });
+      }
+
+      return savedVendor;
+    });
   } catch (error) {
     securityLog("vendor_profile_upsert_failed", {
       code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : "unknown",
@@ -827,23 +865,6 @@ export async function upsertVendorProfileAction(formData: FormData) {
         : "Your vendor profile could not be saved. Please try again.",
       { newBusiness: isCreatingNewBusiness }
     );
-  }
-
-  const validVendorCategoryCount = await db.category.count({
-    where: { id: { in: parsed.categoryIds }, audience: CategoryAudience.VENDOR }
-  });
-  if (validVendorCategoryCount !== parsed.categoryIds.length) {
-    redirectWithVendorProfileError("One or more selected categories are invalid for vendors.", {
-      newBusiness: isCreatingNewBusiness
-    });
-  }
-
-  await db.vendorCategory.deleteMany({ where: { vendorId: vendor.id } });
-  if (parsed.categoryIds.length > 0) {
-    await db.vendorCategory.createMany({
-      data: parsed.categoryIds.map((categoryId) => ({ vendorId: vendor.id, categoryId })),
-      skipDuplicates: true
-    });
   }
 
   if (session.user.role === UserRole.BUYER) {
