@@ -98,6 +98,7 @@ function basePayload() {
     photoUrls: ["/api/vendor-media/gallery-one", "/api/vendor-media/gallery-two"],
     policiesJson: JSON.stringify([{ id: "policy_1", title: "Changes", body: "Final scope is confirmed before booking." }]),
     sectionOrder: ["hero", "portfolio", "all-services", "faq"],
+    sectionLabelsJson: JSON.stringify({ portfolio: "Our Work", faq: "Questions" }),
     serviceAreaNotes: "Serving Solano County and nearby Bay Area events.",
     servicesJson: JSON.stringify(services),
     state: "CA",
@@ -143,9 +144,10 @@ describe("storefront customization actions", () => {
         storefrontDraftJson: expect.objectContaining({
           aboutHeading: "Celebrations with feeling",
           hiddenOfferingIds: [serviceTwoId],
-          hiddenSections: ["reviews"],
+          hiddenSections: [],
           imageShape: "SOFT",
           palette: "DISCO",
+          sectionLabels: { portfolio: "Our Work", faq: "Questions" },
           services: expect.arrayContaining([
             expect.objectContaining({ id: serviceOneId, active: true, featured: true }),
             expect.objectContaining({ id: serviceTwoId, active: false, featured: false })
@@ -172,6 +174,7 @@ describe("storefront customization actions", () => {
         storefrontImageShape: "SOFT",
         storefrontOfferingOrder: [serviceTwoId, serviceOneId],
         storefrontPalette: "DISCO",
+        storefrontSectionLabels: { portfolio: "Our Work", faq: "Questions" },
         storefrontSectionOrder: ["hero", "portfolio", "all-services", "faq", "featured-services", "about", "how-it-works", "reviews", "final-quote"]
       })
     });

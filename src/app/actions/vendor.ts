@@ -14,6 +14,7 @@ import { friendlyValidationMessage } from "@/lib/validators/messages";
 import {
   isReservedStorefrontSlug,
   sanitizeHiddenStorefrontSections,
+  sanitizeStorefrontSectionLabels,
   sanitizeStorefrontSections,
   slugifyBusinessUrl,
   storefrontAccentColorFromPalette,
@@ -407,6 +408,7 @@ function storefrontCustomizationPayloadFromFormData(formData: FormData) {
     textTone: formData.get("textTone") || "AUTO",
     sectionOrder: formDataToArray(formData, "sectionOrder"),
     hiddenSections: formDataToArray(formData, "hiddenSections"),
+    sectionLabelsJson: formData.get("sectionLabelsJson") || undefined,
     faqJson: formData.get("faqJson") || undefined,
     policiesJson: formData.get("policiesJson") || undefined,
     bookingJson: formData.get("bookingJson") || undefined,
@@ -419,6 +421,7 @@ function storefrontCustomizationPayloadFromFormData(formData: FormData) {
 function prepareStorefrontCustomizationPayload(parsed: StorefrontCustomizationInput, existingOfferingIds: string[]) {
   const sanitizedSectionOrder = sanitizeStorefrontSections(parsed.sectionOrder);
   const sanitizedHiddenSections = sanitizeHiddenStorefrontSections(parsed.hiddenSections);
+  const sanitizedSectionLabels = sanitizeStorefrontSectionLabels(parseEditorJson(parsed.sectionLabelsJson));
   const storefrontPalette = normalizeStorefrontPalette(parsed.palette);
   const editorServices = parseEditorServices(parsed.servicesJson);
   const hiddenOfferingIds = editorServices
@@ -448,6 +451,7 @@ function prepareStorefrontCustomizationPayload(parsed: StorefrontCustomizationIn
     textTone: parsed.textTone,
     photoUrls: parsed.photoUrls,
     policies: parseEditorJson(parsed.policiesJson) ?? [],
+    sectionLabels: sanitizedSectionLabels,
     sectionOrder: sanitizedSectionOrder,
     serviceAreaNotes: parsed.serviceAreaNotes || "",
     services: editorServices.map((service) => ({
@@ -480,6 +484,7 @@ function prepareStorefrontCustomizationPayload(parsed: StorefrontCustomizationIn
     hiddenOfferingIds,
     orderedOfferingIds,
     sanitizedHiddenSections,
+    sanitizedSectionLabels,
     sanitizedSectionOrder,
     storefrontPalette
   };
@@ -590,6 +595,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     hiddenOfferingIds,
     orderedOfferingIds,
     sanitizedHiddenSections,
+    sanitizedSectionLabels,
     sanitizedSectionOrder,
     storefrontPalette
   } = prepareStorefrontCustomizationPayload(parsed, existingOfferingIds);
@@ -634,6 +640,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
       storefrontFaqJson: parseEditorJson(parsed.faqJson) ?? Prisma.JsonNull,
       storefrontPoliciesJson: parseEditorJson(parsed.policiesJson) ?? Prisma.JsonNull,
       storefrontBookingJson: parseEditorJson(parsed.bookingJson) ?? Prisma.JsonNull,
+      storefrontSectionLabels: Object.keys(sanitizedSectionLabels).length ? sanitizedSectionLabels : Prisma.JsonNull,
       storefrontFeaturedOfferingIds: featuredOfferingIds,
       storefrontHiddenOfferingIds: hiddenOfferingIds,
       storefrontOfferingOrder: [...orderedOfferingIds, ...existingOfferingIds.filter((id) => !orderedOfferingIds.includes(id))]

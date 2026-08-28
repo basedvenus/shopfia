@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CopyStorefrontLinkButton } from "@/components/vendor/copy-storefront-link-button";
 import {
   APPROVED_STOREFRONT_SECTIONS,
+  REQUIRED_STOREFRONT_SECTIONS,
   STOREFRONT_FONT_STYLES,
   STOREFRONT_IMAGE_SHAPES,
   STOREFRONT_PALETTES,
@@ -34,6 +35,8 @@ import {
   coverageAreaLabels,
   getStorefrontFontFamilies,
   normalizeStorefrontPalette,
+  sanitizeHiddenStorefrontSections,
+  sanitizeStorefrontSectionLabels,
   sanitizeStorefrontSections
 } from "@/lib/businesses";
 import { formatCurrency } from "@/lib/utils";
@@ -99,6 +102,7 @@ type CustomizerBusiness = {
   storefrontOfferingOrder: string[];
   storefrontPalette: string;
   storefrontPoliciesJson: unknown;
+  storefrontSectionLabels: unknown;
   storefrontSectionOrder: string[];
   storefrontTagline: string | null;
   storefrontTextTone: string;
@@ -124,6 +128,7 @@ type FormState = {
   palette: string;
   photoUrls: string[];
   policies: PolicyItem[];
+  sectionLabels: Partial<Record<(typeof APPROVED_STOREFRONT_SECTIONS)[number], string>>;
   sectionOrder: string[];
   serviceAreaNotes: string;
   services: EditorService[];
@@ -135,6 +140,7 @@ type FormState = {
 };
 
 const editableSections = APPROVED_STOREFRONT_SECTIONS;
+const requiredSections = new Set<string>(REQUIRED_STOREFRONT_SECTIONS);
 const toolLabels: Record<EditorTool, string> = {
   content: "Content",
   services: "Services",
@@ -179,7 +185,13 @@ export function StorefrontCustomizer({
     () => form.sectionOrder.filter((section) => !form.hiddenSections.includes(section)),
     [form.hiddenSections, form.sectionOrder]
   );
-  const activeSectionLabel = STOREFRONT_SECTION_LABELS[activeSection as keyof typeof STOREFRONT_SECTION_LABELS] ?? "Section";
+  const sectionLabel = useCallback(
+    (section: string) =>
+      form.sectionLabels[section as keyof typeof STOREFRONT_SECTION_LABELS] ??
+      STOREFRONT_SECTION_LABELS[section as keyof typeof STOREFRONT_SECTION_LABELS] ??
+      "Section",
+    [form.sectionLabels]
+  );
   const panelSection = activeTool === "services" ? "all-services" : activeTool === "gallery" ? "portfolio" : activeSection;
   const panelTitle = activeTool === "design"
     ? "Design"
@@ -223,6 +235,7 @@ export function StorefrontCustomizer({
       fontStyle: form.fontStyle,
       hiddenSections: form.hiddenSections,
       imageShape: form.imageShape,
+      sectionLabelsJson: JSON.stringify(form.sectionLabels),
       instagramUrl: form.instagramUrl,
       intent: "draft",
       layout: "EDITORIAL",
@@ -328,13 +341,25 @@ export function StorefrontCustomizer({
   }
 
   function toggleSection(section: string) {
-    if (section === "hero") return;
+    if (requiredSections.has(section)) return;
     update(
       "hiddenSections",
       form.hiddenSections.includes(section)
         ? form.hiddenSections.filter((item) => item !== section)
         : [...form.hiddenSections, section]
     );
+  }
+
+  function updateSectionLabel(section: string, label: string) {
+    const fallback = STOREFRONT_SECTION_LABELS[section as keyof typeof STOREFRONT_SECTION_LABELS] ?? "Section";
+    const trimmed = label.trim();
+    const next = { ...form.sectionLabels };
+    if (!trimmed || trimmed === fallback) {
+      delete next[section as keyof typeof STOREFRONT_SECTION_LABELS];
+    } else {
+      next[section as keyof typeof STOREFRONT_SECTION_LABELS] = trimmed.slice(0, 40);
+    }
+    update("sectionLabels", next);
   }
 
   function updateService(id: string, patch: Partial<EditorService>) {
@@ -412,6 +437,7 @@ export function StorefrontCustomizer({
       <input type="hidden" name="buttonStyle" value="PILL" />
       <input type="hidden" name="imageShape" value={form.imageShape} />
       <input type="hidden" name="textTone" value={form.textTone} />
+      <input type="hidden" name="sectionLabelsJson" value={JSON.stringify(form.sectionLabels)} />
       <input type="hidden" name="faqJson" value={faqJson} />
       <input type="hidden" name="policiesJson" value={policiesJson} />
       <input type="hidden" name="bookingJson" value={bookingJson} />
@@ -528,11 +554,11 @@ export function StorefrontCustomizer({
                   } ${hidden ? "opacity-55" : ""}`}
                 >
                   <GripVertical className="h-4 w-4" />
-                  <span className="font-semibold">{STOREFRONT_SECTION_LABELS[section as keyof typeof STOREFRONT_SECTION_LABELS]}</span>
+                  <span className="font-semibold">{sectionLabel(section)}</span>
                   <span
                     role="button"
                     tabIndex={0}
-                    className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${hidden ? "border-[#eadbd7] bg-white text-muted-foreground" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}
+                    className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${requiredSections.has(section) ? "border-[#eadbd7] bg-white text-muted-foreground" : hidden ? "border-[#eadbd7] bg-white text-muted-foreground" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}
                     onClick={(event) => {
                       event.stopPropagation();
                       toggleSection(section);
@@ -544,7 +570,7 @@ export function StorefrontCustomizer({
                       }
                     }}
                   >
-                    {hidden ? "Hidden" : "Visible"}
+                    {requiredSections.has(section) ? "Required" : hidden ? "Hidden" : "Visible"}
                   </span>
                 </button>
               );
@@ -567,6 +593,7 @@ export function StorefrontCustomizer({
               moveService={moveService}
               previewMode={previewMode}
               removePhoto={removePhoto}
+              sectionLabel={sectionLabel}
               setActiveSection={selectSection}
               setDraggedPhotoIndex={setDraggedPhotoIndex}
               setServiceVisible={setServiceVisible}
@@ -612,25 +639,35 @@ export function StorefrontCustomizer({
               {activeTool === "design" ? (
                 <DesignControls form={form} update={update} />
               ) : (
-                <SectionEditor
-                  activeSection={panelSection}
-                  business={business}
-                  collapsedFaqIds={collapsedFaqIds}
-                  form={form}
-                  mediaUploadEndpoint={mediaUploadEndpoint}
-                  moveFaq={moveFaq}
-                  movePhoto={movePhoto}
-                  markDirty={markDirty}
-                  removeFaq={removeFaq}
-                  removePhoto={removePhoto}
-                  toggleFaqCollapsed={toggleFaqCollapsed}
-                  update={update}
-                  updateService={updateService}
-                  moveService={moveService}
-                  setDraggedPhotoIndex={setDraggedPhotoIndex}
-                  draggedPhotoIndex={draggedPhotoIndex}
-                  setServiceVisible={setServiceVisible}
-                />
+                <PanelStack>
+                  <SectionVisibilityControls
+                    hidden={form.hiddenSections.includes(panelSection)}
+                    label={sectionLabel(panelSection)}
+                    required={requiredSections.has(panelSection)}
+                    section={panelSection}
+                    toggleSection={toggleSection}
+                    updateSectionLabel={updateSectionLabel}
+                  />
+                  <SectionEditor
+                    activeSection={panelSection}
+                    business={business}
+                    collapsedFaqIds={collapsedFaqIds}
+                    form={form}
+                    mediaUploadEndpoint={mediaUploadEndpoint}
+                    moveFaq={moveFaq}
+                    movePhoto={movePhoto}
+                    markDirty={markDirty}
+                    removeFaq={removeFaq}
+                    removePhoto={removePhoto}
+                    toggleFaqCollapsed={toggleFaqCollapsed}
+                    update={update}
+                    updateService={updateService}
+                    moveService={moveService}
+                    setDraggedPhotoIndex={setDraggedPhotoIndex}
+                    draggedPhotoIndex={draggedPhotoIndex}
+                    setServiceVisible={setServiceVisible}
+                  />
+                </PanelStack>
               )}
             </div>
           )}
@@ -667,7 +704,7 @@ function createInitialState(business: CustomizerBusiness): FormState {
     coverPhoto: draft?.coverPhoto ?? business.coverPhoto ?? business.photos[0] ?? "",
     faqs: draft?.faqs ?? readFaqs(business.storefrontFaqJson),
     fontStyle: draft?.fontStyle ?? business.storefrontFontStyle,
-    hiddenSections: draft?.hiddenSections ?? business.storefrontHiddenSections,
+    hiddenSections: sanitizeHiddenStorefrontSections(draft?.hiddenSections ?? business.storefrontHiddenSections),
     imageShape: draft?.imageShape ?? business.storefrontImageShape,
     instagramUrl: draft?.instagramUrl ?? business.instagramUrl ?? "",
     logoUrl: draft?.logoUrl ?? business.logoUrl ?? "",
@@ -675,6 +712,7 @@ function createInitialState(business: CustomizerBusiness): FormState {
     palette: normalizeStorefrontPalette(draft?.palette ?? business.storefrontPalette),
     photoUrls: draft?.photoUrls ?? [...business.photos, "", "", "", "", "", ""].slice(0, 10),
     policies: draft?.policies ?? readPolicies(business.storefrontPoliciesJson),
+    sectionLabels: draft?.sectionLabels ?? sanitizeStorefrontSectionLabels(business.storefrontSectionLabels),
     sectionOrder: draft?.sectionOrder ?? sanitizeStorefrontSections(business.storefrontSectionOrder),
     serviceAreaNotes: draft?.serviceAreaNotes ?? business.serviceAreaNotes ?? "",
     services: applyDraftServiceDisplay(
@@ -882,6 +920,42 @@ function SectionEditor({
   );
 }
 
+function SectionVisibilityControls({
+  hidden,
+  label,
+  required,
+  section,
+  toggleSection,
+  updateSectionLabel
+}: {
+  hidden: boolean;
+  label: string;
+  required: boolean;
+  section: string;
+  toggleSection: (section: string) => void;
+  updateSectionLabel: (section: string, label: string) => void;
+}) {
+  return (
+    <div className="grid gap-3 rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3">
+      <Field label="Section name">
+        <Input
+          value={label}
+          onChange={(event) => updateSectionLabel(section, event.target.value)}
+          placeholder={STOREFRONT_SECTION_LABELS[section as keyof typeof STOREFRONT_SECTION_LABELS] ?? "Section"}
+        />
+      </Field>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs leading-5 text-muted-foreground">
+          {required ? "Required on every ShopFia storefront." : hidden ? "Hidden from the public storefront." : "Visible on the public storefront."}
+        </p>
+        <Button type="button" variant="secondary" size="sm" disabled={required} onClick={() => toggleSection(section)}>
+          {required ? "Required" : hidden ? "Restore section" : "Hide section"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function ServiceEditor({
   index,
   moveService,
@@ -1083,6 +1157,7 @@ function StorefrontPreview({
   moveService,
   previewMode,
   removePhoto,
+  sectionLabel,
   setActiveSection,
   setDraggedPhotoIndex,
   setServiceVisible,
@@ -1099,6 +1174,7 @@ function StorefrontPreview({
   moveService: (id: string, direction: -1 | 1) => void;
   previewMode: "desktop" | "mobile";
   removePhoto: (index: number) => void;
+  sectionLabel: (section: string) => string;
   setActiveSection: (section: string) => void;
   setDraggedPhotoIndex: (index: number | null) => void;
   setServiceVisible: (id: string, visible: boolean) => void;
@@ -1175,7 +1251,14 @@ function StorefrontPreview({
           </div>
         </div>
         <div className={`flex gap-1 overflow-x-auto border-t px-3 py-2 text-sm ${theme.navClass}`}>
-          {["Home", "Services", "Portfolio", "About", "Reviews", "FAQ"].map((item) => <span key={item} className="rounded-full px-3 py-1" style={item === "Home" ? theme.activeNavItemStyle : undefined}>{item}</span>)}
+          {[
+            ["Home", "Home"],
+            [sectionLabel("all-services"), "Services"],
+            [sectionLabel("portfolio"), "Portfolio"],
+            [sectionLabel("about"), "About"],
+            [sectionLabel("reviews"), "Reviews"],
+            [sectionLabel("faq"), "FAQ"]
+          ].map(([item, defaultLabel]) => <span key={defaultLabel} className="rounded-full px-3 py-1" style={defaultLabel === "Home" ? theme.activeNavItemStyle : undefined}>{item}</span>)}
         </div>
         <section className={`relative m-4 grid min-h-[390px] overflow-hidden bg-[#211815] text-white ${theme.heroRadius} ${isMobile ? "" : "md:grid-cols-[1fr_0.55fr]"}`}>
           {form.coverPhoto ? <img src={form.coverPhoto} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
@@ -1216,7 +1299,7 @@ function StorefrontPreview({
       <div className={`bg-gradient-to-br ${palette.className} p-5`}>
         {visibleSections.filter((section) => section !== "hero").map((section) => {
           if (section === "featured-services") return (
-            <PreviewSection key={section} active={activeSection === section} testId="preview-section-featured-services" theme={theme} title="Featured services" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-featured-services" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               <ServiceGrid
                 editable={activeSection === section}
                 mode="featured"
@@ -1229,7 +1312,7 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "all-services") return (
-            <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title="All services" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               <ServiceGrid
                 editable={activeSection === section}
                 mode="visibility"
@@ -1242,7 +1325,7 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "portfolio") return (
-            <PreviewSection key={section} active={activeSection === section} testId="preview-section-portfolio" theme={theme} title="Portfolio" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-portfolio" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               {activeSection === section ? (
                 <div className="grid gap-3">
                   <ImageUploadField
@@ -1304,13 +1387,13 @@ function StorefrontPreview({
               active={activeSection === section}
               testId="preview-section-about"
               theme={theme}
-              title={activeSection === section ? "" : form.aboutHeading || "About Us"}
+              title={activeSection === section ? "" : form.aboutHeading || sectionLabel(section)}
               onClick={() => setActiveSection(section)}
             >
               {activeSection === section ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   <div>
-                    <InlineTextInput ariaLabel="About heading" className="text-2xl font-semibold" onChange={(value) => update("aboutHeading", value)} placeholder="About Us" style={theme.headingStyle} value={form.aboutHeading} />
+                    <InlineTextInput ariaLabel="About heading" className="text-2xl font-semibold" onChange={(value) => update("aboutHeading", value)} placeholder={sectionLabel(section)} style={theme.headingStyle} value={form.aboutHeading} />
                     <InlineTextarea ariaLabel="About Us text" className={`mt-3 text-sm leading-6 ${theme.copyClass}`} onChange={(value) => update("bio", value)} placeholder="Tell customers about your business" value={form.bio} />
                   </div>
                   <div>
@@ -1326,7 +1409,7 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "how-it-works") return (
-            <PreviewSection key={section} active={activeSection === section} testId="preview-section-how-it-works" theme={theme} title="How it works" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-how-it-works" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               {activeSection === section ? (
                 <div className="grid gap-3">
                   <InlineTextarea ariaLabel="Booking process" onChange={(value) => update("booking", { ...form.booking, process: value })} placeholder="Describe how booking works" value={form.booking.process} />
@@ -1338,9 +1421,9 @@ function StorefrontPreview({
               )}
             </PreviewSection>
           );
-          if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} testId="preview-section-reviews" theme={theme} title="Verified reviews" onClick={() => setActiveSection(section)}><p>Reviews are synced from completed ShopFia bookings.</p></PreviewSection>;
+          if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} testId="preview-section-reviews" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}><p>Reviews are synced from completed ShopFia bookings.</p></PreviewSection>;
           if (section === "faq") return (
-            <PreviewSection key={section} active={activeSection === section} testId="preview-section-faq" theme={theme} title="FAQ" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-faq" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               {activeSection === section ? (
                 <div className="grid gap-4">
                   {form.faqs.map((faq) => (
@@ -1349,7 +1432,7 @@ function StorefrontPreview({
                       <InlineTextarea ariaLabel="FAQ answer" onChange={(value) => updateFaq(faq.id, { answer: value })} placeholder="Answer" value={faq.answer} />
                     </div>
                   ))}
-                  <Button type="button" variant="secondary" onClick={() => update("faqs", [...form.faqs, { id: crypto.randomUUID(), question: "New question", answer: "Answer this in your own words." }])}>
+                  <Button type="button" variant="secondary" style={theme.secondaryButtonStyle} onClick={() => update("faqs", [...form.faqs, { id: crypto.randomUUID(), question: "New question", answer: "Answer this in your own words." }])}>
                     <Plus className="h-4 w-4" />Add FAQ
                   </Button>
                 </div>
@@ -1359,18 +1442,18 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "final-quote") return (
-            <PreviewSection key={section} active={activeSection === section} testId="preview-section-final-quote" theme={theme} title="Ready for a quote?" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-final-quote" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               {activeSection === section ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   <InlineTextarea ariaLabel="Availability notes" onChange={(value) => update("availabilityNotes", value)} placeholder="Availability notes" value={form.availabilityNotes} />
                   <InlineTextarea ariaLabel="Deposit or payment note" onChange={(value) => update("booking", { ...form.booking, deposit: value })} placeholder="Deposit or payment note" value={form.booking.deposit} />
                   <div className="md:col-span-2">
-                    <Button type="button"><Send className="h-4 w-4" />Get a quote</Button>
+                    <Button type="button" style={theme.heroCtaStyle}><Send className="h-4 w-4" />Get a quote</Button>
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-3">
-                  <Button type="button"><Send className="h-4 w-4" />Get a quote</Button>
+                  <Button type="button" style={theme.heroCtaStyle}><Send className="h-4 w-4" />Get a quote</Button>
                   {form.availabilityNotes ? <p className={theme.mutedClass}>{form.availabilityNotes}</p> : null}
                 </div>
               )}
@@ -1602,6 +1685,7 @@ function getPreviewTheme(form: FormState) {
     platformBarStyle: { backgroundColor: `${accent}14`, borderColor: `${accent}33` } as CSSProperties,
     profileClass: isDark ? "bg-[#201b1e] text-white" : "bg-white text-[#2f2626]",
     previewCardStyle: { borderColor: `${accent}44` } as CSSProperties,
+    secondaryButtonStyle: { backgroundColor: `${accent}14`, borderColor: `${accent}66`, color: isDark ? "#ffffff" : "#4b403c" } as CSSProperties,
     sectionRadius,
     selectedControlStyle: { borderColor: accent, backgroundColor: `${accent}14` } as CSSProperties,
     shellClass: isDark ? "bg-[#151113] text-white" : "bg-white text-[#2f2626]",

@@ -61,6 +61,7 @@ export default async function StorefrontCustomizerPage({
       storefrontDraftJson: true,
       storefrontFaqJson: true,
       storefrontPoliciesJson: true,
+      storefrontSectionLabels: true,
       storefrontBookingJson: true,
       storefrontFeaturedOfferingIds: true,
       storefrontOfferingOrder: true,

@@ -46,6 +46,7 @@ export async function getVendorProfileBySlug(slug: string) {
       storefrontOfferingOrder: true,
       storefrontPalette: true,
       storefrontPoliciesJson: true,
+      storefrontSectionLabels: true,
       storefrontSectionOrder: true,
       storefrontTagline: true,
       storefrontTextTone: true,

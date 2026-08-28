@@ -180,6 +180,19 @@ export const STOREFRONT_SECTION_LABELS: Record<(typeof APPROVED_STOREFRONT_SECTI
   "final-quote": "Final Quote Section"
 };
 
+export const REQUIRED_STOREFRONT_SECTIONS = ["hero", "reviews", "final-quote"] as const;
+
+export function sanitizeStorefrontSectionLabels(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const approved = new Set<string>(APPROVED_STOREFRONT_SECTIONS);
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([section, label]) => [section === "services" ? "all-services" : section, String(label ?? "").trim()])
+      .filter(([section, label]) => approved.has(section) && label.length > 0)
+      .map(([section, label]) => [section, label.slice(0, 40)])
+  ) as Partial<Record<(typeof APPROVED_STOREFRONT_SECTIONS)[number], string>>;
+}
+
 export function slugifyBusinessUrl(value: string) {
   return value
     .trim()
@@ -267,7 +280,7 @@ export function storefrontAccentColorFromPalette(value: string | null | undefine
 }
 
 export function sanitizeHiddenStorefrontSections(sections: string[]) {
-  const required = new Set(["hero"]);
+  const required = new Set<string>(REQUIRED_STOREFRONT_SECTIONS);
   const approved = new Set<string>(APPROVED_STOREFRONT_SECTIONS);
   return Array.from(new Set(sections.map((section) => section === "services" ? "all-services" : section).filter((section) => approved.has(section) && !required.has(section))));
 }

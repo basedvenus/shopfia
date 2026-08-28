@@ -1,4 +1,5 @@
 import { Heart } from "lucide-react";
+import type { CSSProperties } from "react";
 import { toggleFavoriteAction, type FavoriteTargetType } from "@/app/actions/favorites";
 import { Button } from "@/components/ui/button";
 
@@ -7,12 +8,14 @@ type FavoriteToggleProps = {
   label?: string;
   targetId: string;
   targetType: FavoriteTargetType;
+  style?: CSSProperties;
   variant?: "floating" | "icon" | "pill";
 };
 
 export function FavoriteToggle({
   isSaved = false,
   label,
+  style,
   targetId,
   targetType,
   variant = "icon"
@@ -31,6 +34,7 @@ export function FavoriteToggle({
           size="sm"
           variant="secondary"
           className="h-8 min-h-8 rounded-full bg-white/90 px-3 text-[13px] shadow-sm hover:bg-white sm:h-9 sm:min-h-9 sm:px-3.5 sm:text-sm"
+          style={style}
           aria-pressed={isSaved}
         >
           <Heart className={`h-4 w-4 ${isSaved ? "fill-current text-primary" : ""}`} />
@@ -46,6 +50,7 @@ export function FavoriteToggle({
         <button
           type="submit"
           className="grid h-[34px] w-[34px] place-items-center rounded-full border border-white/75 bg-white/90 text-foreground shadow-[0_4px_14px_rgba(47,38,38,0.16)] backdrop-blur transition hover:bg-white sm:h-9 sm:w-9"
+          style={style}
           aria-label={label ?? (isSaved ? "Unsave" : "Save")}
           aria-pressed={isSaved}
         >
@@ -60,6 +65,7 @@ export function FavoriteToggle({
       <button
         type="submit"
         className="grid h-9 w-9 place-items-center rounded-full border border-white/80 bg-white/90 text-foreground shadow-sm backdrop-blur transition hover:scale-105 hover:bg-white sm:h-10 sm:w-10"
+        style={style}
         aria-label={label ?? (isSaved ? "Unsave" : "Save")}
         aria-pressed={isSaved}
       >

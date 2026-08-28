@@ -30,7 +30,7 @@ import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorProfileBySlug } from "@/lib/data/vendor";
 import { getVendorTrustStatus } from "@/lib/vendor-status";
-import { STOREFRONT_PALETTES, coverageAreaLabels, getStorefrontFontFamilies, getStorefrontPalette, sanitizeStorefrontSections, storefrontUrl } from "@/lib/businesses";
+import { STOREFRONT_PALETTES, STOREFRONT_SECTION_LABELS, coverageAreaLabels, getStorefrontFontFamilies, getStorefrontPalette, sanitizeHiddenStorefrontSections, sanitizeStorefrontSectionLabels, sanitizeStorefrontSections, storefrontUrl } from "@/lib/businesses";
 
 export const dynamic = "force-dynamic";
 
@@ -163,9 +163,10 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   const serviceAreaLabel = [vendor.city, vendor.state].filter(Boolean).join(", ");
   const coverageAreas = coverageAreaLabels(vendor.serviceAreaNotes, serviceAreaLabel || vendor.city);
   const publicStorefrontUrl = storefrontUrl(vendor.slug);
-  const sectionOrder = sanitizeStorefrontSections(vendor.storefrontSectionOrder).filter(
-    (section) => !vendor.storefrontHiddenSections.includes(section)
-  );
+  const hiddenSections = sanitizeHiddenStorefrontSections(vendor.storefrontHiddenSections);
+  const sectionLabels = sanitizeStorefrontSectionLabels(vendor.storefrontSectionLabels);
+  const sectionLabel = (section: keyof typeof STOREFRONT_SECTION_LABELS) => sectionLabels[section] ?? STOREFRONT_SECTION_LABELS[section];
+  const sectionOrder = sanitizeStorefrontSections(vendor.storefrontSectionOrder).filter((section) => !hiddenSections.includes(section));
   const sectionPriority = (section: string) => sectionOrder.indexOf(section) === -1 ? 999 : sectionOrder.indexOf(section);
   const showSection = (section: string) => sectionOrder.includes(section as never);
   const visibleOfferings = vendor.offerings.filter((offering) => !vendor.storefrontHiddenOfferingIds.includes(offering.id));
@@ -326,8 +327,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 </Link>
               </Button>
             ) : null}
-            <CopyStorefrontLinkButton label="Share" url={publicStorefrontUrl} className="h-9 bg-white/92 px-3" />
-            <FavoriteToggle targetType="vendor" targetId={vendor.id} isSaved={isSavedVendor} variant="pill" label={isSavedVendor ? "Saved" : "Save"} />
+            <CopyStorefrontLinkButton label="Share" url={publicStorefrontUrl} className="h-9 px-3" style={theme.secondaryButtonStyle} />
+            <FavoriteToggle targetType="vendor" targetId={vendor.id} isSaved={isSavedVendor} variant="pill" label={isSavedVendor ? "Saved" : "Save"} style={theme.secondaryButtonStyle} />
             {!isUnclaimed ? (
               <Button asChild size="sm" style={theme.ctaStyle}>
                 <a href="#inquiry">
@@ -341,11 +342,11 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <nav className="sticky top-16 z-10 flex gap-1 overflow-x-auto border-t bg-white px-3 py-1.5 text-sm font-medium backdrop-blur" style={theme.navStyle}>
           {[
             ["#storefront-home", "Home"],
-            ["#services", "Services"],
-            ["#portfolio", "Portfolio"],
-            ["#about", "About"],
-            ["#reviews", "Reviews"],
-            ["#faq", "FAQ"]
+            ["#services", sectionLabel("all-services")],
+            ["#portfolio", sectionLabel("portfolio")],
+            ["#about", sectionLabel("about")],
+            ["#reviews", sectionLabel("reviews")],
+            ["#faq", sectionLabel("faq")]
           ].map(([href, label]) => (
             <a
               key={href}
@@ -452,7 +453,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       <section id="featured-services" className="scroll-mt-28 space-y-4" style={{ order: sectionPriority("featured-services") }}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Featured Services</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">{sectionLabel("featured-services")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               A curated first look at the services this vendor wants customers to discover first.
             </p>
@@ -482,7 +483,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       <section id="portfolio" className="scroll-mt-28 space-y-5" style={{ order: sectionPriority("portfolio") }}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Portfolio</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">{sectionLabel("portfolio")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               A browsable look at this vendor&apos;s uploaded work, styled and ordered from the storefront editor.
             </p>
@@ -513,7 +514,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       <section id="services" className="scroll-mt-28 space-y-4" style={{ order: sectionPriority("all-services") }}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Services and Packages</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">{sectionLabel("all-services")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Click a tile to see the work, pricing anchor, and what the client booked.
             </p>
@@ -539,7 +540,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={theme.accentTextStyle}>Booking</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={theme.headingStyle}>How It Works</h2>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{sectionLabel("how-it-works")}</h2>
             </div>
             <Badge variant="outline" className="rounded-full" style={theme.outlineBadgeStyle}>ShopFia-supported quotes</Badge>
           </div>
@@ -584,7 +585,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         {showSection("reviews") ? (
         <div id="reviews" className="space-y-4 scroll-mt-28" style={{ order: sectionPriority("reviews") }}>
             <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold tracking-tight">Verified Reviews</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">{sectionLabel("reviews")}</h2>
             <div className="text-sm text-muted-foreground">
               {verifiedReviewCount > 0
                 ? `${verifiedAverageRating.toFixed(1)} average from ${verifiedReviewCount} booking-based review${verifiedReviewCount === 1 ? "" : "s"}`
@@ -653,7 +654,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       <section id="faq" className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: sectionPriority("faq") }}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>FAQ</h2>
+            <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{sectionLabel("faq")}</h2>
             <p className={`mt-1 text-sm leading-6 ${theme.copyClass}`}>
               ShopFia keeps quoting, messaging, saved services, reviews, and booking records connected to your account.
             </p>
@@ -819,11 +820,11 @@ function ServiceListingGrid({
               </div>
               <div className="grid gap-3 p-4">
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="rounded-full">
+                  <Badge variant="outline" className="rounded-full" style={theme.outlineBadgeStyle}>
                     {offering.category.name}
                   </Badge>
                   {offering.eventCategories.slice(0, 1).map((eventCategory) => (
-                    <Badge key={eventCategory.id} variant="outline" className="rounded-full">
+                    <Badge key={eventCategory.id} variant="outline" className="rounded-full" style={theme.outlineBadgeStyle}>
                       {eventCategory.category.name}
                     </Badge>
                   ))}
@@ -853,6 +854,7 @@ function ServiceListingGrid({
                 targetId={offering.id}
                 isSaved={savedOfferingIds.has(offering.id)}
                 variant="floating"
+                style={theme.floatingButtonStyle}
               />
             </div>
           </article>
@@ -973,8 +975,10 @@ function getStorefrontTheme({
     outlineBadgeStyle: { backgroundColor: accentWash, borderColor: `${accent}66`, color: isDark ? "#ffffff" : "#4b403c" } as CSSProperties,
     platformBarStyle: { backgroundColor: accentWash, borderColor: `${accent}33`, color: isDark ? "#ffffffcc" : "#5f5550" } as CSSProperties,
     profileMetricClass: isDark ? "text-white/78" : "text-[#4b403c]",
+    secondaryButtonStyle: { backgroundColor: accentWash, borderColor: `${accent}66`, color: isDark ? "#ffffff" : "#4b403c" } as CSSProperties,
     sectionRadius,
     shellClass: isDark ? "text-white" : "text-[#2f2626]",
+    floatingButtonStyle: { backgroundColor: isDark ? "#201b1eee" : "#fffffff2", borderColor: `${accent}66`, color: accent } as CSSProperties,
     softChipStyle: { backgroundColor: accentSoft, color: isDark ? "#ffffffcc" : "#5f5550" } as CSSProperties
   };
 }

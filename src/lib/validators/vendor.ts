@@ -96,6 +96,7 @@ export const storefrontCustomizationSchema = z.object({
   textTone: z.enum(["AUTO", "DARK", "LIGHT"]).default("AUTO"),
   sectionOrder: z.array(z.string().max(40)).max(9).default([]),
   hiddenSections: z.array(z.string().max(40)).max(8).default([]),
+  sectionLabelsJson: z.string().max(10000).optional().or(z.literal("")),
   faqJson: z.string().max(25000).optional().or(z.literal("")),
   policiesJson: z.string().max(25000).optional().or(z.literal("")),
   bookingJson: z.string().max(25000).optional().or(z.literal("")),

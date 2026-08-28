@@ -368,6 +368,7 @@ model VendorProfile {
   storefrontFaqJson         Json?
   storefrontPoliciesJson    Json?
   storefrontBookingJson     Json?
+  storefrontSectionLabels    Json?
   storefrontFeaturedOfferingIds String[]           @default([])
   storefrontHiddenOfferingIds String[]             @default([])
   storefrontOfferingOrder   String[]              @default([])
