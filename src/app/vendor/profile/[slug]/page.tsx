@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import {
   BadgeCheck,
   ExternalLink,
@@ -151,6 +152,12 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   const faqItems = readStorefrontFaqs(vendor.storefrontFaqJson);
   const bookingInfo = readStorefrontBooking(vendor.storefrontBookingJson);
   const policies = readStorefrontPolicies(vendor.storefrontPoliciesJson);
+  const theme = getStorefrontTheme({
+    fontStyle: vendor.storefrontFontStyle,
+    imageShape: vendor.storefrontImageShape,
+    palette: vendor.storefrontPalette,
+    textTone: vendor.storefrontTextTone
+  });
   const isFollowingVendor =
     currentUserId && vendor.user && currentUserId !== vendor.user.id
       ? Boolean(
@@ -195,14 +202,14 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className={`flex flex-col gap-8 rounded-[1.25rem] bg-gradient-to-br ${palette.className} p-0 md:p-2`}>
+    <div className={`flex flex-col gap-8 rounded-[1.25rem] bg-gradient-to-br ${palette.className} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
       <header className="overflow-hidden rounded-[1rem] border border-[#2f2626]/15 bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]">
         <div className="flex items-center justify-between gap-3 border-b border-[#eadbd7] bg-[#fffaf8] px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7a625b]">
           <span>ShopFia Storefront</span>
           <span className="hidden sm:inline">Verified identity, saved services, quotes, and bookings</span>
         </div>
         <div className="grid gap-3 p-3 md:grid-cols-[auto_1fr_auto] md:items-center md:p-4">
-          <div className="relative h-14 w-14 overflow-hidden rounded-full border border-[#eadbd7] bg-[#f8ece9] md:h-16 md:w-16">
+          <div className={`relative h-14 w-14 overflow-hidden border border-[#eadbd7] bg-[#f8ece9] md:h-16 md:w-16 ${theme.logoRadius}`}>
             {vendor.logoUrl ? (
               <Image src={vendor.logoUrl} alt={`${vendor.name} logo`} fill className="object-cover" />
             ) : hero ? (
@@ -216,7 +223,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{vendor.name}</h1>
+              <h1 className="text-xl font-semibold tracking-tight md:text-2xl" style={theme.headingStyle}>{vendor.name}</h1>
               {trustStatus.tone === "verified" || vendor.verified ? (
                 <Badge variant="accent" className="gap-1 rounded-full">
                   <BadgeCheck className="h-3.5 w-3.5" />
@@ -299,7 +306,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         </nav>
       </header>
 
-      <section id="storefront-home" className="relative left-1/2 right-1/2 -mx-[50vw] w-screen scroll-mt-28 overflow-hidden bg-[#211815] text-white" style={{ order: sectionPriority("hero") }}>
+      <section id="storefront-home" className={`relative left-1/2 right-1/2 -mx-[50vw] w-screen scroll-mt-28 overflow-hidden bg-[#211815] text-white ${theme.heroRadius}`} style={{ order: sectionPriority("hero") }}>
         <div className="absolute inset-0">
           {hero ? (
             <Image src={hero} alt={vendor.name} fill priority className="object-cover opacity-58" />
@@ -318,7 +325,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               ))}
             </div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">Featured storefront</p>
-            <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] mt-4 max-w-4xl text-5xl font-normal leading-[0.94] tracking-normal md:text-6xl lg:text-7xl">
+            <h2 className="mt-4 max-w-4xl text-5xl font-normal leading-[0.94] tracking-normal md:text-6xl lg:text-7xl" style={theme.headingStyle}>
               {heroHeadline}
             </h2>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-white/82">
@@ -362,15 +369,15 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       </section>
 
       {showSection("about") ? (
-        <section id="about" className="grid scroll-mt-28 gap-5 bg-white/82 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-8" style={{ order: sectionPriority("about") }}>
+        <section id="about" className={`grid scroll-mt-28 gap-5 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-8 ${theme.cardClass} ${theme.sectionRadius}`} style={{ order: sectionPriority("about") }}>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/75">About</p>
-            <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] mt-3 text-4xl font-normal tracking-normal">
+            <h2 className="mt-3 text-4xl font-normal tracking-normal" style={theme.headingStyle}>
               {aboutHeading}
             </h2>
           </div>
           <div className="grid gap-4">
-            <p className="text-base leading-8 text-[#5f5550]">
+            <p className={`text-base leading-8 ${theme.copyClass}`}>
               {vendor.bio ?? "This storefront is being prepared with business details, services, and recent work."}
             </p>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -398,6 +405,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <ServiceListingGrid
             offerings={displayedFeaturedOfferings}
             savedOfferingIds={savedOfferingIds}
+            theme={theme}
             verifiedAverageRating={verifiedAverageRating}
             verifiedReviewCount={verifiedReviewCount}
           />
@@ -429,12 +437,12 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               const photo = event.coverImageUrl;
               return (
                 <Link key={event.slug} href={`/events/${event.slug}`}>
-                  <article className="group overflow-hidden rounded-[1.6rem] border border-white/80 bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft">
+                  <article className={`group overflow-hidden shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${theme.cardClass} ${theme.sectionRadius}`}>
                     <div className="relative aspect-[4/3] bg-muted">
                       <Image src={photo} alt={event.title} fill className="object-cover transition duration-500 group-hover:scale-[1.03]" />
                     </div>
                     <div className="p-4">
-                      <h3 className="font-semibold">{event.title}</h3>
+                      <h3 className="font-semibold" style={theme.headingStyle}>{event.title}</h3>
                       {event.theme ? (
                         <span className="mt-2 inline-flex h-7 max-w-full items-center rounded-full bg-[#fff7f4] px-2.5 text-[13px] text-muted-foreground">
                           <span className="truncate">{event.theme}</span>
@@ -490,6 +498,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <ServiceListingGrid
           offerings={orderedOfferings}
           savedOfferingIds={savedOfferingIds}
+          theme={theme}
           verifiedAverageRating={verifiedAverageRating}
           verifiedReviewCount={verifiedReviewCount}
         />
@@ -506,26 +515,26 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       ) : null}
 
       {showSection("how-it-works") ? (
-        <section id="how-it-works" className="scroll-mt-28 rounded-[1.5rem] border border-white/80 bg-white/90 p-5 shadow-sm" style={{ order: sectionPriority("how-it-works") }}>
+        <section id="how-it-works" className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ order: sectionPriority("how-it-works") }}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/75">Booking</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight">How It Works</h2>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={theme.headingStyle}>How It Works</h2>
             </div>
             <Badge variant="outline" className="rounded-full">ShopFia-supported quotes</Badge>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <TrustFaqItem title="Process" body={bookingInfo.process} />
-            <TrustFaqItem title="Lead time" body={bookingInfo.leadTime || vendor.availabilityNotes || "Availability is confirmed in ShopFia messages."} />
-            <TrustFaqItem title="Payment details" body={bookingInfo.deposit || "Deposit and payment details are confirmed in the quote."} />
+            <TrustFaqItem title="Process" body={bookingInfo.process} theme={theme} />
+            <TrustFaqItem title="Lead time" body={bookingInfo.leadTime || vendor.availabilityNotes || "Availability is confirmed in ShopFia messages."} theme={theme} />
+            <TrustFaqItem title="Payment details" body={bookingInfo.deposit || "Deposit and payment details are confirmed in the quote."} theme={theme} />
           </div>
-          <p className="mt-4 text-sm leading-6 text-muted-foreground">
+          <p className={`mt-4 text-sm leading-6 ${theme.copyClass}`}>
             {vendor.serviceAreaNotes ?? `${vendor.name} serves ${serviceAreaLabel || "local events"} within ${vendor.serviceRadiusMiles} miles.`}
           </p>
           {policies.length ? (
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {policies.slice(0, 4).map((policy) => (
-                <TrustFaqItem key={policy.id} title={policy.title} body={policy.body} />
+                <TrustFaqItem key={policy.id} title={policy.title} body={policy.body} theme={theme} />
               ))}
             </div>
           ) : null}
@@ -572,7 +581,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 const reviewerBadge = getProfileBadge(review.buyer, originalMemberCutoff);
 
                 return (
-                <Card key={review.id} className="border-white/70 bg-white/95">
+                <Card key={review.id} className={`${theme.cardClass} ${theme.sectionRadius}`}>
                   <CardContent className="space-y-4 p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
@@ -584,18 +593,18 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                             <span className="font-medium">{review.buyer.name ?? "Buyer"}</span>
                             <ProfileBadge badge={reviewerBadge} />
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className={`text-xs ${theme.mutedClass}`}>
                             {review.reviewerDisplayLabel} · {formatReviewDate(review.createdAt)}
                           </div>
                         </div>
                       </div>
-                      <div className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm">
+                      <div className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm text-foreground">
                         <Star className="h-4 w-4 fill-current text-amber-500" />
                         {review.rating}
                       </div>
                     </div>
                     {review.body ? (
-                      <p className="text-sm leading-6 text-muted-foreground">{review.body}</p>
+                      <p className={`text-sm leading-6 ${theme.copyClass}`}>{review.body}</p>
                     ) : null}
                     {review.response ? (
                       <div className="rounded-2xl bg-muted/40 p-3 text-sm">
@@ -614,11 +623,11 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       </section>
 
       {showSection("faq") ? (
-      <section id="faq" className="scroll-mt-28 rounded-[1.5rem] border border-white/80 bg-white/90 p-5 shadow-sm" style={{ order: sectionPriority("faq") }}>
+      <section id="faq" className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ order: sectionPriority("faq") }}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">FAQ</h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>FAQ</h2>
+            <p className={`mt-1 text-sm leading-6 ${theme.copyClass}`}>
               ShopFia keeps quoting, messaging, saved services, reviews, and booking records connected to your account.
             </p>
           </div>
@@ -626,13 +635,13 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           {faqItems.map((faq) => (
-            <TrustFaqItem key={faq.id} title={faq.question} body={faq.answer} />
+            <TrustFaqItem key={faq.id} title={faq.question} body={faq.answer} theme={theme} />
           ))}
         </div>
       </section>
       ) : null}
 
-      <footer className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] bg-white/70 px-5 py-4 text-sm text-muted-foreground" style={{ order: 999 }}>
+      <footer className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm ${theme.mutedClass} ${theme.cardClass} ${theme.sectionRadius}`} style={{ order: 999 }}>
         <span>{vendor.name} storefront, powered by ShopFia.</span>
         <span>Verified vendors, quote requests, messaging, payments, and booking support.</span>
       </footer>
@@ -640,11 +649,11 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   );
 }
 
-function TrustFaqItem({ body, title }: { body: string; title: string }) {
+function TrustFaqItem({ body, theme, title }: { body: string; theme: StorefrontTheme; title: string }) {
   return (
-    <div className="rounded-[1rem] border border-[#eadbd7] bg-white/80 p-4">
-      <h3 className="font-semibold">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{body}</p>
+    <div className={`p-4 ${theme.cardClass} ${theme.sectionRadius}`}>
+      <h3 className="font-semibold" style={theme.headingStyle}>{title}</h3>
+      <p className={`mt-2 text-sm leading-6 ${theme.copyClass}`}>{body}</p>
     </div>
   );
 }
@@ -652,6 +661,7 @@ function TrustFaqItem({ body, title }: { body: string; title: string }) {
 function ServiceListingGrid({
   offerings,
   savedOfferingIds,
+  theme,
   verifiedAverageRating,
   verifiedReviewCount
 }: {
@@ -666,6 +676,7 @@ function ServiceListingGrid({
     title: string;
   }>;
   savedOfferingIds: Set<string>;
+  theme: StorefrontTheme;
   verifiedAverageRating: number;
   verifiedReviewCount: number;
 }) {
@@ -675,7 +686,7 @@ function ServiceListingGrid({
         const photo = offering.photos[0] ?? null;
 
         return (
-          <article key={offering.id} className="group relative overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft">
+          <article key={offering.id} className={`group relative overflow-hidden shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${theme.cardClass} ${theme.sectionRadius}`}>
             <Link href={`/offering/${offering.id}`} className="block">
               <div className="relative aspect-[4/3] bg-muted">
                 {photo ? (
@@ -701,8 +712,8 @@ function ServiceListingGrid({
                   ))}
                 </div>
                 <div>
-                  <h3 className="line-clamp-1 text-lg font-semibold">{offering.title}</h3>
-                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">
+                  <h3 className="line-clamp-1 text-lg font-semibold" style={theme.headingStyle}>{offering.title}</h3>
+                  <p className={`mt-1 line-clamp-2 text-sm leading-6 ${theme.copyClass}`}>
                     {offering.description}
                   </p>
                 </div>
@@ -711,7 +722,7 @@ function ServiceListingGrid({
                     {offering.messageForPricing ? "Custom quote" : formatOfferingPrice(offering)}
                   </span>
                   {verifiedReviewCount > 0 ? (
-                    <span className="inline-flex items-center gap-1 text-muted-foreground">
+                    <span className={`inline-flex items-center gap-1 ${theme.mutedClass}`}>
                       <Star className="h-4 w-4 fill-current text-amber-500" />
                       {verifiedAverageRating.toFixed(1)}
                     </span>
@@ -795,6 +806,47 @@ function getVerifiedCredentials(
 function formatOfferingPrice(offering: { basePriceCents: number | null; messageForPricing: boolean }) {
   if (offering.messageForPricing) return "Message for pricing";
   return offering.basePriceCents ? `From ${formatCurrency(offering.basePriceCents)}` : "Message for pricing";
+}
+
+type StorefrontTheme = ReturnType<typeof getStorefrontTheme>;
+
+function getStorefrontTheme({
+  fontStyle,
+  imageShape,
+  palette,
+  textTone
+}: {
+  fontStyle: string;
+  imageShape: string;
+  palette: string;
+  textTone: string;
+}) {
+  const isDark = textTone === "LIGHT" || (textTone === "AUTO" && palette === "MIDNIGHT");
+  const imageRadius = imageShape === "SQUARE" ? "rounded-none" : imageShape === "SOFT" ? "rounded-[1.75rem]" : "rounded-[0.9rem]";
+  const sectionRadius = imageShape === "SQUARE" ? "rounded-none" : imageShape === "SOFT" ? "rounded-[1.5rem]" : "rounded-[1.25rem]";
+  const logoRadius = imageShape === "SQUARE" ? "rounded-[0.35rem]" : imageShape === "SOFT" ? "rounded-[1rem]" : "rounded-full";
+  const fontFamily =
+    fontStyle === "EDITORIAL"
+      ? "'Iowan Old Style', 'Georgia', serif"
+      : fontStyle === "ROMANTIC"
+        ? "'Baskerville', 'Georgia', serif"
+        : fontStyle === "PLAYFUL"
+          ? "'Avenir Next Rounded', 'Nunito', system-ui, sans-serif"
+          : "Inter, ui-sans-serif, system-ui, sans-serif";
+  const headingFamily = fontStyle === "MODERN" ? "Inter, ui-sans-serif, system-ui, sans-serif" : fontFamily;
+
+  return {
+    bodyStyle: { fontFamily } as CSSProperties,
+    cardClass: isDark ? "border border-white/15 bg-[#201b1e]/88 text-white" : "border border-white/80 bg-white/88 text-[#2f2626]",
+    copyClass: isDark ? "text-white/86" : "text-[#5f5550]",
+    headingStyle: { fontFamily: headingFamily } as CSSProperties,
+    heroRadius: imageRadius,
+    imageRadius,
+    logoRadius,
+    mutedClass: isDark ? "text-white/62" : "text-muted-foreground",
+    sectionRadius,
+    shellClass: isDark ? "text-white" : "text-[#2f2626]"
+  };
 }
 
 function readStorefrontFaqs(value: unknown) {

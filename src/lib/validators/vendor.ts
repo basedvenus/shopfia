@@ -71,6 +71,7 @@ export const storefrontCustomizationSchema = z.object({
   palette: z.enum(["BLUSH", "WARM_NEUTRAL", "SAGE", "LAVENDER", "CHAMPAGNE", "MIDNIGHT"]),
   buttonStyle: z.enum(["PILL", "SOFT", "OUTLINE"]),
   imageShape: z.enum(["ROUNDED", "SOFT", "SQUARE"]),
+  textTone: z.enum(["AUTO", "DARK", "LIGHT"]).default("AUTO"),
   sectionOrder: z.array(z.string().max(40)).max(9).default([]),
   hiddenSections: z.array(z.string().max(40)).max(8).default([]),
   faqJson: z.string().max(25000).optional().or(z.literal("")),

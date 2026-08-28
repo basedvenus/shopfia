@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type DragEvent, type ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
   Check,
@@ -96,6 +96,7 @@ type CustomizerBusiness = {
   storefrontPoliciesJson: unknown;
   storefrontSectionOrder: string[];
   storefrontTagline: string | null;
+  storefrontTextTone: string;
   tiktokUrl: string | null;
   website: string | null;
 };
@@ -123,6 +124,7 @@ type FormState = {
   services: EditorService[];
   state: string;
   tagline: string;
+  textTone: string;
   tiktokUrl: string;
   website: string;
 };
@@ -270,6 +272,7 @@ export function StorefrontCustomizer({
       <input type="hidden" name="palette" value={form.palette} />
       <input type="hidden" name="buttonStyle" value="PILL" />
       <input type="hidden" name="imageShape" value={form.imageShape} />
+      <input type="hidden" name="textTone" value={form.textTone} />
       <input type="hidden" name="faqJson" value={JSON.stringify(form.faqs)} />
       <input type="hidden" name="policiesJson" value={JSON.stringify(form.policies)} />
       <input type="hidden" name="bookingJson" value={JSON.stringify(form.booking)} />
@@ -442,6 +445,7 @@ function createInitialState(business: CustomizerBusiness): FormState {
     services: draft?.services?.length ? mergeDraftServices(draft.services, orderedServices) : orderedServices,
     state: draft?.state ?? business.state ?? "",
     tagline: draft?.tagline ?? business.storefrontTagline ?? "",
+    textTone: draft?.textTone ?? business.storefrontTextTone ?? "AUTO",
     tiktokUrl: draft?.tiktokUrl ?? business.tiktokUrl ?? "",
     website: draft?.website ?? business.website ?? ""
   };
@@ -677,6 +681,26 @@ function DesignControls({
           {STOREFRONT_FONT_STYLES.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
         </select>
       </Field>
+      <Field label="Text color">
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Auto", value: "AUTO" },
+            { label: "Dark", value: "DARK" },
+            { label: "Light", value: "LIGHT" }
+          ].map((tone) => (
+            <button
+              key={tone.value}
+              type="button"
+              onClick={() => update("textTone", tone.value)}
+              className={`rounded-[0.75rem] border px-3 py-2 text-sm font-semibold ${
+                form.textTone === tone.value ? "border-primary bg-[#fffaf8]" : "border-[#eadbd7]"
+              } ${tone.value === "LIGHT" ? "bg-[#241c1a] text-white" : ""}`}
+            >
+              {tone.label}
+            </button>
+          ))}
+        </div>
+      </Field>
       <Field label="Image shape">
         <div className="grid grid-cols-3 gap-2">
           {STOREFRONT_IMAGE_SHAPES.map((shape) => (
@@ -717,45 +741,45 @@ function StorefrontPreview({
   visibleSections: string[];
 }) {
   const palette = STOREFRONT_PALETTES.find((item) => item.value === form.palette) ?? STOREFRONT_PALETTES[0];
-  const imageRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.5rem]" : "rounded-[0.75rem]";
+  const theme = getPreviewTheme(form);
   const activeServices = form.services.filter((service) => service.active);
   const featuredServices = activeServices.filter((service) => service.featured).slice(0, 3);
   const isMobile = previewMode === "mobile";
   return (
-    <div className={`overflow-hidden rounded-[1rem] bg-white shadow-soft ${isMobile ? "text-[12px]" : ""}`}>
+    <div className={`overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={theme.bodyStyle}>
       <button type="button" onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
-        <div className="border-b border-[#eadbd7] bg-[#fffaf8] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7a625b]">ShopFia Storefront</div>
-        <div className="flex gap-3 p-4">
-          {form.logoUrl ? <img src={form.logoUrl} alt="" className="h-14 w-14 rounded-full object-cover" /> : <div className="grid h-14 w-14 place-items-center rounded-full bg-[#f8ece9] font-semibold">{form.name.slice(0, 1)}</div>}
+        <div className={`border-b px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] ${theme.headerClass}`}>ShopFia Storefront</div>
+        <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
+          {form.logoUrl ? <img src={form.logoUrl} alt="" className={`h-14 w-14 object-cover ${theme.logoRadius}`} /> : <div className={`grid h-14 w-14 place-items-center bg-[#f8ece9] font-semibold ${theme.logoRadius}`}>{form.name.slice(0, 1)}</div>}
           <div>
-            <div className="text-lg font-semibold">{form.name}</div>
-            <div className="text-sm text-muted-foreground">@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
-            <p className="mt-1 line-clamp-2 text-sm text-[#5f5550]">{form.tagline}</p>
+            <div className="text-lg font-semibold" style={theme.headingStyle}>{form.name}</div>
+            <div className={`text-sm ${theme.mutedClass}`}>@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
+            <p className={`mt-1 line-clamp-2 text-sm ${theme.copyClass}`}>{form.tagline}</p>
           </div>
         </div>
-        <div className="flex gap-1 overflow-x-auto border-t border-[#eadbd7] px-3 py-2 text-sm">
+        <div className={`flex gap-1 overflow-x-auto border-t px-3 py-2 text-sm ${theme.navClass}`}>
           {["Home", "Services", "Portfolio", "About", "Reviews", "FAQ"].map((item) => <span key={item} className="rounded-full px-3 py-1">{item}</span>)}
         </div>
-        <section className={`relative grid min-h-[390px] overflow-hidden bg-[#211815] text-white ${isMobile ? "" : "md:grid-cols-[1fr_0.55fr]"}`}>
+        <section className={`relative m-4 grid min-h-[390px] overflow-hidden bg-[#211815] text-white ${theme.heroRadius} ${isMobile ? "" : "md:grid-cols-[1fr_0.55fr]"}`}>
           {form.coverPhoto ? <img src={form.coverPhoto} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,17,15,0.9),rgba(24,17,15,0.2))]" />
           <div className="relative p-6">
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/70">Featured storefront</p>
-            <h2 className="mt-4 text-5xl font-semibold leading-[0.9] tracking-normal">{form.aboutHeading || form.name}</h2>
+            <h2 className="mt-4 text-5xl font-semibold leading-[0.9] tracking-normal" style={theme.headingStyle}>{form.aboutHeading || form.name}</h2>
             <p className="mt-4 line-clamp-3 text-sm leading-6 text-white/80">{form.tagline || form.bio}</p>
           </div>
         </section>
       </button>
       <div className={`bg-gradient-to-br ${palette.className} p-5`}>
         {visibleSections.filter((section) => section !== "hero").map((section) => {
-          if (section === "featured-services") return <PreviewSection key={section} active={activeSection === section} title="Featured services" onClick={() => setActiveSection(section)}><ServiceGrid services={featuredServices} /></PreviewSection>;
-          if (section === "all-services") return <PreviewSection key={section} active={activeSection === section} title="All services" onClick={() => setActiveSection(section)}><ServiceGrid services={activeServices} /></PreviewSection>;
-          if (section === "portfolio") return <PreviewSection key={section} active={activeSection === section} title="Portfolio" onClick={() => setActiveSection(section)}><div className="grid grid-cols-3 gap-2">{form.photoUrls.filter(Boolean).slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-square object-cover ${imageRadius}`} />)}</div></PreviewSection>;
-          if (section === "about") return <PreviewSection key={section} active={activeSection === section} title={form.aboutHeading || "About Us"} onClick={() => setActiveSection(section)}><div className="grid gap-3 md:grid-cols-2"><p>{form.bio}</p>{form.aboutImage ? <img src={form.aboutImage} alt="" className={`h-44 w-full object-cover ${imageRadius}`} /> : null}</div></PreviewSection>;
-          if (section === "how-it-works") return <PreviewSection key={section} active={activeSection === section} title="How it works" onClick={() => setActiveSection(section)}><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p></PreviewSection>;
-          if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} title="Verified reviews" onClick={() => setActiveSection(section)}><p>Reviews are synced from completed ShopFia bookings.</p></PreviewSection>;
-          if (section === "faq") return <PreviewSection key={section} active={activeSection === section} title="FAQ" onClick={() => setActiveSection(section)}>{form.faqs.slice(0, 3).map((faq) => <div key={faq.id} className="mt-2"><div className="font-semibold">{faq.question}</div><p>{faq.answer}</p></div>)}</PreviewSection>;
-          if (section === "final-quote") return <PreviewSection key={section} active={activeSection === section} title="Ready for a quote?" onClick={() => setActiveSection(section)}><Button type="button"><Send className="h-4 w-4" />Get a quote</Button></PreviewSection>;
+          if (section === "featured-services") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Featured services" onClick={() => setActiveSection(section)}><ServiceGrid services={featuredServices} theme={theme} /></PreviewSection>;
+          if (section === "all-services") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="All services" onClick={() => setActiveSection(section)}><ServiceGrid services={activeServices} theme={theme} /></PreviewSection>;
+          if (section === "portfolio") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Portfolio" onClick={() => setActiveSection(section)}><div className="grid grid-cols-3 gap-2">{form.photoUrls.filter(Boolean).slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-square object-cover ${theme.imageRadius}`} />)}</div></PreviewSection>;
+          if (section === "about") return <PreviewSection key={section} active={activeSection === section} theme={theme} title={form.aboutHeading || "About Us"} onClick={() => setActiveSection(section)}><div className="grid gap-3 md:grid-cols-2"><p>{form.bio}</p>{form.aboutImage ? <img src={form.aboutImage} alt="" className={`h-44 w-full object-cover ${theme.imageRadius}`} /> : null}</div></PreviewSection>;
+          if (section === "how-it-works") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="How it works" onClick={() => setActiveSection(section)}><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p></PreviewSection>;
+          if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Verified reviews" onClick={() => setActiveSection(section)}><p>Reviews are synced from completed ShopFia bookings.</p></PreviewSection>;
+          if (section === "faq") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="FAQ" onClick={() => setActiveSection(section)}>{form.faqs.slice(0, 3).map((faq) => <div key={faq.id} className="mt-2"><div className="font-semibold">{faq.question}</div><p>{faq.answer}</p></div>)}</PreviewSection>;
+          if (section === "final-quote") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Ready for a quote?" onClick={() => setActiveSection(section)}><Button type="button"><Send className="h-4 w-4" />Get a quote</Button></PreviewSection>;
           return null;
         })}
       </div>
@@ -763,19 +787,19 @@ function StorefrontPreview({
   );
 }
 
-function ServiceGrid({ services }: { services: EditorService[] }) {
-  if (!services.length) return <p className="text-sm text-muted-foreground">No services selected.</p>;
+function ServiceGrid({ services, theme }: { services: EditorService[]; theme: PreviewTheme }) {
+  if (!services.length) return <p className={`text-sm ${theme.mutedClass}`}>No services selected.</p>;
   return (
     <div className="grid gap-3 md:grid-cols-3">
       {services.map((service) => (
-        <div key={service.id} className="overflow-hidden rounded-[0.9rem] bg-white shadow-sm">
+        <div key={service.id} className={`overflow-hidden shadow-sm ${theme.cardClass} ${theme.imageRadius}`}>
           {service.photos[0] ? <img src={service.photos[0]} alt="" className="aspect-[4/3] w-full object-cover" /> : <div className="grid aspect-[4/3] place-items-center bg-[#f8ece9]"><ImagePlus className="h-6 w-6 text-primary" /></div>}
           <div className="p-3">
-            <div className="line-clamp-1 font-semibold">{service.title}</div>
-            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{service.description}</p>
+            <div className="line-clamp-1 font-semibold" style={theme.headingStyle}>{service.title}</div>
+            <p className={`mt-1 line-clamp-2 text-sm ${theme.mutedClass}`}>{service.description}</p>
             <div className="mt-2 flex items-center justify-between text-sm">
               <span>{service.messageForPricing || service.basePriceCents == null ? "Custom quote" : `From ${formatCurrency(service.basePriceCents)}`}</span>
-              <span className="inline-flex items-center gap-1 text-muted-foreground"><Star className="h-3.5 w-3.5 fill-current text-amber-500" />Verified</span>
+              <span className={`inline-flex items-center gap-1 ${theme.mutedClass}`}><Star className="h-3.5 w-3.5 fill-current text-amber-500" />Verified</span>
             </div>
           </div>
         </div>
@@ -784,17 +808,54 @@ function ServiceGrid({ services }: { services: EditorService[] }) {
   );
 }
 
-function PreviewSection({ active, children, onClick, title }: { active: boolean; children: ReactNode; onClick: () => void; title: string }) {
+function PreviewSection({ active, children, onClick, theme, title }: { active: boolean; children: ReactNode; onClick: () => void; theme: PreviewTheme; title: string }) {
   return (
-    <button type="button" onClick={onClick} className={previewButtonClass(active, "mb-5 block w-full rounded-[1rem] bg-white/86 p-5 text-left")}>
-      <h3 className="text-2xl font-semibold tracking-tight">{title}</h3>
-      <div className="mt-3 text-sm leading-6 text-muted-foreground">{children}</div>
+    <button type="button" onClick={onClick} className={previewButtonClass(active, `mb-5 block w-full p-5 text-left transition ${theme.cardClass} ${theme.sectionRadius}`)}>
+      <h3 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{title}</h3>
+      <div className={`mt-3 text-sm leading-6 ${theme.copyClass}`}>{children}</div>
     </button>
   );
 }
 
 function previewButtonClass(active: boolean, base: string) {
   return `${base} ${active ? "ring-2 ring-primary ring-offset-2" : "ring-1 ring-transparent hover:ring-primary/35"}`;
+}
+
+type PreviewTheme = ReturnType<typeof getPreviewTheme>;
+
+function getPreviewTheme(form: FormState) {
+  const isDark = form.textTone === "LIGHT" || (form.textTone === "AUTO" && form.palette === "MIDNIGHT");
+  const imageRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.75rem]" : "rounded-[0.9rem]";
+  const sectionRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.5rem]" : "rounded-[1rem]";
+  const logoRadius = form.imageShape === "SQUARE" ? "rounded-[0.35rem]" : form.imageShape === "SOFT" ? "rounded-[1rem]" : "rounded-full";
+  const fontFamily =
+    form.fontStyle === "EDITORIAL"
+      ? "'Iowan Old Style', 'Georgia', serif"
+      : form.fontStyle === "ROMANTIC"
+        ? "'Baskerville', 'Georgia', serif"
+        : form.fontStyle === "PLAYFUL"
+          ? "'Avenir Next Rounded', 'Nunito', system-ui, sans-serif"
+          : "Inter, ui-sans-serif, system-ui, sans-serif";
+  const headingFamily =
+    form.fontStyle === "MODERN"
+      ? "Inter, ui-sans-serif, system-ui, sans-serif"
+      : fontFamily;
+
+  return {
+    bodyStyle: { fontFamily } as CSSProperties,
+    cardClass: isDark ? "border border-white/15 bg-[#201b1e]/88 text-white" : "border border-white/80 bg-white/88 text-[#2f2626]",
+    copyClass: isDark ? "text-white/86" : "text-[#5f5550]",
+    headerClass: isDark ? "border-white/15 bg-[#171315] text-white/70" : "border-[#eadbd7] bg-[#fffaf8] text-[#7a625b]",
+    headingStyle: { fontFamily: headingFamily } as CSSProperties,
+    heroRadius: imageRadius,
+    imageRadius,
+    logoRadius,
+    mutedClass: isDark ? "text-white/62" : "text-muted-foreground",
+    navClass: isDark ? "border-white/15 bg-[#201b1e] text-white/72" : "border-[#eadbd7] bg-white text-muted-foreground",
+    profileClass: isDark ? "bg-[#201b1e] text-white" : "bg-white text-[#2f2626]",
+    sectionRadius,
+    shellClass: isDark ? "bg-[#151113] text-white" : "bg-white text-[#2f2626]"
+  };
 }
 
 function Field({ children, label }: { children: ReactNode; label: string }) {

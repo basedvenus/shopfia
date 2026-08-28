@@ -47,6 +47,7 @@ export default async function StorefrontCustomizerPage({
       storefrontPalette: true,
       storefrontSectionOrder: true,
       storefrontTagline: true,
+      storefrontTextTone: true,
       storefrontDraftJson: true,
       storefrontFaqJson: true,
       storefrontPoliciesJson: true,

@@ -47,6 +47,7 @@ export async function getVendorProfileBySlug(slug: string) {
       storefrontPoliciesJson: true,
       storefrontSectionOrder: true,
       storefrontTagline: true,
+      storefrontTextTone: true,
       tiktokUrl: true,
       userId: true,
       username: true,

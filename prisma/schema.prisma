@@ -332,6 +332,7 @@ model VendorProfile {
   storefrontPalette         StorefrontPalette     @default(BLUSH)
   storefrontButtonStyle     StorefrontButtonStyle @default(PILL)
   storefrontImageShape      StorefrontImageShape  @default(ROUNDED)
+  storefrontTextTone        String                @default("AUTO")
   storefrontDraftJson       Json?
   storefrontFaqJson         Json?
   storefrontPoliciesJson    Json?
