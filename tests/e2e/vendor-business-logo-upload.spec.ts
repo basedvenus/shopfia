@@ -86,15 +86,20 @@ test("existing vendor setup saves uploaded logo to the business profile", async 
   await page.locator('input[type="file"]').first().setInputFiles(imagePath);
   await page.getByRole("button", { name: "Save positioning" }).click();
   await expect(page.getByText("Photo uploaded and saved.").first()).toBeVisible({ timeout: 10_000 });
+  await page.getByLabel("Business Name").fill("Codex Logo Studio Updated");
+  await page.getByRole("button", { name: "Save business" }).first().click();
+  await expect(page).toHaveURL(new RegExp(`/vendor/business/${slug}$`));
+  await expect(page.getByRole("heading", { name: "Codex Logo Studio Updated" })).toBeVisible();
 
   const savedVendor = await prisma.vendorProfile.findUnique({
     where: { slug },
-    select: { logoUrl: true }
+    select: { logoUrl: true, name: true }
   });
+  expect(savedVendor?.name).toBe("Codex Logo Studio Updated");
   expect(savedVendor?.logoUrl).toMatch(/^\/api\/vendor-media\/.+\?v=\d+$/);
 
   await page.goto(`${baseUrl}/vendor/dashboard`);
-  const logo = page.getByRole("img", { name: "Codex Logo Studio logo" });
+  const logo = page.getByRole("img", { name: "Codex Logo Studio Updated logo" });
   await expect(logo).toBeVisible();
   await expect(logo).toHaveAttribute("src", savedVendor!.logoUrl!);
 });

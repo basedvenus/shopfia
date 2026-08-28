@@ -18,7 +18,8 @@ import {
   slugifyBusinessUrl,
   storefrontAccentColorFromPalette,
   normalizeStorefrontPalette,
-  storefrontPath
+  storefrontPath,
+  businessManagerWhere
 } from "@/lib/businesses";
 
 function formDataToArray(formData: FormData, key: string) {
@@ -656,7 +657,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
       ? await db.vendorProfile.findFirst({
         where: {
           id: businessId,
-          userId: session.user.id
+          ...businessManagerWhere(session.user.id, session.user.role)
         },
         select: { id: true, slug: true, username: true, userId: true }
       })
@@ -856,9 +857,10 @@ export async function upsertVendorProfileAction(formData: FormData) {
   revalidatePath("/onboarding");
   revalidatePath("/vendor/dashboard");
   revalidatePath(`/vendor/dashboard/${vendor.slug}`);
+  revalidatePath(`/vendor/business/${vendor.slug}`);
   revalidatePath(`/vendor/profile/${vendor.slug}`);
   revalidatePath(storefrontPath(vendor.slug));
-  redirect("/vendor/dashboard");
+  redirect(`/vendor/business/${vendor.slug}`);
 }
 
 export async function upsertOfferingAction(formData: FormData) {
@@ -877,9 +879,9 @@ export async function upsertOfferingAction(formData: FormData) {
     where: businessId
       ? {
           id: businessId,
-          userId: session.user.id
+          ...businessManagerWhere(session.user.id, session.user.role)
         }
-      : { userId: session.user.id },
+      : businessManagerWhere(session.user.id, session.user.role),
     orderBy: { createdAt: "asc" }
   });
   if (!vendor) throw new Error("Create vendor profile first");

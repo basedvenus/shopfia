@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { businessManagerWhere } from "@/lib/businesses";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export default async function MyBusinessesPage() {
   }
 
   const businesses = await db.vendorProfile.findMany({
-    where: session.user.role === "ADMIN" ? {} : { userId: session.user.id },
+    where: businessManagerWhere(session.user.id, session.user.role),
     select: {
       id: true,
       logoUrl: true,

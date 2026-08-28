@@ -7,7 +7,7 @@ import { deleteOfferingAction, duplicateOfferingAction, toggleOfferingPublishedA
 import { Button } from "@/components/ui/button";
 import { ConnectStripeButton } from "@/components/vendor/connect-stripe-button";
 import { CopyStorefrontLinkButton } from "@/components/vendor/copy-storefront-link-button";
-import { storefrontPath, storefrontUrl } from "@/lib/businesses";
+import { businessManagerWhere, storefrontPath, storefrontUrl } from "@/lib/businesses";
 import { db } from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
 
@@ -22,7 +22,10 @@ export default async function BusinessDashboardPage({ params }: { params: Promis
   if (!session?.user?.id) redirect("/account?next=login");
 
   const business = await db.vendorProfile.findFirst({
-    where: session.user.role === "ADMIN" ? { slug } : { slug, userId: session.user.id },
+    where: {
+      slug,
+      ...businessManagerWhere(session.user.id, session.user.role)
+    },
     select: {
       id: true,
       availabilityNotes: true,

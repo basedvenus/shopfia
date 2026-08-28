@@ -5,6 +5,7 @@ import { CategoryAudience } from "@prisma/client";
 import { auth } from "@/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OfferingSetupForm } from "@/components/vendor/offering-setup-form";
+import { businessManagerWhere } from "@/lib/businesses";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,10 @@ export default async function NewBusinessServicePage({ params }: { params: Promi
 
   const [business, categories, eventCategories] = await Promise.all([
     db.vendorProfile.findFirst({
-      where: session.user.role === "ADMIN" ? { slug } : { slug, userId: session.user.id },
+      where: {
+        slug,
+        ...businessManagerWhere(session.user.id, session.user.role)
+      },
       select: { id: true, name: true, slug: true }
     }),
     db.category.findMany({ where: { audience: CategoryAudience.VENDOR }, orderBy: { name: "asc" } }),

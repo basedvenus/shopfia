@@ -5,6 +5,7 @@ import { CategoryAudience } from "@prisma/client";
 import { auth } from "@/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OfferingSetupForm } from "@/components/vendor/offering-setup-form";
+import { businessManagerWhere } from "@/lib/businesses";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
       include: {
         categories: { select: { categoryId: true } },
         eventCategories: { select: { categoryId: true } },
-        vendor: { select: { id: true, name: true, slug: true, userId: true } }
+        vendor: { select: { id: true, name: true, slug: true, userId: true, managers: { select: { userId: true } } } }
       }
     }),
     db.category.findMany({ where: { audience: CategoryAudience.VENDOR }, orderBy: { name: "asc" } }),
@@ -49,7 +50,19 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
     notFound();
   }
 
-  if (offering.vendor.userId !== session.user.id && session.user.role !== "ADMIN") {
+  const canManageOffering =
+    session.user.role === "ADMIN" ||
+    Boolean(
+      await db.vendorProfile.findFirst({
+        where: {
+          id: offering.vendor.id,
+          ...businessManagerWhere(session.user.id, session.user.role)
+        },
+        select: { id: true }
+      })
+    );
+
+  if (!canManageOffering) {
     notFound();
   }
 
