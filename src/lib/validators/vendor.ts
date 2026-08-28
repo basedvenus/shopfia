@@ -67,7 +67,7 @@ export const storefrontCustomizationSchema = z.object({
   instagramUrl: z.string().url("Enter a valid Instagram link.").optional().or(z.literal("")),
   tiktokUrl: z.string().url("Enter a valid TikTok link.").optional().or(z.literal("")),
   layout: z.enum(["EDITORIAL", "PORTFOLIO", "SERVICES"]),
-  fontStyle: z.enum(["MODERN", "EDITORIAL", "ROMANTIC", "PLAYFUL"]),
+  fontStyle: z.enum(["MODERN", "EDITORIAL", "ROMANTIC", "BOLD", "FASHION", "PLAYFUL", "RETRO", "COOL"]),
   palette: z.enum([
     "BLUSH",
     "BUBBLEGUM",

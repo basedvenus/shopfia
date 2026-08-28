@@ -27,7 +27,7 @@ import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorProfileBySlug } from "@/lib/data/vendor";
 import { getVendorTrustStatus } from "@/lib/vendor-status";
-import { STOREFRONT_PALETTES, getStorefrontPalette, sanitizeStorefrontSections, storefrontUrl } from "@/lib/businesses";
+import { STOREFRONT_PALETTES, getStorefrontFontFamilies, getStorefrontPalette, sanitizeStorefrontSections, storefrontUrl } from "@/lib/businesses";
 
 export const dynamic = "force-dynamic";
 
@@ -827,15 +827,7 @@ function getStorefrontTheme({
   const imageRadius = imageShape === "SQUARE" ? "rounded-none" : imageShape === "SOFT" ? "rounded-[1.75rem]" : "rounded-[0.9rem]";
   const sectionRadius = imageShape === "SQUARE" ? "rounded-none" : imageShape === "SOFT" ? "rounded-[1.5rem]" : "rounded-[1.25rem]";
   const logoRadius = imageShape === "SQUARE" ? "rounded-[0.35rem]" : imageShape === "SOFT" ? "rounded-[1rem]" : "rounded-full";
-  const fontFamily =
-    fontStyle === "EDITORIAL"
-      ? "'Iowan Old Style', 'Georgia', serif"
-      : fontStyle === "ROMANTIC"
-        ? "'Baskerville', 'Georgia', serif"
-        : fontStyle === "PLAYFUL"
-          ? "'Avenir Next Rounded', 'Nunito', system-ui, sans-serif"
-          : "Inter, ui-sans-serif, system-ui, sans-serif";
-  const headingFamily = fontStyle === "MODERN" ? "Inter, ui-sans-serif, system-ui, sans-serif" : fontFamily;
+  const fontFamilies = getStorefrontFontFamilies(fontStyle);
   const paletteConfig = STOREFRONT_PALETTES.find((item) => item.value === palette) ?? STOREFRONT_PALETTES[0];
   const accent = paletteConfig.accent;
   const ctaBackground = "gradient" in paletteConfig ? paletteConfig.gradient : accent;
@@ -848,14 +840,14 @@ function getStorefrontTheme({
     accentBorderStyle: { borderColor: accent } as CSSProperties,
     accentTextStyle: { color: accent } as CSSProperties,
     activeNavItemStyle: { backgroundColor: accentSoft, color: isDark ? "#ffffff" : "#2f2626" } as CSSProperties,
-    bodyStyle: { fontFamily } as CSSProperties,
+    bodyStyle: { fontFamily: fontFamilies.body } as CSSProperties,
     badgeStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
     cardStyle: { borderColor: isDark ? `${accent}44` : `${accent}40` } as CSSProperties,
     cardClass: isDark ? "border border-white/15 bg-[#201b1e]/88 text-white" : "border bg-white/88 text-[#2f2626]",
     ctaStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
     copyClass: isDark ? "text-white/86" : "text-[#5f5550]",
     headerShellStyle: { borderColor: `${accent}55` } as CSSProperties,
-    headingStyle: { fontFamily: headingFamily } as CSSProperties,
+    headingStyle: { fontFamily: fontFamilies.heading } as CSSProperties,
     heroChipStyle: { backgroundColor: `${accent}33`, borderColor: `${accent}99`, color: "#ffffff" } as CSSProperties,
     heroCtaStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
     heroRadius: imageRadius,

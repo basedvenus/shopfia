@@ -47,11 +47,68 @@ export const STOREFRONT_LAYOUTS = [
 ] as const;
 
 export const STOREFRONT_FONT_STYLES = [
-  { value: "MODERN", label: "Modern", description: "Clean sans-serif." },
-  { value: "EDITORIAL", label: "Editorial", description: "Elegant serif with simple body text." },
-  { value: "ROMANTIC", label: "Romantic", description: "Soft serif with subtle script accents." },
-  { value: "PLAYFUL", label: "Playful", description: "Rounded, friendly typography." }
+  { value: "MODERN", label: "Modern", description: "Manrope. Clean, effortless, and polished." },
+  { value: "EDITORIAL", label: "Editorial", description: "Instrument Serif + Inter. Elegant and magazine-like." },
+  { value: "ROMANTIC", label: "Romantic", description: "Cormorant Garamond + Manrope. Soft and thoughtful." },
+  { value: "BOLD", label: "Bold", description: "Space Grotesk. Strong, graphic, and high-impact." },
+  { value: "FASHION", label: "Fashion", description: "Bodoni Moda + DM Sans. Elevated and boutique." },
+  { value: "PLAYFUL", label: "Playful", description: "Bricolage Grotesque. Colorful and friendly." },
+  { value: "RETRO", label: "Retro", description: "Fraunces + Work Sans. Fresh with vintage charm." },
+  { value: "COOL", label: "Cool", description: "Syne + Inter. Distinctive and modern." }
 ] as const;
+
+export const STOREFRONT_FONT_STYLE_VALUES = STOREFRONT_FONT_STYLES.map((font) => font.value);
+
+export function getStorefrontFontFamilies(value: string | null | undefined) {
+  const requested = value?.trim();
+  const fontStyle = STOREFRONT_FONT_STYLES.some((font) => font.value === requested) ? requested : "MODERN";
+  if (fontStyle === "EDITORIAL") {
+    return {
+      body: "var(--font-shopfia-inter), Inter, ui-sans-serif, system-ui, sans-serif",
+      heading: "var(--font-shopfia-instrument-serif), 'Instrument Serif', Georgia, serif"
+    };
+  }
+  if (fontStyle === "ROMANTIC") {
+    return {
+      body: "var(--font-shopfia-manrope), Manrope, ui-sans-serif, system-ui, sans-serif",
+      heading: "var(--font-shopfia-serif), 'Cormorant Garamond', Georgia, serif"
+    };
+  }
+  if (fontStyle === "BOLD") {
+    return {
+      body: "var(--font-shopfia-space), 'Space Grotesk', ui-sans-serif, system-ui, sans-serif",
+      heading: "var(--font-shopfia-space), 'Space Grotesk', ui-sans-serif, system-ui, sans-serif"
+    };
+  }
+  if (fontStyle === "FASHION") {
+    return {
+      body: "var(--font-shopfia-dm), 'DM Sans', ui-sans-serif, system-ui, sans-serif",
+      heading: "var(--font-shopfia-bodoni), 'Bodoni Moda', Georgia, serif"
+    };
+  }
+  if (fontStyle === "PLAYFUL") {
+    return {
+      body: "var(--font-shopfia-bricolage), 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif",
+      heading: "var(--font-shopfia-bricolage), 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif"
+    };
+  }
+  if (fontStyle === "RETRO") {
+    return {
+      body: "var(--font-shopfia-work), 'Work Sans', ui-sans-serif, system-ui, sans-serif",
+      heading: "var(--font-shopfia-fraunces), Fraunces, Georgia, serif"
+    };
+  }
+  if (fontStyle === "COOL") {
+    return {
+      body: "var(--font-shopfia-inter), Inter, ui-sans-serif, system-ui, sans-serif",
+      heading: "var(--font-shopfia-syne), Syne, ui-sans-serif, system-ui, sans-serif"
+    };
+  }
+  return {
+    body: "var(--font-shopfia-manrope), Manrope, ui-sans-serif, system-ui, sans-serif",
+    heading: "var(--font-shopfia-manrope), Manrope, ui-sans-serif, system-ui, sans-serif"
+  };
+}
 
 export const STOREFRONT_PALETTES = [
   { value: "BLUSH", label: "Blush", description: "Soft pinks with a rose storefront accent.", className: "from-[#FFF8F7] via-[#F8DADD] to-[#FFFFFF]", accent: "#D98889", swatches: ["#F8DADD", "#D98889", "#FFF8F7", "#332A2B"] },

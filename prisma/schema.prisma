@@ -164,7 +164,11 @@ enum StorefrontFontStyle {
   MODERN
   EDITORIAL
   ROMANTIC
+  BOLD
+  FASHION
   PLAYFUL
+  RETRO
+  COOL
 }
 
 enum StorefrontPalette {

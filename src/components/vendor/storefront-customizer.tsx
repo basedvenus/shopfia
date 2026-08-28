@@ -32,6 +32,7 @@ import {
   STOREFRONT_IMAGE_SHAPES,
   STOREFRONT_PALETTES,
   STOREFRONT_SECTION_LABELS,
+  getStorefrontFontFamilies,
   normalizeStorefrontPalette,
   sanitizeStorefrontSections
 } from "@/lib/businesses";
@@ -891,18 +892,7 @@ function getPreviewTheme(form: FormState) {
   const imageRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.75rem]" : "rounded-[0.9rem]";
   const sectionRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.5rem]" : "rounded-[1rem]";
   const logoRadius = form.imageShape === "SQUARE" ? "rounded-[0.35rem]" : form.imageShape === "SOFT" ? "rounded-[1rem]" : "rounded-full";
-  const fontFamily =
-    form.fontStyle === "EDITORIAL"
-      ? "'Iowan Old Style', 'Georgia', serif"
-      : form.fontStyle === "ROMANTIC"
-        ? "'Baskerville', 'Georgia', serif"
-        : form.fontStyle === "PLAYFUL"
-          ? "'Avenir Next Rounded', 'Nunito', system-ui, sans-serif"
-          : "Inter, ui-sans-serif, system-ui, sans-serif";
-  const headingFamily =
-    form.fontStyle === "MODERN"
-      ? "Inter, ui-sans-serif, system-ui, sans-serif"
-      : fontFamily;
+  const fontFamilies = getStorefrontFontFamilies(form.fontStyle);
 
   return {
     accent,
@@ -911,11 +901,11 @@ function getPreviewTheme(form: FormState) {
     activeNavItemStyle: { backgroundColor: `${accent}24`, color: isDark ? "#ffffff" : "#2f2626" } as CSSProperties,
     activeSectionStyle: { borderColor: `${accent}88`, boxShadow: `0 0 0 2px ${accent}` } as CSSProperties,
     badgeStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
-    bodyStyle: { fontFamily } as CSSProperties,
+    bodyStyle: { fontFamily: fontFamilies.body } as CSSProperties,
     cardClass: isDark ? "border border-white/15 bg-[#201b1e]/88 text-white" : "border border-white/80 bg-white/88 text-[#2f2626]",
     copyClass: isDark ? "text-white/86" : "text-[#5f5550]",
     headerClass: isDark ? "border-white/15 bg-[#171315] text-white/70" : "border-[#eadbd7] bg-[#fffaf8] text-[#7a625b]",
-    headingStyle: { fontFamily: headingFamily } as CSSProperties,
+    headingStyle: { fontFamily: fontFamilies.heading } as CSSProperties,
     heroCtaStyle: { background: ctaBackground, color: ctaText } as CSSProperties,
     heroRadius: imageRadius,
     imageRadius,

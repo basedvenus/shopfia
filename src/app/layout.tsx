@@ -1,5 +1,18 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Instrument_Sans } from "next/font/google";
+import {
+  Bodoni_Moda,
+  Bricolage_Grotesque,
+  Cormorant_Garamond,
+  DM_Sans,
+  Fraunces,
+  Instrument_Sans,
+  Instrument_Serif,
+  Inter,
+  Manrope,
+  Space_Grotesk,
+  Syne,
+  Work_Sans
+} from "next/font/google";
 import "./globals.css";
 import { auth } from "@/auth";
 import { ProfileProvider } from "@/components/account/profile-provider";
@@ -22,12 +35,74 @@ const instrumentSans = Instrument_Sans({
   variable: "--font-shopfia-sans"
 });
 
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-shopfia-inter"
+});
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-shopfia-manrope"
+});
+
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   display: "swap",
   style: ["normal", "italic"],
   variable: "--font-shopfia-serif",
   weight: ["400", "500", "600", "700"]
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  display: "swap",
+  style: ["normal", "italic"],
+  variable: "--font-shopfia-instrument-serif",
+  weight: "400"
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-shopfia-space"
+});
+
+const bodoniModa = Bodoni_Moda({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-shopfia-bodoni"
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-shopfia-dm"
+});
+
+const bricolageGrotesque = Bricolage_Grotesque({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-shopfia-bricolage"
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-shopfia-fraunces"
+});
+
+const workSans = Work_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-shopfia-work"
+});
+
+const syne = Syne({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-shopfia-syne"
 });
 
 export const metadata: Metadata = {
@@ -96,7 +171,9 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${instrumentSans.variable} ${cormorant.variable}`}>
+      <body
+        className={`${instrumentSans.variable} ${inter.variable} ${manrope.variable} ${cormorant.variable} ${instrumentSerif.variable} ${spaceGrotesk.variable} ${bodoniModa.variable} ${dmSans.variable} ${bricolageGrotesque.variable} ${fraunces.variable} ${workSans.variable} ${syne.variable}`}
+      >
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-foreground focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-background"
