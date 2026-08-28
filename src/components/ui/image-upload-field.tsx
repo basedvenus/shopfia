@@ -31,6 +31,7 @@ type ImageUploadFieldProps = {
   onCropChange?: (crop: ImageCrop) => void;
   onUploadComplete?: (result: UploadResult) => void;
   rounded?: "full" | "large";
+  uploadMode?: "crop" | "preserve";
   uploadEndpoint?: string;
   uploadLabel?: string;
   value?: string | null;
@@ -49,6 +50,7 @@ export function ImageUploadField({
   onCropChange,
   onUploadComplete,
   rounded = "large",
+  uploadMode = "crop",
   uploadEndpoint,
   uploadLabel = "Upload image",
   value: controlledValue,
@@ -142,13 +144,18 @@ export function ImageUploadField({
 
   async function uploadEditedImage(file: File, nextCrop: ImageCrop) {
     try {
-      const croppedFile = isRound
+      const croppedFile = uploadMode === "preserve" && !isRound
+        ? await resizeImageUploadFile(file, {
+            maxSize: 1800,
+            outputType: "image/jpeg"
+          })
+        : isRound
         ? await cropImageFile(file, nextCrop, {
             aspectRatio: 1,
             maxSize: 900,
             outputType: "image/jpeg"
           })
-        : await containImageFile(file, {
+        : await cropImageFile(file, nextCrop, {
             aspectRatio: 4 / 3,
             maxSize: 1600,
             outputType: "image/jpeg"
@@ -267,7 +274,7 @@ export function ImageUploadField({
       ) : null}
       {editorOpen && pendingPreview ? (
         <ImageCropEditor
-          aspectLabel={isRound ? "Profile crop" : "Image crop"}
+          aspectLabel={isRound ? "Profile crop" : uploadMode === "preserve" ? "Image preview" : "Image crop"}
           crop={crop}
           imageUrl={pendingPreview}
           onCancel={cancelEditor}
@@ -319,39 +326,25 @@ async function resizeImageFile(file: File, maxSize: number) {
   }
 }
 
-async function containImageFile(
+async function resizeImageUploadFile(
   file: File,
-  options: { aspectRatio: number; maxSize: number; outputType?: string }
+  options: { maxSize: number; outputType?: string }
 ) {
   const objectUrl = URL.createObjectURL(file);
   const sourceImage = await loadImage(objectUrl);
   const canvas = document.createElement("canvas");
 
   try {
-    const outputWidth = Math.max(1, Math.min(options.maxSize, sourceImage.naturalWidth));
-    const outputHeight = Math.max(1, Math.round(outputWidth / options.aspectRatio));
-    canvas.width = outputWidth;
-    canvas.height = outputHeight;
+    const scale = Math.min(1, options.maxSize / Math.max(sourceImage.naturalWidth, sourceImage.naturalHeight));
+    canvas.width = Math.max(1, Math.round(sourceImage.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(sourceImage.naturalHeight * scale));
 
     const context = canvas.getContext("2d");
     if (!context) {
       throw new Error("Canvas is unavailable.");
     }
 
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, outputWidth, outputHeight);
-
-    const sourceRatio = sourceImage.naturalWidth / sourceImage.naturalHeight;
-    const drawWidth = sourceRatio > options.aspectRatio
-      ? outputWidth
-      : Math.round(outputHeight * sourceRatio);
-    const drawHeight = sourceRatio > options.aspectRatio
-      ? Math.round(outputWidth / sourceRatio)
-      : outputHeight;
-    const drawX = Math.round((outputWidth - drawWidth) / 2);
-    const drawY = Math.round((outputHeight - drawHeight) / 2);
-
-    context.drawImage(sourceImage, drawX, drawY, drawWidth, drawHeight);
+    context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
 
     const mimeType = options.outputType ?? (SUPPORTED_IMAGE_TYPES.includes(file.type) ? file.type : "image/jpeg");
     const blob = await canvasToBlob(canvas, mimeType);

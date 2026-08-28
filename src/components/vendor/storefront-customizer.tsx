@@ -766,6 +766,7 @@ function SectionEditor({
         <ImageUploadField
           name="portfolio-new"
           label="Add portfolio image"
+          uploadMode="preserve"
           uploadEndpoint={mediaUploadEndpoint}
           onChangePreview={(value) => update("photoUrls", [...photos, value])}
         />
@@ -795,6 +796,7 @@ function SectionEditor({
                   name={`portfolio-replace-${index}`}
                   label="Replace image"
                   value={photo}
+                  uploadMode="preserve"
                   uploadEndpoint={mediaUploadEndpoint}
                   onChangePreview={(value) => {
                     const next = [...photos];
@@ -1246,6 +1248,7 @@ function StorefrontPreview({
                   <ImageUploadField
                     name="previewPortfolioNew"
                     label="Add portfolio image"
+                    uploadMode="preserve"
                     uploadEndpoint={mediaUploadEndpoint}
                     onChangePreview={(value) => update("photoUrls", [...photos, value])}
                   />
@@ -1277,6 +1280,7 @@ function StorefrontPreview({
                             name={`previewPortfolioReplace-${index}`}
                             label="Replace"
                             value={photo}
+                            uploadMode="preserve"
                             uploadEndpoint={mediaUploadEndpoint}
                             onChangePreview={(value) => {
                               const next = [...photos];

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
@@ -43,21 +42,19 @@ export function StorefrontPortfolioGallery({
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="columns-1 gap-4 sm:columns-2 xl:columns-3">
         {photos.map((photo, index) => (
           <button
             key={`${photo}-${index}`}
             type="button"
-            className={`group relative aspect-[4/3] overflow-hidden bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${cardClass}`}
+            className={`group relative mb-4 block w-full break-inside-avoid overflow-hidden bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${cardClass}`}
             style={cardStyle}
             onClick={() => setActiveIndex(index)}
           >
-            <Image
+            <img
               src={photo}
               alt={`${businessName} portfolio photo ${index + 1}`}
-              fill
-              sizes="(min-width: 1280px) 31vw, (min-width: 640px) 48vw, 100vw"
-              className="object-contain p-2 transition duration-500 group-hover:scale-[1.02]"
+              className="h-auto w-full transition duration-500 group-hover:scale-[1.015]"
             />
             <span className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#2f2626] opacity-0 shadow-sm transition group-hover:opacity-100">
               View photo
@@ -88,14 +85,11 @@ export function StorefrontPortfolioGallery({
             </button>
           ) : null}
 
-          <div className={`relative h-[78vh] w-full max-w-5xl overflow-hidden bg-white ${imageRadius}`}>
-            <Image
+          <div className={`grid max-h-[82vh] w-full max-w-5xl place-items-center overflow-hidden bg-white ${imageRadius}`}>
+            <img
               src={activePhoto}
               alt={`${businessName} portfolio photo ${(activeIndex ?? 0) + 1} enlarged`}
-              fill
-              sizes="100vw"
-              className="object-contain p-3"
-              priority
+              className="max-h-[82vh] w-auto max-w-full object-contain p-3"
             />
           </div>
 
