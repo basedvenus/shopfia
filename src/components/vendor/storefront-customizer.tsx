@@ -383,8 +383,10 @@ export function StorefrontCustomizer({
               activeSection={activeSection}
               business={business}
               form={form}
+              mediaUploadEndpoint={mediaUploadEndpoint}
               previewMode={previewMode}
               setActiveSection={setActiveSection}
+              update={update}
               visibleSections={visibleSections}
             />
           </div>
@@ -794,15 +796,19 @@ function StorefrontPreview({
   activeSection,
   business,
   form,
+  mediaUploadEndpoint,
   previewMode,
   setActiveSection,
+  update,
   visibleSections
 }: {
   activeSection: string;
   business: CustomizerBusiness;
   form: FormState;
+  mediaUploadEndpoint: string;
   previewMode: "desktop" | "mobile";
   setActiveSection: (section: string) => void;
+  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
   visibleSections: string[];
 }) {
   const palette = getPreviewPalette(form.palette);
@@ -810,16 +816,39 @@ function StorefrontPreview({
   const activeServices = form.services.filter((service) => service.active);
   const featuredServices = activeServices.filter((service) => service.featured).slice(0, 3);
   const isMobile = previewMode === "mobile";
+  const updateFaq = (id: string, patch: Partial<FaqItem>) => {
+    update("faqs", form.faqs.map((faq) => (faq.id === id ? { ...faq, ...patch } : faq)));
+  };
   return (
     <div className={`overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={theme.bodyStyle}>
-      <button type="button" onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
+      <section onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
         <div className={`border-b px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] ${theme.headerClass}`} style={theme.platformBarStyle}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           {form.logoUrl ? <img src={form.logoUrl} alt="" className={`h-14 w-14 object-cover ${theme.logoRadius}`} /> : <div className={`grid h-14 w-14 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
           <div>
-            <div className="text-lg font-semibold" style={theme.headingStyle}>{form.name}</div>
+            {activeSection === "hero" ? (
+              <InlineTextInput
+                ariaLabel="Business name"
+                className="text-lg font-semibold"
+                onChange={(value) => update("name", value)}
+                style={theme.headingStyle}
+                value={form.name}
+              />
+            ) : (
+              <div className="text-lg font-semibold" style={theme.headingStyle}>{form.name}</div>
+            )}
             <div className={`text-sm ${theme.mutedClass}`}>@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
-            <p className={`mt-1 line-clamp-2 text-sm ${theme.copyClass}`}>{form.tagline}</p>
+            {activeSection === "hero" ? (
+              <InlineTextInput
+                ariaLabel="Tagline"
+                className={`mt-1 text-sm ${theme.copyClass}`}
+                onChange={(value) => update("tagline", value)}
+                placeholder="Add a short tagline"
+                value={form.tagline}
+              />
+            ) : (
+              <p className={`mt-1 line-clamp-2 text-sm ${theme.copyClass}`}>{form.tagline}</p>
+            )}
             <span className="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>Follow</span>
           </div>
         </div>
@@ -831,26 +860,153 @@ function StorefrontPreview({
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,17,15,0.9),rgba(24,17,15,0.2))]" />
           <div className="relative p-6">
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/70">Featured storefront</p>
-            <h2 className="mt-4 text-5xl font-semibold leading-[0.9] tracking-normal" style={theme.headingStyle}>{form.aboutHeading || form.name}</h2>
-            <p className="mt-4 line-clamp-3 text-sm leading-6 text-white/80">{form.tagline || form.bio}</p>
+            {activeSection === "hero" ? (
+              <>
+                <InlineTextInput
+                  ariaLabel="Hero headline"
+                  className="mt-4 text-5xl font-semibold leading-[0.9] tracking-normal text-white"
+                  onChange={(value) => update("aboutHeading", value)}
+                  placeholder={form.name}
+                  style={theme.headingStyle}
+                  value={form.aboutHeading}
+                />
+                <InlineTextarea
+                  ariaLabel="Hero supporting text"
+                  className="mt-4 text-sm leading-6 text-white/80"
+                  onChange={(value) => update("tagline", value)}
+                  placeholder={form.bio || "Add supporting text"}
+                  value={form.tagline}
+                />
+              </>
+            ) : (
+              <>
+                <h2 className="mt-4 text-5xl font-semibold leading-[0.9] tracking-normal" style={theme.headingStyle}>{form.aboutHeading || form.name}</h2>
+                <p className="mt-4 line-clamp-3 text-sm leading-6 text-white/80">{form.tagline || form.bio}</p>
+              </>
+            )}
             <span className="mt-5 inline-flex rounded-full px-4 py-2 text-xs font-semibold" style={theme.heroCtaStyle}>Browse services</span>
           </div>
         </section>
-      </button>
+      </section>
       <div className={`bg-gradient-to-br ${palette.className} p-5`}>
         {visibleSections.filter((section) => section !== "hero").map((section) => {
           if (section === "featured-services") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Featured services" onClick={() => setActiveSection(section)}><ServiceGrid services={featuredServices} theme={theme} /></PreviewSection>;
           if (section === "all-services") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="All services" onClick={() => setActiveSection(section)}><ServiceGrid services={activeServices} theme={theme} /></PreviewSection>;
           if (section === "portfolio") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Portfolio" onClick={() => setActiveSection(section)}><div className="grid grid-cols-3 gap-2">{form.photoUrls.filter(Boolean).slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-square object-cover ${theme.imageRadius}`} />)}</div></PreviewSection>;
-          if (section === "about") return <PreviewSection key={section} active={activeSection === section} theme={theme} title={form.aboutHeading || "About Us"} onClick={() => setActiveSection(section)}><div className="grid gap-3 md:grid-cols-2"><p>{form.bio}</p>{form.aboutImage ? <img src={form.aboutImage} alt="" className={`h-44 w-full object-cover ${theme.imageRadius}`} /> : null}</div></PreviewSection>;
-          if (section === "how-it-works") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="How it works" onClick={() => setActiveSection(section)}><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p></PreviewSection>;
+          if (section === "about") return (
+            <PreviewSection
+              key={section}
+              active={activeSection === section}
+              theme={theme}
+              title={activeSection === section ? "" : form.aboutHeading || "About Us"}
+              onClick={() => setActiveSection(section)}
+            >
+              {activeSection === section ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <InlineTextInput ariaLabel="About heading" className="text-2xl font-semibold" onChange={(value) => update("aboutHeading", value)} placeholder="About Us" style={theme.headingStyle} value={form.aboutHeading} />
+                    <InlineTextarea ariaLabel="About Us text" className={`mt-3 text-sm leading-6 ${theme.copyClass}`} onChange={(value) => update("bio", value)} placeholder="Tell customers about your business" value={form.bio} />
+                  </div>
+                  <div>
+                    {form.aboutImage ? <img src={form.aboutImage} alt="" className={`h-44 w-full object-cover ${theme.imageRadius}`} /> : null}
+                    <div className="mt-3">
+                      <ImageUploadField name="previewFounderPhoto" label="Founder or team photo" value={form.aboutImage} onChangePreview={(value) => update("aboutImage", value)} uploadEndpoint={mediaUploadEndpoint} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2"><p>{form.bio}</p>{form.aboutImage ? <img src={form.aboutImage} alt="" className={`h-44 w-full object-cover ${theme.imageRadius}`} /> : null}</div>
+              )}
+            </PreviewSection>
+          );
+          if (section === "how-it-works") return (
+            <PreviewSection key={section} active={activeSection === section} theme={theme} title="How it works" onClick={() => setActiveSection(section)}>
+              {activeSection === section ? (
+                <div className="grid gap-3">
+                  <InlineTextarea ariaLabel="Booking process" onChange={(value) => update("booking", { ...form.booking, process: value })} placeholder="Describe how booking works" value={form.booking.process} />
+                  <InlineTextarea ariaLabel="Service area" onChange={(value) => update("serviceAreaNotes", value)} placeholder="Describe where you serve customers" value={form.serviceAreaNotes} />
+                </div>
+              ) : (
+                <><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p></>
+              )}
+            </PreviewSection>
+          );
           if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Verified reviews" onClick={() => setActiveSection(section)}><p>Reviews are synced from completed ShopFia bookings.</p></PreviewSection>;
-          if (section === "faq") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="FAQ" onClick={() => setActiveSection(section)}>{form.faqs.slice(0, 3).map((faq) => <div key={faq.id} className="mt-2"><div className="font-semibold">{faq.question}</div><p>{faq.answer}</p></div>)}</PreviewSection>;
+          if (section === "faq") return (
+            <PreviewSection key={section} active={activeSection === section} theme={theme} title="FAQ" onClick={() => setActiveSection(section)}>
+              {activeSection === section ? (
+                <div className="grid gap-4">
+                  {form.faqs.map((faq) => (
+                    <div key={faq.id} className="grid gap-2">
+                      <InlineTextInput ariaLabel="FAQ question" className="font-semibold" onChange={(value) => updateFaq(faq.id, { question: value })} placeholder="Question" value={faq.question} />
+                      <InlineTextarea ariaLabel="FAQ answer" onChange={(value) => updateFaq(faq.id, { answer: value })} placeholder="Answer" value={faq.answer} />
+                    </div>
+                  ))}
+                  <Button type="button" variant="secondary" onClick={() => update("faqs", [...form.faqs, { id: crypto.randomUUID(), question: "New question", answer: "Answer this in your own words." }])}>
+                    <Plus className="h-4 w-4" />Add FAQ
+                  </Button>
+                </div>
+              ) : (
+                form.faqs.slice(0, 3).map((faq) => <div key={faq.id} className="mt-2"><div className="font-semibold">{faq.question}</div><p>{faq.answer}</p></div>)
+              )}
+            </PreviewSection>
+          );
           if (section === "final-quote") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Ready for a quote?" onClick={() => setActiveSection(section)}><Button type="button"><Send className="h-4 w-4" />Get a quote</Button></PreviewSection>;
           return null;
         })}
       </div>
     </div>
+  );
+}
+
+function InlineTextInput({
+  ariaLabel,
+  className = "",
+  onChange,
+  placeholder,
+  style,
+  value
+}: {
+  ariaLabel: string;
+  className?: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  style?: CSSProperties;
+  value: string;
+}) {
+  return (
+    <input
+      aria-label={ariaLabel}
+      className={`w-full rounded-[0.65rem] border border-transparent bg-white/72 px-2 py-1 outline-none ring-1 ring-transparent transition placeholder:text-current/50 focus:border-current/20 focus:bg-white/90 focus:ring-current/20 ${className}`}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      style={style}
+      value={value}
+    />
+  );
+}
+
+function InlineTextarea({
+  ariaLabel,
+  className = "",
+  onChange,
+  placeholder,
+  value
+}: {
+  ariaLabel: string;
+  className?: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  value: string;
+}) {
+  return (
+    <textarea
+      aria-label={ariaLabel}
+      className={`min-h-24 w-full resize-y rounded-[0.75rem] border border-transparent bg-white/72 px-2 py-1 outline-none ring-1 ring-transparent transition placeholder:text-current/50 focus:border-current/20 focus:bg-white/90 focus:ring-current/20 ${className}`}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      value={value}
+    />
   );
 }
 
@@ -877,10 +1033,10 @@ function ServiceGrid({ services, theme }: { services: EditorService[]; theme: Pr
 
 function PreviewSection({ active, children, onClick, theme, title }: { active: boolean; children: ReactNode; onClick: () => void; theme: PreviewTheme; title: string }) {
   return (
-    <button type="button" onClick={onClick} className={previewButtonClass(active, `mb-5 block w-full p-5 text-left transition ${theme.cardClass} ${theme.sectionRadius}`)} style={active ? theme.activeSectionStyle : theme.previewCardStyle}>
-      <h3 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{title}</h3>
-      <div className={`mt-3 text-sm leading-6 ${theme.copyClass}`}>{children}</div>
-    </button>
+    <section onClick={onClick} className={previewButtonClass(active, `mb-5 block w-full cursor-text p-5 text-left transition ${theme.cardClass} ${theme.sectionRadius}`)} style={active ? theme.activeSectionStyle : theme.previewCardStyle}>
+      {title ? <h3 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{title}</h3> : null}
+      <div className={`${title ? "mt-3" : ""} text-sm leading-6 ${theme.copyClass}`}>{children}</div>
+    </section>
   );
 }
 
