@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
   ChevronDown,
@@ -18,7 +18,7 @@ import {
   Trash2,
   Wand2
 } from "lucide-react";
-import { updateStorefrontCustomizationAction } from "@/app/actions/vendor";
+import { autosaveStorefrontDraftAction, updateStorefrontCustomizationAction } from "@/app/actions/vendor";
 import { Button } from "@/components/ui/button";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { Input } from "@/components/ui/input";
@@ -165,6 +165,9 @@ export function StorefrontCustomizer({
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState(errorMessage ? "Needs attention" : draftSaved ? "Draft saved" : saved ? "Published" : "Live");
+  const [autosaveMessage, setAutosaveMessage] = useState("");
+  const [isAutosaving, startAutosaveTransition] = useTransition();
+  const lastAutosaveKeyRef = useRef<string | null>(null);
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
   const [draggedPhotoIndex, setDraggedPhotoIndex] = useState<number | null>(null);
   const [collapsedFaqIds, setCollapsedFaqIds] = useState<string[]>([]);
@@ -199,6 +202,89 @@ export function StorefrontCustomizer({
       ),
     [form.services]
   );
+  const faqJson = useMemo(() => JSON.stringify(form.faqs), [form.faqs]);
+  const policiesJson = useMemo(() => JSON.stringify(form.policies), [form.policies]);
+  const bookingJson = useMemo(() => JSON.stringify(form.booking), [form.booking]);
+  const autosavePayload = useMemo(
+    () => ({
+      aboutHeading: form.aboutHeading,
+      aboutImage: form.aboutImage,
+      availabilityNotes: form.availabilityNotes,
+      bio: form.bio,
+      bookingJson,
+      businessId: business.id,
+      buttonStyle: "PILL",
+      city: form.city,
+      coverPhoto: form.coverPhoto,
+      faqJson,
+      featuredOfferingIds: form.services.filter((service) => service.featured && service.active).map((service) => service.id),
+      fontStyle: form.fontStyle,
+      hiddenSections: form.hiddenSections,
+      imageShape: form.imageShape,
+      instagramUrl: form.instagramUrl,
+      intent: "draft",
+      layout: "EDITORIAL",
+      logoUrl: form.logoUrl,
+      name: form.name,
+      offeringOrder: form.services.map((service) => service.id),
+      palette: form.palette,
+      photoUrls: form.photoUrls.filter(Boolean),
+      policiesJson,
+      sectionOrder: form.sectionOrder,
+      serviceAreaNotes: form.serviceAreaNotes,
+      servicesJson,
+      state: form.state,
+      tagline: form.tagline,
+      textTone: form.textTone,
+      tiktokUrl: form.tiktokUrl,
+      website: form.website
+    }),
+    [bookingJson, business.id, faqJson, form, policiesJson, servicesJson]
+  );
+  const completionItems = useMemo(() => [
+    { done: Boolean(form.logoUrl), label: "Logo added" },
+    { done: Boolean(form.coverPhoto), label: "Cover image added" },
+    { done: Boolean(form.aboutHeading && form.tagline), label: "Headline and tagline set" },
+    { done: Boolean(form.bio), label: "About text written" },
+    { done: form.services.some((service) => service.active), label: "Visible service selected" },
+    { done: form.services.some((service) => service.active && service.featured), label: "Featured service chosen" },
+    { done: form.photoUrls.filter(Boolean).length >= 3, label: "Portfolio has 3+ images" },
+    { done: Boolean(form.serviceAreaNotes || form.booking.leadTime), label: "Booking/service area details added" },
+    { done: form.faqs.some((faq) => faq.question && faq.answer), label: "FAQ started" }
+  ], [form]);
+  const completionCount = completionItems.filter((item) => item.done).length;
+
+  const saveDraftSnapshot = useCallback((payload: typeof autosavePayload, payloadKey = JSON.stringify(payload)) => {
+    setStatus("Saving draft");
+    setAutosaveMessage("Saving draft...");
+    startAutosaveTransition(async () => {
+      const result = await autosaveStorefrontDraftAction(payload);
+      if (result.ok) {
+        lastAutosaveKeyRef.current = payloadKey;
+        setStatus("Draft autosaved");
+        setAutosaveMessage("Draft saved. Publish when it looks right.");
+      } else {
+        setStatus("Draft needs attention");
+        setAutosaveMessage(result.error ?? "Draft could not be saved. Try again in a moment.");
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    const payloadKey = JSON.stringify(autosavePayload);
+    if (lastAutosaveKeyRef.current === null) {
+      lastAutosaveKeyRef.current = payloadKey;
+      return;
+    }
+    if (!dirty || lastAutosaveKeyRef.current === payloadKey) return;
+
+    setAutosaveMessage("Waiting to autosave...");
+    const timer = window.setTimeout(() => {
+      saveDraftSnapshot(autosavePayload, payloadKey);
+    }, 1200);
+
+    return () => window.clearTimeout(timer);
+  }, [autosavePayload, dirty, saveDraftSnapshot]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -324,9 +410,9 @@ export function StorefrontCustomizer({
       <input type="hidden" name="buttonStyle" value="PILL" />
       <input type="hidden" name="imageShape" value={form.imageShape} />
       <input type="hidden" name="textTone" value={form.textTone} />
-      <input type="hidden" name="faqJson" value={JSON.stringify(form.faqs)} />
-      <input type="hidden" name="policiesJson" value={JSON.stringify(form.policies)} />
-      <input type="hidden" name="bookingJson" value={JSON.stringify(form.booking)} />
+      <input type="hidden" name="faqJson" value={faqJson} />
+      <input type="hidden" name="policiesJson" value={policiesJson} />
+      <input type="hidden" name="bookingJson" value={bookingJson} />
       <input type="hidden" name="servicesJson" value={servicesJson} />
       {form.sectionOrder.map((section) => <input key={`order-${section}`} type="hidden" name="sectionOrder" value={section} />)}
       {form.hiddenSections.map((section) => <input key={`hidden-${section}`} type="hidden" name="hiddenSections" value={section} />)}
@@ -347,7 +433,7 @@ export function StorefrontCustomizer({
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded-full bg-[#fbf7f5] px-3 py-1.5 text-xs font-semibold text-muted-foreground">
             <Check className="h-3.5 w-3.5" />
-            {status}
+            {isAutosaving ? "Autosaving draft" : status}
           </span>
           <div className="flex rounded-full border border-[#eadbd7] bg-[#fbf7f5] p-1">
             {[
@@ -368,7 +454,7 @@ export function StorefrontCustomizer({
               );
             })}
           </div>
-          <Button type="submit" name="intent" value="draft" variant="secondary" onClick={() => setStatus("Saving draft")}>
+          <Button type="button" name="intent" value="draft" variant="secondary" onClick={() => saveDraftSnapshot(autosavePayload)} disabled={isAutosaving}>
             <Save className="h-4 w-4" />
             Save draft
           </Button>
@@ -392,6 +478,23 @@ export function StorefrontCustomizer({
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Sections</h2>
             <CopyStorefrontLinkButton url={publicUrl} label="Copy link" className="h-8 bg-white px-3 text-xs" />
+          </div>
+          <div className="mb-3 rounded-[1rem] border border-white/80 bg-white p-3 shadow-sm">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Storefront checklist</span>
+              <span className="rounded-full bg-[#fbf7f5] px-2 py-1 text-xs font-semibold text-[#4b403c]">{completionCount}/{completionItems.length}</span>
+            </div>
+            <div className="grid gap-1.5">
+              {completionItems.map((item) => (
+                <div key={item.label} className={`flex items-center gap-2 text-xs ${item.done ? "text-[#2f6d4f]" : "text-muted-foreground"}`}>
+                  <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border ${item.done ? "border-[#9bd0ae] bg-[#e9f8ed]" : "border-[#eadbd7] bg-[#fbf7f5]"}`}>
+                    {item.done ? <Check className="h-3 w-3" /> : null}
+                  </span>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+            {autosaveMessage ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{autosaveMessage}</p> : null}
           </div>
           <div className="grid gap-2">
             {form.sectionOrder.map((section) => {

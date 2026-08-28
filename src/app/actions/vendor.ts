@@ -354,23 +354,25 @@ function firstValidationMessage(
   return friendlyValidationMessage(error.issues, labels);
 }
 
-export async function updateStorefrontCustomizationAction(formData: FormData) {
-  const { db } = await import("@/lib/db");
-  const session = await requireSession();
-  const submittedBusinessSlug = slugifyBusinessUrl(String(formData.get("businessSlug") ?? ""));
-  const customizeErrorBasePath = submittedBusinessSlug ? `/vendor/business/${submittedBusinessSlug}/storefront` : "/vendor/dashboard";
-  const redirectWithCustomizeError = (message: string): never => {
-    redirect(`${customizeErrorBasePath}?customizeError=${encodeURIComponent(message)}`);
-  };
-  const rate = await checkServerActionRateLimit([
-    { key: "storefront-customize:ip:{ip}", limit: 24, intervalMs: 60_000 },
-    { key: `storefront-customize:user:${session.user.id}`, limit: 10, intervalMs: 60_000 }
-  ]);
-  if (!rate.ok) {
-    return redirectWithCustomizeError("Please wait a minute before publishing again.");
-  }
+const storefrontCustomizeLabels = {
+  name: "Business name",
+  tagline: "Tagline",
+  bio: "About Our Business",
+  aboutHeading: "About heading",
+  aboutImage: "About image",
+  city: "City",
+  logoUrl: "Logo",
+  coverPhoto: "Cover image",
+  photoUrls: "Portfolio photos",
+  website: "Website",
+  instagramUrl: "Instagram Link",
+  tiktokUrl: "TikTok Link"
+};
 
-  const result = storefrontCustomizationSchema.safeParse({
+type StorefrontCustomizationInput = z.infer<typeof storefrontCustomizationSchema>;
+
+function storefrontCustomizationPayloadFromFormData(formData: FormData) {
+  return {
     businessId: formData.get("businessId"),
     intent: formData.get("intent") || "publish",
     name: formData.get("name"),
@@ -402,54 +404,14 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     featuredOfferingIds: formDataToArray(formData, "featuredOfferingIds"),
     offeringOrder: formDataToArray(formData, "offeringOrder"),
     servicesJson: formData.get("servicesJson") || undefined
-  });
-  if (!result.success) {
-    const message = firstValidationMessage(result.error, {
-      name: "Business name",
-      tagline: "Tagline",
-      bio: "About Our Business",
-      aboutHeading: "About heading",
-      aboutImage: "About image",
-      city: "City",
-      logoUrl: "Logo",
-      coverPhoto: "Cover image",
-      photoUrls: "Portfolio photos",
-      website: "Website",
-      instagramUrl: "Instagram Link",
-      tiktokUrl: "TikTok Link"
-    });
-    return redirectWithCustomizeError(message);
-  }
+  };
+}
 
-  const parsed = result.data;
-  const vendor = await db.vendorProfile.findFirst({
-    where: {
-      id: parsed.businessId,
-      ...(session.user.role === UserRole.ADMIN
-        ? {}
-        : {
-            OR: [
-              { userId: session.user.id },
-              { managers: { some: { userId: session.user.id } } }
-            ]
-          })
-    },
-    select: {
-      id: true,
-      city: true,
-      slug: true,
-      state: true,
-      offerings: { select: { id: true } }
-    }
-  });
-  if (!vendor) {
-    return redirectWithCustomizeError("That business could not be found.");
-  }
+function prepareStorefrontCustomizationPayload(parsed: StorefrontCustomizationInput, existingOfferingIds: string[]) {
   const sanitizedSectionOrder = sanitizeStorefrontSections(parsed.sectionOrder);
   const sanitizedHiddenSections = sanitizeHiddenStorefrontSections(parsed.hiddenSections);
   const storefrontPalette = normalizeStorefrontPalette(parsed.palette);
   const editorServices = parseEditorServices(parsed.servicesJson);
-  const existingOfferingIds = vendor.offerings.map((offering) => offering.id);
   const hiddenOfferingIds = editorServices
     .filter((service) => service.active === false && service.id && existingOfferingIds.includes(service.id))
     .map((service) => service.id as string);
@@ -499,6 +461,129 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     website: parsed.website || "",
     savedAt: new Date().toISOString()
   }));
+  const orderedOfferingIds = parsed.offeringOrder.filter((id) => existingOfferingIds.includes(id));
+  const featuredOfferingIds = parsed.featuredOfferingIds
+    .filter((id) => existingOfferingIds.includes(id) && !hiddenOfferingIds.includes(id));
+
+  return {
+    draftPayload,
+    featuredOfferingIds,
+    hiddenOfferingIds,
+    orderedOfferingIds,
+    sanitizedHiddenSections,
+    sanitizedSectionOrder,
+    storefrontPalette
+  };
+}
+
+export async function autosaveStorefrontDraftAction(input: unknown) {
+  const { db } = await import("@/lib/db");
+  const session = await requireSession();
+  const rate = await checkServerActionRateLimit([
+    { key: "storefront-draft-autosave:ip:{ip}", limit: 90, intervalMs: 60_000 },
+    { key: `storefront-draft-autosave:user:${session.user.id}`, limit: 45, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    return { ok: false, error: "Autosave is pausing for a moment. Your changes are still in the editor." };
+  }
+
+  const result = storefrontCustomizationSchema.safeParse({ ...(typeof input === "object" && input ? input : {}), intent: "draft" });
+  if (!result.success) {
+    return { ok: false, error: firstValidationMessage(result.error, storefrontCustomizeLabels) };
+  }
+
+  const parsed = result.data;
+  const vendor = await db.vendorProfile.findFirst({
+    where: {
+      id: parsed.businessId,
+      ...(session.user.role === UserRole.ADMIN
+        ? {}
+        : {
+            OR: [
+              { userId: session.user.id },
+              { managers: { some: { userId: session.user.id } } }
+            ]
+          })
+    },
+    select: {
+      id: true,
+      slug: true,
+      offerings: { select: { id: true } }
+    }
+  });
+  if (!vendor) {
+    return { ok: false, error: "That business could not be found." };
+  }
+
+  const { draftPayload } = prepareStorefrontCustomizationPayload(
+    parsed,
+    vendor.offerings.map((offering) => offering.id)
+  );
+  await db.vendorProfile.update({
+    where: { id: vendor.id },
+    data: { storefrontDraftJson: draftPayload }
+  });
+  revalidatePath(`/vendor/business/${vendor.slug}/storefront`);
+
+  return { ok: true, savedAt: String(draftPayload.savedAt) };
+}
+
+export async function updateStorefrontCustomizationAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
+  const session = await requireSession();
+  const submittedBusinessSlug = slugifyBusinessUrl(String(formData.get("businessSlug") ?? ""));
+  const customizeErrorBasePath = submittedBusinessSlug ? `/vendor/business/${submittedBusinessSlug}/storefront` : "/vendor/dashboard";
+  const redirectWithCustomizeError = (message: string): never => {
+    redirect(`${customizeErrorBasePath}?customizeError=${encodeURIComponent(message)}`);
+  };
+  const rate = await checkServerActionRateLimit([
+    { key: "storefront-customize:ip:{ip}", limit: 24, intervalMs: 60_000 },
+    { key: `storefront-customize:user:${session.user.id}`, limit: 10, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) {
+    return redirectWithCustomizeError("Please wait a minute before publishing again.");
+  }
+
+  const result = storefrontCustomizationSchema.safeParse(storefrontCustomizationPayloadFromFormData(formData));
+  if (!result.success) {
+    const message = firstValidationMessage(result.error, storefrontCustomizeLabels);
+    return redirectWithCustomizeError(message);
+  }
+
+  const parsed = result.data;
+  const vendor = await db.vendorProfile.findFirst({
+    where: {
+      id: parsed.businessId,
+      ...(session.user.role === UserRole.ADMIN
+        ? {}
+        : {
+            OR: [
+              { userId: session.user.id },
+              { managers: { some: { userId: session.user.id } } }
+            ]
+          })
+    },
+    select: {
+      id: true,
+      city: true,
+      slug: true,
+      state: true,
+      offerings: { select: { id: true } }
+    }
+  });
+  if (!vendor) {
+    return redirectWithCustomizeError("That business could not be found.");
+  }
+  const existingOfferingIds = vendor.offerings.map((offering) => offering.id);
+  const {
+    draftPayload,
+    featuredOfferingIds,
+    hiddenOfferingIds,
+    orderedOfferingIds,
+    sanitizedHiddenSections,
+    sanitizedSectionOrder,
+    storefrontPalette
+  } = prepareStorefrontCustomizationPayload(parsed, existingOfferingIds);
 
   if (parsed.intent === "draft") {
     await db.vendorProfile.update({
@@ -508,11 +593,6 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     revalidatePath(`/vendor/business/${vendor.slug}/storefront`);
     redirect(`/vendor/business/${vendor.slug}/storefront?draft=1`);
   }
-
-  const orderedOfferingIds = parsed.offeringOrder
-    .filter((id) => existingOfferingIds.includes(id));
-  const featuredOfferingIds = parsed.featuredOfferingIds
-    .filter((id) => existingOfferingIds.includes(id) && !hiddenOfferingIds.includes(id));
 
   await db.vendorProfile.update({
     where: { id: vendor.id },
