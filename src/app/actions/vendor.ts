@@ -288,7 +288,7 @@ function parseEditorServices(value: string | undefined): StorefrontEditorService
       clientId: typeof item.clientId === "string" ? item.clientId : undefined,
       description: typeof item.description === "string" ? item.description.trim().slice(0, 4000) : "",
       featured: item.featured === true,
-      id: typeof item.id === "string" && item.id.startsWith("cm") ? item.id : undefined,
+      id: typeof item.id === "string" && z.string().cuid().safeParse(item.id).success ? item.id : undefined,
       messageForPricing: Boolean(item.messageForPricing),
       photos: Array.isArray(item.photos)
         ? item.photos.filter((photo): photo is string => typeof photo === "string" && photo.trim().length > 0).slice(0, 10)
@@ -447,7 +447,7 @@ function prepareStorefrontCustomizationPayload(parsed: StorefrontCustomizationIn
       categoryId: service.categoryId ?? null,
       clientId: service.clientId ?? service.id ?? "",
       description: service.description ?? "",
-      featured: parsed.featuredOfferingIds.includes(service.clientId ?? service.id ?? ""),
+      featured: service.active !== false && parsed.featuredOfferingIds.includes(service.clientId ?? service.id ?? ""),
       id: service.id ?? service.clientId,
       isNew: !service.id,
       messageForPricing: Boolean(service.messageForPricing),
