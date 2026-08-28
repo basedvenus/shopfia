@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { db } from "@/lib/db";
+import { storefrontPath } from "@/lib/businesses";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { getSafeProfileImage } from "@/lib/profile-image";
@@ -68,6 +69,31 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           },
           orderBy: { createdAt: "desc" }
         },
+        vendorProfile: {
+          select: {
+            id: true,
+            logoCrop: true,
+            logoUrl: true,
+            name: true,
+            photos: true,
+            slug: true
+          }
+        },
+        managedBusinesses: {
+          include: {
+            vendorProfile: {
+              select: {
+                id: true,
+                logoCrop: true,
+                logoUrl: true,
+                name: true,
+                photos: true,
+                slug: true
+              }
+            }
+          },
+          orderBy: { createdAt: "asc" }
+        },
         _count: {
           select: { followers: true, following: true }
         }
@@ -96,6 +122,10 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   const initials = getInitials(profile.name ?? profile.username);
   const profileImage = getSafeProfileImage(profile.image);
   const profileBadges = getProfileBadges(profile, originalMemberCutoff);
+  const profileStorefronts = dedupeStorefrontLinks([
+    profile.vendorProfile,
+    ...profile.managedBusinesses.map((manager) => manager.vendorProfile)
+  ]);
 
   async function toggleFollow(formData: FormData) {
     "use server";
@@ -141,6 +171,38 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                 <p className="text-sm font-medium text-muted-foreground">@{profile.username}</p>
                 {profile.bio ? (
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">{profile.bio}</p>
+                ) : null}
+                {profileStorefronts.length ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {profileStorefronts.map((storefront) => (
+                      <Link
+                        key={storefront.id}
+                        href={storefrontPath(storefront.slug)}
+                        className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-full border border-primary/20 bg-white/85 px-2.5 py-2 pr-4 text-sm font-semibold text-foreground shadow-sm transition hover:border-primary/40 hover:bg-white"
+                      >
+                        <span className="relative grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full bg-accent text-[11px] font-semibold text-primary">
+                          {storefront.logoUrl ? (
+                            <CroppedImage
+                              src={storefront.logoUrl}
+                              alt={`${storefront.name} logo`}
+                              crop={normalizeImageCrop(storefront.logoCrop)}
+                              className="block h-full w-full object-cover object-center"
+                            />
+                          ) : storefront.photos[0] ? (
+                            <CroppedImage
+                              src={storefront.photos[0]}
+                              alt={`${storefront.name} storefront`}
+                              crop={null}
+                              className="block h-full w-full object-cover object-center"
+                            />
+                          ) : (
+                            storefront.name.slice(0, 1)
+                          )}
+                        </span>
+                        <span className="truncate">{storefront.name}</span>
+                      </Link>
+                    ))}
+                  </div>
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted-foreground">
                   <span>{profile._count.followers} followers</span>
@@ -214,6 +276,24 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
       </section>
     </div>
   );
+}
+
+function dedupeStorefrontLinks(
+  storefronts: Array<{
+    id: string;
+    logoCrop: unknown;
+    logoUrl: string | null;
+    name: string;
+    photos: string[];
+    slug: string;
+  } | null>
+) {
+  const seen = new Set<string>();
+  return storefronts.filter((storefront): storefront is NonNullable<(typeof storefronts)[number]> => {
+    if (!storefront || seen.has(storefront.id)) return false;
+    seen.add(storefront.id);
+    return true;
+  });
 }
 
 function getPrimaryHostName(event: {
