@@ -701,13 +701,20 @@ export async function upsertVendorProfileAction(formData: FormData) {
   const submittedStorefrontSlug = slugifyBusinessUrl(String(formData.get("slug") ?? ""));
   const submittedBusinessName = String(formData.get("name") ?? "");
   const requestedSlug = submittedStorefrontSlug || slugifyBusinessUrl(submittedBusinessName);
+  const submittedVendorUsername = String(formData.get("username") ?? "")
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase();
   if (isReservedStorefrontSlug(requestedSlug)) {
     redirectWithVendorProfileError("That storefront URL is reserved. Choose a different ending.", { newBusiness: isCreatingNewBusiness });
   }
-  const slugOwner = requestedSlug
-    ? await db.vendorProfile.findFirst({
+  const conflictingBusinesses = requestedSlug || submittedVendorUsername
+    ? await db.vendorProfile.findMany({
         where: {
-          slug: requestedSlug,
+          OR: [
+            ...(requestedSlug ? [{ slug: requestedSlug }] : []),
+            ...(submittedVendorUsername ? [{ username: submittedVendorUsername }] : [])
+          ],
           ...(targetVendor ? { id: { not: targetVendor.id } } : {})
         },
         select: {
@@ -719,30 +726,45 @@ export async function upsertVendorProfileAction(formData: FormData) {
           userId: true,
           managers: { where: { userId: session.user.id }, select: { userId: true }, take: 1 },
           _count: { select: { managers: true } }
-        }
+        },
+        take: 3
       })
-    : null;
-  if (slugOwner) {
-    const isManagedByUser = slugOwner.userId === session.user.id || slugOwner.managers.length > 0;
-    const isOwnerlessExactMatch =
-      isCreatingNewBusiness &&
-      !slugOwner.userId &&
-      slugOwner._count.managers === 0 &&
-      slugOwner.status === VendorProfileStatus.CLAIMED &&
-      normalizeBusinessName(slugOwner.name) === normalizeBusinessName(submittedBusinessName);
+    : [];
+  if (conflictingBusinesses.length > 0) {
+    const reusableBusinesses = conflictingBusinesses.filter((business) => {
+      const isManagedByUser = business.userId === session.user.id || business.managers.length > 0;
+      const isOwnerlessExactMatch =
+        isCreatingNewBusiness &&
+        !business.userId &&
+        business._count.managers === 0 &&
+        business.status === VendorProfileStatus.CLAIMED &&
+        normalizeBusinessName(business.name) === normalizeBusinessName(submittedBusinessName);
 
-    if (isManagedByUser || isOwnerlessExactMatch) {
-      targetVendor = slugOwner;
-    } else {
-      redirectWithVendorProfileError("That storefront URL is already taken by another storefront.", {
+      return isManagedByUser || isOwnerlessExactMatch;
+    });
+    const blockedBusiness = conflictingBusinesses.find(
+      (business) => !reusableBusinesses.some((reusableBusiness) => reusableBusiness.id === business.id)
+    );
+    if (blockedBusiness) {
+      const conflictField = blockedBusiness.username === submittedVendorUsername ? "username" : "storefront URL";
+      redirectWithVendorProfileError(`That ${conflictField} is already taken by another storefront.`, {
         newBusiness: isCreatingNewBusiness
       });
     }
+
+    const exactSlugMatch = reusableBusinesses.find((business) => business.slug === requestedSlug);
+    const exactUsernameMatch = reusableBusinesses.find((business) => business.username === submittedVendorUsername);
+    const reusableBusiness = exactSlugMatch ?? exactUsernameMatch ?? reusableBusinesses[0];
+    const isOwnerlessExactMatch =
+      reusableBusinesses.length > 1 &&
+      !reusableBusinesses.some((business) => business.slug === requestedSlug && business.username === submittedVendorUsername);
+    if (isOwnerlessExactMatch) {
+      redirectWithVendorProfileError("We found more than one saved copy of that business. Open it from your vendor dashboard and update it there.", {
+        newBusiness: isCreatingNewBusiness
+      });
+    }
+    targetVendor = reusableBusiness;
   }
-  const submittedVendorUsername = String(formData.get("username") ?? "")
-    .trim()
-    .replace(/^@/, "")
-    .toLowerCase();
   const vendorUsername = submittedVendorUsername || targetVendor?.username || targetVendor?.slug || "";
   const vendorSlug = requestedSlug || targetVendor?.slug || slugify(vendorUsername || formData.get("name"));
   const result = vendorOnboardingSchema.safeParse({

@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
     },
     vendorProfile: {
       findFirst: vi.fn(),
+      findMany: vi.fn(),
       findUnique: vi.fn()
     }
   },
@@ -74,6 +75,7 @@ describe("vendor profile actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.db.vendorProfile.findFirst.mockResolvedValue(null);
+    mocks.db.vendorProfile.findMany.mockResolvedValue([]);
     mocks.db.vendorProfile.findUnique.mockResolvedValue({ id: "primary_vendor" });
     mocks.db.category.count.mockResolvedValue(1);
     mocks.tx.vendorProfile.create.mockResolvedValue({
@@ -112,7 +114,7 @@ describe("vendor profile actions", () => {
   });
 
   it("repairs an ownerless matching business from a previous second-business save", async () => {
-    mocks.db.vendorProfile.findFirst.mockResolvedValueOnce({
+    mocks.db.vendorProfile.findMany.mockResolvedValueOnce([{
       id: "orphan_vendor",
       name: "Second Studio",
       slug: "second-studio",
@@ -121,7 +123,7 @@ describe("vendor profile actions", () => {
       userId: null,
       managers: [],
       _count: { managers: 0 }
-    });
+    }]);
     mocks.tx.vendorProfile.update.mockResolvedValue({
       id: "orphan_vendor",
       slug: "second-studio"
@@ -137,6 +139,48 @@ describe("vendor profile actions", () => {
         where: { id: "orphan_vendor" },
         data: expect.objectContaining({
           name: "Second Studio"
+        })
+      })
+    );
+    expect(mocks.tx.vendorProfileManager.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          vendorProfileId_userId: {
+            vendorProfileId: "orphan_vendor",
+            userId: "user_1"
+          }
+        }
+      })
+    );
+  });
+
+  it("repairs an ownerless matching business when the vendor username is the conflict", async () => {
+    mocks.db.vendorProfile.findMany.mockResolvedValueOnce([{
+      id: "orphan_vendor",
+      name: "Second Studio",
+      slug: "second-studio-copy",
+      status: "CLAIMED",
+      username: "second.studio",
+      userId: null,
+      managers: [],
+      _count: { managers: 0 }
+    }]);
+    mocks.tx.vendorProfile.update.mockResolvedValue({
+      id: "orphan_vendor",
+      slug: "second-studio"
+    });
+
+    await expect(upsertVendorProfileAction(secondBusinessFormData())).rejects.toThrow(
+      "NEXT_REDIRECT:/vendor/business/second-studio"
+    );
+
+    expect(mocks.tx.vendorProfile.create).not.toHaveBeenCalled();
+    expect(mocks.tx.vendorProfile.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "orphan_vendor" },
+        data: expect.objectContaining({
+          slug: "second-studio",
+          username: "second.studio"
         })
       })
     );
