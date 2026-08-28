@@ -336,8 +336,12 @@ function formDataToServiceComponents(formData: FormData) {
     .filter((component) => component.title);
 }
 
-function redirectWithVendorProfileError(message: string): never {
-  redirect(`/onboarding?profileError=${encodeURIComponent(message)}#profile`);
+function redirectWithVendorProfileError(message: string, options?: { newBusiness?: boolean }): never {
+  const params = new URLSearchParams({ profileError: message });
+  if (options?.newBusiness) {
+    params.set("newBusiness", "1");
+  }
+  redirect(`/onboarding?${params.toString()}#profile`);
 }
 
 function redirectWithOfferingError(message: string): never {
@@ -669,13 +673,13 @@ export async function upsertVendorProfileAction(formData: FormData) {
         orderBy: { createdAt: "asc" }
       });
   if (businessId && !existingVendor) {
-    redirectWithVendorProfileError("That business could not be found for your account.");
+    redirectWithVendorProfileError("That business could not be found for your account.", { newBusiness: isCreatingNewBusiness });
   }
   const submittedStorefrontSlug = slugifyBusinessUrl(String(formData.get("slug") ?? ""));
   const submittedBusinessName = String(formData.get("name") ?? "");
   const requestedSlug = submittedStorefrontSlug || slugifyBusinessUrl(submittedBusinessName);
   if (isReservedStorefrontSlug(requestedSlug)) {
-    redirectWithVendorProfileError("That storefront URL is reserved. Choose a different ending.");
+    redirectWithVendorProfileError("That storefront URL is reserved. Choose a different ending.", { newBusiness: isCreatingNewBusiness });
   }
   const slugOwner = requestedSlug
     ? await db.vendorProfile.findFirst({
@@ -687,7 +691,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
       })
     : null;
   if (slugOwner) {
-    redirectWithVendorProfileError("That storefront URL is already taken.");
+    redirectWithVendorProfileError("That storefront URL is already taken.", { newBusiness: isCreatingNewBusiness });
   }
   const submittedVendorUsername = String(formData.get("username") ?? "")
     .trim()
@@ -731,8 +735,10 @@ export async function upsertVendorProfileAction(formData: FormData) {
         website: "Website",
         instagramUrl: "Instagram Link",
         tiktokUrl: "TikTok Link",
-        photoUrls: "Cover/banner image"
-      })
+        photoUrls: "Cover/banner image",
+        categoryIds: "Categories"
+      }),
+      { newBusiness: isCreatingNewBusiness }
     );
   }
   const parsed = result.data;
@@ -818,7 +824,8 @@ export async function upsertVendorProfileAction(formData: FormData) {
     redirectWithVendorProfileError(
       isUniqueConstraintError(error)
         ? "That vendor username or shop username is already taken."
-        : "Your vendor profile could not be saved. Please try again."
+        : "Your vendor profile could not be saved. Please try again.",
+      { newBusiness: isCreatingNewBusiness }
     );
   }
 
@@ -826,7 +833,9 @@ export async function upsertVendorProfileAction(formData: FormData) {
     where: { id: { in: parsed.categoryIds }, audience: CategoryAudience.VENDOR }
   });
   if (validVendorCategoryCount !== parsed.categoryIds.length) {
-    redirectWithVendorProfileError("One or more selected categories are invalid for vendors.");
+    redirectWithVendorProfileError("One or more selected categories are invalid for vendors.", {
+      newBusiness: isCreatingNewBusiness
+    });
   }
 
   await db.vendorCategory.deleteMany({ where: { vendorId: vendor.id } });

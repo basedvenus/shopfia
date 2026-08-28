@@ -18,6 +18,8 @@ const optionalCoordinate = (min: number, max: number) =>
     z.coerce.number().min(min).max(max).optional()
   );
 
+const databaseIdSchema = z.string().trim().min(1, "Choose a valid option.").max(120, "Choose a valid option.");
+
 export const vendorOnboardingSchema = z.object({
   name: z.string().min(2, "Business name is required.").max(80, "Business name is a little too long."),
   slug: z.string().min(2, "Vendor username is required.").max(80, "Vendor username is a little too long.").regex(/^[a-z0-9-]+$/, "Use letters, numbers, and dashes only."),
@@ -44,7 +46,7 @@ export const vendorOnboardingSchema = z.object({
   storefrontAccentColor: z.string().max(40).optional().or(z.literal("")),
   storefrontSectionOrder: z.array(z.string().max(40)).max(9).default([]),
   logoUrl: imageValueSchema.optional().or(z.literal("")),
-  categoryIds: z.array(z.string().cuid()).max(12, "Choose up to 12 categories.").default([]),
+  categoryIds: z.array(databaseIdSchema).max(12, "Choose up to 12 categories.").default([]),
   photoUrls: z.array(imageValueSchema).max(8, "Add up to 8 photos.").default([])
 });
 
@@ -122,8 +124,8 @@ export const offeringSchema = z.object({
   description: z.string().min(20, "Add a little more detail about this offering.").max(4000, "Offering description is a little too long."),
   basePriceCents: z.coerce.number().int().min(0).optional(),
   messageForPricing: z.coerce.boolean().optional().default(false),
-  categoryId: z.string().cuid().optional(),
-  categoryIds: z.array(z.string().cuid()).min(1, "Choose at least one category.").max(8, "Choose up to 8 categories."),
+  categoryId: databaseIdSchema.optional(),
+  categoryIds: z.array(databaseIdSchema).min(1, "Choose at least one category.").max(8, "Choose up to 8 categories."),
   eventCategoryIds: z.array(z.string().min(1)).max(12, "Choose up to 12 event types.").default([]),
   tags: z.array(z.string().min(1).max(30, "Keep tags short and sweet.")).max(12, "Use up to 12 tags.").default([]),
   photos: z.array(imageValueSchema).max(10, "Add up to 10 photos.").default([]),
