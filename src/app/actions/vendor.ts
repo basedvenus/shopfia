@@ -18,6 +18,7 @@ import {
   sanitizeStorefrontSections,
   slugifyBusinessUrl,
   storefrontAccentColorFromPalette,
+  normalizeStorefrontLayout,
   normalizeStorefrontPalette,
   storefrontPath,
   businessManagerWhere
@@ -426,6 +427,7 @@ function prepareStorefrontCustomizationPayload(parsed: StorefrontCustomizationIn
   const sanitizedSectionOrder = sanitizeStorefrontSections(parsed.sectionOrder);
   const sanitizedHiddenSections = sanitizeHiddenStorefrontSections(parsed.hiddenSections);
   const sanitizedSectionLabels = sanitizeStorefrontSectionLabels(parseEditorJson(parsed.sectionLabelsJson));
+  const storefrontLayout = normalizeStorefrontLayout(parsed.layout);
   const storefrontPalette = normalizeStorefrontPalette(parsed.palette);
   const editorServices = parseEditorServices(parsed.servicesJson);
   const hiddenOfferingIds = editorServices
@@ -450,7 +452,7 @@ function prepareStorefrontCustomizationPayload(parsed: StorefrontCustomizationIn
     instagramFeedEnabled: parsed.instagramFeedEnabled,
     instagramFeedUrl: parsed.instagramFeedUrl || "",
     instagramUrl: parsed.instagramUrl || "",
-    layout: parsed.layout,
+    layout: storefrontLayout,
     logoCrop: parsed.logoCrop ?? null,
     logoUrl: parsed.logoUrl || "",
     name: parsed.name,
@@ -494,6 +496,7 @@ function prepareStorefrontCustomizationPayload(parsed: StorefrontCustomizationIn
     sanitizedHiddenSections,
     sanitizedSectionLabels,
     sanitizedSectionOrder,
+    storefrontLayout,
     storefrontPalette
   };
 }
@@ -605,6 +608,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     sanitizedHiddenSections,
     sanitizedSectionLabels,
     sanitizedSectionOrder,
+    storefrontLayout,
     storefrontPalette
   } = prepareStorefrontCustomizationPayload(parsed, existingOfferingIds);
 
@@ -639,7 +643,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
       storefrontTagline: parsed.tagline || null,
       storefrontAboutHeading: parsed.aboutHeading || null,
       storefrontAboutImage: parsed.aboutImage || null,
-      storefrontLayout: parsed.layout,
+      storefrontLayout,
       storefrontFontStyle: parsed.fontStyle,
       storefrontPalette,
       storefrontButtonStyle: parsed.buttonStyle,

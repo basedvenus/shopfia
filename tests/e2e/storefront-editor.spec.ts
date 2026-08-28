@@ -176,6 +176,14 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   await page.getByRole("button", { name: "Desktop" }).click();
 
   await page.getByRole("button", { name: "Design" }).click();
+  await page.getByRole("button", { name: /Editorial Split/ }).click();
+  await expect(page.getByTestId("preview-section-hero").getByText("Request a quote").first()).toBeVisible();
+  await page.getByRole("button", { name: /Brand Spotlight/ }).click();
+  await expect(page.getByTestId("preview-section-hero").getByText("5.0 reviews").first()).toBeVisible();
+  await page.getByRole("button", { name: /Storefront Classic/ }).click();
+  await expect(page.getByTestId("preview-section-hero").getByText("Featured services").first()).toBeVisible();
+  await page.getByRole("button", { name: /Portfolio First/ }).click();
+  await expect(page.getByTestId("preview-section-hero").getByText("5.0 reviews").first()).toBeVisible();
   await page.getByRole("button", { name: "Change theme" }).click();
   await page.getByRole("button", { name: /Citrus/ }).click();
   await page.getByLabel("Font pairing").selectOption("BOLD");
@@ -187,10 +195,10 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   await expect(editorPanel.getByRole("button", { name: "Edit" })).toBeVisible();
   await editorPanel.getByRole("button", { name: "Edit" }).click();
 
-  await page.getByTestId("storefront-section-reviews").getByText("Visible").click();
-  await expect(page.getByTestId("storefront-section-reviews")).toContainText("Hidden");
-  await page.getByTestId("storefront-section-reviews").getByText("Hidden").click();
-  await expect(page.getByTestId("storefront-section-reviews")).toContainText("Visible");
+  await page.getByTestId("storefront-section-faq").getByText("Visible").click();
+  await expect(page.getByTestId("storefront-section-faq")).toContainText("Hidden");
+  await page.getByTestId("storefront-section-faq").getByText("Hidden").click();
+  await expect(page.getByTestId("storefront-section-faq")).toContainText("Visible");
   await page.getByTestId("storefront-section-portfolio").dragTo(page.getByTestId("storefront-section-all-services"));
   await expect(page.getByTestId("storefront-section-all-services")).toBeVisible();
 
@@ -256,6 +264,7 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
       storefrontFontStyle: true,
       storefrontHiddenSections: true,
       storefrontImageShape: true,
+      storefrontLayout: true,
       storefrontAboutImage: true,
       storefrontPalette: true,
       storefrontSectionOrder: true,
@@ -268,8 +277,9 @@ test("vendor can edit, draft, publish, and view storefront changes", async ({ pa
   expect(savedVendor?.storefrontDraftJson).toBeNull();
   expect(savedVendor?.storefrontFeaturedOfferingIds).toHaveLength(1);
   expect(savedVendor?.storefrontFontStyle).toBe("BOLD");
-  expect(savedVendor?.storefrontHiddenSections).not.toContain("reviews");
+  expect(savedVendor?.storefrontHiddenSections).not.toContain("faq");
   expect(savedVendor?.storefrontImageShape).toBe("SQUARE");
+  expect(savedVendor?.storefrontLayout).toBe("PORTFOLIO_FIRST");
   expect(savedVendor?.storefrontAboutImage).toMatch(/^\/api\/vendor-media\/.+\?v=\d+$/);
   expect(savedVendor?.storefrontPalette).toBe("CITRUS");
   expect(savedVendor?.storefrontSectionOrder[2]).toBe("portfolio");

@@ -158,6 +158,10 @@ enum StorefrontLayout {
   EDITORIAL
   PORTFOLIO
   SERVICES
+  EDITORIAL_SPLIT
+  PORTFOLIO_FIRST
+  BRAND_SPOTLIGHT
+  STOREFRONT_CLASSIC
 }
 
 enum StorefrontFontStyle {
@@ -358,7 +362,7 @@ model VendorProfile {
   storefrontTagline         String?
   storefrontAboutHeading    String?
   storefrontAboutImage      String?
-  storefrontLayout          StorefrontLayout      @default(EDITORIAL)
+  storefrontLayout          StorefrontLayout      @default(PORTFOLIO_FIRST)
   storefrontFontStyle       StorefrontFontStyle   @default(MODERN)
   storefrontPalette         StorefrontPalette     @default(BLUSH)
   storefrontButtonStyle     StorefrontButtonStyle @default(PILL)

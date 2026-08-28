@@ -100,7 +100,7 @@ export const storefrontCustomizationSchema = z.object({
   instagramFeedEnabled: booleanValueSchema.default(false),
   instagramFeedUrl: z.string().url("Enter a valid Instagram feed link.").optional().or(z.literal("")),
   tiktokUrl: z.string().url("Enter a valid TikTok link.").optional().or(z.literal("")),
-  layout: z.enum(["EDITORIAL", "PORTFOLIO", "SERVICES"]),
+  layout: z.enum(["EDITORIAL_SPLIT", "PORTFOLIO_FIRST", "BRAND_SPOTLIGHT", "STOREFRONT_CLASSIC", "EDITORIAL", "PORTFOLIO", "SERVICES"]),
   fontStyle: z.enum(["MODERN", "EDITORIAL", "ROMANTIC", "BOLD", "FASHION", "PLAYFUL", "RETRO", "COOL"]),
   palette: z.enum([
     "BLUSH",

@@ -30,21 +30,40 @@ export const STOREFRONT_ACCENT_COLORS = [
 
 export const STOREFRONT_LAYOUTS = [
   {
-    value: "EDITORIAL",
-    label: "Editorial",
-    description: "Large hero image, elegant About section, then portfolio and services."
+    value: "EDITORIAL_SPLIT",
+    label: "Editorial Split",
+    description: "Large lifestyle image beside polished business details."
   },
   {
-    value: "PORTFOLIO",
-    label: "Portfolio",
-    description: "Image grid first, best for florists, decorators, photographers, and bakers."
+    value: "PORTFOLIO_FIRST",
+    label: "Portfolio First",
+    description: "Compact identity followed immediately by the vendor's work."
   },
   {
-    value: "SERVICES",
-    label: "Services",
-    description: "Packages and starting prices first, best for rentals, entertainment, and caterers."
+    value: "BRAND_SPOTLIGHT",
+    label: "Brand Spotlight",
+    description: "Theme-color brand panel with a clear trust and quote card."
+  },
+  {
+    value: "STOREFRONT_CLASSIC",
+    label: "Storefront Classic",
+    description: "Profile sidebar with services and portfolio surfaced together."
   }
 ] as const;
+
+export const STOREFRONT_LAYOUT_VALUES = STOREFRONT_LAYOUTS.map((layout) => layout.value);
+
+const LEGACY_STOREFRONT_LAYOUT_MAP: Record<string, (typeof STOREFRONT_LAYOUTS)[number]["value"]> = {
+  EDITORIAL: "EDITORIAL_SPLIT",
+  PORTFOLIO: "PORTFOLIO_FIRST",
+  SERVICES: "STOREFRONT_CLASSIC"
+};
+
+export function normalizeStorefrontLayout(value: string | null | undefined) {
+  const requested = value?.trim();
+  if (STOREFRONT_LAYOUTS.some((layout) => layout.value === requested)) return requested as (typeof STOREFRONT_LAYOUTS)[number]["value"];
+  return requested ? LEGACY_STOREFRONT_LAYOUT_MAP[requested] ?? "PORTFOLIO_FIRST" : "PORTFOLIO_FIRST";
+}
 
 export const STOREFRONT_FONT_STYLES = [
   { value: "MODERN", label: "Modern", description: "Manrope. Clean, effortless, and polished." },

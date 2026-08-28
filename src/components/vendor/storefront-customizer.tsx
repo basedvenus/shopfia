@@ -31,10 +31,12 @@ import {
   REQUIRED_STOREFRONT_SECTIONS,
   STOREFRONT_FONT_STYLES,
   STOREFRONT_IMAGE_SHAPES,
+  STOREFRONT_LAYOUTS,
   STOREFRONT_PALETTES,
   STOREFRONT_SECTION_LABELS,
   coverageAreaLabels,
   getStorefrontFontFamilies,
+  normalizeStorefrontLayout,
   normalizeStorefrontPalette,
   sanitizeHiddenStorefrontSections,
   sanitizeStorefrontSectionLabels,
@@ -132,6 +134,7 @@ type FormState = {
   instagramUrl: string;
   instagramFeedEnabled: boolean;
   instagramFeedUrl: string;
+  layout: string;
   logoCrop: ImageCrop;
   logoUrl: string;
   name: string;
@@ -251,7 +254,7 @@ export function StorefrontCustomizer({
       instagramFeedUrl: form.instagramFeedUrl,
       instagramUrl: form.instagramUrl,
       intent: "draft",
-      layout: "EDITORIAL",
+      layout: form.layout,
       logoCrop: form.logoCrop,
       logoUrl: form.logoUrl,
       name: form.name,
@@ -447,7 +450,7 @@ export function StorefrontCustomizer({
       <input type="hidden" name="website" value={form.website} />
       <input type="hidden" name="instagramUrl" value={form.instagramUrl} />
       <input type="hidden" name="tiktokUrl" value={form.tiktokUrl} />
-      <input type="hidden" name="layout" value="EDITORIAL" />
+      <input type="hidden" name="layout" value={form.layout} />
       <input type="hidden" name="fontStyle" value={form.fontStyle} />
       <input type="hidden" name="palette" value={form.palette} />
       <input type="hidden" name="buttonStyle" value="PILL" />
@@ -728,6 +731,7 @@ function createInitialState(business: CustomizerBusiness): FormState {
     instagramFeedEnabled: Boolean(draft?.instagramFeedEnabled ?? business.storefrontInstagramFeedEnabled),
     instagramFeedUrl: draft?.instagramFeedUrl ?? business.storefrontInstagramFeedUrl ?? business.instagramUrl ?? "",
     instagramUrl: draft?.instagramUrl ?? business.instagramUrl ?? "",
+    layout: normalizeStorefrontLayout(draft?.layout ?? business.storefrontLayout),
     logoCrop: normalizeImageCrop(draft?.logoCrop ?? business.logoCrop ?? DEFAULT_IMAGE_CROP),
     logoUrl: draft?.logoUrl ?? business.logoUrl ?? "",
     name: draft?.name ?? business.name,
@@ -1128,6 +1132,34 @@ function DesignControls({
 
   return (
     <PanelStack>
+      <div className="grid gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">Storefront layout</h3>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">Choose the public page structure. Content, services, photos, and reviews stay the same when you switch.</p>
+        </div>
+        <div className="grid gap-2">
+          {STOREFRONT_LAYOUTS.map((layout) => (
+            <button
+              key={layout.value}
+              type="button"
+              onClick={() => update("layout", layout.value)}
+              className={`grid gap-3 rounded-[1rem] border p-3 text-left transition ${
+                form.layout === layout.value ? "border-primary bg-[#fff4f5] shadow-sm" : "border-[#eadbd7] bg-white hover:bg-[#fffaf8]"
+              }`}
+              style={form.layout === layout.value ? theme.selectedControlStyle : undefined}
+            >
+              <StorefrontLayoutPreviewCard layout={layout.value} theme={theme} />
+              <span>
+                <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                  {layout.label}
+                  {form.layout === layout.value ? <Check className="h-4 w-4 text-primary" /> : null}
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-muted-foreground">{layout.description}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="flex items-center gap-2">
         <Palette className="h-4 w-4 text-primary" />
         <h3 className="text-sm font-semibold">Theme System</h3>
@@ -1300,7 +1332,7 @@ function StorefrontPreview({
                 src={form.logoUrl}
                 alt=""
                 crop={form.logoCrop}
-                className={`h-20 w-20 bg-white object-cover object-center ${theme.logoRadius}`}
+                className={`h-20 w-20 bg-white object-contain object-center p-1 ${theme.logoRadius}`}
               />
             ) : <div className={`grid h-20 w-20 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
             {activeSection === "hero" ? (
@@ -1363,56 +1395,17 @@ function StorefrontPreview({
             [sectionLabel("faq"), "FAQ"]
           ].map(([item, defaultLabel]) => <span key={defaultLabel} className="rounded-full px-3 py-1" style={defaultLabel === "Home" ? theme.activeNavItemStyle : undefined}>{item}</span>)}
         </div>
-        <section className={`relative m-4 grid min-h-[390px] overflow-hidden bg-[#211815] text-white ${theme.heroRadius} ${isMobile ? "" : "md:grid-cols-[1fr_0.55fr]"}`}>
-          {form.coverPhoto ? (
-            <CroppedImage
-              src={form.coverPhoto}
-              alt=""
-              crop={form.coverPhotoCrop}
-              className="absolute inset-0 h-full w-full object-cover opacity-55"
-            />
-          ) : null}
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,17,15,0.9),rgba(24,17,15,0.2))]" />
-          <div className="relative p-6">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/70">Featured storefront</p>
-            {activeSection === "hero" ? (
-              <>
-                <InlineTextarea
-                  ariaLabel="Hero headline"
-                  className={`mt-4 min-h-0 resize-none font-semibold leading-[0.95] tracking-normal text-white ${isMobile ? "text-3xl" : "text-5xl"}`}
-                  onChange={(value) => update("aboutHeading", value)}
-                  placeholder={form.name}
-                  style={theme.headingStyle}
-                  value={form.aboutHeading}
-                />
-                <InlineTextarea
-                  ariaLabel="Hero supporting text"
-                  className="mt-4 text-sm leading-6 text-white/80"
-                  onChange={(value) => update("tagline", value)}
-                  placeholder={form.bio || "Add supporting text"}
-                  value={form.tagline}
-                />
-                <div className="mt-4 max-w-sm">
-                  <ImageUploadField
-                    name="previewCover"
-                    label="Cover image"
-                    value={form.coverPhoto}
-                    valueCrop={form.coverPhotoCrop}
-                    onChangePreview={(value) => update("coverPhoto", value)}
-                    onCropChange={(crop) => update("coverPhotoCrop", crop)}
-                    uploadEndpoint={coverUploadEndpoint}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <h2 className={`mt-4 break-words font-semibold leading-[0.95] tracking-normal ${isMobile ? "text-3xl" : "text-5xl"}`} style={theme.headingStyle}>{form.aboutHeading || form.name}</h2>
-                <p className="mt-4 line-clamp-3 text-sm leading-6 text-white/80">{form.tagline || form.bio}</p>
-              </>
-            )}
-            <span className="mt-5 inline-flex rounded-full px-4 py-2 text-xs font-semibold" style={theme.heroCtaStyle}>Browse services</span>
-          </div>
-        </section>
+        <PreviewHeroTemplate
+          active={activeSection === "hero"}
+          activeServices={activeServices}
+          business={business}
+          coverUploadEndpoint={coverUploadEndpoint}
+          form={form}
+          isMobile={isMobile}
+          photos={photos}
+          theme={theme}
+          update={update}
+        />
       </section>
       <div className={`bg-gradient-to-br ${palette.className} p-5`}>
         {visibleSections.filter((section) => section !== "hero").map((section) => {
@@ -1587,6 +1580,219 @@ function StorefrontPreview({
         })}
       </div>
     </div>
+  );
+}
+
+function StorefrontLayoutPreviewCard({ layout, theme }: { layout: string; theme: PreviewTheme }) {
+  const accent = theme.palette.accent;
+  if (layout === "PORTFOLIO_FIRST") {
+    return (
+      <span className="grid h-20 grid-rows-[18px_1fr] overflow-hidden rounded-[0.75rem] border bg-white" style={theme.previewCardStyle}>
+        <span className="flex items-center gap-1 px-2"><span className="h-2 w-8 rounded-full" style={{ backgroundColor: accent }} /><span className="h-2 w-14 rounded-full bg-[#eadbd7]" /></span>
+        <span className="grid grid-cols-3 gap-1 p-1">
+          <span className={theme.imageRadius} style={theme.accentBlockStyle} />
+          <span className={theme.imageRadius} style={theme.softSurfaceStyle} />
+          <span className={theme.imageRadius} style={theme.accentBlockStyle} />
+        </span>
+      </span>
+    );
+  }
+  if (layout === "BRAND_SPOTLIGHT") {
+    return (
+      <span className="grid h-20 place-items-center rounded-[0.75rem] border p-3" style={theme.accentBlockStyle}>
+        <span className="grid h-10 w-20 place-items-center rounded-full bg-white/85 text-[10px] font-semibold" style={theme.headingStyle}>Logo</span>
+      </span>
+    );
+  }
+  if (layout === "STOREFRONT_CLASSIC") {
+    return (
+      <span className="grid h-20 grid-cols-[0.35fr_1fr] overflow-hidden rounded-[0.75rem] border bg-white" style={theme.previewCardStyle}>
+        <span className="grid place-items-center border-r border-[#eadbd7]"><span className="h-8 w-8 rounded-full" style={theme.softSurfaceStyle} /></span>
+        <span className="grid gap-1 p-2">
+          <span className="h-4 rounded-full" style={{ backgroundColor: accent }} />
+          <span className="grid grid-cols-3 gap-1">
+            <span className="h-9 rounded-[0.45rem] bg-[#f8ece9]" />
+            <span className="h-9 rounded-[0.45rem] bg-[#f8ece9]" />
+            <span className="h-9 rounded-[0.45rem] bg-[#f8ece9]" />
+          </span>
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className="grid h-20 grid-cols-[0.55fr_0.45fr] overflow-hidden rounded-[0.75rem] border bg-white" style={theme.previewCardStyle}>
+      <span style={theme.accentBlockStyle} />
+      <span className="grid place-items-center p-2">
+        <span className="grid gap-1">
+          <span className="mx-auto h-7 w-7 rounded-full" style={theme.softSurfaceStyle} />
+          <span className="h-2 w-16 rounded-full" style={{ backgroundColor: accent }} />
+          <span className="h-2 w-12 rounded-full bg-[#eadbd7]" />
+        </span>
+      </span>
+    </span>
+  );
+}
+
+function PreviewHeroTemplate({
+  active,
+  activeServices,
+  business,
+  coverUploadEndpoint,
+  form,
+  isMobile,
+  photos,
+  theme,
+  update
+}: {
+  active: boolean;
+  activeServices: EditorService[];
+  business: CustomizerBusiness;
+  coverUploadEndpoint: string;
+  form: FormState;
+  isMobile: boolean;
+  photos: string[];
+  theme: PreviewTheme;
+  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+}) {
+  const layout = normalizeStorefrontLayout(form.layout);
+  const location = `${form.city}${form.state ? `, ${form.state}` : ""}`;
+  const headline = form.aboutHeading || form.name;
+  const copy = form.tagline || form.bio || "Add a short description for this storefront.";
+  const Logo = ({ size = "h-16 w-16" }: { size?: string }) => (
+    form.logoUrl ? (
+      <CroppedImage src={form.logoUrl} alt="" crop={form.logoCrop} className={`${size} bg-white object-contain p-1 ${theme.logoRadius}`} />
+    ) : (
+      <span className={`grid ${size} place-items-center bg-white font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</span>
+    )
+  );
+  const EditableText = (
+    <>
+      <InlineTextarea
+        ariaLabel="Hero headline"
+        className={`min-h-0 resize-none font-semibold leading-[0.98] tracking-normal ${layout === "BRAND_SPOTLIGHT" ? "text-white" : ""} ${isMobile ? "text-3xl" : "text-5xl"}`}
+        onChange={(value) => update("aboutHeading", value)}
+        placeholder={form.name}
+        style={theme.headingStyle}
+        value={form.aboutHeading}
+      />
+      <InlineTextarea
+        ariaLabel="Hero supporting text"
+        className={`mt-3 text-sm leading-6 ${layout === "BRAND_SPOTLIGHT" ? "text-white/85" : theme.copyClass}`}
+        onChange={(value) => update("tagline", value)}
+        placeholder={form.bio || "Add supporting text"}
+        value={form.tagline}
+      />
+    </>
+  );
+  const CoverEditor = active ? (
+    <div className="mt-4 max-w-sm">
+      <ImageUploadField
+        name="previewCover"
+        label="Cover image"
+        value={form.coverPhoto}
+        valueCrop={form.coverPhotoCrop}
+        onChangePreview={(value) => update("coverPhoto", value)}
+        onCropChange={(crop) => update("coverPhotoCrop", crop)}
+        uploadEndpoint={coverUploadEndpoint}
+      />
+    </div>
+  ) : null;
+
+  if (layout === "PORTFOLIO_FIRST") {
+    return (
+      <section className={`m-4 overflow-hidden ${theme.cardClass} ${theme.sectionRadius}`} style={theme.previewCardStyle}>
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <Logo />
+            <span className="min-w-0">
+              <span className="block text-xl font-semibold" style={theme.headingStyle}>{form.name}</span>
+              <span className={`block text-xs ${theme.mutedClass}`}>5.0 reviews · {location}</span>
+            </span>
+          </div>
+          <span className="rounded-full px-4 py-2 text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+        </div>
+        {active ? (
+          <div className="border-t p-4" style={theme.navStyle}>
+            {EditableText}
+            {CoverEditor}
+          </div>
+        ) : null}
+        <div className={`grid gap-1 ${isMobile ? "grid-cols-[0.55fr_1fr_0.55fr]" : "grid-cols-3"}`}>
+          {(photos.length ? photos : [form.coverPhoto]).filter(Boolean).slice(0, 3).map((photo, index) => (
+            <img key={`${photo}-${index}`} src={photo} alt="" className="aspect-[4/3] w-full object-cover" />
+          ))}
+        </div>
+        <div className="grid grid-cols-4 gap-2 p-4 text-center text-[11px] font-semibold">
+          {activeServices.slice(0, 4).map((service) => <span key={service.id} className="rounded-[0.75rem] border p-2" style={theme.previewCardStyle}>{service.title}</span>)}
+        </div>
+      </section>
+    );
+  }
+
+  if (layout === "BRAND_SPOTLIGHT") {
+    return (
+      <section className={`m-4 grid min-h-[420px] place-items-center overflow-hidden p-6 ${theme.heroRadius}`} style={theme.accentBlockStyle}>
+        <div className="grid w-full max-w-3xl place-items-center gap-5 text-center text-white">
+          <Logo size={isMobile ? "h-24 w-24" : "h-32 w-32"} />
+          {active ? EditableText : (
+            <>
+              <h2 className={`${isMobile ? "text-3xl" : "text-5xl"} font-semibold leading-tight`} style={theme.headingStyle}>{headline}</h2>
+              <p className="max-w-xl text-sm leading-6 text-white/85">{copy}</p>
+            </>
+          )}
+          <div className="grid w-full max-w-xl gap-3 rounded-[1rem] bg-white/92 p-4 text-left text-[#2f2626] shadow-sm sm:grid-cols-3">
+            <span>{location}</span>
+            <span>5.0 reviews</span>
+            <span>{activeServices.length} services</span>
+            <span className="sm:col-span-3 rounded-full px-4 py-2 text-center text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (layout === "STOREFRONT_CLASSIC") {
+    return (
+      <section className={`m-4 grid gap-4 p-4 ${theme.cardClass} ${theme.sectionRadius} ${isMobile ? "" : "md:grid-cols-[0.34fr_1fr]"}`} style={theme.previewCardStyle}>
+        <aside className="grid content-start gap-3 border-b pb-4 md:border-b-0 md:border-r md:pr-4" style={theme.navStyle}>
+          <Logo />
+          <h2 className="text-2xl font-semibold" style={theme.headingStyle}>{form.name}</h2>
+          <p className={`text-sm leading-6 ${theme.copyClass}`}>{copy}</p>
+          <span className="rounded-full px-4 py-2 text-center text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+        </aside>
+        <div className="grid gap-4">
+          <div>
+            <h3 className="text-sm font-semibold">Featured services</h3>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              {activeServices.slice(0, 3).map((service) => <span key={service.id} className="rounded-[0.75rem] border p-3 text-sm font-semibold" style={theme.previewCardStyle}>{service.title}</span>)}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {photos.slice(0, 3).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] w-full object-cover ${theme.imageRadius}`} />)}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className={`m-4 grid overflow-hidden ${theme.cardClass} ${theme.sectionRadius} ${isMobile ? "" : "md:grid-cols-[1fr_0.88fr]"}`} style={theme.previewCardStyle}>
+      <div className={`relative min-h-[260px] ${isMobile ? "aspect-[4/3]" : ""}`} style={theme.softSurfaceStyle}>
+        {form.coverPhoto ? <CroppedImage src={form.coverPhoto} alt="" crop={form.coverPhotoCrop} className="absolute inset-0 h-full w-full object-cover" /> : null}
+      </div>
+      <div className="grid content-center justify-items-center gap-4 p-6 text-center">
+        <Logo size="h-20 w-20" />
+        {active ? EditableText : (
+          <>
+            <h2 className={`${isMobile ? "text-3xl" : "text-5xl"} font-semibold leading-tight`} style={theme.headingStyle}>{headline}</h2>
+            <p className={`max-w-md text-sm leading-6 ${theme.copyClass}`}>{copy}</p>
+          </>
+        )}
+        <span className={`text-sm ${theme.mutedClass}`}>{location}</span>
+        <span className="rounded-full px-5 py-2.5 text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+        {CoverEditor}
+      </div>
+    </section>
   );
 }
 
@@ -1899,6 +2105,8 @@ function getPreviewTheme(form: FormState) {
     logoRadius,
     mutedClass: isDark ? "text-white/62" : "text-muted-foreground",
     navClass: isDark ? "border-white/15 bg-[#201b1e] text-white/72" : "border-[#eadbd7] bg-white text-muted-foreground",
+    navStyle: { borderColor: `${accent}33` } as CSSProperties,
+    palette,
     platformBarStyle: { backgroundColor: `${accent}14`, borderColor: `${accent}33` } as CSSProperties,
     profileClass: isDark ? "bg-[#201b1e] text-white" : "bg-white text-[#2f2626]",
     previewCardStyle: { borderColor: `${accent}44` } as CSSProperties,
