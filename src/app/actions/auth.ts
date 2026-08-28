@@ -213,7 +213,8 @@ const profileSchema = z.object({
     ),
   bio: z.string().trim().max(280, "Bio is a little too long. Keep it under 280 characters.").optional(),
   instagramUrl: z.string().trim().url("Enter a valid Instagram link.").optional().or(z.literal("")),
-  tiktokUrl: z.string().trim().url("Enter a valid TikTok link.").optional().or(z.literal(""))
+  tiktokUrl: z.string().trim().url("Enter a valid TikTok link.").optional().or(z.literal("")),
+  partyfulUrl: z.string().trim().url("Enter a valid Partyful link.").optional().or(z.literal(""))
 });
 
 export async function updateAccountProfileAction(formData: FormData) {
@@ -235,7 +236,8 @@ export async function updateAccountProfileAction(formData: FormData) {
     username: formData.get("username"),
     bio: formData.get("bio") || undefined,
     instagramUrl: formData.get("instagramUrl") || undefined,
-    tiktokUrl: formData.get("tiktokUrl") || undefined
+    tiktokUrl: formData.get("tiktokUrl") || undefined,
+    partyfulUrl: formData.get("partyfulUrl") || undefined
   });
 
   if (!parsed.success) {
@@ -245,6 +247,7 @@ export async function updateAccountProfileAction(formData: FormData) {
         bio: "Bio",
         instagramUrl: "Instagram link",
         name: "Name",
+        partyfulUrl: "Partyful link",
         tiktokUrl: "TikTok link",
         username: "Username"
       }, "Check your profile details.")
@@ -260,6 +263,7 @@ export async function updateAccountProfileAction(formData: FormData) {
         bio: parsed.data.bio || null,
         instagramUrl: parsed.data.instagramUrl || null,
         tiktokUrl: parsed.data.tiktokUrl || null,
+        partyfulUrl: parsed.data.partyfulUrl || null,
         imageCrop: parseImageCrop(formData.get("imageCrop")) ?? undefined
       },
       select: userProfileSelect
@@ -302,6 +306,8 @@ const partyEventFieldsSchema = z.object({
   theme: z.string().trim().max(100, "Theme is a little too long.").optional().or(z.literal("")),
   tags: z.array(z.string().trim().min(1).max(30, "Keep tags short and sweet.")).max(12, "Use up to 12 tags.").default([]),
   description: z.string().trim().max(500, "Party notes are a little too long.").optional().or(z.literal("")),
+  eventDate: z.string().trim().optional().or(z.literal("")),
+  partyfulUrl: z.string().trim().url("Enter a valid Partyful invite link.").optional().or(z.literal("")),
   location: z.string().trim().max(240, "Location is a little too long.").optional().or(z.literal("")),
   formattedAddress: z.string().trim().max(240, "Location is a little too long.").optional().or(z.literal("")),
   city: z.string().trim().max(80, "City is a little too long.").optional().or(z.literal("")),
@@ -373,6 +379,8 @@ export async function createPartyEventAction(formData: FormData) {
         theme: parsed.data.theme || null,
         tags: parsed.data.tags,
         description: parsed.data.description || null,
+        eventDate: parsed.data.eventDate ? new Date(parsed.data.eventDate) : null,
+        partyfulUrl: parsed.data.partyfulUrl || null,
         location: parsed.data.formattedAddress || parsed.data.location || null,
         formattedAddress: parsed.data.formattedAddress || null,
         city: parsed.data.city || null,
@@ -499,6 +507,8 @@ export async function updatePartyEventAction(formData: FormData) {
         theme: parsed.data.theme || null,
         tags: parsed.data.tags,
         description: parsed.data.description || null,
+        eventDate: parsed.data.eventDate ? new Date(parsed.data.eventDate) : null,
+        partyfulUrl: parsed.data.partyfulUrl || null,
         location: parsed.data.formattedAddress || parsed.data.location || null,
         formattedAddress: parsed.data.formattedAddress || null,
         city: parsed.data.city || null,
@@ -639,6 +649,8 @@ function parsePartyEventFormData(formData: FormData) {
     theme: formData.get("theme") || undefined,
     tags,
     description: formData.get("description") || undefined,
+    eventDate: formData.get("eventDate") || undefined,
+    partyfulUrl: formData.get("partyfulUrl") || undefined,
     location: formData.get("location") || undefined,
     formattedAddress: formData.get("locationFormattedAddress") || undefined,
     city: formData.get("locationCity") || undefined,

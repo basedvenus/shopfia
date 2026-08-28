@@ -191,6 +191,8 @@ export default async function EventPage({
         theme: event.theme,
         tags: event.tags,
         description: event.description,
+        eventDate: event.eventDate,
+        partyfulUrl: event.partyfulUrl,
         location: event.location,
         formattedAddress: event.formattedAddress,
         city: event.city,
@@ -304,6 +306,20 @@ export default async function EventPage({
                 {event.location}
               </div>
             ) : null}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {event?.eventDate ? (
+                <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs text-white/85 backdrop-blur">
+                  {formatPartyDate(event.eventDate)}
+                </span>
+              ) : null}
+              {event?.partyfulUrl ? (
+                <Button asChild size="sm" variant="secondary" className="border-white/80 bg-white text-foreground shadow-soft hover:bg-white/90">
+                  <Link href={event.partyfulUrl} target="_blank" rel="noreferrer">
+                    Partyful invite
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
             {host ? (
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <div className="text-sm text-white/85">
@@ -505,4 +521,11 @@ function renderHostedBy(
 
 function getVendorCategoryLabel(vendor: { categories?: Array<{ category: { name: string } }> }) {
   return vendor.categories?.[0]?.category.name ?? "Event Vendor";
+}
+
+function formatPartyDate(date: Date) {
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeZone: "UTC"
+  }).format(date);
 }

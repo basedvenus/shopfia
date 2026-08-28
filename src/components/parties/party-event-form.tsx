@@ -49,6 +49,8 @@ export type EditablePartyEvent = {
   theme: string | null;
   tags: string[];
   description: string | null;
+  eventDate?: Date | string | null;
+  partyfulUrl?: string | null;
   location: string | null;
   formattedAddress?: string | null;
   city?: string | null;
@@ -251,6 +253,19 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
           name="theme"
           placeholder="Theme, e.g. Citrus baby shower"
           defaultValue={initialParty?.theme ?? ""}
+        />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Input
+          name="eventDate"
+          type="date"
+          defaultValue={formatDateInputValue(initialParty?.eventDate)}
+        />
+        <Input
+          name="partyfulUrl"
+          type="url"
+          placeholder="Public Partyful invite URL"
+          defaultValue={initialParty?.partyfulUrl ?? ""}
         />
       </div>
       <PlaceAutocompleteInput
@@ -731,6 +746,13 @@ function getUserDisplayName(user?: UserOption) {
 
 function getUserHandle(user?: UserOption) {
   return user?.username ? `@${user.username}` : "Creator profile";
+}
+
+function formatDateInputValue(value?: Date | string | null) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
 }
 
 function PhotoVendorTagger({

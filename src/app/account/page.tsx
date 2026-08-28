@@ -63,6 +63,7 @@ export default async function AccountPage({
           username: true,
           bio: true,
           instagramUrl: true,
+          partyfulUrl: true,
           tiktokUrl: true,
           vendorProfile: { select: { id: true } }
         }

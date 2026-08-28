@@ -9,6 +9,7 @@ export const userProfileSelect = {
   imageCrop: true,
   instagramUrl: true,
   name: true,
+  partyfulUrl: true,
   role: true,
   tiktokUrl: true,
   username: true,

@@ -79,6 +79,12 @@ export function AccountProfileEditor({
                     TikTok
                   </Link>
                 ) : null}
+                {profile?.partyfulUrl ? (
+                  <Link href={profile.partyfulUrl} className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs" target="_blank">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Partyful
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>
@@ -133,6 +139,7 @@ export function AccountProfileEditor({
           <div className="grid gap-3 sm:grid-cols-2">
             <Input name="instagramUrl" defaultValue={profile?.instagramUrl ?? ""} placeholder="Instagram URL" />
             <Input name="tiktokUrl" defaultValue={profile?.tiktokUrl ?? ""} placeholder="TikTok URL" />
+            <Input name="partyfulUrl" defaultValue={profile?.partyfulUrl ?? ""} placeholder="Partyful URL" />
           </div>
           <Button type="submit" className="w-full sm:w-fit" disabled={isPending}>
             {isPending ? "Saving..." : "Save profile"}
