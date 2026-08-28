@@ -195,7 +195,7 @@ export function StorefrontCustomizer({
           featured: service.featured,
           id: service.isNew ? undefined : service.id,
           messageForPricing: service.messageForPricing,
-          photos: service.photos.filter(Boolean),
+          photos: [],
           title: service.title,
           turnaroundDays: service.turnaroundDays
         }))
@@ -1639,7 +1639,14 @@ function orderServices(services: EditorService[], order: string[]) {
 
 function mergeDraftServices(draftServices: EditorService[], liveServices: EditorService[]) {
   const liveById = new Map(liveServices.map((service) => [service.id, service]));
-  return draftServices.map((service) => ({ ...liveById.get(service.id), ...service }));
+  return draftServices.map((service) => {
+    const liveService = liveById.get(service.id);
+    return {
+      ...liveService,
+      ...service,
+      photos: service.photos?.length ? service.photos : liveService?.photos ?? []
+    };
+  });
 }
 
 function applyDraftServiceDisplay(services: EditorService[], hiddenOfferingIds: string[] | undefined) {

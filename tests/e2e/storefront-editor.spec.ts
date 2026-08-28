@@ -10,6 +10,7 @@ const email = `codex-storefront-e2e-${runId}@shopfia.test`;
 const slug = `codex-storefront-e2e-${runId}`;
 const username = `codex-storefront-${runId}`;
 const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
+const legacyDataImage = `data:image/jpeg;base64,${"a".repeat(120_000)}`;
 let userId = "";
 
 test.beforeAll(async () => {
@@ -66,7 +67,7 @@ test.beforeAll(async () => {
         categoryId: category.id,
         description: "A complete styling package used for storefront editor testing.",
         messageForPricing: false,
-        photos: ["https://images.unsplash.com/photo-1519225421980-715cb0215aed"],
+        photos: [legacyDataImage],
         slug: "full-party-styling",
         tags: ["e2e"],
         title: "Full Party Styling",
