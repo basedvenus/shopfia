@@ -7,5 +7,7 @@ test("explore page loads and shows heading", async ({ page }) => {
 
 test("account page loads sign in panel for guests", async ({ page }) => {
   await page.goto("/account");
-  await expect(page.getByText(/magic link/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to ShopFia" })).toBeVisible();
+  await expect(page.getByPlaceholder("Email")).toBeVisible();
+  await expect(page.getByPlaceholder("Password")).toBeVisible();
 });

@@ -387,7 +387,7 @@ export function StorefrontCustomizer({
   }
 
   return (
-    <form action={updateStorefrontCustomizationAction} className="relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]">
+    <form action={updateStorefrontCustomizationAction} data-testid="storefront-editor-shell" className="relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]">
       <input type="hidden" name="businessId" value={business.id} />
       <input type="hidden" name="businessSlug" value={business.slug} />
       <input type="hidden" name="name" value={form.name} />
@@ -509,6 +509,7 @@ export function StorefrontCustomizer({
                 <button
                   key={section}
                   type="button"
+                  data-testid={`storefront-section-${section}`}
                   draggable
                   onClick={() => selectSection(section)}
                   onDragStart={() => setDraggedSection(section)}
@@ -550,7 +551,7 @@ export function StorefrontCustomizer({
               View live
             </Link>
           </div>
-          <div className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
+          <div data-testid="storefront-preview-frame" className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
             <StorefrontPreview
               activeSection={activeSection}
               business={business}
@@ -1109,7 +1110,7 @@ function StorefrontPreview({
   const photos = form.photoUrls.filter(Boolean);
   return (
     <div className={`overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={theme.bodyStyle}>
-      <section onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
+      <section data-testid="preview-section-hero" onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
         <div className={`border-b px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] ${theme.headerClass}`} style={theme.platformBarStyle}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           <div className="shrink-0">
@@ -1208,7 +1209,7 @@ function StorefrontPreview({
       <div className={`bg-gradient-to-br ${palette.className} p-5`}>
         {visibleSections.filter((section) => section !== "hero").map((section) => {
           if (section === "featured-services") return (
-            <PreviewSection key={section} active={activeSection === section} theme={theme} title="Featured services" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-featured-services" theme={theme} title="Featured services" onClick={() => setActiveSection(section)}>
               <ServiceGrid
                 editable={activeSection === section}
                 mode="featured"
@@ -1221,7 +1222,7 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "all-services") return (
-            <PreviewSection key={section} active={activeSection === section} theme={theme} title="All services" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title="All services" onClick={() => setActiveSection(section)}>
               <ServiceGrid
                 editable={activeSection === section}
                 mode="visibility"
@@ -1234,7 +1235,7 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "portfolio") return (
-            <PreviewSection key={section} active={activeSection === section} theme={theme} title="Portfolio" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-portfolio" theme={theme} title="Portfolio" onClick={() => setActiveSection(section)}>
               {activeSection === section ? (
                 <div className="grid gap-3">
                   <ImageUploadField
@@ -1292,6 +1293,7 @@ function StorefrontPreview({
             <PreviewSection
               key={section}
               active={activeSection === section}
+              testId="preview-section-about"
               theme={theme}
               title={activeSection === section ? "" : form.aboutHeading || "About Us"}
               onClick={() => setActiveSection(section)}
@@ -1315,7 +1317,7 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "how-it-works") return (
-            <PreviewSection key={section} active={activeSection === section} theme={theme} title="How it works" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-how-it-works" theme={theme} title="How it works" onClick={() => setActiveSection(section)}>
               {activeSection === section ? (
                 <div className="grid gap-3">
                   <InlineTextarea ariaLabel="Booking process" onChange={(value) => update("booking", { ...form.booking, process: value })} placeholder="Describe how booking works" value={form.booking.process} />
@@ -1326,9 +1328,9 @@ function StorefrontPreview({
               )}
             </PreviewSection>
           );
-          if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Verified reviews" onClick={() => setActiveSection(section)}><p>Reviews are synced from completed ShopFia bookings.</p></PreviewSection>;
+          if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} testId="preview-section-reviews" theme={theme} title="Verified reviews" onClick={() => setActiveSection(section)}><p>Reviews are synced from completed ShopFia bookings.</p></PreviewSection>;
           if (section === "faq") return (
-            <PreviewSection key={section} active={activeSection === section} theme={theme} title="FAQ" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-faq" theme={theme} title="FAQ" onClick={() => setActiveSection(section)}>
               {activeSection === section ? (
                 <div className="grid gap-4">
                   {form.faqs.map((faq) => (
@@ -1347,7 +1349,7 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "final-quote") return (
-            <PreviewSection key={section} active={activeSection === section} theme={theme} title="Ready for a quote?" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-final-quote" theme={theme} title="Ready for a quote?" onClick={() => setActiveSection(section)}>
               {activeSection === section ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   <InlineTextarea ariaLabel="Availability notes" onChange={(value) => update("availabilityNotes", value)} placeholder="Availability notes" value={form.availabilityNotes} />
@@ -1494,9 +1496,9 @@ function ServiceGrid({
   );
 }
 
-function PreviewSection({ active, children, onClick, theme, title }: { active: boolean; children: ReactNode; onClick: () => void; theme: PreviewTheme; title: string }) {
+function PreviewSection({ active, children, onClick, testId, theme, title }: { active: boolean; children: ReactNode; onClick: () => void; testId?: string; theme: PreviewTheme; title: string }) {
   return (
-    <section onClick={onClick} className={previewButtonClass(active, `mb-5 block w-full cursor-text p-5 text-left transition ${theme.cardClass} ${theme.sectionRadius}`)} style={active ? theme.activeSectionStyle : theme.previewCardStyle}>
+    <section data-testid={testId} onClick={onClick} className={previewButtonClass(active, `mb-5 block w-full cursor-text p-5 text-left transition ${theme.cardClass} ${theme.sectionRadius}`)} style={active ? theme.activeSectionStyle : theme.previewCardStyle}>
       {title ? <h3 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{title}</h3> : null}
       <div className={`${title ? "mt-3" : ""} text-sm leading-6 ${theme.copyClass}`}>{children}</div>
     </section>
