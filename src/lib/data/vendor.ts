@@ -38,6 +38,7 @@ export async function getVendorProfileBySlug(slug: string) {
       storefrontBookingJson: true,
       storefrontFaqJson: true,
       storefrontFeaturedOfferingIds: true,
+      storefrontHiddenOfferingIds: true,
       storefrontFontStyle: true,
       storefrontHiddenSections: true,
       storefrontImageShape: true,

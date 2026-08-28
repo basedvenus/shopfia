@@ -6,8 +6,6 @@ import {
   ArrowLeft,
   ChevronDown,
   Check,
-  Eye,
-  EyeOff,
   GripVertical,
   ImagePlus,
   Monitor,
@@ -55,6 +53,7 @@ type EditorService = {
 type FaqItem = { id: string; answer: string; question: string };
 type PolicyItem = { id: string; body: string; title: string };
 type BookingInfo = { deposit: string; leadTime: string; process: string };
+type EditorTool = "content" | "services" | "gallery" | "design";
 
 type CustomizerBusiness = {
   availabilityNotes: string | null;
@@ -92,6 +91,7 @@ type CustomizerBusiness = {
   storefrontFeaturedOfferingIds: string[];
   storefrontFontStyle: string;
   storefrontHiddenSections: string[];
+  storefrontHiddenOfferingIds: string[];
   storefrontImageShape: string;
   storefrontLayout: string;
   storefrontOfferingOrder: string[];
@@ -133,6 +133,18 @@ type FormState = {
 };
 
 const editableSections = APPROVED_STOREFRONT_SECTIONS;
+const toolLabels: Record<EditorTool, string> = {
+  content: "Content",
+  services: "Services",
+  gallery: "Gallery",
+  design: "Design"
+};
+
+function toolForSection(section: string): EditorTool {
+  if (section === "featured-services" || section === "all-services") return "services";
+  if (section === "portfolio") return "gallery";
+  return "content";
+}
 
 export function StorefrontCustomizer({
   business,
@@ -148,10 +160,14 @@ export function StorefrontCustomizer({
   saved?: boolean;
 }) {
   const [activeSection, setActiveSection] = useState<string>("hero");
+  const [activeTool, setActiveTool] = useState<EditorTool>("content");
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState(errorMessage ? "Needs attention" : draftSaved ? "Draft saved" : saved ? "Published" : "Live");
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
+  const [draggedPhotoIndex, setDraggedPhotoIndex] = useState<number | null>(null);
+  const [collapsedFaqIds, setCollapsedFaqIds] = useState<string[]>([]);
   const [form, setForm] = useState<FormState>(() => createInitialState(business));
 
   const visibleSections = useMemo(
@@ -159,6 +175,10 @@ export function StorefrontCustomizer({
     [form.hiddenSections, form.sectionOrder]
   );
   const activeSectionLabel = STOREFRONT_SECTION_LABELS[activeSection as keyof typeof STOREFRONT_SECTION_LABELS] ?? "Section";
+  const panelSection = activeTool === "services" ? "all-services" : activeTool === "gallery" ? "portfolio" : activeSection;
+  const panelTitle = activeTool === "design"
+    ? "Design"
+    : STOREFRONT_SECTION_LABELS[panelSection as keyof typeof STOREFRONT_SECTION_LABELS] ?? "Section";
   const mediaUploadEndpoint = `/api/vendor/business/${business.id}/media`;
   const servicesJson = useMemo(
     () =>
@@ -183,6 +203,22 @@ export function StorefrontCustomizer({
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
     markDirty();
+  }
+
+  function selectSection(section: string) {
+    setActiveSection(section);
+    setActiveTool(toolForSection(section));
+    setPanelCollapsed(false);
+  }
+
+  function selectTool(tool: EditorTool) {
+    setActiveTool(tool);
+    setPanelCollapsed(false);
+    if (tool === "services") setActiveSection("all-services");
+    if (tool === "gallery") setActiveSection("portfolio");
+    if (tool === "content" && (activeSection === "all-services" || activeSection === "featured-services" || activeSection === "portfolio")) {
+      setActiveSection("hero");
+    }
   }
 
   function markDirty() {
@@ -229,33 +265,43 @@ export function StorefrontCustomizer({
     update("services", next);
   }
 
-  function addService() {
-    const categoryId = business.categories[0]?.categoryId ?? null;
-    update("services", [
-      ...form.services,
-      {
-        active: true,
-        basePriceCents: null,
-        categoryId,
-        description: "Describe what is included, who this service is best for, and what customers can customize.",
-        featured: true,
-        id: `draft-${crypto.randomUUID()}`,
-        isNew: true,
-        messageForPricing: true,
-        photos: [],
-        title: "New service",
-        turnaroundDays: null
-      }
-    ]);
-    setActiveSection("all-services");
+  function movePhoto(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    const photos = form.photoUrls.filter(Boolean);
+    const [photo] = photos.splice(fromIndex, 1);
+    if (!photo) return;
+    photos.splice(toIndex, 0, photo);
+    update("photoUrls", photos);
   }
 
-  function removeService(id: string) {
-    update("services", form.services.map((service) => (service.id === id ? { ...service, active: false, featured: false } : service)));
+  function removePhoto(index: number) {
+    update("photoUrls", form.photoUrls.filter(Boolean).filter((_, photoIndex) => photoIndex !== index));
+  }
+
+  function moveFaq(id: string, direction: -1 | 1) {
+    const index = form.faqs.findIndex((faq) => faq.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= form.faqs.length) return;
+    const next = [...form.faqs];
+    [next[index], next[target]] = [next[target], next[index]];
+    update("faqs", next);
+  }
+
+  function removeFaq(id: string) {
+    update("faqs", form.faqs.filter((faq) => faq.id !== id));
+    setCollapsedFaqIds((ids) => ids.filter((faqId) => faqId !== id));
+  }
+
+  function toggleFaqCollapsed(id: string) {
+    setCollapsedFaqIds((ids) => ids.includes(id) ? ids.filter((faqId) => faqId !== id) : [...ids, id]);
+  }
+
+  function setServiceVisible(id: string, visible: boolean) {
+    update("services", form.services.map((service) => (service.id === id ? { ...service, active: visible, featured: visible ? service.featured : false } : service)));
   }
 
   return (
-    <form action={updateStorefrontCustomizationAction} className="overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]">
+    <form action={updateStorefrontCustomizationAction} className="relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]">
       <input type="hidden" name="businessId" value={business.id} />
       <input type="hidden" name="businessSlug" value={business.slug} />
       <input type="hidden" name="name" value={form.name} />
@@ -303,10 +349,25 @@ export function StorefrontCustomizer({
             <Check className="h-3.5 w-3.5" />
             {status}
           </span>
-          <Button type="button" variant="secondary" onClick={() => setPreviewMode(previewMode === "desktop" ? "mobile" : "desktop")}>
-            {previewMode === "desktop" ? <Monitor className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
-            {previewMode === "desktop" ? "Desktop" : "Mobile"}
-          </Button>
+          <div className="flex rounded-full border border-[#eadbd7] bg-[#fbf7f5] p-1">
+            {[
+              { icon: Monitor, label: "Desktop", value: "desktop" as const },
+              { icon: Smartphone, label: "Mobile", value: "mobile" as const }
+            ].map((mode) => {
+              const Icon = mode.icon;
+              return (
+                <button
+                  key={mode.value}
+                  type="button"
+                  onClick={() => setPreviewMode(mode.value)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${previewMode === mode.value ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"}`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {mode.label}
+                </button>
+              );
+            })}
+          </div>
           <Button type="submit" name="intent" value="draft" variant="secondary" onClick={() => setStatus("Saving draft")}>
             <Save className="h-4 w-4" />
             Save draft
@@ -323,7 +384,10 @@ export function StorefrontCustomizer({
         </div>
       ) : null}
 
-      <div className="grid min-h-[calc(100vh-190px)] lg:grid-cols-[260px_minmax(0,1fr)_360px]">
+      <div
+        className="grid min-h-[calc(100vh-190px)] lg:grid-cols-[260px_minmax(0,1fr)_var(--editor-panel-width)]"
+        style={{ "--editor-panel-width": panelCollapsed ? "64px" : "430px" } as CSSProperties}
+      >
         <aside className="border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Sections</h2>
@@ -338,7 +402,7 @@ export function StorefrontCustomizer({
                   key={section}
                   type="button"
                   draggable
-                  onClick={() => setActiveSection(section)}
+                  onClick={() => selectSection(section)}
                   onDragStart={() => setDraggedSection(section)}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => onSectionDrop(event, section)}
@@ -351,7 +415,7 @@ export function StorefrontCustomizer({
                   <span
                     role="button"
                     tabIndex={0}
-                    className="rounded-full p-1 hover:bg-[#fbf7f5]"
+                    className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${hidden ? "border-[#eadbd7] bg-white text-muted-foreground" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}
                     onClick={(event) => {
                       event.stopPropagation();
                       toggleSection(section);
@@ -363,7 +427,7 @@ export function StorefrontCustomizer({
                       }
                     }}
                   >
-                    {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {hidden ? "Hidden" : "Visible"}
                   </span>
                 </button>
               );
@@ -385,33 +449,70 @@ export function StorefrontCustomizer({
               form={form}
               mediaUploadEndpoint={mediaUploadEndpoint}
               previewMode={previewMode}
-              setActiveSection={setActiveSection}
+              setActiveSection={selectSection}
               update={update}
               visibleSections={visibleSections}
             />
           </div>
         </main>
 
-        <aside className="border-t border-[#eadbd8] bg-white p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto lg:border-l lg:border-t-0">
-          <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Editing</p>
-            <h2 className="text-xl font-semibold">{activeSectionLabel}</h2>
-          </div>
-          <SectionEditor
-            activeSection={activeSection}
-            business={business}
-            form={form}
-            mediaUploadEndpoint={mediaUploadEndpoint}
-            markDirty={markDirty}
-            update={update}
-            updateService={updateService}
-            moveService={moveService}
-            removeService={removeService}
-            addService={addService}
-          />
-          <div className="mt-6 border-t border-[#eadbd7] pt-5">
-            <DesignControls form={form} update={update} />
-          </div>
+        <aside className="border-t border-[#eadbd8] bg-white lg:border-l lg:border-t-0">
+          {panelCollapsed ? (
+            <button
+              type="button"
+              onClick={() => setPanelCollapsed(false)}
+              className="grid h-full min-h-24 w-full place-items-center text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground hover:bg-[#fbf7f5]"
+            >
+              Edit
+            </button>
+          ) : (
+            <div className="p-4">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Editing</p>
+                  <h2 className="text-xl font-semibold">{panelTitle}</h2>
+                </div>
+                <Button type="button" variant="secondary" size="sm" onClick={() => setPanelCollapsed(true)}>
+                  Collapse
+                </Button>
+              </div>
+              <div className="mb-4 grid grid-cols-4 gap-1 rounded-full border border-[#eadbd7] bg-[#fbf7f5] p-1">
+                {(Object.keys(toolLabels) as EditorTool[]).map((tool) => (
+                  <button
+                    key={tool}
+                    type="button"
+                    onClick={() => selectTool(tool)}
+                    className={`rounded-full px-2 py-2 text-xs font-semibold transition ${activeTool === tool ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    {toolLabels[tool]}
+                  </button>
+                ))}
+              </div>
+              {activeTool === "design" ? (
+                <DesignControls form={form} update={update} />
+              ) : (
+                <SectionEditor
+                  activeSection={panelSection}
+                  business={business}
+                  collapsedFaqIds={collapsedFaqIds}
+                  form={form}
+                  mediaUploadEndpoint={mediaUploadEndpoint}
+                  moveFaq={moveFaq}
+                  movePhoto={movePhoto}
+                  markDirty={markDirty}
+                  removeFaq={removeFaq}
+                  removePhoto={removePhoto}
+                  toggleFaqCollapsed={toggleFaqCollapsed}
+                  update={update}
+                  updateService={updateService}
+                  moveService={moveService}
+                  setDraggedPhotoIndex={setDraggedPhotoIndex}
+                  draggedPhotoIndex={draggedPhotoIndex}
+                  setServiceVisible={setServiceVisible}
+                />
+              )}
+            </div>
+          )}
         </aside>
       </div>
     </form>
@@ -455,7 +556,10 @@ function createInitialState(business: CustomizerBusiness): FormState {
     policies: draft?.policies ?? readPolicies(business.storefrontPoliciesJson),
     sectionOrder: draft?.sectionOrder ?? sanitizeStorefrontSections(business.storefrontSectionOrder),
     serviceAreaNotes: draft?.serviceAreaNotes ?? business.serviceAreaNotes ?? "",
-    services: draft?.services?.length ? mergeDraftServices(draft.services, orderedServices) : orderedServices,
+    services: applyDraftServiceDisplay(
+      draft?.services?.length ? mergeDraftServices(draft.services, orderedServices) : orderedServices,
+      draft?.hiddenOfferingIds ?? business.storefrontHiddenOfferingIds
+    ),
     state: draft?.state ?? business.state ?? "",
     tagline: draft?.tagline ?? business.storefrontTagline ?? "",
     textTone: draft?.textTone ?? business.storefrontTextTone ?? "AUTO",
@@ -467,25 +571,39 @@ function createInitialState(business: CustomizerBusiness): FormState {
 function SectionEditor({
   activeSection,
   business,
+  collapsedFaqIds,
+  draggedPhotoIndex,
   form,
   mediaUploadEndpoint,
   markDirty,
+  moveFaq,
+  movePhoto,
+  removeFaq,
+  removePhoto,
+  setDraggedPhotoIndex,
+  toggleFaqCollapsed,
   update,
   updateService,
   moveService,
-  removeService,
-  addService
+  setServiceVisible
 }: {
   activeSection: string;
   business: CustomizerBusiness;
+  collapsedFaqIds: string[];
+  draggedPhotoIndex: number | null;
   form: FormState;
   mediaUploadEndpoint: string;
   markDirty: () => void;
+  moveFaq: (id: string, direction: -1 | 1) => void;
+  movePhoto: (fromIndex: number, toIndex: number) => void;
+  removeFaq: (id: string) => void;
+  removePhoto: (index: number) => void;
+  setDraggedPhotoIndex: (index: number | null) => void;
+  toggleFaqCollapsed: (id: string) => void;
   update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
   updateService: (id: string, patch: Partial<EditorService>) => void;
   moveService: (id: string, direction: -1 | 1) => void;
-  removeService: (id: string) => void;
-  addService: () => void;
+  setServiceVisible: (id: string, visible: boolean) => void;
 }) {
   if (activeSection === "hero") {
     return (
@@ -505,39 +623,68 @@ function SectionEditor({
   if (activeSection === "featured-services" || activeSection === "all-services") {
     return (
       <PanelStack>
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">Edit, reorder, hide, feature, and add service photos.</p>
-          <Button type="button" size="sm" onClick={addService}><Plus className="h-4 w-4" />Add</Button>
-        </div>
+        <p className="text-sm leading-6 text-muted-foreground">Choose which existing services appear on this storefront, which are featured, and the order customers see them in. Edit service details from the Services dashboard.</p>
         {form.services.map((service, index) => (
           <ServiceEditor
             key={service.id}
-            business={business}
             index={index}
             service={service}
             updateService={updateService}
             moveService={moveService}
-            removeService={removeService}
-            markDirty={markDirty}
-            mediaUploadEndpoint={mediaUploadEndpoint}
+            setServiceVisible={setServiceVisible}
           />
         ))}
       </PanelStack>
     );
   }
   if (activeSection === "portfolio") {
+    const photos = form.photoUrls.filter(Boolean);
     return (
       <PanelStack>
-        <p className="text-sm text-muted-foreground">Replace images or reorder them by moving content between slots.</p>
-        {form.photoUrls.map((photo, index) => (
-          <div key={index} className="rounded-[1rem] border border-[#eadbd7] p-3">
-            <ImageUploadField name={`portfolio-${index}`} label={`Portfolio image ${index + 1}`} value={photo} uploadEndpoint={mediaUploadEndpoint} onChangePreview={(value) => {
-              const next = [...form.photoUrls];
-              next[index] = value;
-              update("photoUrls", next);
-            }} />
-          </div>
-        ))}
+        <p className="text-sm leading-6 text-muted-foreground">Build the visual story for this storefront. Drag photos to reorder, replace any image, or remove images that no longer fit.</p>
+        <ImageUploadField
+          name="portfolio-new"
+          label="Add portfolio image"
+          uploadEndpoint={mediaUploadEndpoint}
+          onChangePreview={(value) => update("photoUrls", [...photos, value])}
+        />
+        <div className="grid gap-3">
+          {photos.map((photo, index) => (
+            <div
+              key={`${photo}-${index}`}
+              draggable
+              onDragStart={() => setDraggedPhotoIndex(index)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (draggedPhotoIndex != null) movePhoto(draggedPhotoIndex, index);
+                setDraggedPhotoIndex(null);
+              }}
+              className="grid gap-3 rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3 sm:grid-cols-[96px_1fr]"
+            >
+              <img src={photo} alt="" className="aspect-square w-full rounded-[0.8rem] object-cover" />
+              <div className="grid gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold"><GripVertical className="h-4 w-4 text-muted-foreground" />Image {index + 1}</span>
+                  <button type="button" className="rounded-full border p-1.5 text-muted-foreground hover:text-foreground" onClick={() => removePhoto(index)} aria-label="Remove image">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <ImageUploadField
+                  name={`portfolio-replace-${index}`}
+                  label="Replace image"
+                  value={photo}
+                  uploadEndpoint={mediaUploadEndpoint}
+                  onChangePreview={(value) => {
+                    const next = [...photos];
+                    next[index] = value;
+                    update("photoUrls", next);
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </PanelStack>
     );
   }
@@ -567,12 +714,33 @@ function SectionEditor({
         <Button type="button" variant="secondary" onClick={() => update("faqs", [...form.faqs, { id: crypto.randomUUID(), question: "New question", answer: "Answer this in your own words." }])}>
           <Plus className="h-4 w-4" />Add FAQ
         </Button>
-        {form.faqs.map((faq) => (
-          <div key={faq.id} className="rounded-[1rem] border border-[#eadbd7] p-3">
-            <Field label="Question"><Input value={faq.question} onChange={(event) => update("faqs", form.faqs.map((item) => item.id === faq.id ? { ...item, question: event.target.value } : item))} /></Field>
-            <Field label="Answer"><Textarea value={faq.answer} onChange={(event) => update("faqs", form.faqs.map((item) => item.id === faq.id ? { ...item, answer: event.target.value } : item))} /></Field>
+        {form.faqs.map((faq, index) => {
+          const collapsed = collapsedFaqIds.includes(faq.id);
+          return (
+          <div key={faq.id} className="rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3">
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <button type="button" className="min-w-0 text-left" onClick={() => toggleFaqCollapsed(faq.id)}>
+                <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">FAQ {index + 1}</span>
+                <span className="block truncate text-sm font-semibold">{faq.question || "Untitled question"}</span>
+              </button>
+              <div className="flex shrink-0 gap-1">
+                <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveFaq(faq.id, -1)}>Up</button>
+                <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveFaq(faq.id, 1)}>Down</button>
+                <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => toggleFaqCollapsed(faq.id)}>{collapsed ? "Expand" : "Collapse"}</button>
+                <button type="button" className="rounded-full border p-1.5 text-muted-foreground hover:text-foreground" onClick={() => removeFaq(faq.id)} aria-label="Delete FAQ">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            {collapsed ? null : (
+              <div className="grid gap-3">
+                <Field label="Question"><Input value={faq.question} onChange={(event) => update("faqs", form.faqs.map((item) => item.id === faq.id ? { ...item, question: event.target.value } : item))} /></Field>
+                <Field label="Answer"><Textarea value={faq.answer} onChange={(event) => update("faqs", form.faqs.map((item) => item.id === faq.id ? { ...item, answer: event.target.value } : item))} /></Field>
+              </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </PanelStack>
     );
   }
@@ -592,73 +760,63 @@ function SectionEditor({
 }
 
 function ServiceEditor({
-  business,
   index,
-  markDirty,
-  mediaUploadEndpoint,
   moveService,
-  removeService,
+  setServiceVisible,
   service,
   updateService
 }: {
-  business: CustomizerBusiness;
   index: number;
-  markDirty: () => void;
-  mediaUploadEndpoint: string;
   moveService: (id: string, direction: -1 | 1) => void;
-  removeService: (id: string) => void;
+  setServiceVisible: (id: string, visible: boolean) => void;
   service: EditorService;
   updateService: (id: string, patch: Partial<EditorService>) => void;
 }) {
-  if (!service.active) {
-    return (
-      <div className="rounded-[1rem] border border-dashed border-[#eadbd7] p-3 text-sm text-muted-foreground">
-        {service.title} will be hidden after publishing.
-        <Button type="button" size="sm" variant="secondary" className="mt-2" onClick={() => updateService(service.id, { active: true })}>Restore</Button>
-      </div>
-    );
-  }
   return (
-    <div className="space-y-3 rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-sm font-semibold">Service {index + 1}</div>
-        <div className="flex gap-1">
-          <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveService(service.id, -1)}>Up</button>
-          <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveService(service.id, 1)}>Down</button>
-          <button type="button" className="rounded-full border p-1 text-muted-foreground hover:text-foreground" onClick={() => removeService(service.id)}><Trash2 className="h-4 w-4" /></button>
+    <div className={`rounded-[1rem] border p-3 ${service.active ? "border-[#eadbd7] bg-[#fffaf8]" : "border-dashed border-[#eadbd7] bg-white/70 opacity-70"}`}>
+      <div className="grid gap-3 sm:grid-cols-[76px_1fr]">
+        {service.photos[0] ? (
+          <img src={service.photos[0]} alt="" className="aspect-square w-full rounded-[0.75rem] object-cover" />
+        ) : (
+          <div className="grid aspect-square place-items-center rounded-[0.75rem] bg-[#f8ece9]">
+            <ImagePlus className="h-5 w-5 text-primary" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Service {index + 1}</div>
+              <h4 className="truncate text-sm font-semibold text-[#2f2626]">{service.title}</h4>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{service.description}</p>
+            </div>
+            <div className="flex shrink-0 gap-1">
+              <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveService(service.id, -1)}>Up</button>
+              <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveService(service.id, 1)}>Down</button>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setServiceVisible(service.id, !service.active)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${service.active ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-[#eadbd7] bg-white text-muted-foreground"}`}
+            >
+              {service.active ? "Visible" : "Hidden"}
+            </button>
+            <button
+              type="button"
+              disabled={!service.active}
+              onClick={() => updateService(service.id, { featured: !service.featured })}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45 ${
+                service.featured ? "border-primary bg-primary/10 text-primary" : "border-[#eadbd7] bg-white text-muted-foreground"
+              }`}
+            >
+              {service.featured ? "Featured" : "Not featured"}
+            </button>
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              {service.messageForPricing || service.basePriceCents == null ? "Custom quote" : `From ${formatCurrency(service.basePriceCents)}`}
+            </span>
+          </div>
         </div>
-      </div>
-      <Field label="Service name"><Input value={service.title} onChange={(event) => updateService(service.id, { title: event.target.value })} /></Field>
-      <Field label="Description"><Textarea value={service.description} onChange={(event) => updateService(service.id, { description: event.target.value })} /></Field>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Field label="Starting price"><Input inputMode="decimal" value={service.basePriceCents == null ? "" : String(service.basePriceCents / 100)} onChange={(event) => updateService(service.id, { basePriceCents: dollarsToCents(event.target.value), messageForPricing: false })} /></Field>
-        <Field label="Lead time days"><Input inputMode="numeric" value={service.turnaroundDays ?? ""} onChange={(event) => updateService(service.id, { turnaroundDays: event.target.value ? Number(event.target.value) : null })} /></Field>
-      </div>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={service.messageForPricing} onChange={(event) => updateService(service.id, { messageForPricing: event.target.checked })} />Custom quote instead of public price</label>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={service.featured} onChange={(event) => updateService(service.id, { featured: event.target.checked })} />Feature this service</label>
-      {business.categories.length > 0 ? (
-        <Field label="Category">
-          <select className="h-10 rounded-[0.75rem] border border-[#eadbd7] bg-white px-3 text-sm" value={service.categoryId ?? ""} onChange={(event) => updateService(service.id, { categoryId: event.target.value })}>
-            {business.categories.map((category) => <option key={category.categoryId} value={category.categoryId}>{category.category.name}</option>)}
-          </select>
-        </Field>
-      ) : null}
-      <div className="grid gap-2 sm:grid-cols-2">
-        {[0, 1, 2].map((photoIndex) => (
-          <ImageUploadField
-            key={photoIndex}
-            name={`service-${service.id}-${photoIndex}`}
-            label={`Photo ${photoIndex + 1}`}
-            value={service.photos[photoIndex] ?? ""}
-            uploadEndpoint={mediaUploadEndpoint}
-            onChangePreview={(value) => {
-              const photos = [...service.photos];
-              photos[photoIndex] = value;
-              updateService(service.id, { photos });
-              markDirty();
-            }}
-          />
-        ))}
       </div>
     </div>
   );
@@ -1098,8 +1256,10 @@ function PanelStack({ children }: { children: ReactNode }) {
   return <div className="grid gap-4">{children}</div>;
 }
 
-function readDraft(value: unknown): Partial<FormState> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Partial<FormState> : null;
+type StorefrontDraftState = Partial<FormState> & { hiddenOfferingIds?: string[] };
+
+function readDraft(value: unknown): StorefrontDraftState | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as StorefrontDraftState : null;
 }
 
 function readFaqs(value: unknown): FaqItem[] {
@@ -1152,6 +1312,15 @@ function orderServices(services: EditorService[], order: string[]) {
 function mergeDraftServices(draftServices: EditorService[], liveServices: EditorService[]) {
   const liveById = new Map(liveServices.map((service) => [service.id, service]));
   return draftServices.map((service) => ({ ...liveById.get(service.id), ...service }));
+}
+
+function applyDraftServiceDisplay(services: EditorService[], hiddenOfferingIds: string[] | undefined) {
+  const hidden = new Set(hiddenOfferingIds ?? []);
+  return services.map((service) => ({
+    ...service,
+    active: !hidden.has(service.id),
+    featured: hidden.has(service.id) ? false : service.featured
+  }));
 }
 
 function dollarsToCents(value: string) {

@@ -51,6 +51,7 @@ export default async function StorefrontCustomizerPage({
       storefrontButtonStyle: true,
       storefrontFontStyle: true,
       storefrontHiddenSections: true,
+      storefrontHiddenOfferingIds: true,
       storefrontImageShape: true,
       storefrontLayout: true,
       storefrontPalette: true,

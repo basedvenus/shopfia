@@ -142,7 +142,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   );
   const sectionPriority = (section: string) => sectionOrder.indexOf(section) === -1 ? 999 : sectionOrder.indexOf(section);
   const showSection = (section: string) => sectionOrder.includes(section as never);
-  const orderedOfferings = [...vendor.offerings].sort((a, b) => {
+  const visibleOfferings = vendor.offerings.filter((offering) => !vendor.storefrontHiddenOfferingIds.includes(offering.id));
+  const orderedOfferings = [...visibleOfferings].sort((a, b) => {
     const aIndex = vendor.storefrontOfferingOrder.indexOf(a.id);
     const bIndex = vendor.storefrontOfferingOrder.indexOf(b.id);
     return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);

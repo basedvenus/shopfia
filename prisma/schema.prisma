@@ -369,6 +369,7 @@ model VendorProfile {
   storefrontPoliciesJson    Json?
   storefrontBookingJson     Json?
   storefrontFeaturedOfferingIds String[]           @default([])
+  storefrontHiddenOfferingIds String[]             @default([])
   storefrontOfferingOrder   String[]              @default([])
   claimedAt                 DateTime?
   createdAt                 DateTime              @default(now())

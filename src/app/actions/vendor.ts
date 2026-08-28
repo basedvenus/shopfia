@@ -437,25 +437,22 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     select: {
       id: true,
       city: true,
-      formattedAddress: true,
-      locationLat: true,
-      locationLng: true,
-      googlePlaceId: true,
       slug: true,
       state: true,
-      zipCode: true,
-      categories: { select: { categoryId: true } }
+      offerings: { select: { id: true } }
     }
   });
   if (!vendor) {
     return redirectWithCustomizeError("That business could not be found.");
   }
-  const vendorId = vendor.id;
-
   const sanitizedSectionOrder = sanitizeStorefrontSections(parsed.sectionOrder);
   const sanitizedHiddenSections = sanitizeHiddenStorefrontSections(parsed.hiddenSections);
   const storefrontPalette = normalizeStorefrontPalette(parsed.palette);
   const editorServices = parseEditorServices(parsed.servicesJson);
+  const existingOfferingIds = vendor.offerings.map((offering) => offering.id);
+  const hiddenOfferingIds = editorServices
+    .filter((service) => service.active === false && service.id && existingOfferingIds.includes(service.id))
+    .map((service) => service.id as string);
   const draftPayload = JSON.parse(JSON.stringify({
     aboutHeading: parsed.aboutHeading || "",
     aboutImage: parsed.aboutImage || "",
@@ -469,6 +466,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     featuredOfferingIds: parsed.featuredOfferingIds,
     fontStyle: parsed.fontStyle,
     hiddenSections: sanitizedHiddenSections,
+    hiddenOfferingIds,
     imageShape: parsed.imageShape,
     instagramUrl: parsed.instagramUrl || "",
     layout: parsed.layout,
@@ -511,92 +509,10 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     redirect(`/vendor/business/${vendor.slug}/storefront?draft=1`);
   }
 
-  const fallbackCategoryId = vendor.categories[0]?.categoryId;
-  const publishedServiceIds: string[] = [];
-  const clientIdToPublishedId = new Map<string, string>();
-
-  async function nextOfferingSlug(baseSlug: string, existingId?: string) {
-    const base = baseSlug || `service-${Date.now().toString(36)}`;
-    for (let index = 0; index < 25; index += 1) {
-      const candidate = index === 0 ? base : `${base}-${index + 1}`;
-      const existing = await db.offering.findUnique({
-        where: { vendorId_slug: { vendorId, slug: candidate } },
-        select: { id: true }
-      });
-      if (!existing || existing.id === existingId) return candidate;
-    }
-    return `${base}-${Date.now().toString(36)}`;
-  }
-
-  for (const service of editorServices) {
-    const categoryId = service.categoryId || fallbackCategoryId;
-    if (!categoryId) continue;
-    const existingService = service.id
-      ? await db.offering.findFirst({ where: { id: service.id, vendorId: vendor.id }, select: { id: true } })
-      : null;
-    const serviceSlug = await nextOfferingSlug(slugify(service.title ?? ""), existingService?.id);
-    const payload = {
-      active: service.active !== false,
-      basePriceCents: service.messageForPricing ? null : service.basePriceCents ?? null,
-      categoryId,
-      description: service.description || `${service.title} from ${parsed.name}.`,
-      messageForPricing: service.messageForPricing || service.basePriceCents == null,
-      photos: service.photos ?? [],
-      slug: serviceSlug || `service-${Date.now()}`,
-      tags: [],
-      title: service.title || "Untitled service",
-      turnaroundDays: service.turnaroundDays ?? null,
-      type: "SERVICE" as const,
-      vendorId: vendor.id
-    };
-
-    const offering = existingService
-      ? await db.offering.update({
-          where: { id: existingService.id },
-          data: payload,
-          select: { id: true, title: true, description: true, basePriceCents: true, messageForPricing: true, category: { select: { name: true } } }
-        })
-      : await db.offering.create({
-          data: payload,
-          select: { id: true, title: true, description: true, basePriceCents: true, messageForPricing: true, category: { select: { name: true } } }
-        });
-
-    publishedServiceIds.push(offering.id);
-    if (service.clientId) clientIdToPublishedId.set(service.clientId, offering.id);
-    if (service.id) clientIdToPublishedId.set(service.id, offering.id);
-    await db.offeringCategory.deleteMany({ where: { offeringId: offering.id } });
-    await db.offeringCategory.createMany({ data: [{ offeringId: offering.id, categoryId }], skipDuplicates: true });
-    await createListing({
-      autoRenew: true,
-      category: offering.category.name,
-      city: parsed.city,
-      description: offering.description,
-      formattedAddress: vendor.formattedAddress,
-      googlePlaceId: vendor.googlePlaceId,
-      locationLat: vendor.locationLat,
-      locationLng: vendor.locationLng,
-      offeringId: offering.id,
-      priceFrom: offering.messageForPricing ? null : offering.basePriceCents,
-      publish: payload.active,
-      quantity: 1,
-      state: parsed.state || null,
-      title: offering.title,
-      vendorProfileId: vendor.id,
-      zipCode: vendor.zipCode
-    });
-  }
-
-  await db.offering.updateMany({
-    where: { vendorId: vendor.id, id: { notIn: publishedServiceIds } },
-    data: { active: false }
-  });
-
   const orderedOfferingIds = parsed.offeringOrder
-    .map((id) => clientIdToPublishedId.get(id) ?? id)
-    .filter((id) => publishedServiceIds.includes(id));
+    .filter((id) => existingOfferingIds.includes(id));
   const featuredOfferingIds = parsed.featuredOfferingIds
-    .map((id) => clientIdToPublishedId.get(id) ?? id)
-    .filter((id) => publishedServiceIds.includes(id));
+    .filter((id) => existingOfferingIds.includes(id) && !hiddenOfferingIds.includes(id));
 
   await db.vendorProfile.update({
     where: { id: vendor.id },
@@ -630,7 +546,8 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
       storefrontPoliciesJson: parseEditorJson(parsed.policiesJson) ?? Prisma.JsonNull,
       storefrontBookingJson: parseEditorJson(parsed.bookingJson) ?? Prisma.JsonNull,
       storefrontFeaturedOfferingIds: featuredOfferingIds,
-      storefrontOfferingOrder: [...orderedOfferingIds, ...publishedServiceIds.filter((id) => !orderedOfferingIds.includes(id))]
+      storefrontHiddenOfferingIds: hiddenOfferingIds,
+      storefrontOfferingOrder: [...orderedOfferingIds, ...existingOfferingIds.filter((id) => !orderedOfferingIds.includes(id))]
     }
   });
 
