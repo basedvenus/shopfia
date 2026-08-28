@@ -9,15 +9,17 @@ import { BrowseScreen } from "./src/screens/BrowseScreen";
 import { FavoritesScreen } from "./src/screens/FavoritesScreen";
 import { MarketplaceDetailScreen } from "./src/screens/MarketplaceDetailScreen";
 import { MessagesScreen } from "./src/screens/MessagesScreen";
+import { PartyDetailScreen } from "./src/screens/PartyDetailScreen";
 import { FavoritesProvider } from "./src/api/favorites";
 import { ShopFiaLogo } from "./src/components/ShopFiaLogo";
 import { colors, fonts, spacing } from "./src/theme";
-import type { Offering, Vendor } from "./src/types/shopfia";
+import type { Offering, Party, Vendor } from "./src/types/shopfia";
 
 type TabKey = "browse" | "favorites" | "messages" | "account";
 type DetailTarget =
   | { kind: "vendor"; slug: string; name?: string }
-  | { kind: "offering"; id: string; title?: string };
+  | { kind: "offering"; id: string; title?: string }
+  | { kind: "party"; id: string; slug: string; title?: string };
 
 const tabs: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: "browse", label: "Explore", icon: "map-outline" },
@@ -46,8 +48,22 @@ function Shell() {
     setDetailTarget({ kind: "offering", id: offering.id, title: offering.title });
   }
 
+  function openParty(party: Pick<Party, "id" | "slug" | "title">) {
+    setActiveTab("browse");
+    setDetailTarget({ kind: "party", id: party.id, slug: party.slug, title: party.title });
+  }
+
   const screen = useMemo(() => {
     if (detailTarget) {
+      if (detailTarget.kind === "party") {
+        return (
+          <PartyDetailScreen
+            onBack={() => setDetailTarget(null)}
+            onOpenVendor={openVendor}
+            target={detailTarget}
+          />
+        );
+      }
       return (
         <MarketplaceDetailScreen
           onBack={() => setDetailTarget(null)}
@@ -63,12 +79,13 @@ function Shell() {
         <FavoritesScreen
           onOpenAccount={() => setActiveTab("account")}
           onOpenOffering={openOffering}
+          onOpenParty={openParty}
           onOpenVendor={openVendor}
         />
       );
     }
     if (activeTab === "account") return <AccountScreen />;
-    return <BrowseScreen onOpenOffering={openOffering} onOpenVendor={openVendor} />;
+    return <BrowseScreen onOpenOffering={openOffering} onOpenParty={openParty} onOpenVendor={openVendor} />;
   }, [activeTab, detailTarget]);
 
   if (booting) {

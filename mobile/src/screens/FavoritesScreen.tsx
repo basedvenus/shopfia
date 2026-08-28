@@ -13,14 +13,14 @@ import {
   TextInput,
   View
 } from "react-native";
-import { absoluteImageUrl, openWebsitePath } from "../api/client";
+import { absoluteImageUrl } from "../api/client";
 import { useAuth } from "../api/auth";
 import { useFavorites } from "../api/favorites";
 import { EmptyState } from "../components/EmptyState";
 import { FavoriteButton } from "../components/FavoriteButton";
 import { ShopFiaLogo } from "../components/ShopFiaLogo";
 import { colors, radii, screen, spacing } from "../theme";
-import type { FavoriteItem, Offering, Vendor } from "../types/shopfia";
+import type { FavoriteItem, Offering, Party, Vendor } from "../types/shopfia";
 
 const starterCollections = [
   "Baby Shower Ideas",
@@ -33,10 +33,12 @@ const starterCollections = [
 export function FavoritesScreen({
   onOpenAccount,
   onOpenOffering,
+  onOpenParty,
   onOpenVendor
 }: {
   onOpenAccount: () => void;
   onOpenOffering: (offering: Pick<Offering, "id" | "title">) => void;
+  onOpenParty: (party: Pick<Party, "id" | "slug" | "title">) => void;
   onOpenVendor: (vendor: Pick<Vendor, "name" | "slug">) => void;
 }) {
   const { session } = useAuth();
@@ -63,7 +65,11 @@ export function FavoritesScreen({
       onOpenOffering({ id: item.targetId, title: item.title });
       return;
     }
-    openWebsitePath(item.href);
+    onOpenParty({
+      id: item.targetId,
+      slug: item.href.replace(/^\/events\//, ""),
+      title: item.title
+    });
   }
 
   if (!session?.user) {

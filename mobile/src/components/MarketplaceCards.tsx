@@ -3,6 +3,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   absoluteImageUrl,
   formatCurrency,
+  partyPhotoPath,
 } from "../api/client";
 import { colors, fonts, radii, spacing } from "../theme";
 import { FavoriteButton } from "./FavoriteButton";
@@ -102,13 +103,28 @@ export function OfferingCard({ offering, onPress }: { offering: Offering; onPres
   );
 }
 
-export function PartyCard({ party }: { party: Party }) {
-  const image = absoluteImageUrl(party.coverImageUrl ?? party.imageUrls[0]);
+export function PartyCard({ onPress, party }: { onPress?: (party: Party) => void; party: Party }) {
+  const coverPhoto = party.photos[0];
+  const image = absoluteImageUrl(
+    coverPhoto ? partyPhotoPath(coverPhoto.id, coverPhoto.updatedAt, 760) : party.coverImageUrl ?? party.imageUrls[0]
+  );
+  const crop = coverPhoto?.crop && typeof coverPhoto.crop === "object" && !Array.isArray(coverPhoto.crop)
+    ? coverPhoto.crop as { x?: unknown; y?: unknown; zoom?: unknown }
+    : {};
+  const x = Math.min(100, Math.max(0, Number(crop.x) || 50));
+  const y = Math.min(100, Math.max(0, Number(crop.y) || 50));
+  const zoom = Math.min(3, Math.max(0.25, Number(crop.zoom) || 1));
 
   return (
-    <View style={styles.partyCard}>
+    <Pressable onPress={() => onPress?.(party)} style={styles.partyCard}>
       <View style={styles.partyImageWrap}>
-        {image ? <Image alt={`${party.title} party photo`} source={{ uri: image }} style={styles.partyImage} /> : null}
+        {image ? (
+          <Image
+            alt={`${party.title} party photo`}
+            source={{ uri: image }}
+            style={[styles.partyImage, { transform: [{ scale: zoom }], transformOrigin: `${x}% ${y}%` }]}
+          />
+        ) : null}
         <View style={styles.favoritePosition}>
           <FavoriteButton targetId={party.id} targetType="party" />
         </View>
@@ -119,7 +135,7 @@ export function PartyCard({ party }: { party: Party }) {
           {[party.theme, party.city ?? party.location].filter(Boolean).join(" · ")}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

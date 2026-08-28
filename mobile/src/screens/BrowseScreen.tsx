@@ -17,15 +17,17 @@ import { Pill } from "../components/Pill";
 import { ShopFiaLogo } from "../components/ShopFiaLogo";
 import { colors, fonts, screen, spacing } from "../theme";
 import type { ExplorePayload } from "../types/shopfia";
-import type { Offering, Vendor } from "../types/shopfia";
+import type { Offering, Party, Vendor } from "../types/shopfia";
 
 type BrowseMode = "vendors" | "offerings" | "parties";
 
 export function BrowseScreen({
   onOpenOffering,
+  onOpenParty,
   onOpenVendor
 }: {
   onOpenOffering: (offering: Offering) => void;
+  onOpenParty: (party: Party) => void;
   onOpenVendor: (vendor: Vendor) => void;
 }) {
   const { cookie } = useAuth();
@@ -140,7 +142,7 @@ export function BrowseScreen({
       ) : null}
 
       {!error && data && mode === "parties" ? (
-        data.parties.length ? data.parties.map((party) => <PartyCard key={party.id} party={party} />) : (
+        data.parties.length ? data.parties.map((party) => <PartyCard key={party.id} onPress={onOpenParty} party={party} />) : (
           <EmptyState title="No party inspiration found" body="Try a broader search to browse recent celebrations." />
         )
       ) : null}

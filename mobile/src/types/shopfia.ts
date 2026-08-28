@@ -101,6 +101,59 @@ export type Party = {
   } | null;
 };
 
+export type PartyDetailPhoto = {
+  crop: { x: number; y: number; zoom: number };
+  id: string;
+  taggedVendorIds: string[];
+  url: string;
+  vendorContributions: Record<string, string>;
+};
+
+export type PartyDetailVendor = {
+  categories: string[];
+  city: string;
+  coverPhoto: string | null;
+  id: string;
+  logoUrl: string | null;
+  name: string;
+  slug: string;
+  state: string | null;
+  taggedPhotoCount: number;
+};
+
+export type PartyDetail = {
+  city: string | null;
+  collaborators: {
+    id: string;
+    role: string;
+    user: {
+      id: string;
+      image: string | null;
+      name: string | null;
+      username: string | null;
+    };
+  }[];
+  coverImageUrl: string | null;
+  description: string | null;
+  eventDate: string | null;
+  host: {
+    id: string;
+    image: string | null;
+    name: string | null;
+    username: string | null;
+  } | null;
+  id: string;
+  location: string | null;
+  partyfulUrl: string | null;
+  photos: PartyDetailPhoto[];
+  slug: string;
+  state: string | null;
+  tags: string[];
+  theme: string | null;
+  title: string;
+  vendors: PartyDetailVendor[];
+};
+
 export type ExplorePayload = {
   categories: Category[];
   eventCategories: Category[];
@@ -143,6 +196,10 @@ export type VendorDetailPayload = {
 
 export type OfferingDetailPayload = {
   offering: Offering;
+};
+
+export type PartyDetailPayload = {
+  party: PartyDetail;
 };
 
 export type FavoriteTargetType = "vendor" | "party" | "offering";

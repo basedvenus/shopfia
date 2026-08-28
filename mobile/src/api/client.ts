@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
-import type { ExplorePayload, FavoritesPayload, FavoriteTargetType, MessagesPayload, OfferingDetailPayload, VendorDetailPayload } from "../types/shopfia";
+import type { ExplorePayload, FavoritesPayload, FavoriteTargetType, MessagesPayload, OfferingDetailPayload, PartyDetailPayload, VendorDetailPayload } from "../types/shopfia";
 
 const configuredBaseUrl =
   process.env.EXPO_PUBLIC_SHOPFIA_API_URL ||
@@ -71,6 +71,7 @@ export function absoluteImageUrl(path: string | null | undefined) {
 }
 
 export function openWebsitePath(path: string) {
+  if (/^https?:\/\//i.test(path)) return Linking.openURL(path);
   return Linking.openURL(`${API_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`);
 }
 
@@ -91,6 +92,14 @@ export function marketplacePathForOffering(id: string) {
   return `/offering/${id}`;
 }
 
+export function partyPhotoPath(id: string, updatedAt: string, width = 900) {
+  const params = new URLSearchParams({
+    v: String(new Date(updatedAt).getTime()),
+    w: String(width)
+  });
+  return `/api/party-photos/${encodeURIComponent(id)}?${params.toString()}`;
+}
+
 export async function getExplore(cookie: string | null, query: { q?: string; categoryId?: string }) {
   return apiRequest<ExplorePayload>("/api/mobile/explore", {
     cookie,
@@ -104,6 +113,10 @@ export async function getVendorDetail(cookie: string | null, slug: string) {
 
 export async function getOfferingDetail(cookie: string | null, id: string) {
   return apiRequest<OfferingDetailPayload>(`/api/mobile/offerings/${encodeURIComponent(id)}`, { cookie });
+}
+
+export async function getPartyDetail(cookie: string | null, slug: string) {
+  return apiRequest<PartyDetailPayload>(`/api/mobile/parties/${encodeURIComponent(slug)}`, { cookie });
 }
 
 export async function getMessages(cookie: string | null) {
