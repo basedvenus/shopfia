@@ -101,6 +101,29 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       photoCount: 1
     });
   });
+  vendor.partyPhotoRatings.forEach((credit) => {
+    const event = credit.photo.event;
+    if (!event) return;
+    const contributionNote = credit.contributionNote?.trim();
+    const existing = photoTaggedEventMap.get(event.id);
+    if (existing) {
+      existing.photoCount += 1;
+      if (contributionNote) {
+        existing.contributionNotes.push(contributionNote);
+      }
+      return;
+    }
+    photoTaggedEventMap.set(event.id, {
+      title: event.title,
+      slug: event.slug,
+      theme: event.theme,
+      tags: event.tags,
+      coverImageUrl: partyPhotoUrl(credit.photo.id, credit.photo.updatedAt, { width: 900 }),
+      credit: event.user.username ? `@${event.user.username}` : event.user.name ?? "a ShopFia host",
+      contributionNotes: contributionNote ? [contributionNote] : [],
+      photoCount: 1
+    });
+  });
   const photoTaggedEvents = Array.from(photoTaggedEventMap.values());
   const taggedEvents =
     photoTaggedEvents.length > 0
@@ -456,56 +479,6 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           </Card>
         )}
 
-        {taggedEvents.length > 0 ? (
-          <div className="space-y-4 pt-2">
-            <div>
-              <h3 className="text-lg font-semibold" style={theme.headingStyle}>Tagged In Real Events</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Customer-tagged parties create authentic proof of how this vendor shows up in celebrations.
-              </p>
-            </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {taggedEvents.filter((event) => event.coverImageUrl).map((event) => {
-              const photo = event.coverImageUrl;
-              return (
-                <Link key={event.slug} href={`/events/${event.slug}`}>
-                  <article className={`group overflow-hidden shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
-                    <div className="relative aspect-[4/3] bg-muted">
-                      <Image src={photo} alt={event.title} fill className="object-cover transition duration-500 group-hover:scale-[1.03]" />
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-semibold" style={theme.headingStyle}>{event.title}</h3>
-                      {event.theme ? (
-                        <span className="mt-2 inline-flex h-7 max-w-full items-center rounded-full px-2.5 text-[13px]" style={theme.softChipStyle}>
-                          <span className="truncate">{event.theme}</span>
-                        </span>
-                      ) : null}
-                      {event.contributionNotes[0] ? (
-                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                          “{event.contributionNotes[0]}”
-                        </p>
-                      ) : null}
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Credited by {event.credit}
-                        {event.photoCount ? ` in ${event.photoCount} tagged photo${event.photoCount === 1 ? "" : "s"}` : ""}
-                      </p>
-                      {event.tags.length > 0 ? (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {event.tags.slice(0, 4).map((tag) => (
-                            <span key={tag} className="rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  </article>
-                </Link>
-              );
-            })}
-          </div>
-          </div>
-        ) : null}
       </section>
       ) : null}
 
@@ -666,6 +639,46 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           ))}
         </div>
       </section>
+      ) : null}
+
+      {taggedEvents.length > 0 ? (
+        <section id="party-credits" className="scroll-mt-28 space-y-4" style={{ order: 998 }}>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>Seen In Real Parties</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Party credits are connected from ShopFia host galleries and vendor tags.
+              </p>
+            </div>
+            <Badge variant="outline" style={theme.outlineBadgeStyle}>{taggedEvents.length} party credit{taggedEvents.length === 1 ? "" : "s"}</Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {taggedEvents.filter((event) => event.coverImageUrl).map((event) => (
+              <Link key={event.slug} href={`/events/${event.slug}`}>
+                <article className={`group overflow-hidden shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
+                  <div className="relative aspect-[4/3] bg-muted">
+                    <Image src={event.coverImageUrl} alt={event.title} fill sizes="(min-width: 1280px) 31vw, (min-width: 768px) 48vw, 100vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold" style={theme.headingStyle}>{event.title}</h3>
+                    {event.theme ? (
+                      <span className="mt-2 inline-flex h-7 max-w-full items-center rounded-full px-2.5 text-[13px]" style={theme.softChipStyle}>
+                        <span className="truncate">{event.theme}</span>
+                      </span>
+                    ) : null}
+                    {event.contributionNotes[0] ? (
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{event.contributionNotes[0]}</p>
+                    ) : null}
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Credited by {event.credit}
+                      {event.photoCount ? ` in ${event.photoCount} tagged photo${event.photoCount === 1 ? "" : "s"}` : ""}
+                    </p>
+                  </div>
+                </article>
+              </Link>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <footer className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm ${theme.mutedClass} ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: 999 }}>

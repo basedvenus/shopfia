@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/guards";
+import { businessManagerWhere } from "@/lib/businesses";
+import { requireRole, requireSession } from "@/lib/auth/guards";
 import { checkServerActionRateLimit } from "@/lib/security/request";
-import { createVerifiedReview, respondToReview } from "@/lib/services/reviews";
+import { createVerifiedReview, respondToReview, scheduleReviewRemindersForCompletedOrder } from "@/lib/services/reviews";
 import { createReviewSchema, reviewResponseSchema } from "@/lib/validators/review";
 
 export async function createReviewAction(formData: FormData) {
@@ -75,4 +77,71 @@ export async function respondToReviewAction(formData: FormData) {
   revalidatePath("/vendor/dashboard");
   revalidatePath(`/vendor/profile/${review.vendor.slug}`);
   revalidatePath("/explore");
+}
+
+export async function requestReviewForOrderAction(formData: FormData) {
+  const { db } = await import("@/lib/db");
+  const session = await requireSession();
+  const orderId = String(formData.get("orderId") ?? "");
+  const submittedReturnTo = String(formData.get("returnTo") ?? "/vendor/dashboard");
+  const returnTo = submittedReturnTo.startsWith("/") && !submittedReturnTo.startsWith("//")
+    ? submittedReturnTo
+    : "/vendor/dashboard";
+
+  const rate = await checkServerActionRateLimit([
+    { key: "review-request:ip:{ip}", limit: 20, intervalMs: 60_000 },
+    { key: `review-request:user:${session.user.id}`, limit: 8, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) redirect(`${returnTo}?reviewRequest=rate-limited`);
+
+  const order = await db.order.findFirst({
+    where: {
+      id: orderId,
+      status: "completed",
+      paymentSucceededAt: { not: null },
+      review: { is: null },
+      vendorProfile: businessManagerWhere(session.user.id, session.user.role)
+    },
+    include: {
+      buyer: { select: { id: true, name: true } },
+      offering: { select: { title: true } },
+      quote: {
+        include: {
+          quoteRequest: {
+            select: {
+              conversationId: true,
+              eventDate: true,
+              eventLocation: true
+            }
+          }
+        }
+      },
+      vendorProfile: { select: { name: true, slug: true } }
+    }
+  });
+
+  if (!order) redirect(`${returnTo}?reviewRequest=unavailable`);
+
+  const conversationId = order.quote?.quoteRequest.conversationId ?? null;
+  if (!conversationId) redirect(`${returnTo}?reviewRequest=no-conversation`);
+
+  const context = order.offering?.title ?? order.quote?.quoteRequest.eventLocation ?? "your event";
+  await db.message.create({
+    data: {
+      attachments: [],
+      body: `Thank you again for booking ${context} with ${order.vendorProfile.name}. When you have a moment, could you leave a verified ShopFia review from your Account page? It helps future hosts feel confident booking us.`,
+      conversationId,
+      senderId: session.user.id
+    }
+  });
+  await db.conversation.update({
+    where: { id: conversationId },
+    data: { lastMessageAt: new Date() }
+  });
+  await scheduleReviewRemindersForCompletedOrder(order.id);
+
+  revalidatePath("/messages");
+  revalidatePath("/vendor/dashboard");
+  revalidatePath(`/vendor/business/${order.vendorProfile.slug}`);
+  redirect(`${returnTo}?reviewRequest=sent`);
 }

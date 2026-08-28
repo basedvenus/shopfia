@@ -367,6 +367,7 @@ function ConversationThread({
   const latestQuoteRequest =
     [...conversation.quoteRequests].reverse().find((quoteRequest) => quoteRequest.quote) ?? null;
   const activeQuoteRequest = getActiveQuoteRequest(conversation.quoteRequests);
+  const reviewableOrder = getReviewableOrder(conversation.quoteRequests);
 
   function openQuoteBuilder(quoteRequest: QuoteRequestItem | null = latestQuoteRequest) {
     setQuoteBuilderQuoteRequest(quoteRequest);
@@ -385,6 +386,10 @@ function ConversationThread({
   async function sendMessage() {
     const trimmed = body.trim();
     if (!trimmed || isSending) return;
+    await sendMessageBody(trimmed, { restoreOnError: true });
+  }
+
+  async function sendMessageBody(trimmed: string, { restoreOnError = false }: { restoreOnError?: boolean } = {}) {
     setError(null);
     setIsSending(true);
     setBody("");
@@ -399,11 +404,20 @@ function ConversationThread({
     if (!response.ok) {
       const result = (await response.json().catch(() => null)) as { error?: string } | null;
       setError(result?.error ?? "That message could not be sent.");
-      setBody(trimmed);
+      if (restoreOnError) setBody(trimmed);
       return;
     }
 
     onAfterSend();
+  }
+
+  async function sendReviewRequest() {
+    if (!reviewableOrder || isSending) return;
+    const context =
+      reviewableOrder.offeringTitle ??
+      reviewableOrder.eventLocation ??
+      "your event";
+    await sendMessageBody(`Thank you again for booking ${context} with ${conversation.vendorProfile.name}. When you have a moment, could you leave a verified ShopFia review from your Account page? It helps future hosts feel confident booking us.`);
   }
 
   return (
@@ -459,6 +473,25 @@ function ConversationThread({
               setReviewQuoteRequest(activeQuoteRequest);
             }}
           />
+        ) : null}
+        {viewerIsVendor && reviewableOrder ? (
+          <button
+            type="button"
+            onClick={() => void sendReviewRequest()}
+            disabled={isSending}
+            className="mb-2 flex w-full items-center gap-3 rounded-[1rem] border border-[#eadbd7] bg-[#fffaf6] px-3 py-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md disabled:opacity-60"
+          >
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.8rem] bg-[#fbf1ed] text-[#9b6b65]">
+              <Mail className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-[#9b6b65]">Review follow-up</span>
+              <span className="block truncate text-sm font-bold text-[#2f2626]">Ask this client for a verified review</span>
+            </span>
+            <span className="shrink-0 rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-[#2f2626] shadow-sm">
+              Request Review
+            </span>
+          </button>
         ) : null}
         <div className="rounded-[1.1rem] border border-[#eadbd7] bg-[#fffdfa] p-1.5 shadow-sm md:rounded-[1.35rem] md:p-2">
           <Textarea
@@ -1893,6 +1926,20 @@ function formatDepositPercent(depositCents: number, totalCents: number) {
 
 function getLatestQuoteOrder(quote: QuoteRequestItem["quote"] | null | undefined) {
   return quote?.orders?.[0] ?? null;
+}
+
+function getReviewableOrder(quoteRequests: QuoteRequestItem[]) {
+  for (const quoteRequest of [...quoteRequests].reverse()) {
+    const order = getLatestQuoteOrder(quoteRequest.quote);
+    if (order && order.status === "completed" && order.paymentSucceededAt && !order.review) {
+      return {
+        eventLocation: quoteRequest.eventLocation,
+        offeringTitle: quoteRequest.offering?.title ?? null,
+        orderId: order.id
+      };
+    }
+  }
+  return null;
 }
 
 function getActiveQuoteRequest(quoteRequests: QuoteRequestItem[]) {

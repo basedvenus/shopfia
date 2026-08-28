@@ -72,6 +72,7 @@ type MessageQuoteRequest = Prisma.QuoteRequestGetPayload<{
             createdAt: true;
             id: true;
             paymentSucceededAt: true;
+            review: { select: { id: true } };
             status: true;
             updatedAt: true;
           };
@@ -226,6 +227,7 @@ export async function getMessagesPayload({
                     createdAt: true,
                     id: true,
                     paymentSucceededAt: true,
+                    review: { select: { id: true } },
                     status: true,
                     updatedAt: true
                   }

@@ -137,6 +137,36 @@ export async function getVendorProfileBySlug(slug: string) {
         orderBy: { createdAt: "desc" },
         take: 18
       },
+      partyPhotoRatings: {
+        where: {
+          photo: {
+            eventId: {
+              not: null
+            }
+          }
+        },
+        include: {
+          photo: {
+            include: {
+              event: {
+                include: {
+                  user: {
+                    select: {
+                      createdAt: true,
+                      email: true,
+                      name: true,
+                      username: true,
+                      image: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 18
+      },
       _count: {
         select: {
           favorites: true,

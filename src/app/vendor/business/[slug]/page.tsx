@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AlertCircle, CheckCircle2, ChevronDown, Clock3, Edit3, Eye, MessageSquare, PackagePlus, Settings, ShieldCheck, ShoppingBag, Store, Upload, Wand2 } from "lucide-react";
 import { auth } from "@/auth";
+import { requestReviewForOrderAction } from "@/app/actions/reviews";
 import { submitBusinessVerificationDocumentAction } from "@/app/actions/vendor";
 import { deleteOfferingAction, duplicateOfferingAction, toggleOfferingPublishedAction } from "@/app/actions/offerings";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,15 @@ export const dynamic = "force-dynamic";
 const openRequestStatuses = new Set(["SUBMITTED", "RESPONDED"]);
 const activeOrderStatuses = new Set(["awaiting_payment", "paid", "in_progress"]);
 
-export default async function BusinessDashboardPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function BusinessDashboardPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ reviewRequest?: string }>;
+}) {
   const { slug } = await params;
+  const resolvedSearchParams = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/account?next=login");
 
@@ -86,6 +94,8 @@ export default async function BusinessDashboardPage({ params }: { params: Promis
           buyerTotalCents: true,
           id: true,
           offering: { select: { title: true } },
+          review: { select: { id: true } },
+          quote: { select: { quoteRequest: { select: { conversationId: true } } } },
           status: true
         },
         take: 8
@@ -139,13 +149,18 @@ export default async function BusinessDashboardPage({ params }: { params: Promis
                 Edit Storefront
               </Link>
             </Button>
+            <Button asChild variant="secondary">
+              <Link href={publicPath}>
+                <Eye className="h-4 w-4" />
+                View Live Storefront
+              </Link>
+            </Button>
             <details className="group relative">
               <summary className="inline-flex h-10 cursor-pointer list-none items-center justify-center gap-2 rounded-full border border-border bg-white px-4 text-sm font-medium transition hover:bg-muted">
                 More
                 <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
               </summary>
               <div className="absolute right-0 z-20 mt-2 w-56 rounded-[1rem] border border-border bg-white p-2 shadow-[0_18px_50px_rgba(72,44,43,0.14)]">
-                <MenuLink href={publicPath} icon={<Eye className="h-4 w-4" />} label="View Live Storefront" />
                 <CopyStorefrontLinkButton url={publicUrl} label="Copy Link" className="h-9 w-full justify-start bg-white px-3 shadow-none" />
                 <MenuLink href="#settings" icon={<Settings className="h-4 w-4" />} label="Business Settings" />
               </div>
@@ -247,11 +262,16 @@ export default async function BusinessDashboardPage({ params }: { params: Promis
       <section id="bookings" className="scroll-mt-24">
         <Panel>
           <SectionKicker icon={<ShoppingBag className="h-4 w-4" />} label="Bookings" />
-          <RequestList
+          <ReviewRequestStatus status={resolvedSearchParams?.reviewRequest} />
+          <BookingList
+            businessSlug={business.slug}
             empty="Orders and payments will appear here after customers accept quotes."
             items={business.orders.map((order) => ({
               detail: order.buyer.name ?? order.buyer.email ?? "Customer",
+              hasConversation: Boolean(order.quote?.quoteRequest.conversationId),
+              hasReview: Boolean(order.review),
               id: order.id,
+              reviewEligible: order.status === "completed" && !order.review && Boolean(order.quote?.quoteRequest.conversationId),
               status: `${order.status} · ${formatCurrency(order.buyerTotalCents || order.amountCents)}`,
               title: order.offering?.title ?? "Custom booking"
             }))}
@@ -352,6 +372,60 @@ function StatTile({ label, value }: { label: string; value: string }) {
 function RequestList({ empty, items }: { empty: string; items: Array<{ detail: string; id: string; status: string; title: string }> }) {
   if (!items.length) return <p className="mt-4 text-sm leading-6 text-muted-foreground">{empty}</p>;
   return <div className="mt-4 space-y-3">{items.map((item) => <div key={item.id} className="rounded-[1rem] border border-[#eadbd8] bg-[#fbf7f5] p-4 text-sm"><div className="flex items-start justify-between gap-3"><div><div className="font-semibold">{item.title}</div><div className="mt-1 text-muted-foreground">{item.detail}</div></div><span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold">{item.status}</span></div></div>)}</div>;
+}
+
+function BookingList({
+  businessSlug,
+  empty,
+  items
+}: {
+  businessSlug: string;
+  empty: string;
+  items: Array<{ detail: string; hasConversation: boolean; hasReview: boolean; id: string; reviewEligible: boolean; status: string; title: string }>;
+}) {
+  if (!items.length) return <p className="mt-4 text-sm leading-6 text-muted-foreground">{empty}</p>;
+  return (
+    <div className="mt-4 space-y-3">
+      {items.map((item) => (
+        <div key={item.id} className="rounded-[1rem] border border-[#eadbd8] bg-[#fbf7f5] p-4 text-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="font-semibold">{item.title}</div>
+              <div className="mt-1 text-muted-foreground">{item.detail}</div>
+              <div className="mt-2 text-xs text-muted-foreground">
+                {item.hasReview ? "Review received" : item.reviewEligible ? "Ready to request a verified review" : item.hasConversation ? "Review opens after completion" : "No linked conversation yet"}
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold">{item.status}</span>
+              {item.reviewEligible ? (
+                <form action={requestReviewForOrderAction}>
+                  <input type="hidden" name="orderId" value={item.id} />
+                  <input type="hidden" name="returnTo" value={`/vendor/business/${businessSlug}`} />
+                  <Button type="submit" size="sm" variant="secondary">Request Review</Button>
+                </form>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReviewRequestStatus({ status }: { status?: string }) {
+  if (!status) return null;
+  const messages: Record<string, string> = {
+    sent: "Review request sent in Messages.",
+    unavailable: "That booking is not ready for a review request yet.",
+    "no-conversation": "That booking does not have a message thread yet.",
+    "rate-limited": "Please wait a minute before requesting another review."
+  };
+  return (
+    <p className="mt-4 rounded-[1rem] border border-[#eadbd8] bg-[#fffaf8] px-4 py-3 text-sm font-medium text-[#7f514d]">
+      {messages[status] ?? "Review request updated."}
+    </p>
+  );
 }
 
 function CredentialSummary({ documents }: { documents: Array<{ expiresAt: Date | null; status: string; type: string }> }) {
