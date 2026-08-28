@@ -12,6 +12,9 @@ export const DEFAULT_IMAGE_CROP: ImageCrop = {
   zoom: 1
 };
 
+export const MIN_IMAGE_ZOOM = 0.25;
+export const MAX_IMAGE_ZOOM = 3;
+
 export function normalizeImageCrop(value: unknown): ImageCrop {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return DEFAULT_IMAGE_CROP;
@@ -21,7 +24,7 @@ export function normalizeImageCrop(value: unknown): ImageCrop {
   return {
     x: clampNumber(record.x, 0, 100, DEFAULT_IMAGE_CROP.x),
     y: clampNumber(record.y, 0, 100, DEFAULT_IMAGE_CROP.y),
-    zoom: clampNumber(record.zoom, 1, 3, DEFAULT_IMAGE_CROP.zoom)
+    zoom: clampNumber(record.zoom, MIN_IMAGE_ZOOM, MAX_IMAGE_ZOOM, DEFAULT_IMAGE_CROP.zoom)
   };
 }
 

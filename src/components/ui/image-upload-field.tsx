@@ -365,24 +365,7 @@ async function cropImageFile(
 
   try {
     const normalized = normalizeImageCrop(crop);
-    const visibleScale = Math.max(1, normalized.zoom);
-    let sourceWidth = sourceImage.naturalWidth / visibleScale;
-    let sourceHeight = sourceWidth / options.aspectRatio;
-
-    if (sourceHeight > sourceImage.naturalHeight / visibleScale) {
-      sourceHeight = sourceImage.naturalHeight / visibleScale;
-      sourceWidth = sourceHeight * options.aspectRatio;
-    }
-
-    sourceWidth = Math.min(sourceWidth, sourceImage.naturalWidth);
-    sourceHeight = Math.min(sourceHeight, sourceImage.naturalHeight);
-
-    const centerX = (sourceImage.naturalWidth * normalized.x) / 100;
-    const centerY = (sourceImage.naturalHeight * normalized.y) / 100;
-    const sourceX = clamp(centerX - sourceWidth / 2, 0, sourceImage.naturalWidth - sourceWidth);
-    const sourceY = clamp(centerY - sourceHeight / 2, 0, sourceImage.naturalHeight - sourceHeight);
-
-    const outputWidth = Math.max(1, Math.min(options.maxSize, Math.round(sourceWidth)));
+    const outputWidth = Math.max(1, Math.min(options.maxSize, sourceImage.naturalWidth));
     const outputHeight = Math.max(1, Math.round(outputWidth / options.aspectRatio));
     canvas.width = outputWidth;
     canvas.height = outputHeight;
@@ -397,17 +380,16 @@ async function cropImageFile(
       context.fillRect(0, 0, outputWidth, outputHeight);
     }
 
-    context.drawImage(
-      sourceImage,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      0,
-      0,
-      outputWidth,
-      outputHeight
-    );
+    const baseScale = Math.max(outputWidth / sourceImage.naturalWidth, outputHeight / sourceImage.naturalHeight);
+    const drawScale = baseScale * normalized.zoom;
+    const drawWidth = sourceImage.naturalWidth * drawScale;
+    const drawHeight = sourceImage.naturalHeight * drawScale;
+    const centerX = outputWidth * (normalized.x / 100);
+    const centerY = outputHeight * (normalized.y / 100);
+    const drawX = centerX - drawWidth * (normalized.x / 100);
+    const drawY = centerY - drawHeight * (normalized.y / 100);
+
+    context.drawImage(sourceImage, drawX, drawY, drawWidth, drawHeight);
 
     const mimeType = options.outputType ?? (SUPPORTED_IMAGE_TYPES.includes(file.type) ? file.type : "image/jpeg");
     const blob = await canvasToBlob(canvas, mimeType);
@@ -436,9 +418,4 @@ function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string) {
       mimeType === "image/png" ? undefined : 0.86
     );
   });
-}
-
-function clamp(value: number, min: number, max: number) {
-  if (max <= min) return min;
-  return Math.min(max, Math.max(min, value));
 }

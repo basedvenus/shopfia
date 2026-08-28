@@ -3,7 +3,7 @@
 import { Minus, Move, Plus } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_IMAGE_CROP, normalizeImageCrop, type ImageCrop } from "@/lib/image-crop";
+import { DEFAULT_IMAGE_CROP, MAX_IMAGE_ZOOM, MIN_IMAGE_ZOOM, normalizeImageCrop, type ImageCrop } from "@/lib/image-crop";
 
 type ImageCropEditorProps = {
   aspectLabel?: string;
@@ -56,7 +56,7 @@ export function ImageCropEditor({
   function updateZoom(nextZoom: number) {
     setDraft((current) => ({
       ...current,
-      zoom: clamp(nextZoom, 1, 3)
+      zoom: clamp(nextZoom, MIN_IMAGE_ZOOM, MAX_IMAGE_ZOOM)
     }));
   }
 
@@ -113,8 +113,8 @@ export function ImageCropEditor({
               </button>
               <input
                 type="range"
-                min="1"
-                max="3"
+                min={MIN_IMAGE_ZOOM}
+                max={MAX_IMAGE_ZOOM}
                 step="0.01"
                 value={draft.zoom}
                 onChange={(event) => updateZoom(Number(event.target.value))}
