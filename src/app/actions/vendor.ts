@@ -17,6 +17,7 @@ import {
   sanitizeStorefrontSections,
   slugifyBusinessUrl,
   storefrontAccentColorFromPalette,
+  normalizeStorefrontPalette,
   storefrontPath
 } from "@/lib/businesses";
 
@@ -441,6 +442,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
 
   const sanitizedSectionOrder = sanitizeStorefrontSections(parsed.sectionOrder);
   const sanitizedHiddenSections = sanitizeHiddenStorefrontSections(parsed.hiddenSections);
+  const storefrontPalette = normalizeStorefrontPalette(parsed.palette);
   const editorServices = parseEditorServices(parsed.servicesJson);
   const draftPayload = JSON.parse(JSON.stringify({
     aboutHeading: parsed.aboutHeading || "",
@@ -461,7 +463,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
     logoUrl: parsed.logoUrl || "",
     name: parsed.name,
     offeringOrder: parsed.offeringOrder,
-    palette: parsed.palette,
+    palette: storefrontPalette,
     textTone: parsed.textTone,
     photoUrls: parsed.photoUrls,
     policies: parseEditorJson(parsed.policiesJson) ?? [],
@@ -604,11 +606,11 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
       storefrontAboutImage: parsed.aboutImage || null,
       storefrontLayout: parsed.layout,
       storefrontFontStyle: parsed.fontStyle,
-      storefrontPalette: parsed.palette,
+      storefrontPalette,
       storefrontButtonStyle: parsed.buttonStyle,
       storefrontImageShape: parsed.imageShape,
       storefrontTextTone: parsed.textTone,
-      storefrontAccentColor: storefrontAccentColorFromPalette(parsed.palette),
+      storefrontAccentColor: storefrontAccentColorFromPalette(storefrontPalette),
       storefrontSectionOrder: sanitizedSectionOrder,
       storefrontHiddenSections: sanitizedHiddenSections,
       storefrontDraftJson: Prisma.JsonNull,

@@ -54,13 +54,38 @@ export const STOREFRONT_FONT_STYLES = [
 ] as const;
 
 export const STOREFRONT_PALETTES = [
-  { value: "BLUSH", label: "Blush", description: "Soft pinks and airy warm whites.", className: "from-[#fff7f6] via-[#fde8e8] to-[#fffaf8]", accent: "#c9828a" },
-  { value: "WARM_NEUTRAL", label: "Warm Neutral", description: "Cream, taupe, and quiet clay accents.", className: "from-[#fbf5ef] via-[#efe4d9] to-[#fffdf9]", accent: "#9c7661" },
-  { value: "SAGE", label: "Sage", description: "Fresh greens with natural light backgrounds.", className: "from-[#f6faf3] via-[#dfe9d8] to-[#fbfff8]", accent: "#6f8a63" },
-  { value: "LAVENDER", label: "Lavender", description: "Soft purple tones with polished neutrals.", className: "from-[#faf7ff] via-[#e8def6] to-[#fffaff]", accent: "#8873a7" },
-  { value: "CHAMPAGNE", label: "Champagne", description: "Golden neutrals for a warm premium feel.", className: "from-[#fff9ed] via-[#f6e4be] to-[#fffdf6]", accent: "#b38a45" },
-  { value: "MIDNIGHT", label: "Midnight", description: "Deep contrast with elegant warm accents.", className: "from-[#201e2a] via-[#343044] to-[#f9efe9]", accent: "#d7b98f" }
+  { value: "BLUSH", label: "Blush", description: "Soft pinks with a rose storefront accent.", className: "from-[#FFF8F7] via-[#F8DADD] to-[#FFFFFF]", accent: "#D98889", swatches: ["#F8DADD", "#D98889", "#FFF8F7", "#332A2B"] },
+  { value: "BUBBLEGUM", label: "Bubblegum", description: "Bright party pink with crisp white contrast.", className: "from-[#FFF6FC] via-[#F7C7E3] to-[#FFFFFF]", accent: "#EB72B4", swatches: ["#F7C7E3", "#EB72B4", "#FFF6FC", "#392B34"] },
+  { value: "CITRUS", label: "Citrus", description: "Sunny orange with warm cream support.", className: "from-[#FFF8F0] via-[#FFD2A6] to-[#FFFFFF]", accent: "#F07832", swatches: ["#FFD2A6", "#F07832", "#FFF8F0", "#352B25"] },
+  { value: "MATCHA_SOFT", label: "Matcha Soft", description: "Light matcha greens and fresh natural whites.", className: "from-[#FAFCF5] via-[#DDE8C8] to-[#FFFFFF]", accent: "#91AA6B", swatches: ["#DDE8C8", "#91AA6B", "#FAFCF5", "#2D3329"] },
+  { value: "MATCHA_BOLD", label: "Matcha Bold", description: "Deep botanical greens with strong contrast.", className: "from-[#F6F9EC] via-[#C3D889] to-[#FFFFFF]", accent: "#5B7A3D", swatches: ["#C3D889", "#5B7A3D", "#F6F9EC", "#263022"] },
+  { value: "SKY", label: "Sky", description: "Airy blue with clean editorial contrast.", className: "from-[#F7FBFD] via-[#D5E9F4] to-[#FFFFFF]", accent: "#6599B5", swatches: ["#D5E9F4", "#6599B5", "#F7FBFD", "#26323A"] },
+  { value: "LAVENDER", label: "Lavender", description: "Soft purple with polished deep neutrals.", className: "from-[#FBF8FE] via-[#E5D9F4] to-[#FFFFFF]", accent: "#9A76C1", swatches: ["#E5D9F4", "#9A76C1", "#FBF8FE", "#302A36"] },
+  { value: "PASTEL_RAINBOW", label: "Pastel Rainbow", description: "Playful pastel mix for colorful celebrations.", className: "from-[#F7CFE1] via-[#BFE2D0] to-[#CFCBF3]", accent: "#8BBFB8", swatches: ["#F7CFE1", "#F8D98B", "#BFE2D0", "#CFCBF3"], gradient: "linear-gradient(90deg, #F7CFE1, #F8D98B, #BFE2D0, #CFCBF3)", ctaText: "#1F1F1F" },
+  { value: "DISCO", label: "Disco", description: "Pearl and violet for glam, sparkle-forward storefronts.", className: "from-[#FCFAFD] via-[#E5E2E8] to-[#F5EFFA]", accent: "#B49AC8", swatches: ["#E5E2E8", "#B49AC8", "#FCFAFD", "#302D34"] },
+  { value: "BLACK_AND_WHITE", label: "Black & White", description: "High-contrast monochrome with a boutique feel.", className: "from-[#FFFFFF] via-[#EFEDEB] to-[#F8F8F8]", accent: "#111111", swatches: ["#FFFFFF", "#1F1F1F", "#EFEDEB", "#111111"] },
+  { value: "ESPRESSO", label: "Espresso", description: "Warm coffee browns with bakery-style cream.", className: "from-[#F8F4F0] via-[#D8C6B8] to-[#FFFFFF]", accent: "#5A4035", swatches: ["#D8C6B8", "#5A4035", "#F8F4F0", "#292421"] }
 ] as const;
+
+export const STOREFRONT_PALETTE_VALUES = STOREFRONT_PALETTES.map((palette) => palette.value);
+
+const LEGACY_STOREFRONT_PALETTE_MAP: Record<string, (typeof STOREFRONT_PALETTES)[number]["value"]> = {
+  CHAMPAGNE: "CITRUS",
+  MIDNIGHT: "BLACK_AND_WHITE",
+  SAGE: "MATCHA_SOFT",
+  WARM_NEUTRAL: "ESPRESSO"
+};
+
+export function normalizeStorefrontPalette(value: string | null | undefined) {
+  const requested = value?.trim();
+  if (STOREFRONT_PALETTES.some((palette) => palette.value === requested)) return requested as (typeof STOREFRONT_PALETTES)[number]["value"];
+  return requested ? LEGACY_STOREFRONT_PALETTE_MAP[requested] ?? "BLUSH" : "BLUSH";
+}
+
+export function getStorefrontPalette(value: string | null | undefined) {
+  const normalized = normalizeStorefrontPalette(value);
+  return STOREFRONT_PALETTES.find((palette) => palette.value === normalized) ?? STOREFRONT_PALETTES[0];
+}
 
 export const STOREFRONT_BUTTON_STYLES = [
   { value: "PILL", label: "Pill" },
@@ -165,12 +190,12 @@ export function normalizeStorefrontAccentColor(value: string | null | undefined)
 }
 
 export function storefrontAccentColorFromPalette(value: string | null | undefined) {
-  const palette = STOREFRONT_PALETTES.find((item) => item.value === value);
-  if (!palette) return "blush";
-  if (palette.value === "SAGE") return "sage";
-  if (palette.value === "LAVENDER") return "lilac";
-  if (palette.value === "CHAMPAGNE" || palette.value === "MIDNIGHT") return "champagne";
-  return palette.value === "BLUSH" ? "blush" : "champagne";
+  const palette = normalizeStorefrontPalette(value);
+  if (palette === "MATCHA_SOFT" || palette === "MATCHA_BOLD") return "sage";
+  if (palette === "LAVENDER" || palette === "DISCO") return "lilac";
+  if (palette === "SKY") return "sky";
+  if (palette === "BLUSH" || palette === "BUBBLEGUM" || palette === "PASTEL_RAINBOW") return "blush";
+  return "champagne";
 }
 
 export function sanitizeHiddenStorefrontSections(sections: string[]) {

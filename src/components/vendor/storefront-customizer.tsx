@@ -31,6 +31,7 @@ import {
   STOREFRONT_IMAGE_SHAPES,
   STOREFRONT_PALETTES,
   STOREFRONT_SECTION_LABELS,
+  normalizeStorefrontPalette,
   sanitizeStorefrontSections
 } from "@/lib/businesses";
 import { formatCurrency } from "@/lib/utils";
@@ -435,7 +436,7 @@ function createInitialState(business: CustomizerBusiness): FormState {
     instagramUrl: draft?.instagramUrl ?? business.instagramUrl ?? "",
     logoUrl: draft?.logoUrl ?? business.logoUrl ?? "",
     name: draft?.name ?? business.name,
-    palette: draft?.palette ?? business.storefrontPalette,
+    palette: normalizeStorefrontPalette(draft?.palette ?? business.storefrontPalette),
     photoUrls: draft?.photoUrls ?? [...business.photos, "", "", "", "", "", ""].slice(0, 10),
     policies: draft?.policies ?? readPolicies(business.storefrontPoliciesJson),
     sectionOrder: draft?.sectionOrder ?? sanitizeStorefrontSections(business.storefrontSectionOrder),
@@ -672,6 +673,11 @@ function DesignControls({
             <span className={`h-8 w-8 rounded-full bg-gradient-to-br ${palette.className}`} />
             <span>
               <span className="block font-semibold">{palette.label}</span>
+              <span className="mt-1 flex gap-1.5">
+                {palette.swatches.map((color) => (
+                  <span key={color} className="h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: color }} />
+                ))}
+              </span>
               <span className="block text-xs text-muted-foreground">{palette.description}</span>
             </span>
           </button>
@@ -753,7 +759,7 @@ function StorefrontPreview({
   setActiveSection: (section: string) => void;
   visibleSections: string[];
 }) {
-  const palette = STOREFRONT_PALETTES.find((item) => item.value === form.palette) ?? STOREFRONT_PALETTES[0];
+  const palette = getPreviewPalette(form.palette);
   const theme = getPreviewTheme(form);
   const activeServices = form.services.filter((service) => service.active);
   const featuredServices = activeServices.filter((service) => service.featured).slice(0, 3);
@@ -839,9 +845,12 @@ function previewButtonClass(active: boolean, base: string) {
 type PreviewTheme = ReturnType<typeof getPreviewTheme>;
 
 function getPreviewTheme(form: FormState) {
-  const isDark = form.textTone === "LIGHT" || (form.textTone === "AUTO" && form.palette === "MIDNIGHT");
-  const palette = STOREFRONT_PALETTES.find((item) => item.value === form.palette) ?? STOREFRONT_PALETTES[0];
+  const normalizedPalette = normalizeStorefrontPalette(form.palette);
+  const isDark = form.textTone === "LIGHT" || (form.textTone === "AUTO" && normalizedPalette === "BLACK_AND_WHITE");
+  const palette = getPreviewPalette(normalizedPalette);
   const accent = palette.accent;
+  const ctaBackground = "gradient" in palette ? palette.gradient : accent;
+  const ctaText = "ctaText" in palette ? palette.ctaText : "#ffffff";
   const imageRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.75rem]" : "rounded-[0.9rem]";
   const sectionRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.5rem]" : "rounded-[1rem]";
   const logoRadius = form.imageShape === "SQUARE" ? "rounded-[0.35rem]" : form.imageShape === "SOFT" ? "rounded-[1rem]" : "rounded-full";
@@ -860,17 +869,17 @@ function getPreviewTheme(form: FormState) {
 
   return {
     accent,
-    accentBlockStyle: { background: `linear-gradient(135deg, ${accent}, ${accent}55)` } as CSSProperties,
+    accentBlockStyle: { background: "gradient" in palette ? palette.gradient : `linear-gradient(135deg, ${palette.swatches.join(", ")})` } as CSSProperties,
     accentTextStyle: { color: accent } as CSSProperties,
     activeNavItemStyle: { backgroundColor: `${accent}24`, color: isDark ? "#ffffff" : "#2f2626" } as CSSProperties,
     activeSectionStyle: { borderColor: `${accent}88`, boxShadow: `0 0 0 2px ${accent}` } as CSSProperties,
-    badgeStyle: { backgroundColor: accent, borderColor: accent, color: form.palette === "MIDNIGHT" ? "#201815" : "#ffffff" } as CSSProperties,
+    badgeStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
     bodyStyle: { fontFamily } as CSSProperties,
     cardClass: isDark ? "border border-white/15 bg-[#201b1e]/88 text-white" : "border border-white/80 bg-white/88 text-[#2f2626]",
     copyClass: isDark ? "text-white/86" : "text-[#5f5550]",
     headerClass: isDark ? "border-white/15 bg-[#171315] text-white/70" : "border-[#eadbd7] bg-[#fffaf8] text-[#7a625b]",
     headingStyle: { fontFamily: headingFamily } as CSSProperties,
-    heroCtaStyle: { backgroundColor: accent, color: form.palette === "MIDNIGHT" ? "#201815" : "#ffffff" } as CSSProperties,
+    heroCtaStyle: { background: ctaBackground, color: ctaText } as CSSProperties,
     heroRadius: imageRadius,
     imageRadius,
     logoRadius,
@@ -884,6 +893,10 @@ function getPreviewTheme(form: FormState) {
     shellClass: isDark ? "bg-[#151113] text-white" : "bg-white text-[#2f2626]",
     softSurfaceStyle: { backgroundColor: `${accent}18`, color: accent } as CSSProperties
   };
+}
+
+function getPreviewPalette(value: string) {
+  return STOREFRONT_PALETTES.find((item) => item.value === normalizeStorefrontPalette(value)) ?? STOREFRONT_PALETTES[0];
 }
 
 function Field({ children, label }: { children: ReactNode; label: string }) {
