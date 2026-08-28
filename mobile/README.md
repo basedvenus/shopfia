@@ -6,9 +6,9 @@ The mobile app keeps all mobile-specific code in `/mobile` and calls the same Sh
 
 ## Physical iPhone authentication baseline
 
-ShopFia uses the website's Auth.js JWT session and Prisma `User`/`Account` records. The mobile app does not have a separate account store. It exchanges a Google iOS ID token with the hosted ShopFia backend, which verifies the token and returns the same Auth.js session cookie used by the website.
+ShopFia uses the website's Auth.js JWT session and Prisma `User`/`Account` records. The mobile app does not have a separate account store. Public Explore, vendor, offering, and party pages work while signed out. Existing ShopFia email/password accounts work in Expo Go and development builds through the hosted mobile auth endpoint. Google sign-in exchanges a Google iOS ID token for the same Auth.js session cookie used by the website.
 
-Google OAuth cannot be tested in Expo Go because Expo Go cannot use ShopFia's custom OAuth redirect scheme. Use an iOS development build.
+Google OAuth cannot be tested in Expo Go because Expo Go cannot use ShopFia's custom OAuth redirect scheme. Use email/password in Expo Go or install an iOS development build for Google sign-in.
 
 ### One-time Google Cloud and hosted-backend setup
 
@@ -32,7 +32,7 @@ npm run start:dev-client
 
 Install the EAS build on the iPhone from its internal-distribution link. The app is pinned to `https://www.shopfia.app`; it does not use localhost for physical-device requests.
 
-After installing, verify: launch shows one stable sign-in screen; Google returns to ShopFia; Explore loads; force-quitting and reopening restores the session; Account → Sign out returns to sign-in; and reopening remains signed out.
+After installing, verify: launch opens public Explore; email/password or Google returns to ShopFia; force-quitting and reopening restores the session; Account → Sign out returns to public Explore; and reopening remains signed out.
 
 ## App Store Build
 

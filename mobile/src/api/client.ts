@@ -134,6 +134,17 @@ export async function exchangeGoogleIdToken(idToken: string) {
   });
 }
 
+export async function exchangePasswordCredentials(email: string, password: string) {
+  return apiRequest<{
+    session: import("../types/shopfia").ShopFiaSession;
+    sessionCookie: string;
+  }>("/api/mobile/auth/password", {
+    body: JSON.stringify({ email, password }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST"
+  });
+}
+
 export async function getFavorites(cookie: string | null) {
   return apiRequest<FavoritesPayload>("/api/mobile/favorites", { cookie });
 }

@@ -97,14 +97,6 @@ function Shell() {
     );
   }
 
-  if (!session?.user) {
-    return (
-      <SafeAreaView style={styles.shell}>
-        <AccountScreen />
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.shell}>
       <View style={styles.content}>{screen}</View>

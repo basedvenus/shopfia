@@ -3,7 +3,7 @@ import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as AuthSession from "expo-auth-session";
 import * as SecureStore from "expo-secure-store";
 import * as WebBrowser from "expo-web-browser";
-import { ApiError, apiRequest, exchangeGoogleIdToken } from "./client";
+import { ApiError, apiRequest, exchangeGoogleIdToken, exchangePasswordCredentials } from "./client";
 import type { ShopFiaSession } from "../types/shopfia";
 
 const COOKIE_KEY = "shopfia.auth.cookies";
@@ -24,6 +24,7 @@ type AuthContextValue = {
   refreshSession: () => Promise<void>;
   session: ShopFiaSession | null;
   signInWithGoogle: () => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -196,6 +197,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [cookie, googleConfigurationMessage, googleIosClientId, googleScheme, setCookie]);
 
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const signedIn = await exchangePasswordCredentials(email.trim().toLowerCase(), password);
+      const authCookie = mergeCookies(cookie, signedIn.data.sessionCookie || signedIn.setCookie);
+      if (!authCookie || !signedIn.data.session?.user) {
+        throw new Error("ShopFia did not return a session for this account.");
+      }
+      await setCookie(authCookie);
+      setSession(signedIn.data.session);
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "Email sign-in could not be completed.";
+      setError(message);
+      throw reason;
+    } finally {
+      setLoading(false);
+    }
+  }, [cookie, setCookie]);
+
   const signOut = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -227,8 +248,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     refreshSession,
     session,
     signInWithGoogle,
+    signInWithPassword,
     signOut
-  }), [booting, cookie, error, googleConfigurationMessage, loading, refreshSession, session, signInWithGoogle, signOut]);
+  }), [booting, cookie, error, googleConfigurationMessage, loading, refreshSession, session, signInWithGoogle, signInWithPassword, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
