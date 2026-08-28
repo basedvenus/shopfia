@@ -549,11 +549,18 @@ export function StorefrontCustomizer({
             <StorefrontPreview
               activeSection={activeSection}
               business={business}
+              draggedPhotoIndex={draggedPhotoIndex}
               form={form}
               mediaUploadEndpoint={mediaUploadEndpoint}
+              movePhoto={movePhoto}
+              moveService={moveService}
               previewMode={previewMode}
+              removePhoto={removePhoto}
               setActiveSection={selectSection}
+              setDraggedPhotoIndex={setDraggedPhotoIndex}
+              setServiceVisible={setServiceVisible}
               update={update}
+              updateService={updateService}
               visibleSections={visibleSections}
             />
           </div>
@@ -1056,20 +1063,34 @@ function DesignControls({
 function StorefrontPreview({
   activeSection,
   business,
+  draggedPhotoIndex,
   form,
   mediaUploadEndpoint,
+  movePhoto,
+  moveService,
   previewMode,
+  removePhoto,
   setActiveSection,
+  setDraggedPhotoIndex,
+  setServiceVisible,
   update,
+  updateService,
   visibleSections
 }: {
   activeSection: string;
   business: CustomizerBusiness;
+  draggedPhotoIndex: number | null;
   form: FormState;
   mediaUploadEndpoint: string;
+  movePhoto: (fromIndex: number, toIndex: number) => void;
+  moveService: (id: string, direction: -1 | 1) => void;
   previewMode: "desktop" | "mobile";
+  removePhoto: (index: number) => void;
   setActiveSection: (section: string) => void;
+  setDraggedPhotoIndex: (index: number | null) => void;
+  setServiceVisible: (id: string, visible: boolean) => void;
   update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+  updateService: (id: string, patch: Partial<EditorService>) => void;
   visibleSections: string[];
 }) {
   const palette = getPreviewPalette(form.palette);
@@ -1080,6 +1101,7 @@ function StorefrontPreview({
   const updateFaq = (id: string, patch: Partial<FaqItem>) => {
     update("faqs", form.faqs.map((faq) => (faq.id === id ? { ...faq, ...patch } : faq)));
   };
+  const photos = form.photoUrls.filter(Boolean);
   return (
     <div className={`overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={theme.bodyStyle}>
       <section onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
@@ -1151,9 +1173,87 @@ function StorefrontPreview({
       </section>
       <div className={`bg-gradient-to-br ${palette.className} p-5`}>
         {visibleSections.filter((section) => section !== "hero").map((section) => {
-          if (section === "featured-services") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Featured services" onClick={() => setActiveSection(section)}><ServiceGrid services={featuredServices} theme={theme} /></PreviewSection>;
-          if (section === "all-services") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="All services" onClick={() => setActiveSection(section)}><ServiceGrid services={activeServices} theme={theme} /></PreviewSection>;
-          if (section === "portfolio") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Portfolio" onClick={() => setActiveSection(section)}><div className="grid grid-cols-3 gap-2">{form.photoUrls.filter(Boolean).slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-square object-cover ${theme.imageRadius}`} />)}</div></PreviewSection>;
+          if (section === "featured-services") return (
+            <PreviewSection key={section} active={activeSection === section} theme={theme} title="Featured services" onClick={() => setActiveSection(section)}>
+              <ServiceGrid
+                editable={activeSection === section}
+                mode="featured"
+                moveService={moveService}
+                services={activeSection === section ? activeServices : featuredServices}
+                setServiceVisible={setServiceVisible}
+                theme={theme}
+                updateService={updateService}
+              />
+            </PreviewSection>
+          );
+          if (section === "all-services") return (
+            <PreviewSection key={section} active={activeSection === section} theme={theme} title="All services" onClick={() => setActiveSection(section)}>
+              <ServiceGrid
+                editable={activeSection === section}
+                mode="visibility"
+                moveService={moveService}
+                services={activeSection === section ? form.services : activeServices}
+                setServiceVisible={setServiceVisible}
+                theme={theme}
+                updateService={updateService}
+              />
+            </PreviewSection>
+          );
+          if (section === "portfolio") return (
+            <PreviewSection key={section} active={activeSection === section} theme={theme} title="Portfolio" onClick={() => setActiveSection(section)}>
+              {activeSection === section ? (
+                <div className="grid gap-3">
+                  <ImageUploadField
+                    name="previewPortfolioNew"
+                    label="Add portfolio image"
+                    uploadEndpoint={mediaUploadEndpoint}
+                    onChangePreview={(value) => update("photoUrls", [...photos, value])}
+                  />
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                    {photos.map((photo, index) => (
+                      <div
+                        key={`${photo}-${index}`}
+                        draggable
+                        onDragStart={() => setDraggedPhotoIndex(index)}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (draggedPhotoIndex != null) movePhoto(draggedPhotoIndex, index);
+                          setDraggedPhotoIndex(null);
+                        }}
+                        className={`group overflow-hidden border ${theme.imageRadius}`}
+                        style={theme.previewCardStyle}
+                      >
+                        <img src={photo} alt="" className="aspect-square w-full object-cover" />
+                        <div className="grid gap-2 bg-white/90 p-2 text-[#2f2626]">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold"><GripVertical className="h-3.5 w-3.5" />Image {index + 1}</span>
+                            <button type="button" className="rounded-full border p-1 text-muted-foreground hover:text-foreground" onClick={(event) => { event.stopPropagation(); removePhoto(index); }} aria-label="Remove image">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <ImageUploadField
+                            name={`previewPortfolioReplace-${index}`}
+                            label="Replace"
+                            value={photo}
+                            uploadEndpoint={mediaUploadEndpoint}
+                            onChangePreview={(value) => {
+                              const next = [...photos];
+                              next[index] = value;
+                              update("photoUrls", next);
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">{photos.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-square object-cover ${theme.imageRadius}`} />)}</div>
+              )}
+            </PreviewSection>
+          );
           if (section === "about") return (
             <PreviewSection
               key={section}
@@ -1271,12 +1371,28 @@ function InlineTextarea({
   );
 }
 
-function ServiceGrid({ services, theme }: { services: EditorService[]; theme: PreviewTheme }) {
+function ServiceGrid({
+  editable,
+  mode = "visibility",
+  moveService,
+  services,
+  setServiceVisible,
+  theme,
+  updateService
+}: {
+  editable?: boolean;
+  mode?: "featured" | "visibility";
+  moveService?: (id: string, direction: -1 | 1) => void;
+  services: EditorService[];
+  setServiceVisible?: (id: string, visible: boolean) => void;
+  theme: PreviewTheme;
+  updateService?: (id: string, patch: Partial<EditorService>) => void;
+}) {
   if (!services.length) return <p className={`text-sm ${theme.mutedClass}`}>No services selected.</p>;
   return (
     <div className="grid gap-3 md:grid-cols-3">
       {services.map((service) => (
-        <div key={service.id} className={`overflow-hidden shadow-sm ${theme.cardClass} ${theme.imageRadius}`}>
+        <div key={service.id} className={`overflow-hidden shadow-sm ${theme.cardClass} ${theme.imageRadius} ${service.active ? "" : "opacity-60"}`}>
           {service.photos[0] ? <img src={service.photos[0]} alt="" className="aspect-[4/3] w-full object-cover" /> : <div className="grid aspect-[4/3] place-items-center bg-[#f8ece9]"><ImagePlus className="h-6 w-6 text-primary" /></div>}
           <div className="p-3">
             <div className="line-clamp-1 font-semibold" style={theme.headingStyle}>{service.title}</div>
@@ -1285,6 +1401,41 @@ function ServiceGrid({ services, theme }: { services: EditorService[]; theme: Pr
               <span style={theme.accentTextStyle}>{service.messageForPricing || service.basePriceCents == null ? "Custom quote" : `From ${formatCurrency(service.basePriceCents)}`}</span>
               <span className={`inline-flex items-center gap-1 ${theme.mutedClass}`}><Star className="h-3.5 w-3.5 fill-current text-amber-500" />Verified</span>
             </div>
+            {editable ? (
+              <div className="mt-3 grid gap-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {mode === "visibility" ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setServiceVisible?.(service.id, !service.active);
+                      }}
+                      className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${service.active ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-[#eadbd7] bg-white text-muted-foreground"}`}
+                    >
+                      {service.active ? "Visible" : "Hidden"}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={!service.active}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      updateService?.(service.id, { featured: !service.featured });
+                    }}
+                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45 ${
+                      service.featured ? "border-primary bg-primary/10 text-primary" : "border-[#eadbd7] bg-white text-muted-foreground"
+                    }`}
+                  >
+                    {service.featured ? "Featured" : "Not featured"}
+                  </button>
+                </div>
+                <div className="flex gap-1.5">
+                  <button type="button" className="rounded-full border bg-white px-2.5 py-1 text-xs text-[#2f2626]" onClick={(event) => { event.stopPropagation(); moveService?.(service.id, -1); }}>Up</button>
+                  <button type="button" className="rounded-full border bg-white px-2.5 py-1 text-xs text-[#2f2626]" onClick={(event) => { event.stopPropagation(); moveService?.(service.id, 1); }}>Down</button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       ))}
