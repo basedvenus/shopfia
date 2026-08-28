@@ -1107,8 +1107,15 @@ function StorefrontPreview({
       <section onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
         <div className={`border-b px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] ${theme.headerClass}`} style={theme.platformBarStyle}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
-          {form.logoUrl ? <img src={form.logoUrl} alt="" className={`h-14 w-14 object-cover ${theme.logoRadius}`} /> : <div className={`grid h-14 w-14 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
-          <div>
+          <div className="shrink-0">
+            {form.logoUrl ? <img src={form.logoUrl} alt="" className={`h-14 w-14 object-cover ${theme.logoRadius}`} /> : <div className={`grid h-14 w-14 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
+            {activeSection === "hero" ? (
+              <div className="mt-2 w-32">
+                <ImageUploadField name="previewLogo" label="Logo" value={form.logoUrl} onChangePreview={(value) => update("logoUrl", value)} rounded="full" uploadEndpoint={mediaUploadEndpoint} />
+              </div>
+            ) : null}
+          </div>
+          <div className="min-w-0 flex-1">
             {activeSection === "hero" ? (
               <InlineTextInput
                 ariaLabel="Business name"
@@ -1120,7 +1127,26 @@ function StorefrontPreview({
             ) : (
               <div className="text-lg font-semibold" style={theme.headingStyle}>{form.name}</div>
             )}
-            <div className={`text-sm ${theme.mutedClass}`}>@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
+            {activeSection === "hero" ? (
+              <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                <InlineTextInput
+                  ariaLabel="City"
+                  className={`text-sm ${theme.mutedClass}`}
+                  onChange={(value) => update("city", value)}
+                  placeholder="City"
+                  value={form.city}
+                />
+                <InlineTextInput
+                  ariaLabel="State"
+                  className={`text-sm ${theme.mutedClass}`}
+                  onChange={(value) => update("state", value)}
+                  placeholder="State"
+                  value={form.state}
+                />
+              </div>
+            ) : (
+              <div className={`text-sm ${theme.mutedClass}`}>@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
+            )}
             {activeSection === "hero" ? (
               <InlineTextInput
                 ariaLabel="Tagline"
@@ -1147,7 +1173,7 @@ function StorefrontPreview({
               <>
                 <InlineTextInput
                   ariaLabel="Hero headline"
-                  className="mt-4 text-5xl font-semibold leading-[0.9] tracking-normal text-white"
+                  className={`mt-4 font-semibold leading-[0.95] tracking-normal text-white ${isMobile ? "text-3xl" : "text-5xl"}`}
                   onChange={(value) => update("aboutHeading", value)}
                   placeholder={form.name}
                   style={theme.headingStyle}
@@ -1160,10 +1186,13 @@ function StorefrontPreview({
                   placeholder={form.bio || "Add supporting text"}
                   value={form.tagline}
                 />
+                <div className="mt-4 max-w-sm">
+                  <ImageUploadField name="previewCover" label="Cover image" value={form.coverPhoto} onChangePreview={(value) => update("coverPhoto", value)} uploadEndpoint={mediaUploadEndpoint} />
+                </div>
               </>
             ) : (
               <>
-                <h2 className="mt-4 text-5xl font-semibold leading-[0.9] tracking-normal" style={theme.headingStyle}>{form.aboutHeading || form.name}</h2>
+                <h2 className={`mt-4 font-semibold leading-[0.95] tracking-normal ${isMobile ? "text-3xl" : "text-5xl"}`} style={theme.headingStyle}>{form.aboutHeading || form.name}</h2>
                 <p className="mt-4 line-clamp-3 text-sm leading-6 text-white/80">{form.tagline || form.bio}</p>
               </>
             )}
@@ -1312,7 +1341,24 @@ function StorefrontPreview({
               )}
             </PreviewSection>
           );
-          if (section === "final-quote") return <PreviewSection key={section} active={activeSection === section} theme={theme} title="Ready for a quote?" onClick={() => setActiveSection(section)}><Button type="button"><Send className="h-4 w-4" />Get a quote</Button></PreviewSection>;
+          if (section === "final-quote") return (
+            <PreviewSection key={section} active={activeSection === section} theme={theme} title="Ready for a quote?" onClick={() => setActiveSection(section)}>
+              {activeSection === section ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <InlineTextarea ariaLabel="Availability notes" onChange={(value) => update("availabilityNotes", value)} placeholder="Availability notes" value={form.availabilityNotes} />
+                  <InlineTextarea ariaLabel="Deposit or payment note" onChange={(value) => update("booking", { ...form.booking, deposit: value })} placeholder="Deposit or payment note" value={form.booking.deposit} />
+                  <div className="md:col-span-2">
+                    <Button type="button"><Send className="h-4 w-4" />Get a quote</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="button"><Send className="h-4 w-4" />Get a quote</Button>
+                  {form.availabilityNotes ? <p className={theme.mutedClass}>{form.availabilityNotes}</p> : null}
+                </div>
+              )}
+            </PreviewSection>
+          );
           return null;
         })}
       </div>
