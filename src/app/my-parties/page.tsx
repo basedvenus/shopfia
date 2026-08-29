@@ -60,8 +60,8 @@ export default async function MyPartiesPage() {
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(390px,0.85fr)]">
-        <div className="space-y-5">
+      <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+        <div className="min-w-0 space-y-5">
           <div>
             <p className="text-sm text-muted-foreground">Social party portfolio</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">My Parties</h1>
@@ -147,7 +147,7 @@ export default async function MyPartiesPage() {
           )}
         </div>
 
-        <aside className="rounded-[1.8rem] border border-white/70 bg-white/90 p-4 shadow-soft lg:sticky lg:top-24 lg:self-start">
+        <aside className="min-w-0 rounded-[1.8rem] border border-white/70 bg-white/90 p-4 shadow-soft xl:sticky xl:top-24 xl:self-start">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold tracking-tight">Add Party</h2>

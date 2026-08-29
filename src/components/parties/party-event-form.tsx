@@ -240,32 +240,36 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
           }
         });
       }}
-      className="grid gap-5"
+      className="grid min-w-0 gap-5"
     >
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <Input
           name="title"
           placeholder="Party Name, e.g. Lemon Garden Brunch"
           required
           defaultValue={initialParty?.title ?? ""}
+          className="min-w-0"
         />
         <Input
           name="theme"
           placeholder="Theme, e.g. Citrus baby shower"
           defaultValue={initialParty?.theme ?? ""}
+          className="min-w-0"
         />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <Input
           name="eventDate"
           type="date"
           defaultValue={formatDateInputValue(initialParty?.eventDate)}
+          className="min-w-0"
         />
         <Input
           name="partyfulUrl"
           type="url"
           placeholder="Public Partyful invite URL"
           defaultValue={initialParty?.partyfulUrl ?? ""}
+          className="min-w-0"
         />
       </div>
       <PlaceAutocompleteInput
@@ -294,7 +298,7 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
       <Textarea
         name="description"
         placeholder="Tell the party details: the mood, inspiration, favorite moments, or what made it special..."
-        className="min-h-[110px]"
+        className="min-h-[110px] min-w-0"
         defaultValue={initialParty?.description ?? ""}
       />
 
@@ -314,7 +318,7 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
         users={users}
       />
 
-      <div className="grid gap-2">
+      <div className="grid min-w-0 gap-2">
         <label className="text-sm font-medium">Hashtags</label>
         <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-2xl border bg-white px-3 py-2">
           {tags.map((tag) => (
@@ -346,7 +350,7 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
         <p className="text-xs text-muted-foreground">Press Enter to turn each tag into a searchable bubble.</p>
       </div>
 
-      <div className="grid gap-3">
+      <div className="grid min-w-0 gap-3">
         <label
           onDragOver={(event) => event.preventDefault()}
           onDrop={onDrop}
@@ -378,7 +382,7 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
         {photos.length > 0 ? (
           <div className="grid gap-3">
             {photos.map((photo, index) => (
-              <article key={photo.id} className="grid gap-3 rounded-[1.4rem] border bg-white p-3 sm:grid-cols-[150px_1fr]">
+              <article key={photo.id} className="grid min-w-0 gap-3 rounded-[1.4rem] border bg-white p-3 sm:grid-cols-[150px_minmax(0,1fr)]">
                 <div className="relative aspect-square overflow-hidden rounded-[1rem] bg-muted">
                   <CroppedImage src={photo.url} alt="" crop={photo.crop} className="h-full w-full object-cover object-center" />
                   {index === 0 ? (
@@ -387,7 +391,7 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
                     </span>
                   ) : null}
                 </div>
-                <div className="grid gap-3">
+                <div className="grid min-w-0 gap-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-sm font-semibold">Photo {index + 1}</p>
@@ -632,7 +636,7 @@ function PartyCollaboratorPicker({
     .slice(0, 6);
 
   return (
-    <section className="grid gap-3 rounded-[1.5rem] border bg-white p-4">
+    <section className="grid min-w-0 gap-3 rounded-[1.5rem] border bg-white p-4">
       <div>
         <p className="text-sm font-semibold">Party hosts</p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -642,8 +646,8 @@ function PartyCollaboratorPicker({
 
       <div className="grid gap-2">
         <label className="text-xs font-medium text-muted-foreground">Main Host</label>
-        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-          <div className="flex items-center gap-3 rounded-2xl border bg-[#fffaf8] px-3 py-2">
+        <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)]">
+          <div className="flex min-w-0 items-center gap-3 rounded-2xl border bg-[#fffaf8] px-3 py-2">
             {mainHost ? <UserAvatar user={mainHost} /> : null}
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{getUserDisplayName(mainHost)}</p>
@@ -653,7 +657,7 @@ function PartyCollaboratorPicker({
           <select
             value={mainHostId}
             onChange={(event) => onMainHostChange(event.target.value)}
-            className="h-12 rounded-2xl border bg-white px-3 text-sm outline-none transition focus:border-primary"
+            className="h-12 min-w-0 rounded-2xl border bg-white px-3 text-sm outline-none transition focus:border-primary"
           >
             {users.map((user) => (
               <option key={user.id} value={user.id}>
@@ -664,9 +668,9 @@ function PartyCollaboratorPicker({
         </div>
       </div>
 
-      <div className="grid gap-2">
+      <div className="grid min-w-0 gap-2">
         <label className="text-xs font-medium text-muted-foreground">Supporting Hosts / Co-Hosts</label>
-        <div className="relative">
+        <div className="relative min-w-0">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={query}
