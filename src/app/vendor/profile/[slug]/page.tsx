@@ -277,10 +277,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 fill
                 sizes="96px"
                 className="object-contain p-1"
-                style={{
-                  ...imageCropToCss(logoCrop),
-                  transformOrigin: `${logoCrop.x}% ${logoCrop.y}%`
-                }}
+                style={imageCropToCss(logoCrop)}
               />
             ) : hero ? (
               <Image src={hero} alt={vendor.name} fill sizes="96px" className="object-cover" />
@@ -757,10 +754,7 @@ function StorefrontTemplateIntro({
           fill
           sizes="112px"
           className="object-contain p-1"
-          style={{
-            ...imageCropToCss(logoCrop),
-            transformOrigin: `${logoCrop.x}% ${logoCrop.y}%`
-          }}
+          style={imageCropToCss(logoCrop)}
         />
       ) : (
         <div className="grid h-full place-items-center px-2 text-center text-lg font-semibold" style={theme.accentTextStyle}>{vendor.name}</div>
@@ -887,10 +881,7 @@ function StorefrontTemplateIntro({
             fill
             priority
             className="object-cover"
-            style={{
-              ...imageCropToCss(vendor.coverPhoto ? coverCrop : null),
-              transformOrigin: `${coverCrop.x}% ${coverCrop.y}%`
-            }}
+            style={imageCropToCss(vendor.coverPhoto ? coverCrop : null)}
           />
         ) : (
           <NeutralVendorPlaceholder label={primaryCategory} />

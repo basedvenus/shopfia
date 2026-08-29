@@ -86,8 +86,7 @@ export function ImageCropEditor({
               draggable={false}
               style={{
                 objectPosition: `${draft.x}% ${draft.y}%`,
-                transform: `scale(${draft.zoom})`,
-                transformOrigin: `${draft.x}% ${draft.y}%`
+                transform: `scale(${draft.zoom})`
               }}
             />
             <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/0">

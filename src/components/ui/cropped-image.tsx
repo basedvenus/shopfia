@@ -25,8 +25,7 @@ export function CroppedImage({
       loading={loading}
       className={className}
       style={{
-        ...imageCropToCss(crop),
-        transformOrigin: `${crop?.x ?? 50}% ${crop?.y ?? 50}%`
+        ...imageCropToCss(crop)
       }}
     />
   );
