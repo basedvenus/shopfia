@@ -60,6 +60,7 @@ export default async function AccountPage({
           name: true,
           email: true,
           image: true,
+          imageCrop: true,
           username: true,
           bio: true,
           instagramUrl: true,

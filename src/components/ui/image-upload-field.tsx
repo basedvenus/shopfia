@@ -57,7 +57,7 @@ export function ImageUploadField({
   valueCrop
 }: ImageUploadFieldProps) {
   const [internalValue, setInternalValue] = useState(defaultValue ?? "");
-  const [internalCrop, setInternalCrop] = useState<ImageCrop>(() => normalizeImageCrop(defaultCrop));
+  const [liveCrop, setLiveCrop] = useState<ImageCrop>(() => normalizeImageCrop(valueCrop ?? defaultCrop));
   const [uploadPreviewValue, setUploadPreviewValue] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
@@ -70,13 +70,14 @@ export function ImageUploadField({
   const [message, setMessage] = useState<string | null>(null);
   const isRound = rounded === "full";
   const value = controlledValue !== undefined ? controlledValue ?? "" : internalValue;
-  const crop = valueCrop ? normalizeImageCrop(valueCrop) : internalCrop;
+  const crop = liveCrop;
   const previewValue = uploadPreviewValue ?? value;
   const resolvedCropName = cropName ?? `${name}Crop`;
 
   useEffect(() => {
-    setInternalCrop(normalizeImageCrop(defaultCrop));
-  }, [defaultCrop]);
+    const nextCrop = normalizeImageCrop(valueCrop ?? defaultCrop);
+    setLiveCrop(nextCrop);
+  }, [defaultCrop, valueCrop]);
 
   function updateValue(nextValue: string) {
     setInternalValue(nextValue);
@@ -86,7 +87,7 @@ export function ImageUploadField({
 
   function updateCrop(nextCrop: ImageCrop) {
     const normalized = normalizeImageCrop(nextCrop);
-    setInternalCrop(normalized);
+    setLiveCrop(normalized);
     onCropChange?.(normalized);
   }
 
@@ -107,6 +108,8 @@ export function ImageUploadField({
     }
 
     const localPreviewUrl = URL.createObjectURL(file);
+    setLiveCrop(DEFAULT_IMAGE_CROP);
+    onCropChange?.(DEFAULT_IMAGE_CROP);
     setPendingFile(file);
     setPendingPreview(localPreviewUrl);
     setFailedUpload(null);
@@ -214,7 +217,7 @@ export function ImageUploadField({
     if (!failedUpload) return;
     setPendingFile(failedUpload.file);
     setPendingPreview(failedUpload.preview);
-    setInternalCrop(normalizeImageCrop(failedUpload.crop));
+    setLiveCrop(normalizeImageCrop(failedUpload.crop));
     setFailedUpload(null);
     setEditorOpen(true);
     setMessage(null);
