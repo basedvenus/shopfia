@@ -15,7 +15,6 @@ import {
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
-import { claimUnclaimedVendorAction } from "@/app/actions/vendor";
 import { ListingInquiryPanel } from "@/components/inquiries/listing-inquiry-form";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
@@ -739,10 +738,9 @@ function StorefrontTemplateIntro({
       Request a quote
     </a>
   ) : (
-    <form action={claimUnclaimedVendorAction}>
-      <input type="hidden" name="vendorId" value={vendor.id} />
-      <Button type="submit">Claim This Business</Button>
-    </form>
+    <p className="max-w-sm text-sm text-muted-foreground">
+      Business ownership must be reviewed before this profile can be claimed.
+    </p>
   );
   const detailPanel = (
     <div className={`grid gap-4 p-5 text-sm ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>

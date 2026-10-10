@@ -11,7 +11,7 @@ import { authProviderConfig } from "@/lib/auth/provider-config";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { sendWelcomeEmail } from "@/lib/email";
 import { securityLog } from "@/lib/security/audit-log";
-import { getSafeProfileImage, getUserProfileImage } from "@/lib/profile-image";
+import { getUserProfileImage } from "@/lib/profile-image";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(db) as Adapter,
@@ -140,14 +140,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             })
           : null;
 
-        session.user.id = token.sub ?? "";
-        session.user.role = freshUser?.role ?? ((token.role as UserRole) ?? UserRole.BUYER);
-        session.user.name = freshUser ? freshUser.name : session.user.name ?? null;
-        session.user.email = freshUser?.email ?? session.user.email ?? null;
-        session.user.image = freshUser
-          ? getUserProfileImage(freshUser)
-          : getSafeProfileImage(session.user.image);
-        session.user.username = freshUser ? freshUser.username : token.username ?? null;
+        // Authorization must reflect a current account, never a stale JWT role.
+        // Auth.js rejects the session if this callback fails.
+        if (!freshUser) throw new Error("Session account is unavailable");
+
+        session.user.id = freshUser.id;
+        session.user.role = freshUser.role;
+        session.user.name = freshUser.name;
+        session.user.email = freshUser.email ?? "";
+        session.user.image = getUserProfileImage(freshUser);
+        session.user.username = freshUser.username;
       }
       return session;
     }

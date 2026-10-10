@@ -22,14 +22,26 @@ export async function GET(
     select: {
       contentType: true,
       data: true,
+      eventId: true,
       size: true,
-      updatedAt: true
+      updatedAt: true,
+      userId: true
     }
   });
 
   if (!photo) {
-    return NextResponse.json({ error: "Photo not found." }, { status: 404 });
+    return NextResponse.json({ error: "Photo not found." }, { status: 404, headers: { "Cache-Control": "private, no-store" } });
   }
+
+  // Uploaded drafts are private until their owner attaches them to a public party.
+  const isDraft = photo.eventId === null;
+  if (isDraft) {
+    const session = await auth();
+    if (!session?.user?.id || session.user.id !== photo.userId) {
+      return NextResponse.json({ error: "Photo not found." }, { status: 404, headers: { "Cache-Control": "private, no-store" } });
+    }
+  }
+  const cacheControl = isDraft ? "private, no-store" : "public, max-age=31536000, immutable";
 
   const width = parseImageWidth(new URL(request.url).searchParams.get("w"));
   if (width && photo.contentType !== "image/gif") {
@@ -41,7 +53,7 @@ export async function GET(
 
     return new Response(new Uint8Array(optimized), {
       headers: {
-        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cache-Control": cacheControl,
         "Content-Length": String(optimized.byteLength),
         "Content-Type": "image/webp",
         "Last-Modified": photo.updatedAt.toUTCString()
@@ -51,7 +63,7 @@ export async function GET(
 
   return new Response(new Uint8Array(photo.data), {
     headers: {
-      "Cache-Control": "public, max-age=31536000, immutable",
+      "Cache-Control": cacheControl,
       "Content-Length": String(photo.size),
       "Content-Type": photo.contentType,
       "Last-Modified": photo.updatedAt.toUTCString()

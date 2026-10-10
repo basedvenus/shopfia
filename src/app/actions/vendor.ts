@@ -47,10 +47,6 @@ function slugify(value: FormDataEntryValue | null) {
     .replace(/(^-|-$)/g, "");
 }
 
-function normalizeBusinessName(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
 const UNCLAIMED_VENDOR_CATEGORIES = [
   "Backdrops",
   "Balloons",
@@ -152,61 +148,13 @@ export async function createUnclaimedVendorAction(input: {
   return { ok: true, vendor };
 }
 
-export async function claimUnclaimedVendorAction(formData: FormData) {
-  const { db } = await import("@/lib/db");
-  const session = await requireSession();
-  const vendorId = String(formData.get("vendorId") ?? "");
-  if (!vendorId) redirect("/onboarding");
-
-  const unclaimedVendor = await db.vendorProfile.findFirst({
-    where: { id: vendorId, status: VendorProfileStatus.UNCLAIMED },
-    include: {
-      categories: true,
-      taggedPartyEvents: { select: { id: true } },
-      taggedPartyPhotos: { select: { id: true } },
-      partyPhotoRatings: { select: { id: true, photoId: true, rating: true, userId: true } }
-    }
-  });
-  if (!unclaimedVendor) redirect("/onboarding");
-
-  const destination = await db.$transaction(async (tx) => {
-    const existingVendor = await tx.vendorProfile.findUnique({
-      where: { userId: session.user.id },
-      select: { id: true, slug: true }
-    });
-
-    const claimedVendor = await tx.vendorProfile.update({
-      where: { id: unclaimedVendor.id },
-      data: {
-        userId: existingVendor ? null : session.user.id,
-        status: VendorProfileStatus.CLAIMED,
-        claimedAt: new Date()
-      },
-      select: { id: true, slug: true }
-    });
-
-    await tx.vendorProfileManager.upsert({
-      where: {
-        vendorProfileId_userId: {
-          vendorProfileId: claimedVendor.id,
-          userId: session.user.id
-        }
-      },
-      update: { role: "OWNER" },
-      create: {
-        role: "OWNER",
-        userId: session.user.id,
-        vendorProfileId: claimedVendor.id
-      }
-    });
-
-    return claimedVendor;
-  });
-
-  revalidatePath(`/vendor/profile/${unclaimedVendor.slug}`);
-  revalidatePath(`/vendor/profile/${destination.slug}`);
-  revalidatePath("/my-parties");
-  redirect(`/vendor/dashboard/${destination.slug}`);
+export async function claimUnclaimedVendorAction(_formData: FormData) {
+  await requireSession();
+  // Public profile IDs and a signed-in account are not proof of business ownership.
+  // Keep legacy forms safe until a reviewed ownership-verification flow exists.
+  redirectWithVendorProfileError(
+    "Business ownership must be reviewed before an existing profile can be claimed."
+  );
 }
 
 async function getAvailableVendorSlug(baseSlug: string) {
@@ -760,17 +708,11 @@ export async function upsertVendorProfileAction(formData: FormData) {
     redirectWithVendorProfileError("That username or storefront URL belongs to another business. Choose an available one.", profileErrorOptions);
   }
   if (conflictingBusinesses.length > 0) {
-    const reusableBusinesses = conflictingBusinesses.filter((business) => {
-      const isManagedByUser = business.userId === session.user.id || business.managers.length > 0;
-      const isOwnerlessExactMatch =
-        isCreatingNewBusiness &&
-        !business.userId &&
-        business._count.managers === 0 &&
-        business.status === VendorProfileStatus.CLAIMED &&
-        normalizeBusinessName(business.name) === normalizeBusinessName(submittedBusinessName);
-
-      return isManagedByUser || isOwnerlessExactMatch;
-    });
+    // Matching a public business name/slug is not proof of ownership, even if
+    // an older record has no current owner. Recovery needs a reviewed process.
+    const reusableBusinesses = conflictingBusinesses.filter((business) =>
+      business.userId === session.user.id || business.managers.length > 0
+    );
     const blockedBusiness = conflictingBusinesses.find(
       (business) => !reusableBusinesses.some((reusableBusiness) => reusableBusiness.id === business.id)
     );

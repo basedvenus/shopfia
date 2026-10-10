@@ -87,27 +87,46 @@ describe("mobile Google Auth.js session", () => {
     expect(result.createdUser).toBe(false);
   });
 
-  it("links a verified Google identity to the existing ShopFia email account", async () => {
+  it.each([
+    { emailVerified: null, passwordHash: "attacker-controlled-password-hash" },
+    { emailVerified: new Date("2026-01-01"), passwordHash: "existing-password-hash" },
+    { emailVerified: new Date("2026-01-01"), passwordHash: null }
+  ])("refuses email-only account linking without proof of the existing account ($emailVerified)", async (credentials) => {
     mocks.accountFindUnique.mockResolvedValue(null);
-    mocks.userFindUnique.mockResolvedValue(existingUser);
+    mocks.userFindUnique.mockResolvedValue({ ...existingUser, ...credentials });
     mocks.accountCreate.mockResolvedValue({ id: "account_1" });
+
+    await expect(createMobileGoogleSession(
+      "google-id-token",
+      "https://www.shopfia.app/api/mobile/auth/google"
+    )).rejects.toEqual(expect.objectContaining<Partial<MobileGoogleAuthError>>({ status: 409 }));
+
+    expect(mocks.userFindUnique).toHaveBeenCalledWith({ where: { email: "venus@example.com" } });
+    expect(mocks.accountCreate).not.toHaveBeenCalled();
+    expect(mocks.userCreate).not.toHaveBeenCalled();
+    expect(mocks.encode).not.toHaveBeenCalled();
+  });
+
+  it("creates a new user only when neither the Google subject nor email has an account", async () => {
+    mocks.accountFindUnique.mockResolvedValue(null);
+    mocks.userFindUnique.mockResolvedValue(null);
+    mocks.userCreate.mockResolvedValue(existingUser);
 
     const result = await createMobileGoogleSession(
       "google-id-token",
       "https://www.shopfia.app/api/mobile/auth/google"
     );
 
-    expect(mocks.userFindUnique).toHaveBeenCalledWith({ where: { email: "venus@example.com" } });
-    expect(mocks.accountCreate).toHaveBeenCalledWith({
-      data: {
-        provider: "google",
-        providerAccountId: "google_account_123",
-        type: "oidc",
-        userId: existingUser.id
-      }
+    expect(mocks.userCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        email: "venus@example.com",
+        emailVerified: expect.any(Date),
+        image: null,
+        accounts: { create: { provider: "google", providerAccountId: "google_account_123", type: "oidc" } }
+      })
     });
-    expect(mocks.userCreate).not.toHaveBeenCalled();
-    expect(result.session.user.id).toBe(existingUser.id);
+    expect(mocks.accountCreate).not.toHaveBeenCalled();
+    expect(result.createdUser).toBe(true);
   });
 
   it("rejects an unverified Google identity without touching ShopFia accounts", async () => {

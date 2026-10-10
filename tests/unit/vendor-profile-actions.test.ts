@@ -232,86 +232,19 @@ describe("vendor profile actions", () => {
     });
   });
 
-  it("repairs an ownerless matching business from a previous second-business save", async () => {
+  it.each([
+    { slug: "second-studio", username: "other.studio" },
+    { slug: "second-studio-copy", username: "second.studio" }
+  ])("rejects ownerless business adoption by a matching public slug or username", async (identity) => {
     mocks.db.vendorProfile.findMany.mockResolvedValueOnce([{
-      id: "orphan_vendor",
-      name: "Second Studio",
-      slug: "second-studio",
-      status: "CLAIMED",
-      username: "second.studio",
-      userId: null,
-      managers: [],
-      _count: { managers: 0 }
+      id: "orphan_vendor", name: "Second Studio", ...identity,
+      status: "CLAIMED", userId: null, managers: [], _count: { managers: 0 }
     }]);
-    mocks.tx.vendorProfile.update.mockResolvedValue({
-      id: "orphan_vendor",
-      slug: "second-studio"
-    });
-
-    await expect(upsertVendorProfileAction(secondBusinessFormData())).rejects.toThrow(
-      "NEXT_REDIRECT:/vendor/business/second-studio"
-    );
-
+    await expect(upsertVendorProfileAction(secondBusinessFormData())).rejects.toThrow("NEXT_REDIRECT:/onboarding?");
+    expect(mocks.db.$transaction).not.toHaveBeenCalled();
+    expect(mocks.tx.vendorProfile.update).not.toHaveBeenCalled();
     expect(mocks.tx.vendorProfile.create).not.toHaveBeenCalled();
-    expect(mocks.tx.vendorProfile.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "orphan_vendor" },
-        data: expect.objectContaining({
-          name: "Second Studio"
-        })
-      })
-    );
-    expect(mocks.tx.vendorProfileManager.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          vendorProfileId_userId: {
-            vendorProfileId: "orphan_vendor",
-            userId: "user_1"
-          }
-        }
-      })
-    );
+    expect(mocks.tx.vendorProfileManager.upsert).not.toHaveBeenCalled();
   });
 
-  it("repairs an ownerless matching business when the vendor username is the conflict", async () => {
-    mocks.db.vendorProfile.findMany.mockResolvedValueOnce([{
-      id: "orphan_vendor",
-      name: "Second Studio",
-      slug: "second-studio-copy",
-      status: "CLAIMED",
-      username: "second.studio",
-      userId: null,
-      managers: [],
-      _count: { managers: 0 }
-    }]);
-    mocks.tx.vendorProfile.update.mockResolvedValue({
-      id: "orphan_vendor",
-      slug: "second-studio"
-    });
-
-    await expect(upsertVendorProfileAction(secondBusinessFormData())).rejects.toThrow(
-      "NEXT_REDIRECT:/vendor/business/second-studio"
-    );
-
-    expect(mocks.tx.vendorProfile.create).not.toHaveBeenCalled();
-    expect(mocks.tx.vendorProfile.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "orphan_vendor" },
-        data: expect.objectContaining({
-          slug: "second-studio",
-          username: "second.studio"
-        })
-      })
-    );
-    expect(mocks.tx.vendorProfileManager.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          vendorProfileId_userId: {
-            vendorProfileId: "orphan_vendor",
-            userId: "user_1"
-          }
-        }
-      })
-    );
-  });
 });

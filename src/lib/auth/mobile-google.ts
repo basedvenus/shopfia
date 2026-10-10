@@ -50,25 +50,13 @@ export async function createMobileGoogleSession(idToken: string, requestUrl: str
     user = await db.user.findUnique({ where: { email } });
 
     if (user) {
-      await db.account.create({
-        data: {
-          provider: "google",
-          providerAccountId: identity.sub,
-          type: "oidc",
-          userId: user.id
-        }
-      }).catch(async (error) => {
-        const racedAccount = await db.account.findUnique({
-          where: {
-            provider_providerAccountId: {
-              provider: "google",
-              providerAccountId: identity.sub
-            }
-          },
-          include: { user: true }
-        });
-        if (!racedAccount || racedAccount.userId !== user?.id) throw error;
-      });
+      // A verified Google email does not prove ownership of an existing local
+      // account. Password signup can reserve an unverified email, so linking
+      // here would leave that account's original credentials active.
+      throw new MobileGoogleAuthError(
+        "An account already uses this email. Sign in using your existing ShopFia sign-in method.",
+        409
+      );
     } else {
       user = await db.user.create({
         data: {
