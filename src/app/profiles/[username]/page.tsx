@@ -12,7 +12,7 @@ import { db } from "@/lib/db";
 import { storefrontPath } from "@/lib/businesses";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
-import { getSafeProfileImage } from "@/lib/profile-image";
+import { getUserProfileImage } from "@/lib/profile-image";
 import { getOriginalMemberCutoffDate, getProfileBadges } from "@/lib/profile-badges";
 
 export const dynamic = "force-dynamic";
@@ -25,12 +25,14 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
       where: { username },
       select: {
         id: true,
+        avatar: { select: { updatedAt: true } },
         createdAt: true,
         email: true,
         name: true,
         username: true,
         bio: true,
         image: true,
+        imageCrop: true,
         instagramUrl: true,
         partyfulUrl: true,
         tiktokUrl: true,
@@ -124,7 +126,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         )
       : false;
   const initials = getInitials(profile.name ?? profile.username);
-  const profileImage = getSafeProfileImage(profile.image);
+  const profileImage = getUserProfileImage(profile);
   const profileBadges = getProfileBadges(profile, originalMemberCutoff);
   const profileStorefronts = dedupeStorefrontLinks([
     profile.vendorProfile,
@@ -198,7 +200,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                     key={profileImage}
                     src={profileImage}
                     alt={profile.name ?? profile.username ?? "Profile"}
-                    crop={null}
+                    crop={normalizeImageCrop(profile.imageCrop)}
                     className="block h-full w-full object-cover object-center"
                   />
                 ) : (
@@ -285,7 +287,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Reviews</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Verified ShopFia reviews connected to this member's storefronts.
+            Verified ShopFia reviews connected to this member&apos;s storefronts.
           </p>
         </div>
         {profileReviews.length > 0 ? (
@@ -321,7 +323,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         ) : (
           <Card className="border-white/70 bg-white/90">
             <CardContent className="p-4 text-sm text-muted-foreground">
-              Reviews will appear here when this member's storefronts receive verified ShopFia reviews.
+              Reviews will appear here when this member&apos;s storefronts receive verified ShopFia reviews.
             </CardContent>
           </Card>
         )}

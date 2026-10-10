@@ -1,7 +1,8 @@
 import type { Prisma } from "@prisma/client";
-import { getSafeProfileImage } from "@/lib/profile-image";
+import { getUserProfileImage } from "@/lib/profile-image";
 
 export const userProfileSelect = {
+  avatar: { select: { updatedAt: true } },
   bio: true,
   email: true,
   id: true,
@@ -22,15 +23,18 @@ export const userProfileSelect = {
   }
 } as const satisfies Prisma.UserSelect;
 
-export type SharedUserProfile = Prisma.UserGetPayload<{
+type StoredUserProfile = Prisma.UserGetPayload<{
   select: typeof userProfileSelect;
-}> & {
+}>;
+
+export type SharedUserProfile = Omit<StoredUserProfile, "avatar"> & {
   image: string | null;
 };
 
-export function serializeUserProfile(user: Prisma.UserGetPayload<{ select: typeof userProfileSelect }>) {
+export function serializeUserProfile(user: StoredUserProfile): SharedUserProfile {
+  const { avatar, ...profile } = user;
   return {
-    ...user,
-    image: getSafeProfileImage(user.image)
+    ...profile,
+    image: getUserProfileImage({ ...profile, avatar })
   };
 }

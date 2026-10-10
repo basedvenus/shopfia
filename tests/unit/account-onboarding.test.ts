@@ -138,6 +138,12 @@ describe("setup and account reads", () => {
     await action();
     expect(mocks.signOut).toHaveBeenCalledWith({ redirectTo: "/account" });
   });
+  it("prefills the saved custom upload instead of a stale Google photo", async () => {
+    const updatedAt = new Date("2026-10-01T12:00:00Z");
+    mocks.db.user.findUnique.mockResolvedValue(profile({ username: null, avatar: { updatedAt } }));
+    const nodes = elements(await SetupPage());
+    expect(nodes.find((node) => node.type === RequiredProfileForm)?.props.defaultImage).toBe(`/api/users/user_1/avatar?v=${updatedAt.getTime()}`);
+  });
   it("does not delete a stored legacy image when opening the account page", async () => {
     mocks.db.user.findUnique.mockResolvedValue(profile({ image: "data:image/png;base64,legacy" }));
     await AccountPage({});

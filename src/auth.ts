@@ -11,7 +11,7 @@ import { authProviderConfig } from "@/lib/auth/provider-config";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { sendWelcomeEmail } from "@/lib/email";
 import { securityLog } from "@/lib/security/audit-log";
-import { getSafeProfileImage } from "@/lib/profile-image";
+import { getSafeProfileImage, getUserProfileImage } from "@/lib/profile-image";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(db) as Adapter,
@@ -43,6 +43,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const user = await db.user.findUnique({
           where: { email },
           select: {
+            avatar: { select: { updatedAt: true } },
             id: true,
             email: true,
             name: true,
@@ -72,7 +73,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
-          image: getSafeProfileImage(user.image),
+          image: getUserProfileImage(user),
           username: user.username,
           role: user.role
         };
@@ -116,6 +117,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           ? await db.user.findUnique({
               where: { id: token.sub },
               select: {
+                id: true,
+                avatar: { select: { updatedAt: true } },
                 email: true,
                 image: true,
                 name: true,
@@ -132,7 +135,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.role = freshUser?.role ?? ((token.role as UserRole) ?? UserRole.BUYER);
         session.user.name = freshUser ? freshUser.name : session.user.name ?? null;
         session.user.email = freshUser?.email ?? session.user.email ?? null;
-        session.user.image = getSafeProfileImage(freshUser ? freshUser.image : session.user.image);
+        session.user.image = freshUser
+          ? getUserProfileImage(freshUser)
+          : getSafeProfileImage(session.user.image);
         session.user.username = freshUser ? freshUser.username : token.username ?? null;
       }
       return session;

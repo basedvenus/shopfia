@@ -3,6 +3,7 @@ import { RequiredProfileForm } from "@/components/account/required-profile-form"
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { AccountRecovery } from "@/components/account/account-recovery";
+import { getUserProfileImage } from "@/lib/profile-image";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function RequiredProfileSetupPage() {
     where: { id: session.user.id },
     select: {
       id: true,
+      avatar: { select: { updatedAt: true } },
       email: true,
       image: true,
       imageCrop: true,
@@ -64,7 +66,7 @@ export default async function RequiredProfileSetupPage() {
           <RequiredProfileForm
             profileId={user.id}
             defaultDisplayName={user?.name}
-            defaultImage={user?.image}
+            defaultImage={getUserProfileImage(user)}
             defaultImageCrop={user?.imageCrop}
             defaultUsername={user?.username}
           />

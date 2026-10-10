@@ -26,4 +26,11 @@ describe("authoritative session profile", () => {
     const result = await config.callbacks.session({ session: session(), token: { sub: "user_1", username: "old" } });
     expect(result.user).toMatchObject({ id: "user_1", name: null, image: null, username: null });
   });
+  it("uses the same user's saved upload before a stale Google image or JWT photo", async () => {
+    const updatedAt = new Date("2026-10-01T12:00:00Z");
+    mocks.findUnique.mockResolvedValue({ id: "user_1", name: "Saved", email: "saved@example.com", image: "https://lh3.googleusercontent.com/avatar", avatar: { updatedAt }, username: "saved", role: "BUYER" });
+    const result = await config.callbacks.session({ session: session(), token: { sub: "user_1", username: "old" } });
+    expect(result.user.image).toBe(`/api/users/user_1/avatar?v=${updatedAt.getTime()}`);
+    expect(mocks.findUnique.mock.calls[0][0].select.avatar).toEqual({ select: { updatedAt: true } });
+  });
 });
