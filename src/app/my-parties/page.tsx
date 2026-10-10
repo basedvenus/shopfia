@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Camera, MapPin, Pencil, Sparkles } from "lucide-react";
 import { PartyEventForm } from "@/components/parties/party-event-form";
+import { PartyInvitationResponse } from "@/components/parties/party-invitation-response";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
@@ -34,7 +35,7 @@ export default async function MyPartiesPage() {
     return <PublicMyPartiesPreview />;
   }
 
-  const [events, vendors, users] = await Promise.all([
+  const [events, vendors, users, invitations, hostedParties] = await Promise.all([
     db.partyEvent.findMany({
       where: { userId: session.user.id },
       include: {
@@ -57,11 +58,76 @@ export default async function MyPartiesPage() {
       select: { id: true, image: true, name: true, username: true },
       orderBy: [{ name: "asc" }, { username: "asc" }],
       take: 100
+    }),
+    db.partyCollaborator.findMany({
+      where: { userId: session.user.id, status: "PENDING" },
+      select: {
+        id: true,
+        role: true,
+        event: { select: { title: true, slug: true } }
+      },
+      orderBy: { createdAt: "desc" }
+    }),
+    db.partyCollaborator.findMany({
+      where: {
+        userId: session.user.id,
+        status: "ACCEPTED",
+        // Owners retain their organizer attribution and use their own event controls.
+        event: { userId: { not: session.user.id } }
+      },
+      select: {
+        id: true,
+        role: true,
+        event: { select: { title: true, slug: true } }
+      },
+      orderBy: { createdAt: "desc" }
     })
   ]);
 
   return (
     <div className="space-y-8">
+      {invitations.length > 0 ? (
+        <section className="space-y-4 rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-soft">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Party invitations</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Accept to appear publicly as a host on a party.</p>
+          </div>
+          {invitations.map((invitation) => (
+            <article key={invitation.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4">
+              <div>
+                <Link href={`/events/${invitation.event.slug}`} className="font-semibold underline-offset-4 hover:underline">
+                  {invitation.event.title}
+                </Link>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Invited as {invitation.role === "MAIN_HOST" ? "main host" : "co-host"}
+                </p>
+              </div>
+              <PartyInvitationResponse collaborationId={invitation.id} />
+            </article>
+          ))}
+        </section>
+      ) : null}
+      {hostedParties.length > 0 ? (
+        <section className="space-y-4 rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-soft">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Parties you host</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Leaving removes your public host attribution from a party.</p>
+          </div>
+          {hostedParties.map((collaboration) => (
+            <article key={collaboration.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4">
+              <div>
+                <Link href={`/events/${collaboration.event.slug}`} className="font-semibold underline-offset-4 hover:underline">
+                  {collaboration.event.title}
+                </Link>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {collaboration.role === "MAIN_HOST" ? "Main host" : "Co-host"}
+                </p>
+              </div>
+              <PartyInvitationResponse collaborationId={collaboration.id} mode="accepted" />
+            </article>
+          ))}
+        </section>
+      ) : null}
       <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <div className="min-w-0 space-y-5">
           <div>

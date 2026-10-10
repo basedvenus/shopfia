@@ -130,7 +130,20 @@ export default async function EventPage({
   const visibleCollaborators = getVisiblePartyCollaborators(event?.collaborators ?? [], host);
   const editRequested = resolvedSearchParams.edit === "1" || resolvedSearchParams.edit === "true";
   const isEditing = Boolean(editRequested && isOwner && event);
-  const formParty = event
+  // Keep pending invitations selected during owner edits without adding them to
+  // the public collaborator projection above.
+  const editableCollaborators = isEditing && event
+    ? await db.partyCollaborator.findMany({
+        where: {
+          eventId: event.id,
+          event: { userId: currentUserId! },
+          status: { in: ["PENDING", "ACCEPTED"] }
+        },
+        select: { userId: true, role: true },
+        orderBy: [{ role: "asc" }, { createdAt: "asc" }]
+      })
+    : [];
+  const formParty = isEditing && event
     ? ({
         id: event.id,
         slug: event.slug,
@@ -160,10 +173,10 @@ export default async function EventPage({
           )
         })),
         mainHostId:
-          event.collaborators.find((collaborator) => collaborator.role === "MAIN_HOST")?.userId ??
+          editableCollaborators.find((collaborator) => collaborator.role === "MAIN_HOST")?.userId ??
           event.userId,
-        coHostIds: event.collaborators
-          .filter((collaborator) => collaborator.role === "CO_HOST" && collaborator.status !== "REMOVED")
+        coHostIds: editableCollaborators
+          .filter((collaborator) => collaborator.role === "CO_HOST")
           .map((collaborator) => collaborator.userId)
       } satisfies EditablePartyEvent)
     : null;

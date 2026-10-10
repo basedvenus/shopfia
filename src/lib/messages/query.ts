@@ -257,10 +257,6 @@ export async function getMessagesPayload({
     selectedConversationId: selectedExists
       ? selectedConversationId ?? null
       : serializedConversations[0]?.id ?? null,
-    supabase: {
-      anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? null,
-      url: process.env.NEXT_PUBLIC_SUPABASE_URL ?? null
-    },
     unreadByConversation,
     unreadTotal: Object.values(unreadByConversation).reduce((sum, count) => sum + count, 0)
   };

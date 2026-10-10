@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   explore: vi.fn(),
   db: {
     partyEvent: { findFirst: vi.fn(), findMany: vi.fn() },
+    partyCollaborator: { findMany: vi.fn() },
     vendorProfile: { findMany: vi.fn() },
     follow: { findMany: vi.fn(), findUnique: vi.fn() },
     favorite: { findMany: vi.fn() },
@@ -59,6 +60,7 @@ describe("truthful party inspiration and credits", () => {
     mocks.auth.mockResolvedValue(null);
     mocks.db.partyEvent.findFirst.mockResolvedValue(null);
     mocks.db.partyEvent.findMany.mockResolvedValue([]);
+    mocks.db.partyCollaborator.findMany.mockResolvedValue([]);
     mocks.db.vendorProfile.findMany.mockResolvedValue([]);
     mocks.db.follow.findMany.mockResolvedValue([]);
     mocks.db.follow.findUnique.mockResolvedValue(null);

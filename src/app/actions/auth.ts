@@ -3,7 +3,7 @@
 import { createHash } from "crypto";
 import { hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
-import { PartyCollaborationStatus, PartyCollaboratorRole, type Prisma } from "@prisma/client";
+import { PartyCollaborationStatus, type Prisma } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
@@ -15,6 +15,7 @@ import { checkServerActionRateLimit } from "@/lib/security/request";
 import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 import { friendlyValidationMessage } from "@/lib/validators/messages";
 import { getAccountSetupDestination } from "@/lib/account-setup";
+import { persistPartyCollaborators } from "@/lib/services/party-collaboration";
 
 const signUpSchema = z.object({
   email: z.string().trim().email("Enter a valid email address.").max(255, "Email is a little too long."),
@@ -639,7 +640,12 @@ export async function updatePartyCollaborationAction(formData: FormData) {
   const collaboration = await db.partyCollaborator.updateMany({
     where: {
       id: collaborationId,
-      userId: session.user.id
+      userId: session.user.id,
+      // Check consent and current state atomically: a stale accept must never
+      // restore an invitation that the owner revoked or the invitee declined.
+      status: action === "remove"
+        ? { in: [PartyCollaborationStatus.PENDING, PartyCollaborationStatus.ACCEPTED] }
+        : PartyCollaborationStatus.PENDING
     },
     data: { status: nextStatus }
   });
@@ -701,69 +707,6 @@ function parsePartyEventFormData(formData: FormData) {
       .filter(Boolean),
     photos
   };
-}
-
-async function persistPartyCollaborators({
-  coHostIds,
-  eventId,
-  invitedById,
-  mainHostId,
-  ownerId,
-  tx
-}: {
-  coHostIds: string[];
-  eventId: string;
-  invitedById: string;
-  mainHostId: string;
-  ownerId: string;
-  tx: Prisma.TransactionClient;
-}) {
-  const requestedIds = Array.from(new Set([mainHostId, ...coHostIds, ownerId].filter(Boolean)));
-  const users = await tx.user.findMany({
-    where: { id: { in: requestedIds } },
-    select: { id: true }
-  });
-  const validUserIds = new Set(users.map((user) => user.id));
-  const safeMainHostId = validUserIds.has(mainHostId) ? mainHostId : ownerId;
-  const safeCoHostIds = coHostIds.filter((id) => id !== safeMainHostId && validUserIds.has(id));
-  const activeUserIds = new Set([safeMainHostId, ...safeCoHostIds]);
-
-  await tx.partyCollaborator.updateMany({
-    where: {
-      eventId,
-      userId: { notIn: Array.from(activeUserIds) }
-    },
-    data: { status: PartyCollaborationStatus.REMOVED }
-  });
-
-  const collaborators = [
-    { role: PartyCollaboratorRole.MAIN_HOST, userId: safeMainHostId },
-    ...safeCoHostIds.map((userId) => ({ role: PartyCollaboratorRole.CO_HOST, userId }))
-  ];
-
-  await Promise.all(
-    collaborators.map((collaborator) =>
-      tx.partyCollaborator.upsert({
-        where: {
-          eventId_userId: {
-            eventId,
-            userId: collaborator.userId
-          }
-        },
-        update: {
-          role: collaborator.role,
-          status: PartyCollaborationStatus.ACCEPTED
-        },
-        create: {
-          eventId,
-          invitedById,
-          role: collaborator.role,
-          status: PartyCollaborationStatus.ACCEPTED,
-          userId: collaborator.userId
-        }
-      })
-    )
-  );
 }
 
 async function preparePartyPhotoPersistence({

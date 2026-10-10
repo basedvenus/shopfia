@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { createClient } from "@supabase/supabase-js";
 import {
   ArrowLeft,
   Banknote,
@@ -34,10 +33,6 @@ import type { SerializedMessageConversation } from "@/lib/messages/query";
 type MessagesPayload = {
   conversations: SerializedMessageConversation[];
   selectedConversationId: string | null;
-  supabase: {
-    anonKey: string | null;
-    url: string | null;
-  };
   unreadByConversation: Record<string, number>;
   unreadTotal: number;
 };
@@ -125,32 +120,13 @@ export function MessagesClient({
   }, [refreshMessages, router, searchParams, selectedConversationId]);
 
   useEffect(() => {
-    if (!payload.supabase.url || !payload.supabase.anonKey) {
-      const interval = window.setInterval(() => {
-        void refreshMessages();
-      }, 7000);
-      return () => window.clearInterval(interval);
-    }
-
-    const supabase = createClient(payload.supabase.url, payload.supabase.anonKey);
-    const channel = supabase
-      .channel("shopfia-messages")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "Message" },
-        () => void refreshMessages({ markRead: true })
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "Conversation" },
-        () => void refreshMessages()
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [payload.supabase.anonKey, payload.supabase.url, refreshMessages]);
+    // Keep message updates behind the authenticated, conversation-scoped API.
+    // Realtime needs a verified per-user identity/RLS policy before it is enabled.
+    const interval = window.setInterval(() => {
+      void refreshMessages();
+    }, 7000);
+    return () => window.clearInterval(interval);
+  }, [refreshMessages]);
 
   useEffect(() => {
     if (payload.unreadTotal <= previousUnreadTotal.current) {
