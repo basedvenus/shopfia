@@ -14,6 +14,7 @@ import { securityLog } from "@/lib/security/audit-log";
 import { checkServerActionRateLimit } from "@/lib/security/request";
 import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 import { friendlyValidationMessage } from "@/lib/validators/messages";
+import { getAccountSetupDestination } from "@/lib/account-setup";
 
 const signUpSchema = z.object({
   email: z.string().trim().email("Enter a valid email address.").max(255, "Email is a little too long."),
@@ -121,8 +122,11 @@ export async function completeRequiredProfileAction(formData: FormData) {
     // A stale onboarding tab must never rename an existing profile. Profile edits
     // belong in account settings; this action only fills missing identity fields.
     if (existingUser.username && existingUser.name) {
-      return { ok: true, profile: serializeUserProfile(existingUser) };
+      return { ok: true, profile: serializeUserProfile(existingUser), nextPath: "/account" };
     }
+
+    const destination = getAccountSetupDestination(formData);
+    if (!destination.ok) return destination;
 
     const parsed = requiredOnboardingProfileSchema.partial().safeParse({
       ...(existingUser.name ? {} : { name: formData.get("name") }),
@@ -163,7 +167,7 @@ export async function completeRequiredProfileAction(formData: FormData) {
     revalidatePath("/", "layout");
     revalidatePath("/account");
     revalidatePath(`/profiles/${profile.username}`);
-    return { ok: true, profile };
+    return { ok: true, profile, nextPath: destination.nextPath };
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       return { ok: false, error: "That username is already taken. Try another one." };

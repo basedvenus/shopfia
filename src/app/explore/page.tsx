@@ -15,6 +15,7 @@ import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorTrustStatus } from "@/lib/vendor-status";
+import { getSafeProfileImage } from "@/lib/profile-image";
 
 export const dynamic = "force-dynamic";
 
@@ -302,9 +303,10 @@ function PartyExploreCard({
 }
 
 function HostAvatar({ image, name }: { image: string | null; name: string | null | undefined }) {
-  if (image) {
-    // eslint-disable-next-line @next/next/no-img-element -- user avatars can be local uploads or auth-provider URLs.
-    return <img src={image} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />;
+  const savedImage = getSafeProfileImage(image);
+  if (savedImage) {
+    // eslint-disable-next-line @next/next/no-img-element -- user-uploaded avatars can be local image routes.
+    return <img src={savedImage} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />;
   }
 
   return (

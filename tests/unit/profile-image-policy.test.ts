@@ -8,11 +8,11 @@ const original = [
   "connect-src 'self' https://api.stripe.com https://*.stripe.com https://*.stripe.network https://*.supabase.co wss://*.supabase.co",
   "frame-src https://js.stripe.com https://hooks.stripe.com https://*.stripe.com", "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'", "upgrade-insecure-requests"
 ];
-describe("Google profile photo CSP", () => {
-  it("allows only the exact additional avatar host and leaves every other directive unchanged", () => {
+describe("Uploaded profile photo CSP", () => {
+  it("does not allow automatic Google avatar images and leaves the original policy intact", () => {
     const config = readFileSync(new URL("../../next.config.mjs", import.meta.url), "utf8");
     const directives = [...config.matchAll(/"((?:default|script|style|img|connect|frame|object|base|form)[^"\n]+|upgrade-insecure-requests)"/g)].map((match) => match[1]);
-    expect(directives).toEqual(original.map((directive) => directive.startsWith("img-src ") ? `${directive} https://lh3.googleusercontent.com` : directive));
+    expect(directives).toEqual(original);
     expect(directives.find((directive) => directive.startsWith("img-src "))?.split(" ")).not.toContain("https://unrelated.example.com");
     expect(directives.join(" ")).not.toContain("https://*.googleusercontent.com");
   });

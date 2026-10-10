@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function VendorOnboardingPage({
   searchParams
 }: {
-  searchParams?: Promise<{ business?: string; newBusiness?: string; offeringError?: string; profileError?: string }>;
+  searchParams?: Promise<{ business?: string; newBusiness?: string; offeringError?: string; profileError?: string; storefrontName?: string | string[] }>;
 }) {
   const [{ requireRole }, { db }] = await Promise.all([
     import("@/lib/auth/guards"),
@@ -24,6 +24,9 @@ export default async function VendorOnboardingPage({
   ]);
   const session = await requireRole([UserRole.BUYER, UserRole.VENDOR, UserRole.ADMIN]);
   const resolvedSearchParams = await searchParams;
+  const initialStorefrontName = resolvedSearchParams?.newBusiness && typeof resolvedSearchParams.storefrontName === "string"
+    ? resolvedSearchParams.storefrontName.trim().slice(0, 80)
+    : undefined;
   const editingBusinessSlug = resolvedSearchParams?.newBusiness ? null : resolvedSearchParams?.business;
   const [categories, eventCategories, existingVendor] = await Promise.all([
     db.category.findMany({ where: { audience: CategoryAudience.VENDOR }, orderBy: { name: "asc" } }),
@@ -168,28 +171,28 @@ export default async function VendorOnboardingPage({
               />
             </div>
             <FieldShell
-              label="Business Name"
+              label="Storefront name"
               required
-              helperText="Use the public name hosts will recognize on your storefront."
+              helperText="Your public business name. This is separate from your personal display name."
             >
               <Input
                 name="name"
                 placeholder="Solano Flora & Table"
-                defaultValue={existingVendor?.name}
-                data-required-label="Business Name"
+                defaultValue={existingVendor?.name ?? initialStorefrontName}
+                data-required-label="Storefront name"
                 required
               />
             </FieldShell>
             <FieldShell
-              label="Vendor Username"
+              label="Storefront handle"
               required
-              helperText="Example: solanoflora. This must be unique and becomes shopfia.app/solanoflora."
+              helperText="Your business's own @handle for tags, separate from your personal @username. Set its web address below."
             >
               <Input
                 name="username"
                 placeholder="solanoflora"
                 defaultValue={existingVendor?.username ?? existingVendor?.slug ?? ""}
-                data-required-label="Vendor Username"
+                data-required-label="Storefront handle"
                 required
               />
             </FieldShell>
@@ -258,7 +261,7 @@ export default async function VendorOnboardingPage({
             <FieldShell
               label="Storefront URL"
               required
-              helperText="Customize the ending if it is available. Reserved paths like admin, login, explore, settings, and businesses cannot be used."
+              helperText="Your business web address, separate from your personal profile at shopfia.app/profiles/your-username. Choose an available ending; reserved paths cannot be used."
             >
               <div className="flex overflow-hidden rounded-full border bg-white focus-within:ring-2 focus-within:ring-ring">
                 <span className="inline-flex items-center border-r bg-muted/60 px-3 text-sm text-muted-foreground">

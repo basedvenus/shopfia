@@ -12,7 +12,7 @@ import { db } from "@/lib/db";
 import { storefrontPath } from "@/lib/businesses";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
-import { getUserProfileImage } from "@/lib/profile-image";
+import { getSafeProfileImage, getUserProfileImage } from "@/lib/profile-image";
 import { getOriginalMemberCutoffDate, getProfileBadges } from "@/lib/profile-badges";
 import { isQuarantinedVendorId, publicVendorWhere } from "@/lib/public-marketplace";
 
@@ -298,8 +298,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-accent text-xs font-semibold text-primary">
-                      {review.buyer.image ? (
-                        <img src={review.buyer.image} alt="" className="h-full w-full object-cover" />
+                      {getSafeProfileImage(review.buyer.image) ? (
+                        <img src={getSafeProfileImage(review.buyer.image) ?? ""} alt="" className="h-full w-full object-cover" />
                       ) : (
                         getInitials(review.buyer.name ?? review.buyer.username)
                       )}

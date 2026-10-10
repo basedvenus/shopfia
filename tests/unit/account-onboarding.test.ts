@@ -27,11 +27,11 @@ import { RequiredProfileForm } from "@/components/account/required-profile-form"
 import { AccountRecovery } from "@/components/account/account-recovery";
 
 function profile(overrides = {}) {
-  return { id: "user_1", email: "existing@example.com", name: "Existing Name", username: "saved-handle", image: "https://lh3.googleusercontent.com/avatar", imageCrop: { x: 20, y: 60, zoom: 2 }, role: "BUYER", bio: null, instagramUrl: null, partyfulUrl: null, tiktokUrl: null, vendorProfile: null, ...overrides };
+  return { id: "user_1", email: "existing@example.com", name: "Existing Name", username: "saved-handle", image: "/api/users/user_1/avatar?v=1", imageCrop: { x: 20, y: 60, zoom: 2 }, role: "BUYER", bio: null, instagramUrl: null, partyfulUrl: null, tiktokUrl: null, vendorProfile: null, ...overrides };
 }
 function form(overrides: Record<string, string> = {}) {
   const data = new FormData();
-  Object.entries({ profileId: "user_1", name: "New Name", username: "new-handle", image: "", imageCrop: '{"x":50,"y":50,"zoom":1}', ...overrides }).forEach(([key, value]) => data.set(key, value));
+  Object.entries({ profileId: "user_1", isVendor: "no", name: "New Name", username: "new-handle", image: "", imageCrop: '{"x":50,"y":50,"zoom":1}', ...overrides }).forEach(([key, value]) => data.set(key, value));
   return data;
 }
 function elements(node: ReactNode): Array<React.ReactElement<Record<string, unknown>>> {
@@ -96,6 +96,25 @@ describe("safe onboarding completion", () => {
     expect(await completeRequiredProfileAction(form({ username: "!" }))).toMatchObject({ ok: false });
     expect(mocks.db.user.updateMany).not.toHaveBeenCalled();
   });
+  it("saves a first-time buyer's personal identity then goes straight to Explore", async () => {
+    mocks.db.user.findUnique.mockResolvedValueOnce(profile({ name: null, username: null })).mockResolvedValueOnce(profile());
+    expect(await completeRequiredProfileAction(form())).toMatchObject({ ok: true, nextPath: "/explore" });
+  });
+  it("validates personal identity before continuing a new vendor to separate storefront setup", async () => {
+    mocks.db.user.findUnique.mockResolvedValueOnce(profile({ name: null, username: null })).mockResolvedValueOnce(profile());
+    const result = await completeRequiredProfileAction(form({ isVendor: "yes", storefrontName: "Venus & Aura" }));
+    expect(result).toMatchObject({ ok: true, nextPath: "/onboarding?newBusiness=1&storefrontName=Venus+%26+Aura#profile" });
+    expect(mocks.db.user.updateMany.mock.calls[0][0].data).toEqual({ name: "New Name", username: "new-handle" });
+  });
+  it("does not save partial identity when the vendor name is missing", async () => {
+    mocks.db.user.findUnique.mockResolvedValue(profile({ name: null, username: null }));
+    expect(await completeRequiredProfileAction(form({ isVendor: "yes", storefrontName: "" }))).toMatchObject({ ok: false });
+    expect(mocks.db.user.updateMany).not.toHaveBeenCalled();
+  });
+  it("skips onboarding choices for an already-complete account without modifying it", async () => {
+    expect(await completeRequiredProfileAction(form({ isVendor: "yes", storefrontName: "" }))).toMatchObject({ ok: true, nextPath: "/account" });
+    expect(mocks.db.user.updateMany).not.toHaveBeenCalled();
+  });
   it("only reports username collision for a unique constraint failure", async () => {
     mocks.db.user.findUnique.mockResolvedValue(profile({ username: null }));
     mocks.db.user.updateMany.mockRejectedValueOnce({ code: "P2002" });
@@ -109,7 +128,7 @@ describe("safe onboarding completion", () => {
 
 describe("setup and account reads", () => {
   it("redirects complete accounts instead of offering new setup", async () => {
-    await expect(SetupPage()).rejects.toThrow("NEXT_REDIRECT:/welcome");
+    await expect(SetupPage()).rejects.toThrow("NEXT_REDIRECT:/account");
   });
   it("shows recovery without a creation form when a user row is missing", async () => {
     mocks.db.user.findUnique.mockResolvedValue(null);
@@ -129,7 +148,7 @@ describe("setup and account reads", () => {
     const nodes = elements(await SetupPage());
     expect(mocks.db.user.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "user_1" } }));
     expect(nodes.find((node) => node.type === AccountRecovery)?.props.email).toBe("existing@example.com");
-    expect(nodes.find((node) => node.type === RequiredProfileForm)?.props).toMatchObject({ profileId: "user_1", defaultDisplayName: "Existing Name", defaultImage: "https://lh3.googleusercontent.com/avatar", defaultUsername: null });
+    expect(nodes.find((node) => node.type === RequiredProfileForm)?.props).toMatchObject({ profileId: "user_1", defaultDisplayName: "Existing Name", defaultImage: "/api/users/user_1/avatar?v=1", defaultUsername: null });
   });
   it("changes login only when the recovery form is submitted", async () => {
     const nodes = elements(AccountRecovery({ email: "existing@example.com" }));

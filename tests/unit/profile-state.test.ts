@@ -84,6 +84,13 @@ describe("profile state reconciliation", () => {
 });
 
 describe("unavailable photo presentation", () => {
+  it("shows initials instead of an imported Google profile photo", () => {
+    let root!: ReactTestRenderer;
+    act(() => { root = create(createElement(ProfileImage, { image: "https://lh3.googleusercontent.com/provider", initials: "EN" })); });
+    roots.push(root);
+    expect(root.root.findAllByType(CroppedImage)).toHaveLength(0);
+    expect(root.toJSON()).toMatchObject({ type: "span", children: ["EN"] });
+  });
   it("shows initials when an image fails and attempts a replacement URL", () => {
     let root!: ReactTestRenderer;
     act(() => { root = create(createElement(ProfileImage, { image: "/broken.jpg", initials: "EN" })); });
@@ -100,5 +107,24 @@ describe("unavailable photo presentation", () => {
     act(() => root.root.findByType(CroppedImage).props.onError());
     expect(root.root.findAllByType("input").find((input) => input.props.name === "image")?.props.value).toBe("/saved.jpg");
     expect(JSON.stringify(root.toJSON())).toContain("Your saved photo has not been changed");
+  });
+});
+
+describe("personal and vendor setup form", () => {
+  it("shows a separate storefront name only for Yes and keeps it when toggling", () => {
+    const root = mount(profile({ username: null }), createElement(RequiredProfileForm, { profileId: "user_1" }));
+    const inputs = () => root.root.findAllByType("input");
+    expect(inputs().find((input) => input.props.name === "name")?.props.readOnly).toBe(true);
+    expect(JSON.stringify(root.toJSON())).toContain("you can edit them later in Account settings");
+    expect(inputs().filter((input) => input.props.name === "storefrontName")).toHaveLength(0);
+    act(() => inputs().find((input) => input.props.name === "isVendor" && input.props.value === "yes")?.props.onChange());
+    const field = inputs().find((input) => input.props.name === "storefrontName");
+    expect(field?.props.required).toBe(true);
+    act(() => field?.props.onChange({ target: { value: "Venus & Aura" } }));
+    act(() => inputs().find((input) => input.props.name === "isVendor" && input.props.value === "no")?.props.onChange());
+    expect(inputs().filter((input) => input.props.name === "storefrontName")).toHaveLength(0);
+    act(() => inputs().find((input) => input.props.name === "isVendor" && input.props.value === "yes")?.props.onChange());
+    expect(inputs().find((input) => input.props.name === "storefrontName")?.props.value).toBe("Venus & Aura");
+    expect(JSON.stringify(root.toJSON())).toContain("separate storefront URL");
   });
 });

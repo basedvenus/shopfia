@@ -5,6 +5,14 @@ export function getSafeProfileImage(image?: string | null) {
   if (!value) return null;
   if (value.startsWith("data:")) return null;
   if (value.toLowerCase().startsWith("javascript:")) return null;
+  // Google is a login method, not consent to publish its account photo.
+  // Keep stored values untouched; only user-uploaded photos are displayed.
+  try {
+    const hostname = new URL(value, "https://www.shopfia.app").hostname.toLowerCase();
+    if (hostname === "googleusercontent.com" || hostname.endsWith(".googleusercontent.com")) return null;
+  } catch {
+    // Relative URLs from ShopFia's upload endpoints are valid profile images.
+  }
 
   return value.length <= MAX_PROFILE_IMAGE_LENGTH ? value : null;
 }

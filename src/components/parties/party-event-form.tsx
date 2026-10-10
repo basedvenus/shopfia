@@ -11,6 +11,7 @@ import { ImageCropEditor } from "@/components/ui/image-crop-editor";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DEFAULT_IMAGE_CROP, type ImageCrop } from "@/lib/image-crop";
+import { getSafeProfileImage } from "@/lib/profile-image";
 
 const MAX_PARTY_UPLOAD_BYTES = 3.5 * 1024 * 1024;
 const MAX_PARTY_UPLOAD_DIMENSION = 2400;
@@ -734,8 +735,9 @@ function PartyCollaboratorPicker({
 
 function UserAvatar({ size = "md", user }: { size?: "sm" | "md"; user?: UserOption }) {
   const className = size === "sm" ? "h-5 w-5 text-[10px]" : "h-9 w-9 text-xs";
-  if (user?.image) {
-    return <img src={user.image} alt="" className={`${className} shrink-0 rounded-full object-cover`} />;
+  const savedImage = getSafeProfileImage(user?.image);
+  if (savedImage) {
+    return <img src={savedImage} alt="" className={`${className} shrink-0 rounded-full object-cover`} />;
   }
   return (
     <span className={`${className} grid shrink-0 place-items-center rounded-full bg-primary/10 font-semibold text-primary`}>

@@ -36,7 +36,7 @@ describe("saved custom avatar priority", () => {
     expect(getUserProfileImage({ ...savedUser(), image: null })).toBe(uploadedUrl);
   });
   it("does not invent an upload when there is no persisted avatar", () => {
-    expect(getUserProfileImage({ ...savedUser(), avatar: null })).toBe(googleUrl);
+    expect(getUserProfileImage({ ...savedUser(), avatar: null })).toBeNull();
     expect(getUserProfileImage({ ...savedUser(), avatar: null, image: null })).toBeNull();
   });
   it("keeps an existing custom URL when there is no stored byte record", () => {

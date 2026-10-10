@@ -1,3 +1,5 @@
+import { getSafeProfileImage } from "@/lib/profile-image";
+
 type PublicProfileFields = {
   id?: string;
   image?: string | null;
@@ -11,7 +13,7 @@ export function publicUserProfile(user: PublicProfileFields | null | undefined) 
   if (!user) return null;
   return {
     id: user.id,
-    image: user.image,
+    image: user.image === undefined ? undefined : getSafeProfileImage(user.image),
     name: user.name,
     username: user.username
   };

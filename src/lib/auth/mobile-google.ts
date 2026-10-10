@@ -3,7 +3,6 @@ import { UserRole } from "@prisma/client";
 import { authProviderConfig } from "@/lib/auth/provider-config";
 import { db } from "@/lib/db";
 import { createMobileAuthSession } from "@/lib/auth/mobile-session";
-import { getSafeProfileImage } from "@/lib/profile-image";
 
 export class MobileGoogleAuthError extends Error {
   constructor(message: string, readonly status: number) {
@@ -82,7 +81,7 @@ export async function createMobileGoogleSession(idToken: string, requestUrl: str
           },
           email,
           emailVerified: new Date(),
-          image: getSafeProfileImage(identity.picture),
+          image: null,
           name: identity.name ?? null,
           role: UserRole.BUYER
         }

@@ -25,6 +25,7 @@ import {
   X
 } from "lucide-react";
 import { NotificationPreferences } from "@/components/messages/notification-preferences";
+import { getSafeProfileImage } from "@/lib/profile-image";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { storefrontPath } from "@/lib/businesses";
@@ -1757,6 +1758,7 @@ function IdentityAvatar({
   size: "sm" | "inbox" | "md" | "lg";
 }) {
   const initials = getInitials(label);
+  const savedImage = getSafeProfileImage(image);
   const dimensions =
     size === "lg"
       ? "h-12 w-12 text-base"
@@ -1768,8 +1770,8 @@ function IdentityAvatar({
 
   return (
     <div className={`${dimensions} relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-[linear-gradient(135deg,#f4cfca,#f9e8dd,#e4efe8)] font-serif font-semibold text-[#8a5c58] shadow-sm ring-2 ring-white`}>
-      {image ? (
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${image})` }} />
+      {savedImage ? (
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${savedImage})` }} />
       ) : (
         initials
       )}

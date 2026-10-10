@@ -101,6 +101,23 @@ describe("vendor profile actions", () => {
     });
   });
 
+  it("prefills a new storefront name without creating a business", async () => {
+    const page = await VendorOnboardingPage({ searchParams: Promise.resolve({ newBusiness: "1", storefrontName: "  Venus & Aura  " }) });
+    function nameDefault(node: ReactNode): unknown {
+      if (Array.isArray(node)) return node.map(nameDefault).find((value) => value !== undefined);
+      if (!isValidElement<{ name?: string; defaultValue?: unknown; children?: ReactNode }>(node)) return undefined;
+      return node.props.name === "name" ? node.props.defaultValue : nameDefault(node.props.children);
+    }
+    expect(nameDefault(page)).toBe("Venus & Aura");
+    expect(mocks.tx.vendorProfile.create).not.toHaveBeenCalled();
+    expect(mocks.db.user.update).not.toHaveBeenCalled();
+  });
+
+  it("ignores repeated storefront-name query parameters instead of crashing", async () => {
+    await expect(VendorOnboardingPage({ searchParams: Promise.resolve({ newBusiness: "1", storefrontName: ["One", "Two"] }) })).resolves.toBeTruthy();
+    expect(mocks.tx.vendorProfile.create).not.toHaveBeenCalled();
+  });
+
   it.each(["slug", "username"] as const)("rejects editing a business to another managed business's %s without changing either business", async (conflictField) => {
     const currentBusiness = {
       id: "primary_vendor",

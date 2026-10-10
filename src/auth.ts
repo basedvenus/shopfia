@@ -83,7 +83,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       ? [
           Google({
             clientId: authProviderConfig.googleClientId!,
-            clientSecret: authProviderConfig.googleClientSecret!
+            clientSecret: authProviderConfig.googleClientSecret!,
+            profile(profile) {
+              return {
+                id: profile.sub,
+                name: profile.name,
+                email: profile.email,
+                image: null,
+                role: UserRole.BUYER
+              };
+            }
           })
         ]
       : []),

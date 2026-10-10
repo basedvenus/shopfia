@@ -16,9 +16,9 @@ function session() { return { user: { name: "Stale Name", email: "stale@example.
 beforeEach(() => vi.clearAllMocks());
 describe("authoritative session profile", () => {
   it("uses the database identity instead of stale JWT fields", async () => {
-    mocks.findUnique.mockResolvedValue({ name: "Saved", email: "saved@example.com", image: "https://lh3.googleusercontent.com/avatar", username: "saved", role: "BUYER" });
+    mocks.findUnique.mockResolvedValue({ name: "Saved", email: "saved@example.com", image: "/saved-upload.jpg", username: "saved", role: "BUYER" });
     const result = await config.callbacks.session({ session: session(), token: { sub: "user_1", username: "old" } });
-    expect(result.user).toMatchObject({ id: "user_1", name: "Saved", email: "saved@example.com", image: "https://lh3.googleusercontent.com/avatar", username: "saved" });
+    expect(result.user).toMatchObject({ id: "user_1", name: "Saved", email: "saved@example.com", image: "/saved-upload.jpg", username: "saved" });
     expect(mocks.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "user_1" } }));
   });
   it("does not resurrect deliberately empty database fields from the old token", async () => {
