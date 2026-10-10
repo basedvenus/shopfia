@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { PlaceDetails, PlaceSuggestion } from "@/lib/places";
+import { createPlaceSelectionGuard } from "@/lib/place-selection-guard";
 
 type LocationFieldNames = {
   input: string;
@@ -27,6 +28,7 @@ type PlaceAutocompleteInputProps = {
   label?: string;
   placeholder?: string;
   required?: boolean;
+  syncAddressFields?: boolean;
 };
 
 const defaultHiddenFieldNames = {
@@ -49,7 +51,8 @@ export function PlaceAutocompleteInput({
   inputClassName,
   label,
   placeholder = "Search vendors, venues, or locations",
-  required
+  required,
+  syncAddressFields = false
 }: PlaceAutocompleteInputProps) {
   const hiddenFieldNames = { ...defaultHiddenFieldNames, ...fieldNames };
   const initialValue = defaultValue ?? defaultPlace?.formattedAddress ?? "";
@@ -62,6 +65,12 @@ export function PlaceAutocompleteInput({
   const [isOpen, setIsOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const detailsRequestGuard = useRef(createPlaceSelectionGuard());
+
+  useEffect(() => {
+    const guard = detailsRequestGuard.current;
+    return () => guard.invalidate();
+  }, []);
 
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
@@ -132,8 +141,27 @@ export function PlaceAutocompleteInput({
     };
   }, [inputValue, selectedPlace?.formattedAddress]);
 
+  useEffect(() => {
+    if (!syncAddressFields) return;
+    const form = containerRef.current?.closest("form");
+    const onManualAddress = (event: Event) => {
+      const target = event.target;
+      if (target instanceof HTMLInputElement && ["city", "state", "zipCode"].includes(target.name)) {
+        // Manual edits invalidate coordinates/place IDs from the previous selection.
+        detailsRequestGuard.current.invalidate();
+        setIsLoading(false);
+        setSelectedPlace(null);
+        setInputValue("");
+      }
+    };
+    form?.addEventListener("input", onManualAddress);
+    return () => form?.removeEventListener("input", onManualAddress);
+  }, [syncAddressFields]);
+
   async function selectSuggestion(suggestion: PlaceSuggestion) {
+    const isCurrentRequest = detailsRequestGuard.current.start();
     setInputValue(suggestion.description);
+    setSelectedPlace(null);
     setIsOpen(false);
     setSuggestions([]);
     setIsLoading(true);
@@ -142,6 +170,7 @@ export function PlaceAutocompleteInput({
     try {
       const response = await fetch(`/api/places/details?placeId=${encodeURIComponent(suggestion.placeId)}`);
       const data = (await response.json()) as { error?: string; place?: PlaceDetails };
+      if (!isCurrentRequest()) return;
       const place = data.place;
       if (!response.ok) {
         setSelectedPlace(null);
@@ -149,6 +178,13 @@ export function PlaceAutocompleteInput({
         setErrorMessage(data.error ?? "That location could not be selected.");
         setIsOpen(true);
       } else if (place) {
+        if (syncAddressFields) {
+          const form = containerRef.current?.closest("form");
+          for (const name of ["city", "state", "zipCode"] as const) {
+            const field = form?.elements.namedItem(name);
+            if (field instanceof HTMLInputElement) field.value = place[name] ?? "";
+          }
+        }
         setSelectedPlace(place);
         setInputValue(place.formattedAddress);
         setErrorMessage(null);
@@ -158,13 +194,14 @@ export function PlaceAutocompleteInput({
         setIsOpen(true);
       }
     } catch (error) {
+      if (!isCurrentRequest()) return;
       console.error("[places] client details failed", error);
       setSelectedPlace(null);
       setInputValue(suggestion.description);
       setErrorMessage("That location could not be selected. Please try again.");
       setIsOpen(true);
     } finally {
-      setIsLoading(false);
+      if (isCurrentRequest()) setIsLoading(false);
     }
   }
 
@@ -190,6 +227,8 @@ export function PlaceAutocompleteInput({
           className={`${inputClassName ?? ""} pl-10 pr-9`}
           onChange={(event) => {
             const nextValue = event.target.value;
+            detailsRequestGuard.current.invalidate();
+            setIsLoading(false);
             setInputValue(nextValue);
             setSelectedPlace(null);
             setIsOpen(true);

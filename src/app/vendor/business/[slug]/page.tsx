@@ -10,14 +10,13 @@ import { CroppedImage } from "@/components/ui/cropped-image";
 import { ConnectStripeButton } from "@/components/vendor/connect-stripe-button";
 import { CopyStorefrontLinkButton } from "@/components/vendor/copy-storefront-link-button";
 import { businessManagerWhere, storefrontPath, storefrontUrl } from "@/lib/businesses";
+import { getVendorDashboardStats } from "@/lib/services/vendor-dashboard-stats";
 import { db } from "@/lib/db";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const openRequestStatuses = new Set(["SUBMITTED", "RESPONDED"]);
-const activeOrderStatuses = new Set(["awaiting_payment", "paid", "in_progress"]);
 
 export default async function BusinessDashboardPage({
   params,
@@ -122,14 +121,7 @@ export default async function BusinessDashboardPage({
 
   const publicUrl = storefrontUrl(business.slug);
   const publicPath = storefrontPath(business.slug);
-  const activeServices = business.offerings.filter((offering) => offering.active).length;
-  const openRequests =
-    business.inquiries.filter((inquiry) => inquiry.status === "NEW").length +
-    business.quoteRequests.filter((request) => openRequestStatuses.has(request.status)).length;
-  const activeBookings = business.orders.filter((order) => activeOrderStatuses.has(order.status)).length;
-  const revenue = business.orders
-    .filter((order) => ["paid", "in_progress", "completed"].includes(order.status))
-    .reduce((sum, order) => sum + (order.buyerTotalCents || order.amountCents), 0);
+  const { activeServices, openRequests, activeBookings, revenueCents: revenue } = await getVendorDashboardStats(business.id);
 
   return (
     <div className="space-y-6 pb-10">
@@ -499,7 +491,7 @@ function formatLocation(city: string, state?: string | null) {
 
 function formatOfferingPrice(offering: { basePriceCents: number | null; messageForPricing: boolean }) {
   if (offering.messageForPricing) return "Message for pricing";
-  return offering.basePriceCents ? `From ${formatCurrency(offering.basePriceCents)}` : "Message for pricing";
+  return offering.basePriceCents != null ? `From ${formatCurrency(offering.basePriceCents)}` : "Message for pricing";
 }
 
 function storefrontStatus(business: { bio: string | null; coverPhoto: string | null; logoUrl: string | null; offerings: unknown[]; photos: string[]; status: string }) {

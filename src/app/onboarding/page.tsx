@@ -7,6 +7,8 @@ import { FieldShell, SubmitButton, ValidatedForm } from "@/components/ui/validat
 import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { OfferingSetupForm } from "@/components/vendor/offering-setup-form";
+import { businessManagerWhere } from "@/lib/businesses";
+import { notFound } from "next/navigation";
 import { ServiceAreaPicker } from "@/components/vendor/service-area-picker";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +32,7 @@ export default async function VendorOnboardingPage({
       where: editingBusinessSlug
         ? {
             slug: editingBusinessSlug,
-            userId: session.user.id
+            ...businessManagerWhere(session.user.id, session.user.role)
           }
         : resolvedSearchParams?.newBusiness
           ? { id: "__new_business__" }
@@ -67,6 +69,7 @@ export default async function VendorOnboardingPage({
       }
     })
   ]);
+  if (editingBusinessSlug && !existingVendor) notFound();
   const sortedCategories = sortVendorCategories(categories);
   const sortedEventCategories = sortEventCategories(eventCategories);
   const businessMediaUploadEndpoint = existingVendor ? `/api/vendor/business/${existingVendor.id}/media` : undefined;
@@ -201,6 +204,7 @@ export default async function VendorOnboardingPage({
             </FieldShell>
             <div className="md:col-span-2">
               <PlaceAutocompleteInput
+                syncAddressFields
                 label="Business Location"
                 helperText="Choose a city, venue, neighborhood, or address so hosts can discover you nearby."
                 placeholder="Fairfield, CA or Solano County Event Center"

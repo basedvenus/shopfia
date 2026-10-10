@@ -15,7 +15,6 @@ import {
   Save,
   Send,
   Smartphone,
-  Star,
   Trash2,
   Wand2
 } from "lucide-react";
@@ -65,6 +64,8 @@ type BookingInfo = { deposit: string; leadTime: string; process: string };
 type EditorTool = "content" | "services" | "gallery" | "design";
 
 type CustomizerBusiness = {
+  averageRating: number;
+  reviewCount: number;
   availabilityNotes: string | null;
   bio: string | null;
   categories: Array<{ categoryId: string; category: { name: string } }>;
@@ -1633,6 +1634,18 @@ function StorefrontLayoutPreviewCard({ layout, theme }: { layout: string; theme:
   );
 }
 
+function PreviewHeroLogo({ form, theme, size = "h-16 w-16" }: {
+  form: FormState;
+  theme: PreviewTheme;
+  size?: string;
+}) {
+  return form.logoUrl ? (
+    <CroppedImage src={form.logoUrl} alt="" crop={form.logoCrop} className={`${size} bg-white object-contain p-1 ${theme.logoRadius}`} />
+  ) : (
+    <span className={`grid ${size} place-items-center bg-white font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</span>
+  );
+}
+
 function PreviewHeroTemplate({
   active,
   activeServices,
@@ -1658,13 +1671,6 @@ function PreviewHeroTemplate({
   const location = `${form.city}${form.state ? `, ${form.state}` : ""}`;
   const headline = form.aboutHeading || form.name;
   const copy = form.tagline || form.bio || "Add a short description for this storefront.";
-  const Logo = ({ size = "h-16 w-16" }: { size?: string }) => (
-    form.logoUrl ? (
-      <CroppedImage src={form.logoUrl} alt="" crop={form.logoCrop} className={`${size} bg-white object-contain p-1 ${theme.logoRadius}`} />
-    ) : (
-      <span className={`grid ${size} place-items-center bg-white font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</span>
-    )
-  );
   const EditableText = (
     <>
       <InlineTextarea
@@ -1703,10 +1709,10 @@ function PreviewHeroTemplate({
       <section className={`m-4 overflow-hidden ${theme.cardClass} ${theme.sectionRadius}`} style={theme.previewCardStyle}>
         <div className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="flex min-w-0 items-center gap-3">
-            <Logo />
+            <PreviewHeroLogo form={form} theme={theme} />
             <span className="min-w-0">
               <span className="block text-xl font-semibold" style={theme.headingStyle}>{form.name}</span>
-              <span className={`block text-xs ${theme.mutedClass}`}>5.0 reviews · {location}</span>
+              <span className={`block text-xs ${theme.mutedClass}`}>{business.reviewCount ? `${business.averageRating.toFixed(1)} · ${business.reviewCount} reviews` : "No reviews yet"} · {location}</span>
             </span>
           </div>
           <span className="rounded-full px-4 py-2 text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
@@ -1733,7 +1739,7 @@ function PreviewHeroTemplate({
     return (
       <section className={`m-4 grid min-h-[420px] place-items-center overflow-hidden p-6 ${theme.heroRadius}`} style={theme.accentBlockStyle}>
         <div className="grid w-full max-w-3xl place-items-center gap-5 text-center text-white">
-          <Logo size={isMobile ? "h-24 w-24" : "h-32 w-32"} />
+          <PreviewHeroLogo form={form} theme={theme} size={isMobile ? "h-24 w-24" : "h-32 w-32"} />
           {active ? EditableText : (
             <>
               <h2 className={`${isMobile ? "text-3xl" : "text-5xl"} font-semibold leading-tight`} style={theme.headingStyle}>{headline}</h2>
@@ -1742,7 +1748,7 @@ function PreviewHeroTemplate({
           )}
           <div className="grid w-full max-w-xl gap-3 rounded-[1rem] bg-white/92 p-4 text-left text-[#2f2626] shadow-sm sm:grid-cols-3">
             <span>{location}</span>
-            <span>5.0 reviews</span>
+            <span>{business.reviewCount ? `${business.averageRating.toFixed(1)} · ${business.reviewCount} reviews` : "No reviews yet"}</span>
             <span>{activeServices.length} services</span>
             <span className="sm:col-span-3 rounded-full px-4 py-2 text-center text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
           </div>
@@ -1755,7 +1761,7 @@ function PreviewHeroTemplate({
     return (
       <section className={`m-4 grid max-h-[520px] gap-4 overflow-hidden p-4 ${theme.cardClass} ${theme.sectionRadius} ${isMobile ? "" : "md:grid-cols-[minmax(190px,0.42fr)_minmax(0,1fr)]"}`} style={theme.previewCardStyle}>
         <aside className="grid content-start gap-3 border-b pb-4 md:border-b-0 md:border-r md:pr-4" style={theme.navStyle}>
-          <Logo />
+          <PreviewHeroLogo form={form} theme={theme} />
           <h2 className="break-words text-2xl font-semibold leading-tight" style={theme.headingStyle}>{form.name}</h2>
           <p className={`line-clamp-5 text-sm leading-6 ${theme.copyClass}`}>{copy}</p>
           <span className="rounded-full px-4 py-2 text-center text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
@@ -1789,7 +1795,7 @@ function PreviewHeroTemplate({
         {form.coverPhoto ? <CroppedImage src={form.coverPhoto} alt="" crop={form.coverPhotoCrop} className="absolute inset-0 h-full w-full object-cover" /> : null}
       </div>
       <div className="grid content-center justify-items-center gap-4 p-6 text-center">
-        <Logo size="h-20 w-20" />
+        <PreviewHeroLogo form={form} theme={theme} size="h-20 w-20" />
         {active ? EditableText : (
           <>
             <h2 className={`${isMobile ? "text-3xl" : "text-5xl"} font-semibold leading-tight`} style={theme.headingStyle}>{headline}</h2>
@@ -1921,7 +1927,7 @@ function ServiceGrid({
             <p className={`mt-1 line-clamp-2 text-sm ${theme.mutedClass}`}>{service.description}</p>
             <div className="mt-2 flex items-center justify-between text-sm">
               <span style={theme.accentTextStyle}>{service.messageForPricing || service.basePriceCents == null ? "Custom quote" : `From ${formatCurrency(service.basePriceCents)}`}</span>
-              <span className={`inline-flex items-center gap-1 ${theme.mutedClass}`}><Star className="h-3.5 w-3.5 fill-current text-amber-500" />Verified</span>
+
             </div>
             {editable ? (
               <div className="mt-3 grid gap-2">

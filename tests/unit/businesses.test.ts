@@ -14,7 +14,7 @@ describe("business storefront utilities", () => {
   });
 
   it("blocks reserved storefront URL endings", () => {
-    expect(isReservedStorefrontSlug("admin")).toBe(true);
+    for (const path of ["admin", "listings", "events", "mobile"]) expect(isReservedStorefrontSlug(path)).toBe(true);
     expect(isReservedStorefrontSlug("login")).toBe(true);
     expect(isReservedStorefrontSlug("explore")).toBe(true);
     expect(isReservedStorefrontSlug("settings")).toBe(true);

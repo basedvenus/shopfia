@@ -32,6 +32,8 @@ export default async function StorefrontCustomizerPage({
             ]
           },
     select: {
+      averageRating: true,
+      reviewCount: true,
       availabilityNotes: true,
       bio: true,
       city: true,

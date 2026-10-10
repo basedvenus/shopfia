@@ -342,9 +342,11 @@ function formDataToServiceComponents(formData: FormData) {
     .filter((component) => component.title);
 }
 
-function redirectWithVendorProfileError(message: string, options?: { newBusiness?: boolean }): never {
+function redirectWithVendorProfileError(message: string, options?: { businessSlug?: string; newBusiness?: boolean }): never {
   const params = new URLSearchParams({ profileError: message });
-  if (options?.newBusiness) {
+  if (options?.businessSlug) {
+    params.set("business", options.businessSlug);
+  } else if (options?.newBusiness) {
     params.set("newBusiness", "1");
   }
   redirect(`/onboarding?${params.toString()}#profile`);
@@ -720,6 +722,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
   if (businessId && !existingVendor) {
     redirectWithVendorProfileError("That business could not be found for your account.", { newBusiness: isCreatingNewBusiness });
   }
+  const profileErrorOptions = { businessSlug: existingVendor?.slug, newBusiness: isCreatingNewBusiness };
   let targetVendor = existingVendor;
   const submittedStorefrontSlug = slugifyBusinessUrl(String(formData.get("slug") ?? ""));
   const submittedBusinessName = String(formData.get("name") ?? "");
@@ -729,7 +732,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
     .replace(/^@/, "")
     .toLowerCase();
   if (isReservedStorefrontSlug(requestedSlug)) {
-    redirectWithVendorProfileError("That storefront URL is reserved. Choose a different ending.", { newBusiness: isCreatingNewBusiness });
+    redirectWithVendorProfileError("That storefront URL is reserved. Choose a different ending.", profileErrorOptions);
   }
   const conflictingBusinesses = requestedSlug || submittedVendorUsername
     ? await db.vendorProfile.findMany({
@@ -753,6 +756,9 @@ export async function upsertVendorProfileAction(formData: FormData) {
         take: 3
       })
     : [];
+  if (existingVendor && conflictingBusinesses.length > 0) {
+    redirectWithVendorProfileError("That username or storefront URL belongs to another business. Choose an available one.", profileErrorOptions);
+  }
   if (conflictingBusinesses.length > 0) {
     const reusableBusinesses = conflictingBusinesses.filter((business) => {
       const isManagedByUser = business.userId === session.user.id || business.managers.length > 0;
@@ -770,9 +776,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
     );
     if (blockedBusiness) {
       const conflictField = blockedBusiness.username === submittedVendorUsername ? "username" : "storefront URL";
-      redirectWithVendorProfileError(`That ${conflictField} is already taken by another storefront.`, {
-        newBusiness: isCreatingNewBusiness
-      });
+      redirectWithVendorProfileError(`That ${conflictField} is already taken by another storefront.`, profileErrorOptions);
     }
 
     const exactSlugMatch = reusableBusinesses.find((business) => business.slug === requestedSlug);
@@ -782,9 +786,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
       reusableBusinesses.length > 1 &&
       !reusableBusinesses.some((business) => business.slug === requestedSlug && business.username === submittedVendorUsername);
     if (isOwnerlessExactMatch) {
-      redirectWithVendorProfileError("We found more than one saved copy of that business. Open it from your vendor dashboard and update it there.", {
-        newBusiness: isCreatingNewBusiness
-      });
+      redirectWithVendorProfileError("We found more than one saved copy of that business. Open it from your vendor dashboard and update it there.", profileErrorOptions);
     }
     targetVendor = reusableBusiness;
   }
@@ -829,7 +831,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
         photoUrls: "Cover/banner image",
         categoryIds: "Categories"
       }),
-      { newBusiness: isCreatingNewBusiness }
+      profileErrorOptions
     );
   }
   const parsed = result.data;
@@ -842,9 +844,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
       })
     : 0;
   if (validVendorCategoryCount !== parsed.categoryIds.length) {
-    redirectWithVendorProfileError("One or more selected categories are invalid for vendors.", {
-      newBusiness: isCreatingNewBusiness
-    });
+    redirectWithVendorProfileError("One or more selected categories are invalid for vendors.", profileErrorOptions);
   }
 
   const existingPrimaryVendor = targetVendor
@@ -954,7 +954,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
       isUniqueConstraintError(error)
         ? "That vendor username or shop username is already taken."
         : "Your vendor profile could not be saved. Please try again.",
-      { newBusiness: isCreatingNewBusiness }
+      profileErrorOptions
     );
   }
 
@@ -1013,7 +1013,7 @@ export async function upsertOfferingAction(formData: FormData) {
     title: formData.get("title"),
     slug: formData.get("slug") || slugify(formData.get("title")),
     description: formData.get("description"),
-    basePriceCents: formData.get("basePriceCents") || dollarsToCents(formData.get("startingPrice")) || undefined,
+    basePriceCents: formData.get("basePriceCents") || (dollarsToCents(formData.get("startingPrice")) ?? undefined),
     messageForPricing: formData.get("messageForPricing") === "on",
     categoryId: formData.get("categoryId") || undefined,
     categoryIds: formDataToArray(formData, "categoryIds"),
