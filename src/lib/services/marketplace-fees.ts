@@ -5,8 +5,7 @@ import {
   OrderStatus,
   PayoutStatus,
   PrismaClient,
-  Prisma,
-  RefundStatus
+  Prisma
 } from "@prisma/client";
 import { addDays } from "date-fns";
 import { scheduleReviewRemindersForCompletedOrder } from "@/lib/services/reviews";
@@ -337,21 +336,77 @@ export async function finalizeOrder(
     orderId: string;
     status?: OrderStatus;
     paymentSucceeded?: boolean;
-  }
+  },
+  client?: Pick<PrismaClient, "$transaction">
 ) {
-  const { db } = await import("@/lib/db");
+  const db = client ?? (await import("@/lib/db")).db;
   return db.$transaction(async (tx) => {
+    const now = new Date();
+    const settlingPayment = input.paymentSucceeded === true;
+    if (!settlingPayment && input.status !== OrderStatus.completed) {
+      throw new Error("A verified payment or paid-order completion is required");
+    }
+    if (settlingPayment && input.status && input.status !== OrderStatus.paid) {
+      throw new Error("A payment event can only mark an order paid");
+    }
+
+    // Conditional UPDATE is the once-only claim. PostgreSQL serializes competing
+    // updates of this order and rechecks the predicate after the winner commits.
+    // The claim and every fulfillment write share this transaction, so a failure
+    // rolls the claim back and leaves a later webhook retry able to complete it.
+    const claim = await tx.order.updateMany({
+      where: settlingPayment
+        ? {
+            id: input.orderId,
+            paymentSucceededAt: null,
+            status: { in: [OrderStatus.awaiting_payment, OrderStatus.canceled] }
+          }
+        : {
+            id: input.orderId,
+            paymentSucceededAt: { not: null },
+            completedAt: null,
+            status: { in: [OrderStatus.paid, OrderStatus.in_progress] }
+          },
+      data: settlingPayment
+        ? { paymentSucceededAt: now, status: OrderStatus.paid }
+        : { completedAt: now, reviewEligibleAt: now, status: OrderStatus.completed }
+    });
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
       include: {
         seller: true,
         listing: true,
-        vendorProfile: true
+        vendorProfile: true,
+        feeBreakdown: true,
+        payout: true
       }
     });
 
     if (!order) {
       throw new Error("Order not found");
+    }
+
+    if (claim.count === 0) {
+      if (settlingPayment && !order.paymentSucceededAt) {
+        // Do not acknowledge a verified payment as handled while it is still
+        // unrecorded. A webhook retry or explicit reconciliation is required.
+        throw new Error("Verified payment requires order-state reconciliation");
+      }
+      if (!settlingPayment && !order.paymentSucceededAt) {
+        throw new Error("Cannot complete an unpaid order");
+      }
+      if (!settlingPayment && order.status !== OrderStatus.completed) {
+        throw new Error("This order cannot be completed from its current status");
+      }
+      return { order, feeBreakdown: order.feeBreakdown, payout: order.payout };
+    }
+
+    if (!settlingPayment) {
+      // Completion changes delivery/review eligibility only. Inventory and fees
+      // were finalized when the verified payment was first recorded.
+      const payout = await generateSellerPayout(order.id, tx);
+      await scheduleReviewRemindersForCompletedOrder(order.id, tx);
+      return { order, feeBreakdown: order.feeBreakdown, payout };
     }
 
     const { seller, shop } = await ensureSellerAccountForVendorProfile(order.vendorProfileId, tx);
@@ -416,17 +471,8 @@ export async function finalizeOrder(
         sellerId: seller.id,
         shopId: shop.id,
         buyerTotalCents: buyerTotalCents || order.amountCents,
-        paymentSucceededAt: input.paymentSucceeded ? new Date() : order.paymentSucceededAt,
-        completedAt:
-          input.status === OrderStatus.completed || order.status === OrderStatus.completed
-            ? new Date()
-            : order.completedAt,
-        reviewEligibleAt:
-          (input.status === OrderStatus.completed || order.status === OrderStatus.completed) &&
-          (input.paymentSucceeded || Boolean(order.paymentSucceededAt))
-            ? new Date()
-            : order.reviewEligibleAt,
-        status: input.status ?? order.status
+        paymentSucceededAt: order.paymentSucceededAt,
+        status: OrderStatus.paid
       }
     });
 
@@ -496,104 +542,12 @@ export async function issueRefund(
     reason?: string;
   }
 ) {
-  const { db } = await import("@/lib/db");
-  return db.$transaction(async (tx) => {
-    const config = await getMarketplaceFeeConfig(tx);
-    const order = await tx.order.findUnique({
-      where: { id: input.orderId },
-      include: {
-        seller: true,
-        feeBreakdown: true
-      }
-    });
-
-    if (!order?.seller || !order.feeBreakdown) {
-      throw new Error("Order fee breakdown not found");
-    }
-
-    const buyerTotal = order.buyerTotalCents || order.amountCents;
-    const refundRatio = Math.min(1, input.refundAmountCents / Math.max(buyerTotal, 1));
-    const remainingRatio = 1 - refundRatio;
-    const breakdown = order.feeBreakdown;
-    const adjustedTransactionFeeCents = config.transactionFeeRefundable
-      ? scaleCents(breakdown.transactionFeeCents, remainingRatio)
-      : breakdown.transactionFeeCents;
-    const adjustedPaymentProcessingFeeCents = config.paymentProcessingFeeRefundable
-      ? scaleCents(breakdown.paymentProcessingFeeCents, remainingRatio)
-      : breakdown.paymentProcessingFeeCents;
-    const adjustedOffsiteAdsFeeCents = scaleCents(
-      breakdown.offsiteAdsFeeCents,
-      remainingRatio
-    );
-    const adjustedTotalBuyerCents = Math.max(0, buyerTotal - input.refundAmountCents);
-    const adjustedTaxAmountCents = scaleCents(breakdown.taxAmountCents, remainingRatio);
-    const adjustedFees =
-      breakdown.listingFeeCents +
-      adjustedTransactionFeeCents +
-      adjustedPaymentProcessingFeeCents +
-      adjustedOffsiteAdsFeeCents;
-    const adjustedSellerNetPayoutCents =
-      adjustedTotalBuyerCents -
-      (order.taxRemittedByMarketplace ? adjustedTaxAmountCents : 0) -
-      adjustedFees;
-
-    const refund = await tx.refund.create({
-      data: {
-        orderId: order.id,
-        sellerId: order.seller.id,
-        amountCents: input.refundAmountCents,
-        reason: input.reason ?? null,
-        status: RefundStatus.COMPLETED,
-        isFullRefund: input.refundAmountCents >= buyerTotal,
-        transactionFeeAdjustmentCents:
-          breakdown.transactionFeeCents - adjustedTransactionFeeCents,
-        paymentProcessingFeeAdjustmentCents:
-          breakdown.paymentProcessingFeeCents - adjustedPaymentProcessingFeeCents,
-        offsiteAdsFeeAdjustmentCents: breakdown.offsiteAdsFeeCents - adjustedOffsiteAdsFeeCents,
-        sellerNetAdjustmentCents:
-          breakdown.sellerNetPayoutCents - adjustedSellerNetPayoutCents,
-        originalFeeValuesJson: breakdown.lineItemsJson ?? Prisma.JsonNull,
-        adjustedFeeValuesJson: {
-          listing_fee: breakdown.listingFeeCents,
-          transaction_fee: adjustedTransactionFeeCents,
-          payment_processing_fee: adjustedPaymentProcessingFeeCents,
-          offsite_ads_fee: adjustedOffsiteAdsFeeCents
-        }
-      }
-    });
-
-    await tx.orderFeeBreakdown.update({
-      where: { orderId: order.id },
-      data: {
-        adjustedItemSubtotalCents: scaleCents(breakdown.itemSubtotalCents, remainingRatio),
-        adjustedShippingAmountCents: scaleCents(
-          breakdown.shippingAmountCents,
-          remainingRatio
-        ),
-        adjustedTaxAmountCents,
-        adjustedGiftWrapAmountCents: scaleCents(
-          breakdown.giftWrapAmountCents,
-          remainingRatio
-        ),
-        adjustedListingFeeCents: breakdown.listingFeeCents,
-        adjustedTransactionFeeCents,
-        adjustedPaymentProcessingFeeCents,
-        adjustedOffsiteAdsFeeCents,
-        adjustedTotalFeesCents: adjustedFees,
-        adjustedSellerNetPayoutCents,
-        refundedAmountCents: breakdown.refundedAmountCents + input.refundAmountCents
-      }
-    });
-
-    await tx.order.update({
-      where: { id: order.id },
-      data: {
-        status: input.refundAmountCents >= buyerTotal ? OrderStatus.refunded : order.status
-      }
-    });
-
-    return refund;
-  });
+  if (!Number.isSafeInteger(input.refundAmountCents) || input.refundAmountCents <= 0) {
+    throw new Error("Refund amount must be a positive whole number of cents");
+  }
+  // A database status is not proof that money was refunded. Until a provider-
+  // confirmed refund flow exists, leave order, fees and payout records intact.
+  throw new Error("Refunds are not available in ShopFia yet. Use Stripe to issue and verify the refund; ShopFia will not mark it completed automatically.");
 }
 
 export async function generateSellerPayout(orderId: string, client?: DbClient) {
@@ -640,10 +594,6 @@ export async function generateSellerPayout(orderId: string, client?: DbClient) {
 
 function percentageFee(amountCents: number, basisPoints: number) {
   return Math.round((amountCents * basisPoints) / 10_000);
-}
-
-function scaleCents(amountCents: number, ratio: number) {
-  return Math.max(0, Math.round(amountCents * ratio));
 }
 
 async function renewListingInTx(

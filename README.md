@@ -100,10 +100,29 @@ Use separate Stripe test and live keys for preview/development versus production
    - `account.updated`
    - `payment_intent.succeeded`
    - `payment_intent.payment_failed`
+   - `checkout.session.completed`
+   - `checkout.session.async_payment_succeeded`
+   - `checkout.session.async_payment_failed`
+   - `checkout.session.expired`
 6. Copy the webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
 7. In Vercel, add the same Stripe env vars for Production and Preview, then redeploy.
 
 ### Local webhook testing
+
+Checkout completion events are required: they link the Checkout PaymentIntent to
+the ShopFia order and finalize a paid order. A failed card attempt stays retryable;
+Checkout expiry cancels an unpaid order. Payment fulfillment and later order
+completion are separate, idempotent transitions.
+
+Refunds are not implemented end to end. ShopFia refuses to mark an order refunded
+without provider confirmation; use Stripe to issue and verify a refund. The app
+does not yet synchronize externally issued refunds automatically.
+
+An authenticated ADMIN may read `/api/admin/payments/mode` to check the deployed
+server's Stripe mode. It returns only `livemode` and the deployment commit, using
+a rate-limited Stripe read with a 30-second server cache. An unavailable result is
+not evidence of test mode. This endpoint does not create payments, and Stripe
+test mode does not isolate application database records.
 
 Run Stripe CLI for local webhooks:
 

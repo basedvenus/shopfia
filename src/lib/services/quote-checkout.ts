@@ -45,6 +45,7 @@ export async function prepareQuoteCheckout({
     select: {
       amountCents: true,
       id: true,
+      paymentSucceededAt: true,
       seller: { select: { offsiteAdsEnabled: true, offsiteAdsTier: true } },
       sellerId: true,
       shopId: true,
@@ -54,11 +55,18 @@ export async function prepareQuoteCheckout({
   });
   if (existingOrder) {
     if (
+      existingOrder.paymentSucceededAt ||
+      existingOrder.status === OrderStatus.refunded ||
       existingOrder.status === OrderStatus.paid ||
       existingOrder.status === OrderStatus.in_progress ||
       existingOrder.status === OrderStatus.completed
     ) {
       throw new Error("Quote already has an active order");
+    }
+    if (existingOrder.amountCents !== quotePayableAmount(quote, payMode)) {
+      // A canceled order's quote can have been revised. Never charge the old
+      // amount while the buyer is viewing a different price or payment option.
+      throw new Error("This quote or payment option changed after checkout began. Please request a new quote before paying.");
     }
 
     const checkoutUrl = existingOrder.stripeCheckoutSessionId
@@ -66,10 +74,16 @@ export async function prepareQuoteCheckout({
       : null;
     if (checkoutUrl) {
       if (existingOrder.status !== OrderStatus.awaiting_payment) {
-        await db.order.update({
-          where: { id: existingOrder.id },
+        const reopened = await db.order.updateMany({
+          where: {
+            id: existingOrder.id,
+            stripeCheckoutSessionId: existingOrder.stripeCheckoutSessionId,
+            paymentSucceededAt: null,
+            status: { in: [OrderStatus.draft, OrderStatus.awaiting_payment, OrderStatus.canceled] }
+          },
           data: { status: OrderStatus.awaiting_payment }
         });
+        if (reopened.count !== 1) throw new Error("The order changed while preparing payment. Please refresh it.");
       }
       return {
         checkoutSessionId: existingOrder.stripeCheckoutSessionId,
@@ -84,6 +98,7 @@ export async function prepareQuoteCheckout({
       conversationId: quote.quoteRequest.conversation?.id ?? null,
       destinationAccountId: requireStripeReadyVendor(quote.quoteRequest.vendor),
       orderId: existingOrder.id,
+      previousSessionId: existingOrder.stripeCheckoutSessionId,
       origin,
       payMode,
       productName: checkoutProductName(quote.quoteRequest.vendor.name, quote.quoteRequest.offering?.title),
@@ -93,13 +108,19 @@ export async function prepareQuoteCheckout({
       shopId: existingOrder.shopId,
       vendorProfileId: quote.quoteRequest.vendorId
     });
-    await db.order.update({
-      where: { id: existingOrder.id },
+    const replaced = await db.order.updateMany({
+      where: {
+        id: existingOrder.id,
+        stripeCheckoutSessionId: existingOrder.stripeCheckoutSessionId,
+        paymentSucceededAt: null,
+        status: { in: [OrderStatus.draft, OrderStatus.awaiting_payment, OrderStatus.canceled] }
+      },
       data: {
         status: OrderStatus.awaiting_payment,
         stripeCheckoutSessionId: session.id
       }
     });
+    if (replaced.count !== 1) throw new Error("The order changed while preparing payment. Please refresh it.");
     return {
       checkoutSessionId: session.id,
       checkoutUrl: requireCheckoutUrl(session.url),
@@ -151,6 +172,7 @@ export async function prepareQuoteCheckout({
     conversationId: quote.quoteRequest.conversation?.id ?? null,
     destinationAccountId,
     orderId: order.id,
+    previousSessionId: null,
     origin,
     payMode,
     productName: checkoutProductName(quote.quoteRequest.vendor.name, quote.quoteRequest.offering?.title),
@@ -218,6 +240,24 @@ async function getOpenCheckoutSessionUrl(sessionId: string) {
   if (session.status === "open" && session.url) {
     return session.url;
   }
+  if (session.status === "complete" && session.payment_status === "unpaid") {
+    const paymentIntentId = typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id;
+    if (paymentIntentId) {
+      const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (intent.status === "requires_payment_method" || intent.status === "canceled") {
+        // A completed delayed-payment Checkout cannot be reused after a
+        // provider-confirmed failed attempt. Processing payments stay blocked.
+        return null;
+      }
+    }
+  }
+  if (session.status !== "expired") {
+    // A completed Checkout can still be waiting for its webhook. Never open a
+    // second payment while the first payment may already have succeeded.
+    throw new Error("This payment is being confirmed. Please refresh your order instead of paying again.");
+  }
   return null;
 }
 
@@ -227,6 +267,7 @@ async function createCheckoutSessionForOrder(input: {
   conversationId: string | null;
   destinationAccountId: string;
   orderId: string;
+  previousSessionId: string | null;
   origin: string;
   payMode: "deposit" | "full";
   productName: string;
@@ -303,7 +344,9 @@ async function createCheckoutSessionForOrder(input: {
       success_url: successUrl
     },
     {
-      idempotencyKey: `quote-checkout:${input.quoteId}:${input.buyerId}:${input.payMode}`
+      // Retrying the same attempt reuses its key; replacing an expired session
+      // starts a new attempt, even while Stripe retains the original response.
+      idempotencyKey: `quote-checkout:${input.orderId}:${input.previousSessionId ?? "initial"}`
     }
   );
 }

@@ -20,6 +20,7 @@ export async function updateOrderStatusAction(formData: FormData) {
   }
   const orderId = String(formData.get("orderId"));
   const status = String(formData.get("status")) as OrderStatus;
+  if (!Object.values(OrderStatus).includes(status)) throw new Error("Invalid order status");
 
   const order = await db.order.findUnique({
     where: { id: orderId },
@@ -53,6 +54,20 @@ export async function updateOrderStatusAction(formData: FormData) {
       paymentSucceeded: false
     });
   } else {
+    if (status === OrderStatus.in_progress && !order.paymentSucceededAt) {
+      throw new Error("Cannot start an unpaid order");
+    }
+    if (status === OrderStatus.in_progress && (order.completedAt || order.status === OrderStatus.completed)) {
+      throw new Error("Completed orders cannot be restarted");
+    }
+    if (
+      order.paymentSucceededAt &&
+      [OrderStatus.draft, OrderStatus.awaiting_vendor, OrderStatus.quoted, OrderStatus.awaiting_payment].includes(
+        status as typeof OrderStatus.draft | typeof OrderStatus.awaiting_vendor | typeof OrderStatus.quoted | typeof OrderStatus.awaiting_payment
+      )
+    ) {
+      throw new Error("A paid order cannot be reset to unpaid");
+    }
     if (
       session.user.role !== UserRole.ADMIN &&
       status === OrderStatus.canceled &&
@@ -60,10 +75,11 @@ export async function updateOrderStatusAction(formData: FormData) {
     ) {
       throw new Error("Completed orders cannot be canceled by vendor");
     }
-    await db.order.update({
-      where: { id: orderId },
+    const changed = await db.order.updateMany({
+      where: { id: orderId, status: order.status, paymentSucceededAt: order.paymentSucceededAt },
       data: { status }
     });
+    if (changed.count !== 1) throw new Error("The order changed. Please refresh before updating it.");
   }
 
   revalidatePath("/vendor/dashboard");
