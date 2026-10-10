@@ -16,7 +16,7 @@ export function RequiredProfileGate() {
   const { profile } = useProfile();
 
   useEffect(() => {
-    if (!profile || profile.username) return;
+    if (!profile || (profile.username && profile.name)) return;
     if (allowedPrefixes.some((prefix) => pathname.startsWith(prefix))) return;
 
     router.replace("/account/setup");

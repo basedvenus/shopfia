@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SignInPanel } from "@/components/account/sign-in-panel";
 import { authProviderConfig } from "@/lib/auth/provider-config";
-import { isUnsafeProfileImage } from "@/lib/profile-image";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -153,14 +152,6 @@ export default async function AccountPage({
 
   if (!accountUser?.username || !accountUser.name) {
     redirect("/account/setup");
-  }
-
-  if (isUnsafeProfileImage(accountUser?.image)) {
-    await db.user.update({
-      where: { id: session.user.id },
-      data: { image: null }
-    });
-    accountUser!.image = null;
   }
 
   const displayName = accountUser?.name || session.user.name || "ShopFia Member";

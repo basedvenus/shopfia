@@ -12,7 +12,7 @@ import type { SharedUserProfile } from "@/lib/user-profile";
 type ProfileContextValue = {
   profile: SharedUserProfile | null;
   setProfile: (profile: SharedUserProfile | null) => void;
-  updateProfile: (profile: Partial<SharedUserProfile>) => void;
+  updateProfile: (profile: Partial<SharedUserProfile>, expectedId?: string) => void;
 };
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
@@ -21,10 +21,18 @@ export function ProfileProvider({
   children,
   initialProfile
 }: {
-  children: ReactNode;
+  children?: ReactNode;
   initialProfile: SharedUserProfile | null;
 }) {
   const [profile, setProfile] = useState<SharedUserProfile | null>(initialProfile);
+  const [serverProfile, setServerProfile] = useState(initialProfile);
+
+  // Layouts persist across navigation. Apply refreshed server data before children
+  // render, so the onboarding gate never acts on the previous account/profile.
+  if (serverProfile !== initialProfile) {
+    setServerProfile(initialProfile);
+    setProfile(initialProfile);
+  }
 
   const value = useMemo<ProfileContextValue>(
     () => ({
@@ -32,8 +40,12 @@ export function ProfileProvider({
       setProfile(nextProfile) {
         setProfile(nextProfile);
       },
-      updateProfile(nextProfile) {
-        setProfile((current) => (current ? { ...current, ...nextProfile } : current));
+      updateProfile(nextProfile, expectedId) {
+        setProfile((current) => (
+          current && (!expectedId || current.id === expectedId)
+            ? { ...current, ...nextProfile }
+            : current
+        ));
       }
     }),
     [profile]

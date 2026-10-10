@@ -29,11 +29,14 @@ export function AccountProfileEditor({
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const { profile, setProfile } = useProfile();
+  const { profile, updateProfile } = useProfile();
 
   function onAvatarUploaded(profileFromUpload?: SharedUserProfile) {
     if (profileFromUpload) {
-      setProfile(profileFromUpload);
+      updateProfile({
+        image: profileFromUpload.image,
+        imageCrop: profileFromUpload.imageCrop
+      }, profileFromUpload.id);
     }
   }
 
@@ -106,7 +109,7 @@ export function AccountProfileEditor({
               }
 
               if (result.profile) {
-                setProfile(result.profile);
+                updateProfile(result.profile, result.profile.id);
               }
 
               setMessage("Profile saved.");

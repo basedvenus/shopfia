@@ -1,4 +1,5 @@
 import { imageCropToCss, type ImageCrop } from "@/lib/image-crop";
+import type { ReactEventHandler } from "react";
 
 type CroppedImageProps = {
   alt?: string;
@@ -6,6 +7,7 @@ type CroppedImageProps = {
   crop?: ImageCrop | null;
   decoding?: "async" | "auto" | "sync";
   loading?: "eager" | "lazy";
+  onError?: ReactEventHandler<HTMLImageElement>;
   src: string;
 };
 
@@ -15,6 +17,7 @@ export function CroppedImage({
   crop,
   decoding = "async",
   loading = "lazy",
+  onError,
   src
 }: CroppedImageProps) {
   return (
@@ -23,6 +26,7 @@ export function CroppedImage({
       alt={alt}
       decoding={decoding}
       loading={loading}
+      onError={onError}
       className={className}
       style={{
         ...imageCropToCss(crop)

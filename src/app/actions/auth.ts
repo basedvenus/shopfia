@@ -97,6 +97,9 @@ export async function completeRequiredProfileAction(formData: FormData) {
   if (!session?.user?.id) {
     return { ok: false, error: "Sign in to create your ShopFia username." };
   }
+  if (formData.get("profileId") !== session.user.id) {
+    return { ok: false, error: "Your signed-in account changed. Reload the page before continuing." };
+  }
 
   const rate = await checkServerActionRateLimit([
     { key: "required-profile:ip:{ip}", limit: 30, intervalMs: 60_000 },
@@ -106,39 +109,67 @@ export async function completeRequiredProfileAction(formData: FormData) {
     return { ok: false, error: "Please wait a minute before updating your profile again." };
   }
 
-  const parsed = requiredOnboardingProfileSchema.safeParse({
-    name: formData.get("name"),
-    username: formData.get("username")
-  });
-
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: friendlyValidationMessage(parsed.error.issues, {
-        name: "Display name",
-        username: "Username"
-      }, "Check your profile details.")
-    };
-  }
-
   try {
-    const updatedUser = await db.user.update({
+    const existingUser = await db.user.findUnique({
       where: { id: session.user.id },
-      data: {
-        name: parsed.data.name,
-        username: parsed.data.username,
-        imageCrop: parseImageCrop(formData.get("imageCrop")) ?? undefined
-      },
       select: userProfileSelect
     });
+    if (!existingUser) {
+      return { ok: false, error: "Your profile could not be loaded. Sign in again with your existing login." };
+    }
+
+    // A stale onboarding tab must never rename an existing profile. Profile edits
+    // belong in account settings; this action only fills missing identity fields.
+    if (existingUser.username && existingUser.name) {
+      return { ok: true, profile: serializeUserProfile(existingUser) };
+    }
+
+    const parsed = requiredOnboardingProfileSchema.partial().safeParse({
+      ...(existingUser.name ? {} : { name: formData.get("name") }),
+      ...(existingUser.username ? {} : { username: formData.get("username") })
+    });
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: friendlyValidationMessage(parsed.error.issues, {
+          name: "Display name",
+          username: "Username"
+        }, "Check your profile details.")
+      };
+    }
+
+    // Match the observed identity as well as the authenticated ID. If another tab
+    // completes setup first, its saved identity wins instead of being overwritten.
+    await db.user.updateMany({
+      where: {
+        id: session.user.id,
+        name: existingUser.name,
+        username: existingUser.username
+      },
+      data: {
+        ...(existingUser.name ? {} : { name: parsed.data.name }),
+        ...(existingUser.username ? {} : { username: parsed.data.username })
+      }
+    });
+    const updatedUser = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: userProfileSelect
+    });
+    if (!updatedUser?.username || !updatedUser.name) {
+      return { ok: false, error: "Your profile changed while saving. Reload the page and try again." };
+    }
 
     const profile = serializeUserProfile(updatedUser);
     revalidatePath("/", "layout");
     revalidatePath("/account");
     revalidatePath(`/profiles/${profile.username}`);
     return { ok: true, profile };
-  } catch {
-    return { ok: false, error: "That username is already taken. Try another one." };
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+      return { ok: false, error: "That username is already taken. Try another one." };
+    }
+    console.error("ShopFia required profile save failed", error);
+    return { ok: false, error: "Your profile could not be saved right now. Please try again." };
   }
 }
 

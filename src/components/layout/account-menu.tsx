@@ -12,7 +12,7 @@ import {
   User
 } from "lucide-react";
 import { useProfile } from "@/components/account/profile-provider";
-import { CroppedImage } from "@/components/ui/cropped-image";
+import { ProfileImage } from "@/components/account/profile-image";
 
 type AccountMenuProps = {
   initials: string;
@@ -74,17 +74,11 @@ export function AccountMenu({ initials, signOutAction }: AccountMenuProps) {
         <span
           className="grid aspect-square h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-accent text-sm font-semibold text-foreground"
         >
-          {profile?.image ? (
-            <CroppedImage
-              key={profile.image}
-              src={profile.image}
-              alt=""
-              crop={profile.imageCrop as { x: number; y: number; zoom: number } | null}
-              className="block h-full w-full object-cover object-center"
-            />
-          ) : (
-            initials
-          )}
+          <ProfileImage
+            image={profile?.image}
+            crop={profile?.imageCrop as { x: number; y: number; zoom: number } | null}
+            initials={initials}
+          />
         </span>
         <span className="hidden max-w-[120px] truncate pr-2 text-muted-foreground md:block">
           {profile?.name || "Profile"}

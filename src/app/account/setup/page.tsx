@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { RequiredProfileForm } from "@/components/account/required-profile-form";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { AccountRecovery } from "@/components/account/account-recovery";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +15,30 @@ export default async function RequiredProfileSetupPage() {
   const user = await db.user.findUnique({
     where: { id: session.user.id },
     select: {
+      id: true,
+      email: true,
       image: true,
       imageCrop: true,
       name: true,
       username: true
     }
+  }).catch((error) => {
+    console.error("ShopFia setup profile lookup failed", error);
+    return null;
   });
+
+  if (!user) {
+    return (
+      <section className="mx-auto grid max-w-xl gap-4 rounded-3xl border bg-white p-6">
+        <h1 className="text-2xl font-semibold">Your profile could not be loaded.</h1>
+        <p className="text-muted-foreground">
+          Try reloading this page. If you still cannot see your profile, sign out and
+          sign back in with your existing login.
+        </p>
+        <AccountRecovery email={session.user.email} />
+      </section>
+    );
+  }
 
   if (user?.username && user.name) {
     redirect("/welcome");
@@ -40,8 +59,10 @@ export default async function RequiredProfileSetupPage() {
             favorites, messages, and everything you create next.
           </p>
         </div>
-        <div className="p-5 md:p-8">
+        <div className="grid gap-5 p-5 md:p-8">
+          <AccountRecovery email={user.email} />
           <RequiredProfileForm
+            profileId={user.id}
             defaultDisplayName={user?.name}
             defaultImage={user?.image}
             defaultImageCrop={user?.imageCrop}

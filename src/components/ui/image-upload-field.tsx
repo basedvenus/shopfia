@@ -68,6 +68,7 @@ export function ImageUploadField({
   } | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [failedPreview, setFailedPreview] = useState<string | null>(null);
   const isRound = rounded === "full";
   const value = controlledValue !== undefined ? controlledValue ?? "" : internalValue;
   const crop = liveCrop;
@@ -240,12 +241,13 @@ export function ImageUploadField({
           isRound ? "h-32 w-32 rounded-full" : "min-h-[150px] rounded-[1.5rem]"
         }`}
       >
-        {previewValue ? (
+        {previewValue && failedPreview !== previewValue ? (
           <CroppedImage
             src={previewValue}
             alt=""
             crop={crop}
             className="absolute inset-0 h-full w-full object-cover object-center"
+            onError={() => setFailedPreview(previewValue)}
           />
         ) : null}
         <span className="relative z-10 rounded-full bg-white/90 px-3 py-1.5 shadow-sm">
@@ -256,6 +258,9 @@ export function ImageUploadField({
       <input type="hidden" name={name} value={value} />
       <input type="hidden" name={resolvedCropName} value={JSON.stringify(crop)} />
       {helperText ? <p className="text-xs text-muted-foreground">{helperText}</p> : null}
+      {previewValue && failedPreview === previewValue ? (
+        <p className="text-xs text-muted-foreground">Photo preview is unavailable. Your saved photo has not been changed.</p>
+      ) : null}
       <p className="text-xs text-muted-foreground">
         Supported formats: {SUPPORTED_IMAGE_FORMAT_LABEL}. Max size: {formatBytes(MAX_IMAGE_SIZE_BYTES)}.
       </p>

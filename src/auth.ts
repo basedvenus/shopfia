@@ -130,10 +130,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         session.user.id = token.sub ?? "";
         session.user.role = freshUser?.role ?? ((token.role as UserRole) ?? UserRole.BUYER);
-        session.user.name = freshUser?.name ?? session.user.name ?? null;
+        session.user.name = freshUser ? freshUser.name : session.user.name ?? null;
         session.user.email = freshUser?.email ?? session.user.email ?? null;
-        session.user.image = getSafeProfileImage(freshUser?.image ?? session.user.image);
-        session.user.username = freshUser?.username ?? token.username ?? null;
+        session.user.image = getSafeProfileImage(freshUser ? freshUser.image : session.user.image);
+        session.user.username = freshUser ? freshUser.username : token.username ?? null;
       }
       return session;
     }

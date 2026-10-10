@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import type { SharedUserProfile } from "@/lib/user-profile";
 
 type RequiredProfileFormProps = {
+  profileId: string;
   defaultDisplayName?: string | null;
   defaultImage?: string | null;
   defaultImageCrop?: unknown;
@@ -18,6 +19,7 @@ type RequiredProfileFormProps = {
 };
 
 export function RequiredProfileForm({
+  profileId,
   defaultDisplayName,
   defaultImage,
   defaultImageCrop,
@@ -26,11 +28,15 @@ export function RequiredProfileForm({
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const { profile, setProfile } = useProfile();
+  const { profile: contextProfile, updateProfile } = useProfile();
+  const profile = contextProfile?.id === profileId ? contextProfile : null;
 
   function onAvatarUploaded(profileFromUpload?: SharedUserProfile) {
-    if (profileFromUpload) {
-      setProfile(profileFromUpload);
+    if (profileFromUpload?.id === profileId) {
+      updateProfile({
+        image: profileFromUpload.image,
+        imageCrop: profileFromUpload.imageCrop
+      }, profileId);
     }
   }
 
@@ -45,13 +51,14 @@ export function RequiredProfileForm({
             return;
           }
 
-          if (result.profile) setProfile(result.profile);
+          if (result.profile) updateProfile(result.profile, profileId);
           router.replace("/welcome");
           router.refresh();
         });
       }}
       className="grid gap-5"
     >
+      <input type="hidden" name="profileId" value={profileId} />
       <div className="grid gap-4 sm:grid-cols-[150px_1fr] sm:items-start">
         <div className="grid justify-items-start gap-2">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-[#9b6b65]">
