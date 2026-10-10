@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   ArrowLeft,
   Banknote,
@@ -29,13 +29,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { storefrontPath } from "@/lib/businesses";
 import type { SerializedMessageConversation } from "@/lib/messages/query";
+import type { PagedMessagesPayload, MessagePage } from "@/lib/messages/paged-query";
+import { historyCursor } from "@/lib/messages/client-state";
+import { isMessagesVisible, useMessagePages } from "@/components/messages/use-message-pages";
 
-type MessagesPayload = {
-  conversations: SerializedMessageConversation[];
-  selectedConversationId: string | null;
-  unreadByConversation: Record<string, number>;
-  unreadTotal: number;
-};
+type MessagesPayload = PagedMessagesPayload;
 
 type InquiryItem = SerializedMessageConversation["inquiries"][number];
 type QuoteRequestItem = SerializedMessageConversation["quoteRequests"][number];
@@ -51,40 +49,19 @@ export function MessagesClient({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [payload, setPayload] = useState(initialPayload);
   const [selectedConversationId, setSelectedConversationId] = useState(
     initialPayload.selectedConversationId
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { payload, refreshMessages, loadPage, loading, error: refreshError } = useMessagePages(initialPayload, selectedConversationId, !drawerOpen);
   const [isPending, startTransition] = useTransition();
   const previousUnreadTotal = useRef(initialPayload.unreadTotal);
 
   const selectedConversation = useMemo(
-    () =>
-      payload.conversations.find((conversation) => conversation.id === selectedConversationId) ??
-      null,
-    [payload.conversations, selectedConversationId]
-  );
-
-  const refreshMessages = useCallback(
-    async ({ markRead = false }: { markRead?: boolean } = {}) => {
-      const params = new URLSearchParams();
-      if (selectedConversationId) params.set("conversationId", selectedConversationId);
-      if (markRead) params.set("markRead", "1");
-      const response = await fetch(`/api/messages?${params.toString()}`, {
-        cache: "no-store"
-      });
-      if (!response.ok) return;
-      const nextPayload = (await response.json()) as MessagesPayload;
-      setPayload(nextPayload);
-      setSelectedConversationId((current) => {
-        if (current && nextPayload.conversations.some((conversation) => conversation.id === current)) {
-          return current;
-        }
-        return nextPayload.selectedConversationId;
-      });
-    },
-    [selectedConversationId]
+    () => payload.pagination.history?.conversationId === selectedConversationId
+      ? payload.conversations.find((conversation) => conversation.id === selectedConversationId) ?? null
+      : null,
+    [payload.conversations, payload.pagination.history, selectedConversationId]
   );
 
   const selectConversation = useCallback(
@@ -92,18 +69,22 @@ export function MessagesClient({
       setSelectedConversationId(conversationId);
       setDrawerOpen(false);
       startTransition(() => {
-        router.replace(`/messages?conversationId=${conversationId}`, { scroll: false });
+        router.replace(`/messages?conversationId=${encodeURIComponent(conversationId)}`, { scroll: false });
       });
     },
     [router, startTransition]
   );
 
+  const urlConversationId = searchParams.get("conversationId");
   useEffect(() => {
-    const urlConversationId = searchParams.get("conversationId");
-    if (urlConversationId && urlConversationId !== selectedConversationId) {
-      setSelectedConversationId(urlConversationId);
+    setSelectedConversationId(urlConversationId ?? initialPayload.selectedConversationId);
+  }, [urlConversationId, initialPayload.selectedConversationId]);
+
+  useEffect(() => {
+    if (!selectedConversationId && payload.selectedConversationId) {
+      setSelectedConversationId(payload.selectedConversationId);
     }
-  }, [searchParams, selectedConversationId]);
+  }, [payload.selectedConversationId, selectedConversationId]);
 
   useEffect(() => {
     if (!selectedConversationId) return;
@@ -113,9 +94,10 @@ export function MessagesClient({
   useEffect(() => {
     const payment = searchParams.get("payment");
     if (payment !== "return" && payment !== "canceled") return;
-    void refreshMessages({ markRead: true });
+    const orderId = searchParams.get("orderId");
+    void refreshMessages({ markRead: true, orderId: orderId && orderId.length <= 256 ? orderId : undefined });
     if (selectedConversationId) {
-      router.replace(`/messages?conversationId=${selectedConversationId}`, { scroll: false });
+      router.replace(`/messages?conversationId=${encodeURIComponent(selectedConversationId)}`, { scroll: false });
     }
   }, [refreshMessages, router, searchParams, selectedConversationId]);
 
@@ -123,9 +105,16 @@ export function MessagesClient({
     // Keep message updates behind the authenticated, conversation-scoped API.
     // Realtime needs a verified per-user identity/RLS policy before it is enabled.
     const interval = window.setInterval(() => {
-      void refreshMessages();
+      if (isMessagesVisible()) void refreshMessages({ markRead: true });
     }, 7000);
-    return () => window.clearInterval(interval);
+    const onVisibility = () => {
+      if (isMessagesVisible()) void refreshMessages({ markRead: true });
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [refreshMessages]);
 
   useEffect(() => {
@@ -157,8 +146,16 @@ export function MessagesClient({
 
   return (
     <div className="mx-auto flex h-[calc(100dvh-5.25rem)] max-w-[1500px] flex-col overflow-hidden rounded-[1.25rem] border border-white/75 bg-[#fffaf6] shadow-[0_24px_72px_rgba(82,55,55,0.10)] md:h-[calc(100vh-7.25rem)] md:min-h-[620px] md:rounded-[1.5rem]">
+      {refreshError ? (
+        <p role="alert" className="px-4 py-2 text-sm text-red-700">
+          {refreshError} <button type="button" className="underline" disabled={loading} onClick={() => void refreshMessages()}>Retry</button>
+        </p>
+      ) : null}
       <div className="relative grid min-h-0 flex-1 md:grid-cols-[minmax(270px,23%)_1fr]">
         <InboxPanel
+          nextCursor={payload.pagination.nextConversationCursor}
+          loading={loading}
+          onLoadMore={() => void loadPage("conversations", payload.pagination.nextConversationCursor)}
           conversations={payload.conversations}
           currentUserId={currentUserId}
           isOverlay={false}
@@ -185,6 +182,9 @@ export function MessagesClient({
                 </button>
               </div>
               <InboxPanel
+                nextCursor={payload.pagination.nextConversationCursor}
+                loading={loading}
+                onLoadMore={() => void loadPage("conversations", payload.pagination.nextConversationCursor)}
                 conversations={payload.conversations}
                 currentUserId={currentUserId}
                 isOverlay
@@ -198,12 +198,29 @@ export function MessagesClient({
 
         {selectedConversation ? (
           <ConversationThread
+            key={selectedConversation.id}
+            historyCursors={{
+              messages: historyCursor(payload, selectedConversation.id, "messages"),
+              inquiries: historyCursor(payload, selectedConversation.id, "inquiries"),
+              quoteRequests: historyCursor(payload, selectedConversation.id, "quoteRequests")
+            }}
+            loadingHistory={loading}
+            onLoadHistory={(kind, cursor) => void loadPage(kind, cursor)}
             conversation={selectedConversation}
             currentUserId={currentUserId}
             isPending={isPending}
-            onAfterSend={() => void refreshMessages({ markRead: true })}
+            onAfterSend={(quoteRequestId) => void refreshMessages({ markRead: true, quoteRequestId })}
+            onRefreshQuote={async (quoteRequestId) => {
+              const refreshed = await refreshMessages({ quoteRequestId });
+              return refreshed?.conversations.find((item) => item.id === selectedConversationId)?.quoteRequests.find((item) => item.id === quoteRequestId);
+            }}
             onOpenInbox={() => setDrawerOpen(true)}
           />
+        ) : selectedConversationId ? (
+          <div className="p-6 text-sm text-muted-foreground">
+            <Button type="button" variant="secondary" onClick={() => setDrawerOpen(true)} className="mb-3 md:hidden">Open inbox</Button>
+            <p role="status">{loading ? "Loading conversation..." : "This conversation is unavailable."}</p>
+          </div>
         ) : (
           <NoConversation />
         )}
@@ -213,6 +230,9 @@ export function MessagesClient({
 }
 
 function InboxPanel({
+  nextCursor,
+  loading,
+  onLoadMore,
   conversations,
   currentUserId,
   isOverlay,
@@ -220,6 +240,9 @@ function InboxPanel({
   selectedConversationId,
   unreadByConversation
 }: {
+  nextCursor: string | null;
+  loading: boolean;
+  onLoadMore: () => void;
   conversations: SerializedMessageConversation[];
   currentUserId: string;
   isOverlay: boolean;
@@ -257,6 +280,7 @@ function InboxPanel({
               />
             ))
           )}
+          {nextCursor ? <Button type="button" variant="secondary" disabled={loading} onClick={onLoadMore} className="w-full">Load older conversations</Button> : null}
         </div>
         {!isOverlay ? (
           <div className="shrink-0 border-t border-[#eadbd3] p-3">
@@ -319,17 +343,27 @@ function InboxRow({
   );
 }
 
+type HistoryPage = Exclude<MessagePage, "refresh" | "conversations">;
+
 function ConversationThread({
+  historyCursors,
+  loadingHistory,
+  onLoadHistory,
   conversation,
   currentUserId,
   isPending,
   onAfterSend,
+  onRefreshQuote,
   onOpenInbox
 }: {
+  historyCursors: Record<HistoryPage, string | null>;
+  loadingHistory: boolean;
+  onLoadHistory: (kind: HistoryPage, cursor: string) => void;
   conversation: SerializedMessageConversation;
   currentUserId: string;
   isPending: boolean;
-  onAfterSend: () => void;
+  onAfterSend: (quoteRequestId?: string) => void;
+  onRefreshQuote: (quoteRequestId: string) => Promise<QuoteRequestItem | undefined>;
   onOpenInbox: () => void;
 }) {
   const viewerIsVendor = conversation.vendorId === currentUserId;
@@ -339,26 +373,45 @@ function ConversationThread({
   const [quoteBuilderQuoteRequest, setQuoteBuilderQuoteRequest] = useState<QuoteRequestItem | null>(null);
   const [reviewQuoteRequest, setReviewQuoteRequest] = useState<QuoteRequestItem | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const quoteOpenVersion = useRef(0);
   const [error, setError] = useState<string | null>(null);
-  const messageCount = conversation.messages.length + conversation.inquiries.length;
-  const latestQuoteRequest =
-    [...conversation.quoteRequests].reverse().find((quoteRequest) => quoteRequest.quote) ?? null;
+  const previousScroll = useRef<{ height: number; first?: string; last?: string } | null>(null);
+  const firstMessageId = conversation.messages[0]?.id;
+  const lastMessageId = conversation.messages.at(-1)?.id;
+  const latestQuoteRequest = conversation.quoteRequests.at(-1) ?? null;
   const activeQuoteRequest = getActiveQuoteRequest(conversation.quoteRequests);
   const reviewableOrder = getReviewableOrder(conversation.quoteRequests);
 
-  function openQuoteBuilder(quoteRequest: QuoteRequestItem | null = latestQuoteRequest) {
-    setQuoteBuilderQuoteRequest(quoteRequest);
+  async function openQuoteBuilder(quoteRequest: QuoteRequestItem | null = latestQuoteRequest) {
+    if (quoteRequest && quoteRequest.id !== latestQuoteRequest?.id) {
+      if (quoteRequest.quote) await openQuoteReview(quoteRequest);
+      return;
+    }
+    const version = ++quoteOpenVersion.current;
+    const fresh = quoteRequest ? await onRefreshQuote(quoteRequest.id) : null;
+    if (version !== quoteOpenVersion.current || (quoteRequest && !fresh)) return;
+    setQuoteBuilderQuoteRequest(fresh ?? null);
     setQuoteBuilderOpen(true);
   }
 
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      const scrollEl = scrollRef.current;
-      if (!scrollEl) return;
-      scrollEl.scrollTop = scrollEl.scrollHeight;
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [conversation.id, messageCount]);
+  async function openQuoteReview(quoteRequest: QuoteRequestItem) {
+    const version = ++quoteOpenVersion.current;
+    const fresh = await onRefreshQuote(quoteRequest.id);
+    if (version === quoteOpenVersion.current && fresh) setReviewQuoteRequest(fresh);
+  }
+
+  useLayoutEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    const previous = previousScroll.current;
+    if (!previous) element.scrollTop = element.scrollHeight;
+    else if (previous.first !== firstMessageId && previous.last === lastMessageId) {
+      element.scrollTop += element.scrollHeight - previous.height;
+    } else if (previous.last !== lastMessageId && previous.height - element.scrollTop - element.clientHeight < 150) {
+      element.scrollTop = element.scrollHeight;
+    }
+    previousScroll.current = { height: element.scrollHeight, first: firstMessageId, last: lastMessageId };
+  }, [firstMessageId, lastMessageId, conversation.inquiries.length, conversation.quoteRequests.length]);
 
   async function sendMessage() {
     const trimmed = body.trim();
@@ -371,21 +424,25 @@ function ConversationThread({
     setIsSending(true);
     setBody("");
 
-    const response = await fetch("/api/messages", {
-      body: JSON.stringify({ body: trimmed, conversationId: conversation.id }),
-      headers: { "Content-Type": "application/json" },
-      method: "POST"
-    });
-
-    setIsSending(false);
-    if (!response.ok) {
-      const result = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(result?.error ?? "That message could not be sent.");
+    try {
+      const response = await fetch("/api/messages", {
+        body: JSON.stringify({ body: trimmed, conversationId: conversation.id }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST"
+      });
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(result?.error ?? "That message could not be sent.");
+        if (restoreOnError) setBody(trimmed);
+        return;
+      }
+      onAfterSend();
+    } catch {
+      setError("The connection was interrupted. Check the conversation before sending again.");
       if (restoreOnError) setBody(trimmed);
-      return;
+    } finally {
+      setIsSending(false);
     }
-
-    onAfterSend();
   }
 
   async function sendReviewRequest() {
@@ -428,11 +485,19 @@ function ConversationThread({
         ref={scrollRef}
         className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[linear-gradient(180deg,#fffaf6,#ffffff_34%)] px-2.5 py-2.5 md:space-y-2.5 md:px-4 md:py-3"
       >
+        <div className="flex flex-wrap gap-2">
+          {(["messages", "inquiries", "quoteRequests"] as const).map((kind) => historyCursors[kind] ? (
+            <Button key={kind} type="button" size="sm" variant="secondary" disabled={loadingHistory}
+              onClick={() => onLoadHistory(kind, historyCursors[kind]!)}>
+              Load older {kind === "quoteRequests" ? "quotes" : kind}
+            </Button>
+          ) : null)}
+        </div>
         <ConversationItems
           conversation={conversation}
           currentUserId={currentUserId}
           onBuildQuote={openQuoteBuilder}
-          onReviewQuote={setReviewQuoteRequest}
+          onReviewQuote={(quoteRequest) => void openQuoteReview(quoteRequest)}
           viewerIsVendor={viewerIsVendor}
         />
       </div>
@@ -440,6 +505,7 @@ function ConversationThread({
       <div className="shrink-0 border-t border-[#f0dfda] bg-white px-2.5 py-2 md:px-4">
         {activeQuoteRequest ? (
           <CompactQuoteStatusBanner
+            readOnly={viewerIsVendor && activeQuoteRequest.id !== latestQuoteRequest?.id}
             quoteRequest={activeQuoteRequest}
             viewerIsVendor={viewerIsVendor}
             onOpen={() => {
@@ -447,7 +513,7 @@ function ConversationThread({
                 openQuoteBuilder(activeQuoteRequest);
                 return;
               }
-              setReviewQuoteRequest(activeQuoteRequest);
+              void openQuoteReview(activeQuoteRequest);
             }}
           />
         ) : null}
@@ -508,32 +574,34 @@ function ConversationThread({
           conversation={conversation}
           existingQuoteRequest={quoteBuilderQuoteRequest}
           onClose={() => {
+            quoteOpenVersion.current += 1;
             setQuoteBuilderOpen(false);
             setQuoteBuilderQuoteRequest(null);
           }}
           onSent={() => {
             setQuoteBuilderOpen(false);
             setQuoteBuilderQuoteRequest(null);
-            onAfterSend();
+            onAfterSend(quoteBuilderQuoteRequest?.id);
           }}
         />
       ) : null}
       {reviewQuoteRequest?.quote ? (
         <QuoteReviewModal
+          readOnly={viewerIsVendor}
           conversation={conversation}
-          onClose={() => setReviewQuoteRequest(null)}
+          onClose={() => { quoteOpenVersion.current += 1; setReviewQuoteRequest(null); }}
           onRequestedChanges={() => {
             setReviewQuoteRequest(null);
-            onAfterSend();
+            onAfterSend(reviewQuoteRequest.id);
           }}
-          quoteRequest={reviewQuoteRequest}
+          quoteRequest={conversation.quoteRequests.find((item) => item.id === reviewQuoteRequest.id) ?? reviewQuoteRequest}
         />
       ) : null}
     </section>
   );
 }
 
-function ConversationItems({
+export function ConversationItems({
   conversation,
   currentUserId,
   onBuildQuote,
@@ -548,28 +616,24 @@ function ConversationItems({
 }) {
   const inquiriesById = new Map(conversation.inquiries.map((inquiry) => [inquiry.id, inquiry]));
   const renderedInquiryIds = new Set<string>();
-  const nextUnrenderedInquiry = () =>
-    conversation.inquiries.find((inquiry) => !renderedInquiryIds.has(inquiry.id));
 
   return (
     <>
       {conversation.messages.map((message) => {
         const markerInquiryId = getInquiryMarkerId(message.body);
-        const inquiry =
-          (markerInquiryId ? inquiriesById.get(markerInquiryId) : null) ??
-          (isLegacyInquiryMessage(message.body) ? nextUnrenderedInquiry() : null);
+        // Independently paged collections cannot be paired by array position.
+        // Only explicit IDs establish which brief belongs to a message.
+        const inquiry = markerInquiryId ? inquiriesById.get(markerInquiryId) : null;
 
         if (inquiry) {
           renderedInquiryIds.add(inquiry.id);
           return <InquiryBriefCard key={message.id} inquiry={inquiry} createdAt={message.createdAt} />;
         }
 
-        if (markerInquiryId || isLegacyInquiryMessage(message.body)) return null;
-
         return (
           <ChatBubble
             key={message.id}
-            body={message.body}
+            body={markerInquiryId ? "An event brief was shared. Load older inquiries to find its details." : message.body}
             createdAt={message.createdAt}
             image={
               message.senderId === conversation.buyerId
@@ -587,15 +651,14 @@ function ConversationItems({
           <InquiryBriefCard key={inquiry.id} inquiry={inquiry} createdAt={inquiry.createdAt} />
         ))}
       {conversation.quoteRequests.map((quoteRequest) => (
-        quoteRequest.quote ? null : (
           <QuoteWorkflowCard
+            historical={quoteRequest.id !== conversation.quoteRequests.at(-1)?.id}
             key={quoteRequest.id}
             quoteRequest={quoteRequest}
             onBuildQuote={onBuildQuote}
             onReviewQuote={onReviewQuote}
             viewerIsVendor={viewerIsVendor}
           />
-        )
       ))}
       {viewerIsVendor && conversation.inquiries.length > 0 && conversation.quoteRequests.length === 0 ? (
         <BuildQuotePromptCard onBuildQuote={onBuildQuote} />
@@ -851,11 +914,13 @@ function FullInquiryBrief({
 }
 
 function QuoteWorkflowCard({
+  historical = false,
   onBuildQuote,
   onReviewQuote,
   quoteRequest,
   viewerIsVendor
 }: {
+  historical?: boolean;
   onBuildQuote: (quoteRequest?: QuoteRequestItem | null) => void;
   onReviewQuote: (quoteRequest: QuoteRequestItem) => void;
   quoteRequest: QuoteRequestItem;
@@ -959,7 +1024,10 @@ function QuoteWorkflowCard({
               ))}
             </div>
           ) : null}
-          {isBooked ? (
+          {viewerIsVendor && historical ? (
+            quote ? <button type="button" onClick={() => onReviewQuote(quoteRequest)} className="mt-3 rounded-full border border-[#eadbd3] px-3 py-1.5 text-xs font-bold text-[#8f5f5b]">View historical quote</button>
+              : <span className="mt-3 block text-xs text-muted-foreground">Historical request</span>
+          ) : isBooked ? (
             viewerIsVendor ? (
               <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#dbe9d5] bg-[#f7fbf4] px-3 py-1.5 text-xs font-bold text-[#5f7658] shadow-sm">
                 Quote Locked
@@ -1015,10 +1083,12 @@ function QuoteWorkflowCard({
 }
 
 function CompactQuoteStatusBanner({
+  readOnly = false,
   onOpen,
   quoteRequest,
   viewerIsVendor
 }: {
+  readOnly?: boolean;
   onOpen: () => void;
   quoteRequest: QuoteRequestItem;
   viewerIsVendor: boolean;
@@ -1036,7 +1106,7 @@ function CompactQuoteStatusBanner({
     : viewerIsVendor
       ? "Quote sent"
       : "Quote ready";
-  const actionLabel = isBooked
+  const actionLabel = isBooked || readOnly
     ? "View"
     : viewerIsVendor
       ? "Manage"
@@ -1087,11 +1157,13 @@ function CompactQuoteStatusBanner({
 }
 
 function QuoteReviewModal({
+  readOnly = false,
   conversation,
   onClose,
   onRequestedChanges,
   quoteRequest
 }: {
+  readOnly?: boolean;
   conversation: SerializedMessageConversation;
   onClose: () => void;
   onRequestedChanges: () => void;
@@ -1310,7 +1382,7 @@ function QuoteReviewModal({
         </div>
 
         <div className="grid shrink-0 gap-2 border-t border-[#eadbd3] bg-white p-3 sm:grid-cols-[1fr_auto]">
-          {bookingIsPaid ? (
+          {bookingIsPaid || readOnly ? (
             <button
               type="button"
               onClick={returnToConversation}
@@ -1806,10 +1878,6 @@ function getConversationIdentity(
 function getInquiryMarkerId(body: string) {
   const match = body.match(/^INQUIRY_CARD:([a-z0-9]+)$/i);
   return match?.[1] ?? null;
-}
-
-function isLegacyInquiryMessage(body: string) {
-  return /^New inquiry\b/i.test(body) || /^Inquiry for\b/i.test(body);
 }
 
 function formatEventDate(date: string) {

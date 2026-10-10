@@ -58,7 +58,7 @@ export type MessageConversation = Prisma.ConversationGetPayload<{
 }>;
 
 export type SerializedMessageConversation = ReturnType<typeof serializeConversation>;
-type MessageQuoteRequest = Prisma.QuoteRequestGetPayload<{
+export type MessageQuoteRequest = Prisma.QuoteRequestGetPayload<{
   include: {
     offering: { select: { photos: true; title: true } };
     quote: {
@@ -82,7 +82,7 @@ type MessageQuoteRequest = Prisma.QuoteRequestGetPayload<{
   };
 }>;
 
-const conversationInclude = {
+export const conversationInclude = {
   buyer: {
     select: { email: true, id: true, image: true, name: true, username: true }
   },

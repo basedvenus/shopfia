@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { db } from "@/lib/db";
 import { sendNewMessageEmail } from "@/lib/email";
 import { getMessagesPayload } from "@/lib/messages/query";
+import { getPagedMessagesPayload, InvalidMessageCursorError, type MessagePage } from "@/lib/messages/paged-query";
 import { enforceRequestRateLimit } from "@/lib/security/request";
 import { sendMessageSchema } from "@/lib/validators/message";
 
@@ -18,6 +19,31 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const conversationId = url.searchParams.get("conversationId");
+  if (url.searchParams.get("paged") === "1") {
+    try {
+      const page = url.searchParams.get("page") ?? "refresh";
+      if (!["refresh", "conversations", "messages", "inquiries", "quoteRequests"].includes(page)) {
+        return NextResponse.json({ error: "Invalid pagination cursor" }, { status: 400 });
+      }
+      const payload = await getPagedMessagesPayload({
+        currentUserId: session.user.id,
+        markSelectedRead: url.searchParams.get("markRead") === "1",
+        role: session.user.role,
+        selectedConversationId: conversationId,
+        page: page as MessagePage,
+        cursor: url.searchParams.get("cursor"),
+        quoteRequestId: url.searchParams.get("quoteRequestId"),
+        orderId: url.searchParams.get("orderId")
+      });
+      return NextResponse.json(payload);
+    } catch (error) {
+      if (error instanceof InvalidMessageCursorError) {
+        return NextResponse.json({ error: "Invalid pagination cursor" }, { status: 400 });
+      }
+      throw error;
+    }
+  }
+  // Existing mobile clients retain their original response until they opt in.
   const payload = await getMessagesPayload({
     currentUserId: session.user.id,
     markSelectedRead: url.searchParams.get("markRead") === "1",
