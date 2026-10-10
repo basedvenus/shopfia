@@ -238,13 +238,9 @@ export default function Page() {
       </section>
 
       <section className="rounded-[8px] border border-primary/20 bg-white/85 px-5 py-8 text-center shadow-sm md:px-10">
-        <div className="mx-auto grid max-w-5xl gap-5 text-2xl font-semibold leading-tight text-foreground md:grid-cols-3 md:text-3xl">
-          <p>Pinterest gives you ideas.</p>
-          <p>Instagram shows you pretty photos.</p>
-          <p className="text-primary">
-            ShopFia lets you hire the people who created them.
-          </p>
-        </div>
+        <p className="mx-auto max-w-5xl text-2xl font-semibold leading-tight text-primary md:text-3xl">
+          Your one-stop shop for party planning.
+        </p>
       </section>
 
       <section className="space-y-6">
