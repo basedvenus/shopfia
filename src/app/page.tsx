@@ -16,28 +16,22 @@ import {
   Tags
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { partyInspirationExamples } from "@/lib/party-inspiration";
 
 const partyImages = [
-  {
-    title: "Citrus Garden Brunch",
-    image: "/demo/fairfield-lemon-tablescape.png",
-    href: "/events/citrus-garden-brunch",
-    detail: "Florals, linens, rentals, and cake artists tagged",
-    className: "md:col-span-2 md:row-span-2"
-  },
-  {
-    title: "Tulip Cookie Shower",
-    image: "/demo/vacaville-cookie-tulips.png",
-    href: "/events/tulip-cookie-shower",
-    detail: "Custom cookies and pastel tablescape",
-    className: ""
-  },
+  ...partyInspirationExamples.map((party, index) => ({
+    title: party.title,
+    image: party.coverImageUrl,
+    href: `/events/${party.slug}`,
+    detail: party.theme,
+    className: index === 0 ? "md:col-span-2 md:row-span-2" : ""
+  })),
   {
     title: "Blush Garden Tables",
     image:
       "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1100&q=80",
     href: "/parties",
-    detail: "Decor, florals, and rentals behind the look",
+    detail: "Decor, florals, and rental inspiration",
     className: ""
   },
   {
@@ -101,18 +95,12 @@ const categoryCards = [
 ];
 
 const featuredParties = [
-  {
-    title: "Lemon Grove Baby Brunch",
-    meta: "Fairfield, CA · 8 vendors tagged",
-    image: "/demo/fairfield-lemon-tablescape.png",
-    href: "/events/citrus-garden-brunch"
-  },
-  {
-    title: "Blush Tulip Shower",
-    meta: "Vacaville, CA · cookies, florals, tablescape",
-    image: "/demo/vacaville-cookie-tulips.png",
-    href: "/events/tulip-cookie-shower"
-  },
+  ...partyInspirationExamples.map((party) => ({
+    title: party.title,
+    meta: party.theme,
+    image: party.coverImageUrl,
+    href: `/events/${party.slug}`
+  })),
   {
     title: "Backyard Floral Dinner",
     meta: "Garden party · rentals, stems, place settings",
@@ -229,6 +217,7 @@ export default function Page() {
                 <ArrowUpRight className="h-4 w-4" />
               </div>
               <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                <p className="mb-1 text-xs text-white/90">Inspiration example</p>
                 <h2 className="text-lg font-semibold leading-tight">{party.title}</h2>
                 <p className="mt-1 text-xs leading-5 text-white/90">{party.detail}</p>
               </div>
@@ -297,7 +286,7 @@ export default function Page() {
       <section className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
-            Featured Parties
+            Inspiration examples
           </p>
           <h2 className="shopfia-editorial-heading mt-2 text-3xl tracking-normal md:text-4xl">
             Start with the celebration, not a search form.
@@ -332,6 +321,7 @@ export default function Page() {
                 />
               </div>
               <div className="p-4">
+                <p className="mb-1 text-xs text-muted-foreground">Inspiration example</p>
                 <h3 className="font-semibold leading-tight">{party.title}</h3>
                 <p className="mt-2 text-xs leading-5 text-muted-foreground">
                   {party.meta}

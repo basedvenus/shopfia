@@ -11,6 +11,8 @@ import { CroppedImage } from "@/components/ui/cropped-image";
 import { storefrontPath } from "@/lib/businesses";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
+import { getPartyInspirationExample, getUniquePartyVendors } from "@/lib/party-inspiration";
+import { isQuarantinedVendorId, publicVendorWhere } from "@/lib/public-marketplace";
 import {
   canShowPartyManagementLinks,
   getPartyDescriptionForViewer,
@@ -20,29 +22,6 @@ import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badg
 import { getSafeProfileImage } from "@/lib/profile-image";
 
 export const dynamic = "force-dynamic";
-
-const fallbackEvents = {
-  "citrus-garden-brunch": {
-    title: "Citrus Garden Brunch",
-    theme: "Lemon garden party",
-    tags: ["brunch", "lemons", "floral", "garden party"],
-    description:
-      "A soft citrus tablescape with blush linens, lemon accents, candlelight, and modern florals.",
-    coverImageUrl: "/demo/fairfield-lemon-tablescape.png",
-    imageUrls: ["/demo/fairfield-lemon-tablescape.png"],
-    vendorSlugs: ["solano-flora-and-table"]
-  },
-  "tulip-cookie-shower": {
-    title: "Tulip Cookie Shower",
-    theme: "Pastel floral baby shower",
-    tags: ["baby shower", "pastel", "cookies", "floral"],
-    description:
-      "A sweet pastel favor moment built around hand-piped tulip and floral cookies.",
-    coverImageUrl: "/demo/vacaville-cookie-tulips.png",
-    imageUrls: ["/demo/vacaville-cookie-tulips.png"],
-    vendorSlugs: ["blush-batch-cookie-atelier"]
-  }
-};
 
 export default async function EventPage({
   params,
@@ -58,7 +37,6 @@ export default async function EventPage({
   const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
   const originalMemberCutoff = await getOriginalMemberCutoffDate(db);
   const requestedSlug = decodeURIComponent(slug).trim();
-  const fallback = fallbackEvents[requestedSlug as keyof typeof fallbackEvents];
   const event = await db.partyEvent
     .findFirst({
       where: {
@@ -95,41 +73,25 @@ export default async function EventPage({
           }
         }
       }
-    })
-    .catch(() => null);
+    });
 
-  const fallbackVendors = fallback
-    ? await db.vendorProfile.findMany({
-        where: { slug: { in: fallback.vendorSlugs } },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          city: true,
-          state: true,
-          coverPhoto: true,
-          categories: { include: { category: true } },
-          logoUrl: true,
-          user: { select: { createdAt: true, email: true, username: true } }
-        }
-      })
-    : [];
+  const fallback = getPartyInspirationExample(requestedSlug, Boolean(event));
 
   if (!event && !fallback) return notFound();
 
   const title = event?.title ?? fallback?.title ?? "Party";
   const theme = event?.theme ?? fallback?.theme ?? null;
   const tags = event?.tags?.length ? event.tags : fallback?.tags ?? [];
-  const legacyImages = event?.imageUrls?.length ? event.imageUrls : fallback?.imageUrls ?? [];
+  const legacyImages = event?.imageUrls?.length ? event.imageUrls : event?.coverImageUrl ? [event.coverImageUrl] : fallback?.imageUrls ?? [];
   const photos = event?.photos?.length
     ? event.photos.map((photo) => ({
       id: photo.id,
       url: partyPhotoUrl(photo.id, photo.updatedAt, { width: 1400 }),
       crop: normalizeImageCrop(photo.crop),
-      taggedVendors: photo.taggedVendors,
+      taggedVendors: photo.taggedVendors.filter((vendor) => !isQuarantinedVendorId(vendor.id)),
       vendorContributions: Object.fromEntries(
         photo.vendorRatings
-          .filter((credit) => credit.contributionNote)
+          .filter((credit) => credit.contributionNote && !isQuarantinedVendorId(credit.vendorId))
           .map((credit) => [credit.vendorId, credit.contributionNote ?? ""])
       )
       }))
@@ -137,30 +99,15 @@ export default async function EventPage({
       id: `${image}-${index}`,
       url: image,
       crop: normalizeImageCrop(null),
-      taggedVendors: event?.taggedVendors ?? fallbackVendors,
+      taggedVendors: event?.taggedVendors.filter((vendor) => !isQuarantinedVendorId(vendor.id)) ?? [],
       vendorContributions: {}
       }));
-  const safePhotos = photos.length
-    ? photos
-    : [
-        {
-          id: "placeholder",
-          url: fallback?.coverImageUrl ?? "/demo/fairfield-lemon-tablescape.png",
-          crop: normalizeImageCrop(null),
-          taggedVendors: [],
-          vendorContributions: {}
-        }
-      ];
-  const hero = event?.coverImageUrl ?? safePhotos[0]?.url ?? fallback?.coverImageUrl ?? "/demo/fairfield-lemon-tablescape.png";
-  const vendors = Array.from(
-    new Map(
-      [
-        ...(event?.taggedVendors ?? []),
-        ...safePhotos.flatMap((photo) => photo.taggedVendors),
-        ...fallbackVendors
-      ].map((vendor) => [vendor.id, vendor])
-    ).values()
-  );
+  const safePhotos = photos;
+  const hero = event?.coverImageUrl ?? safePhotos[0]?.url ?? fallback?.coverImageUrl ?? null;
+  const vendors = getUniquePartyVendors({
+    taggedVendors: event?.taggedVendors ?? [],
+    photos: safePhotos
+  });
   const firstPhotoIdByVendor = new Map<string, string>();
   for (const photo of safePhotos) {
     for (const vendor of photo.taggedVendors) {
@@ -236,6 +183,7 @@ export default async function EventPage({
   const [editVendors, editUsers] = isEditing
     ? await Promise.all([
         db.vendorProfile.findMany({
+          where: publicVendorWhere(),
           select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true, status: true },
           orderBy: { name: "asc" }
         }),
@@ -267,7 +215,7 @@ export default async function EventPage({
               </p>
             </div>
             <div className="relative min-h-[260px] overflow-hidden rounded-[1.4rem] bg-muted shadow-sm">
-              <CroppedImage src={hero} alt="" crop={safePhotos[0]?.crop} className="absolute inset-0 h-full w-full object-cover" />
+              {hero ? <CroppedImage src={hero} alt="" crop={safePhotos[0]?.crop} className="absolute inset-0 h-full w-full object-cover" /> : null}
             </div>
             <Link href={`/events/${formParty.slug}`} className="inline-flex">
               <Button type="button" variant="secondary">
@@ -289,11 +237,11 @@ export default async function EventPage({
 
       <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
         <div className="relative min-h-[480px]">
-          <CroppedImage src={hero} alt="" crop={safePhotos[0]?.crop} className="absolute inset-0 h-full w-full object-cover" />
+          {hero ? <CroppedImage src={hero} alt="" crop={safePhotos[0]?.crop} className="absolute inset-0 h-full w-full object-cover" /> : null}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="relative flex min-h-[480px] flex-col justify-end p-6 text-white md:p-8">
             <div className="mb-3 flex flex-wrap gap-2">
-              <Badge className="bg-white/15 text-white backdrop-blur" variant="default">Party</Badge>
+              <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{event ? "Party" : "Inspiration example"}</Badge>
               {theme ? <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{theme}</Badge> : null}
             </div>
             <h1 className="max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">{title}</h1>
@@ -398,6 +346,7 @@ export default async function EventPage({
 
       <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div id="party-gallery" className="grid scroll-mt-24 auto-rows-[190px] grid-cols-2 gap-3 md:grid-cols-4">
+          {safePhotos.length === 0 ? <p className="col-span-full rounded-2xl bg-muted/60 p-5 text-sm text-muted-foreground">No party photos have been added yet.</p> : null}
           {safePhotos.map((photo, index) => (
             <div
               key={photo.id}
@@ -429,7 +378,7 @@ export default async function EventPage({
         <div className="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft">
           <h2 className="text-2xl font-semibold tracking-tight">Featured Vendors</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            The creative team behind this celebration.
+            {event ? "The creative team credited by this party’s host." : "This is a decorative inspiration example. No vendor participation is implied."}
           </p>
           <div className="mt-5 grid gap-2">
             {vendors.length > 0 ? (
@@ -474,7 +423,7 @@ export default async function EventPage({
               })
             ) : (
               <div className="rounded-[1.4rem] bg-muted/60 p-4 text-sm text-muted-foreground">
-                Featured vendors will appear here once this party has tagged credits.
+                {event ? "No vendors have been credited on this party yet." : "No verified vendor credits are available for this example."}
               </div>
             )}
           </div>

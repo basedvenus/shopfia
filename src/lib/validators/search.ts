@@ -12,6 +12,8 @@ export const exploreSearchSchema = z.object({
   zip: z.string().optional(),
   placeId: z.string().optional(),
   locationLabel: z.string().optional(),
+  locationCity: z.string().optional(),
+  locationState: z.string().optional(),
   lat: optionalCoordinate(-90, 90),
   lng: optionalCoordinate(-180, 180),
   theme: z.preprocess(
@@ -28,9 +30,9 @@ export const exploreSearchSchema = z.object({
       if (typeof value === "string" && value.trim()) return [value.trim()];
       return [];
     },
-    z.array(z.string().cuid()).max(9).default([])
+    z.array(z.string().trim().min(1).max(120)).max(12).default([])
   ),
-  eventCategoryId: z.string().min(1).optional(),
+  eventCategoryId: z.string().trim().min(1).max(120).optional(),
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),
   availableWeekend: z.enum(["true", "false"]).optional(),

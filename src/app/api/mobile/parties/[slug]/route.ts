@@ -3,6 +3,7 @@ import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { getVisiblePartyCollaborators } from "@/lib/party-public-view";
 import { getSafeProfileImage } from "@/lib/profile-image";
+import { publicVendorWhere } from "@/lib/public-marketplace";
 
 export const dynamic = "force-dynamic";
 
@@ -27,12 +28,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
         orderBy: { sortOrder: "asc" },
         include: {
           taggedVendors: {
+            where: publicVendorWhere(),
             include: { categories: { include: { category: true } } }
           },
-          vendorRatings: true
+          vendorRatings: { where: { vendor: publicVendorWhere() } }
         }
       },
       taggedVendors: {
+        where: publicVendorWhere(),
         include: { categories: { include: { category: true } } }
       },
       user: { select: { id: true, image: true, name: true, username: true } }

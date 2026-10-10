@@ -4,6 +4,7 @@ import { PartyEventForm } from "@/components/parties/party-event-form";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
+import { publicVendorWhere } from "@/lib/public-marketplace";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export default async function MyPartiesPage() {
       orderBy: { createdAt: "desc" }
     }),
     db.vendorProfile.findMany({
+      where: publicVendorWhere(),
       select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true, status: true },
       orderBy: { name: "asc" }
     }),

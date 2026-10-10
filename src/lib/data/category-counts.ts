@@ -1,3 +1,5 @@
+import { publicOfferingWhere, publicVendorWhere } from "@/lib/public-marketplace";
+
 type CategoryCountDb = {
   offering: {
     count(args: unknown): Promise<number>;
@@ -10,38 +12,38 @@ type CategoryCountDb = {
 export async function getExploreCategoryCounts(db: CategoryCountDb, categoryId: string) {
   const [vendors, offerings, eventOfferings] = await Promise.all([
     db.vendorProfile.count({
-      where: {
+      where: publicVendorWhere({
         OR: [
           { categories: { some: { categoryId } } },
           {
             offerings: {
-              some: {
+              some: publicOfferingWhere({
                 active: true,
                 OR: [
                   { categoryId },
                   { categories: { some: { categoryId } } }
                 ]
-              }
+              })
             }
           }
         ]
-      }
+      })
     }),
     db.offering.count({
-      where: {
+      where: publicOfferingWhere({
         active: true,
         OR: [
           { categoryId },
           { categories: { some: { categoryId } } },
           { vendor: { categories: { some: { categoryId } } } }
         ]
-      }
+      })
     }),
     db.offering.count({
-      where: {
+      where: publicOfferingWhere({
         active: true,
         eventCategories: { some: { categoryId } }
-      }
+      })
     })
   ]);
 

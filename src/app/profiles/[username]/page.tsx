@@ -14,6 +14,7 @@ import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { getUserProfileImage } from "@/lib/profile-image";
 import { getOriginalMemberCutoffDate, getProfileBadges } from "@/lib/profile-badges";
+import { isQuarantinedVendorId, publicVendorWhere } from "@/lib/public-marketplace";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         tiktokUrl: true,
         partyEvents: {
           include: {
-            taggedVendors: true,
+            taggedVendors: { where: publicVendorWhere() },
             collaborators: {
               where: { status: "ACCEPTED" },
               include: {
@@ -58,7 +59,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           include: {
             event: {
               include: {
-                taggedVendors: true,
+                taggedVendors: { where: publicVendorWhere() },
                 collaborators: {
                   where: { status: "ACCEPTED" },
                   include: {
@@ -131,7 +132,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   const profileStorefronts = dedupeStorefrontLinks([
     profile.vendorProfile,
     ...profile.managedBusinesses.map((manager) => manager.vendorProfile)
-  ]);
+  ]).filter((storefront) => !isQuarantinedVendorId(storefront.id));
   const businessIds = profileStorefronts.map((storefront) => storefront.id);
   const profileReviews = businessIds.length
     ? await db.review.findMany({

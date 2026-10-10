@@ -1,15 +1,17 @@
+import { publicOfferingWhere, publicVendorWhere } from "@/lib/public-marketplace";
+
 export async function getVendorProfileBySlug(slug: string) {
   const { db } = await import("@/lib/db");
   const normalizedSlug = decodeURIComponent(slug).trim();
 
   const vendor = await db.vendorProfile.findFirst({
-    where: {
+    where: publicVendorWhere({
       OR: [
         { slug: normalizedSlug },
         { username: normalizedSlug },
         { id: normalizedSlug }
       ]
-    },
+    }),
     select: {
       id: true,
       availabilityNotes: true,
@@ -90,7 +92,7 @@ export async function getVendorProfileBySlug(slug: string) {
       rankingScore: true,
       categories: { include: { category: true } },
       offerings: {
-        where: { active: true },
+        where: publicOfferingWhere({ active: true }),
         include: {
           category: true,
           eventCategories: { include: { category: true } }

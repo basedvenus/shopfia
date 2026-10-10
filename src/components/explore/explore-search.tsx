@@ -12,6 +12,9 @@ type Category = { id: string; name: string };
 type Filters = {
   q?: string;
   city?: string;
+  zip?: string;
+  locationCity?: string;
+  locationState?: string;
   placeId?: string;
   locationLabel?: string;
   lat?: number;
@@ -52,6 +55,7 @@ export function ExploreSearch({
 
   return (
     <form action="/explore" className="space-y-4 rounded-[1.6rem] border border-white/70 bg-white/85 p-4 shadow-soft md:p-5">
+      {(filters.theme ?? []).map((theme) => <input key={theme} type="hidden" name="theme" value={theme} />)}
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.7fr)_minmax(260px,1fr)_auto_auto]">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -63,15 +67,19 @@ export function ExploreSearch({
           />
         </div>
         <PlaceAutocompleteInput
-          defaultValue={filters.locationLabel ?? filters.city ?? ""}
+          defaultValue={filters.locationLabel ?? filters.city ?? filters.zip ?? ""}
           defaultPlace={{
-            formattedAddress: filters.locationLabel ?? filters.city,
+            formattedAddress: filters.locationLabel ?? filters.city ?? filters.zip,
+            city: filters.locationCity,
+            state: filters.locationState,
+            zipCode: filters.zip,
             placeId: filters.placeId,
             lat: filters.lat,
             lng: filters.lng
           }}
           fieldNames={{
             input: "city",
+            zipCode: "zip",
             placeId: "placeId",
             lat: "lat",
             lng: "lng",
@@ -316,6 +324,9 @@ function clearAdvancedHref(filters: Filters) {
   const params = new URLSearchParams();
   if (filters.q) params.set("q", filters.q);
   if (filters.city) params.set("city", filters.city);
+  if (filters.zip) params.set("zip", filters.zip);
+  if (filters.locationCity) params.set("locationCity", filters.locationCity);
+  if (filters.locationState) params.set("locationState", filters.locationState);
   if (filters.locationLabel) params.set("locationLabel", filters.locationLabel);
   if (filters.placeId) params.set("placeId", filters.placeId);
   if (filters.lat != null) params.set("lat", String(filters.lat));
@@ -332,6 +343,9 @@ function baseSearchParams(filters: Filters) {
   const params = new URLSearchParams();
   if (filters.q) params.set("q", filters.q);
   if (filters.city) params.set("city", filters.city);
+  if (filters.zip) params.set("zip", filters.zip);
+  if (filters.locationCity) params.set("locationCity", filters.locationCity);
+  if (filters.locationState) params.set("locationState", filters.locationState);
   if (filters.locationLabel) params.set("locationLabel", filters.locationLabel);
   if (filters.placeId) params.set("placeId", filters.placeId);
   if (filters.lat != null) params.set("lat", String(filters.lat));
@@ -341,6 +355,10 @@ function baseSearchParams(filters: Filters) {
   }
   for (const categoryId of filters.categoryId ?? []) {
     params.append("categoryId", categoryId);
+  }
+  for (const key of ["eventCategoryId", "minPrice", "maxPrice", "minRating", "radius", "availableWeekend", "verified", "sort"] as const) {
+    const value = filters[key];
+    if (value != null) params.set(key, String(value));
   }
   return params;
 }

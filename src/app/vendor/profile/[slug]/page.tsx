@@ -35,29 +35,6 @@ import { STOREFRONT_PALETTES, STOREFRONT_SECTION_LABELS, coverageAreaLabels, get
 
 export const dynamic = "force-dynamic";
 
-const demoTaggedEvents = {
-  "solano-flora-and-table": [
-    {
-      title: "Citrus Garden Brunch",
-      slug: "citrus-garden-brunch",
-      theme: "Lemon garden party",
-      tags: ["brunch", "lemons", "floral", "garden party"],
-      coverImageUrl: "/demo/fairfield-lemon-tablescape.png",
-      credit: "@jordan.parties"
-    }
-  ],
-  "blush-batch-cookie-atelier": [
-    {
-      title: "Tulip Cookie Shower",
-      slug: "tulip-cookie-shower",
-      theme: "Pastel floral baby shower",
-      tags: ["baby shower", "pastel", "cookies", "floral"],
-      coverImageUrl: "/demo/vacaville-cookie-tulips.png",
-      credit: "@jordan.parties"
-    }
-  ]
-} as const;
-
 export default async function VendorProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const [vendor, session, originalMemberCutoff] = await Promise.all([
@@ -147,11 +124,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           contributionNotes: [],
           photoCount: 0
         }))
-      : [...(demoTaggedEvents[vendor.slug as keyof typeof demoTaggedEvents] ?? [])].map((event) => ({
-          ...event,
-          contributionNotes: [],
-          photoCount: 0
-        }));
+      : [];
   const currentUserId = session?.user?.id;
   const isUnclaimed = vendor.status === "UNCLAIMED";
   const trustStatus = getVendorTrustStatus(vendor);

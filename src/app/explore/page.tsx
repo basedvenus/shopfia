@@ -30,9 +30,11 @@ export default async function ExplorePage({
     return null;
   });
   const [data, originalMemberCutoff] = await Promise.all([
-    getExploreData(resolvedSearchParams).catch((error) => {
+    getExploreData(resolvedSearchParams).then((data) => ({ ...data, unavailable: false })).catch((error) => {
       console.error("ShopFia explore data failed", error);
       return {
+        unavailable: true,
+        truncated: { vendors: false, offerings: false, parties: false },
         categories: [],
         eventCategories: [],
         offerings: [],
@@ -46,6 +48,7 @@ export default async function ExplorePage({
       return null;
     })
   ]);
+  const dataUnavailable = data.unavailable;
   const savedFavorites = session?.user?.id
     ? await db.favorite.findMany({
         where: { buyerId: session.user.id },
@@ -86,14 +89,19 @@ export default async function ExplorePage({
         </div>
       </section>
 
+      {Object.values(data.truncated).some(Boolean) ? (
+        <p role="status" className="rounded-2xl border bg-white/80 p-4 text-sm text-muted-foreground">
+          This location search reached its result limit. Results and distance ordering cover only the records checked. Narrow your radius or filters for a more complete search.
+        </p>
+      ) : null}
       <section className="space-y-4">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Vendors</h2>
-          <p className="text-sm text-muted-foreground">{data.vendors.length} vendors</p>
+          <p className="text-sm text-muted-foreground">{dataUnavailable ? "Unavailable" : `${data.vendors.length} vendors${data.truncated.vendors ? " shown (partial results)" : ""}`}</p>
         </div>
         {data.vendors.length === 0 ? (
           <div className="rounded-3xl border bg-white/80 p-8 text-center text-muted-foreground">
-            No vendors match those filters yet. Try a business name, username, category, or nearby city.
+            {dataUnavailable ? "We couldn’t load vendors. Please try again shortly." : data.truncated.vendors ? "The search limit was reached before finding matching vendors. Try a narrower location or filters." : "No vendors match those filters yet. Try a business name, username, category, or nearby city."}
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -112,11 +120,11 @@ export default async function ExplorePage({
       <section className="space-y-4">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Offerings</h2>
-          <p className="text-sm text-muted-foreground">{data.offerings.length} offerings</p>
+          <p className="text-sm text-muted-foreground">{dataUnavailable ? "Unavailable" : `${data.offerings.length} offerings${data.truncated.offerings ? " shown (partial results)" : ""}`}</p>
         </div>
         {data.offerings.length === 0 ? (
           <div className="rounded-3xl border bg-white/80 p-8 text-center text-muted-foreground">
-            No offerings match those filters yet. Search a service title, category, vendor, or city.
+            {dataUnavailable ? "We couldn’t load offerings. Please try again shortly." : data.truncated.offerings ? "The search limit was reached before finding matching offerings. Try a narrower location or filters." : "No offerings match those filters yet. Search a service title, category, vendor, or city."}
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -134,11 +142,11 @@ export default async function ExplorePage({
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Party Inspiration</h2>
-          <p className="text-sm text-muted-foreground">{data.parties.length} parties</p>
+          <p className="text-sm text-muted-foreground">{dataUnavailable ? "Unavailable" : `${data.parties.length} published ${data.parties.length === 1 ? "party" : "parties"}${data.truncated.parties ? " shown (partial results)" : ""}`}</p>
         </div>
         {data.parties.length === 0 ? (
           <div className="rounded-3xl border bg-white/80 p-8 text-center text-muted-foreground">
-            We are refreshing party inspiration right now. Try another theme or check back shortly.
+            {dataUnavailable ? "We couldn’t load published parties. Please try again shortly." : data.truncated.parties ? "The search limit was reached before finding matching parties. Try a narrower location or filters." : "No published parties match these filters yet."} <Link href="/parties" className="font-medium text-primary underline-offset-4 hover:underline">Browse inspiration examples</Link>.
           </div>
         ) : (
           <div className="columns-2 gap-3 sm:columns-3 lg:columns-4">
@@ -209,7 +217,7 @@ function OfferingExploreCard({
         </div>
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold">
-            {offering.messageForPricing || !offering.basePriceCents
+            {offering.messageForPricing || offering.basePriceCents == null
               ? "Custom pricing"
               : `From ${formatCurrency(offering.basePriceCents)}`}
           </p>

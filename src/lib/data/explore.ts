@@ -1,5 +1,18 @@
 import { CategoryAudience, Prisma } from "@prisma/client";
 import { exploreSearchSchema } from "@/lib/validators/search";
+import type { z } from "zod";
+import { publicVendorWhere, publicOfferingWhere } from "@/lib/public-marketplace";
+
+type ExploreFilters = z.infer<typeof exploreSearchSchema>;
+type LocatedRecord = {
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  googlePlaceId?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
+  serviceRadiusMiles?: number;
+};
 
 function normalizeLocation(value: string | null | undefined) {
   return value?.trim().toLowerCase() ?? "";
@@ -20,7 +33,8 @@ function distanceMiles(
     Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
     Math.cos(fromLat) * Math.cos(toLat) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
 
-  return earthRadiusMiles * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const clamped = Math.max(0, Math.min(1, a));
+  return earthRadiusMiles * 2 * Math.atan2(Math.sqrt(clamped), Math.sqrt(1 - clamped));
 }
 
 function getDistanceSortScore(vendor: {
@@ -35,7 +49,7 @@ function getDistanceSortScore(vendor: {
       lat: vendor.locationLat ?? null,
       lng: vendor.locationLng ?? null
     });
-    if (Number.isFinite(miles)) return miles;
+    return miles;
   }
 
   const query = normalizeLocation(locationQuery);
@@ -54,11 +68,117 @@ function getDistanceSortScore(vendor: {
     return 1;
   }
 
-  if (vendorCity.includes(query) || query.includes(vendorCity)) {
+  if (vendorCity && (vendorCity.includes(query) || query.includes(vendorCity))) {
     return 2;
   }
 
   return 1000 + vendor.serviceRadiusMiles;
+}
+
+// Without coordinates, location text is shared across every Explore result type.
+function textLocationFilters(filters: ExploreFilters) {
+  const query = filters.city ?? filters.locationLabel;
+  return [
+    ...(query ? [
+      { city: { contains: query, mode: "insensitive" as const } },
+      { state: { equals: query, mode: "insensitive" as const } },
+      { zipCode: { contains: query, mode: "insensitive" as const } },
+      { formattedAddress: { contains: query, mode: "insensitive" as const } }
+    ] : []),
+    ...(filters.placeId ? [{ googlePlaceId: filters.placeId }] : [])
+  ];
+}
+
+type LocationWhere = {
+  AND?: LocationWhere[];
+  OR?: LocationWhere[];
+  locationLat?: { gte: number; lte: number } | null;
+  locationLng?: { gte?: number; lte?: number } | null;
+  city?: { equals: string; mode: "insensitive" };
+  zipCode?: { equals: string; mode: "insensitive" };
+  googlePlaceId?: string;
+};
+
+function coordinateLocationFilter(filters: ExploreFilters, defaultRadius: number): LocationWhere {
+  const lat = filters.lat!;
+  const lng = filters.lng!;
+  const angularRadius = (filters.radius ?? defaultRadius) / 3958.8;
+  const latDelta = angularRadius * 180 / Math.PI;
+  const bounds: LocationWhere[] = [{ locationLat: { gte: Math.max(-90, lat - latDelta), lte: Math.min(90, lat + latDelta) } }];
+  if (Math.abs(lat) + latDelta < 90) {
+    const lngDelta = Math.asin(Math.sin(angularRadius) / Math.cos(lat * Math.PI / 180)) * 180 / Math.PI;
+    const west = lng - lngDelta;
+    const east = lng + lngDelta;
+    bounds.push(west < -180 ? { OR: [
+      { locationLng: { gte: west + 360 } }, { locationLng: { lte: east } }
+    ] } : east > 180 ? { OR: [
+      { locationLng: { gte: west } }, { locationLng: { lte: east - 360 } }
+    ] } : { locationLng: { gte: west, lte: east } });
+  }
+  const fallback: LocationWhere[] = [];
+  if (filters.placeId) fallback.push({ googlePlaceId: filters.placeId });
+  if (filters.zip) fallback.push({ zipCode: { equals: filters.zip, mode: "insensitive" } });
+  const cityTerms = filters.locationCity ? [filters.locationCity] :
+    (filters.locationLabel ?? filters.city ?? "").split(",").map((part) => part.trim()).filter(Boolean);
+  fallback.push(...cityTerms.map((city) => ({ city: { equals: city, mode: "insensitive" as const } })));
+  return { OR: [
+    { AND: bounds },
+    ...(fallback.length ? [{ AND: [
+      { OR: [{ locationLat: null }, { locationLng: null }] },
+      { OR: fallback }
+    ] }] : [])
+  ] };
+}
+
+function matchesSearchLocation(record: LocatedRecord, filters: ExploreFilters) {
+  if (filters.lat == null || filters.lng == null) return true;
+  const miles = distanceMiles({ lat: filters.lat, lng: filters.lng }, {
+    lat: record.locationLat ?? null,
+    lng: record.locationLng ?? null
+  });
+  if (Number.isFinite(miles)) {
+    // An explicit distance is a cap; default discovery also includes vendors
+    // whose advertised service area reaches the selected location.
+    return miles <= (filters.radius ?? Math.max(50, record.serviceRadiusMiles ?? 0));
+  }
+
+  // Legacy records may not have coordinates. Only retain them with positive
+  // location evidence; an empty city must never match every selected place.
+  if (filters.placeId && record.googlePlaceId === filters.placeId) return true;
+  if (filters.zip && normalizeLocation(record.zipCode) === normalizeLocation(filters.zip)) return true;
+  const city = normalizeLocation(record.city);
+  if (!city) return false;
+  const state = normalizeLocation(record.state);
+  if (filters.locationCity) {
+    return city === normalizeLocation(filters.locationCity) &&
+      (!filters.locationState || state === normalizeLocation(filters.locationState));
+  }
+  const parts = normalizeLocation(filters.locationLabel ?? filters.city).split(",").map((part) => part.trim());
+  return parts.includes(city) && (!state || parts.length === 1 || parts.some((part) => part === state || part.startsWith(`${state} `)));
+}
+
+// Coordinates need an exact in-memory distance check. Read subsequent batches
+// rather than applying it only to the first globally ranked database page.
+async function locationPage<T>(
+  fetch: (page: { skip: number; take: number }) => Promise<T[]>,
+  limit: number,
+  filter?: (row: T) => boolean,
+  compare?: (left: T, right: T) => number
+) {
+  if (!filter && !compare) return { items: await fetch({ skip: 0, take: limit }), truncated: false };
+  const matches: T[] = [];
+  const batchSize = 100;
+  let skip = 0;
+  // Bound work even for dense regions. Distance sorting is over these candidates.
+  const maxCandidates = 1000;
+  while (skip < maxCandidates) {
+    const rows = await fetch({ skip, take: batchSize });
+    matches.push(...(filter ? rows.filter(filter) : rows));
+    if (rows.length < batchSize || (!compare && matches.length >= limit)) break;
+    skip += rows.length;
+  }
+  if (compare) matches.sort(compare);
+  return { items: matches.slice(0, limit), truncated: skip >= maxCandidates };
 }
 
 const serviceCategoryOrder = [
@@ -114,7 +234,9 @@ export async function getExploreData(input: Record<string, string | string[] | u
   const parsed = exploreSearchSchema.parse({
     q: clean(input.q),
     city: clean(input.city),
-    zip: clean(input.zip),
+    zip: clean(input.zip) ?? clean(input.locationZipCode),
+    locationCity: clean(input.locationCity),
+    locationState: clean(input.locationState),
     placeId: clean(input.placeId),
     locationLabel: clean(input.locationLabel),
     lat: clean(input.lat),
@@ -136,39 +258,38 @@ export async function getExploreData(input: Record<string, string | string[] | u
     ? { lat: parsed.lat, lng: parsed.lng }
     : undefined;
 
-  const andFilters: Prisma.VendorProfileWhereInput[] = [];
-  const offeringAndFilters: Prisma.OfferingWhereInput[] = [{ active: true }];
+  const andFilters: Prisma.VendorProfileWhereInput[] = [publicVendorWhere()];
+  const offeringAndFilters: Prisma.OfferingWhereInput[] = [publicOfferingWhere({ active: true })];
+  if (searchPoint) {
+    // Vendor input validation caps advertised travel at 200 miles.
+    const locationFilter = coordinateLocationFilter(parsed, 200);
+    andFilters.push(locationFilter);
+    offeringAndFilters.push({ vendor: locationFilter });
+  }
 
-  if (parsed.city && !searchPoint) {
-    andFilters.push({
-      OR: [
-        {
-          city: {
-            contains: parsed.city,
-            mode: "insensitive"
-          }
-        },
-        {
-          zipCode: {
-            contains: parsed.city,
-            mode: "insensitive"
-          }
-        }
-      ]
-    });
-    offeringAndFilters.push({
-      OR: [
-        { vendor: { city: { contains: parsed.city, mode: "insensitive" } } },
-        { vendor: { zipCode: { contains: parsed.city, mode: "insensitive" } } },
-        { vendor: { state: { contains: parsed.city, mode: "insensitive" } } }
-      ]
-    });
+  if (!searchPoint) {
+    const locationFilters = textLocationFilters(parsed);
+    if (locationFilters.length) {
+      andFilters.push({ OR: locationFilters });
+      offeringAndFilters.push({ vendor: { OR: locationFilters } });
+    }
+    if (parsed.zip) {
+      const zipFilter = { zipCode: { equals: parsed.zip, mode: "insensitive" as const } };
+      andFilters.push(zipFilter);
+      offeringAndFilters.push({ vendor: zipFilter });
+    }
+  }
+
+  if (minPriceCents != null || maxPriceCents != null) {
+    const priceFilter = { gte: minPriceCents, lte: maxPriceCents };
+    andFilters.push({ startingPriceCents: priceFilter });
+    offeringAndFilters.push({ basePriceCents: priceFilter, messageForPricing: false });
   }
 
   if (parsed.minRating) andFilters.push({ averageRating: { gte: parsed.minRating } });
-  if (parsed.radius) andFilters.push({ serviceRadiusMiles: { gte: parsed.radius } });
+  if (parsed.radius && !searchPoint) andFilters.push({ serviceRadiusMiles: { gte: parsed.radius } });
   if (parsed.minRating) offeringAndFilters.push({ vendor: { averageRating: { gte: parsed.minRating } } });
-  if (parsed.radius) offeringAndFilters.push({ vendor: { serviceRadiusMiles: { gte: parsed.radius } } });
+  if (parsed.radius && !searchPoint) offeringAndFilters.push({ vendor: { serviceRadiusMiles: { gte: parsed.radius } } });
   if (parsed.verified === "true") {
     andFilters.push({ verified: true });
     offeringAndFilters.push({ vendor: { verified: true } });
@@ -184,13 +305,13 @@ export async function getExploreData(input: Record<string, string | string[] | u
         { categories: { some: { categoryId: { in: parsed.categoryId } } } },
         {
           offerings: {
-            some: {
+            some: publicOfferingWhere({
               active: true,
               OR: [
                 { categoryId: { in: parsed.categoryId } },
                 { categories: { some: { categoryId: { in: parsed.categoryId } } } }
               ]
-            }
+            })
           }
         }
       ]
@@ -207,10 +328,10 @@ export async function getExploreData(input: Record<string, string | string[] | u
   if (parsed.eventCategoryId) {
     andFilters.push({
       offerings: {
-        some: {
+        some: publicOfferingWhere({
           active: true,
           eventCategories: { some: { categoryId: parsed.eventCategoryId } }
-        }
+        })
       }
     });
     offeringAndFilters.push({
@@ -225,14 +346,17 @@ export async function getExploreData(input: Record<string, string | string[] | u
         OR: themeFilters.flatMap((theme) => [
           { name: { contains: theme, mode: "insensitive" } },
           { bio: { contains: theme, mode: "insensitive" } },
+          { categories: { some: { category: { name: { contains: theme, mode: "insensitive" } } } } },
           {
             offerings: {
-              some: {
+              some: publicOfferingWhere({
                 active: true,
                 OR: [
                   { title: { contains: theme, mode: "insensitive" } },
                   { description: { contains: theme, mode: "insensitive" } },
                   { tags: { has: theme.toLowerCase() } },
+                  { category: { name: { contains: theme, mode: "insensitive" } } },
+                  { categories: { some: { category: { name: { contains: theme, mode: "insensitive" } } } } },
                   {
                     eventCategories: {
                       some: {
@@ -241,7 +365,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
                     }
                   }
                 ]
-              }
+              })
             }
           }
         ])
@@ -253,7 +377,10 @@ export async function getExploreData(input: Record<string, string | string[] | u
           { tags: { has: theme.toLowerCase() } },
           { category: { name: { contains: theme, mode: "insensitive" } } },
           { categories: { some: { category: { name: { contains: theme, mode: "insensitive" } } } } },
-          { eventCategories: { some: { category: { name: { contains: theme, mode: "insensitive" } } } } }
+          { eventCategories: { some: { category: { name: { contains: theme, mode: "insensitive" } } } } },
+          { vendor: { name: { contains: theme, mode: "insensitive" } } },
+          { vendor: { bio: { contains: theme, mode: "insensitive" } } },
+          { vendor: { categories: { some: { category: { name: { contains: theme, mode: "insensitive" } } } } } }
         ])
       });
     }
@@ -281,7 +408,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
         },
         {
           offerings: {
-            some: {
+            some: publicOfferingWhere({
               active: true,
               OR: [
                 { title: { contains: parsed.q, mode: "insensitive" } },
@@ -303,7 +430,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
                   }
                 }
               ]
-            }
+            })
           }
         }
       ]
@@ -330,12 +457,15 @@ export async function getExploreData(input: Record<string, string | string[] | u
         },
         { vendor: { name: { contains: parsed.q, mode: "insensitive" } } },
         { vendor: { username: { contains: parsed.q, mode: "insensitive" } } },
+        { vendor: { bio: { contains: parsed.q, mode: "insensitive" } } },
+        { vendor: { user: { username: { contains: parsed.q, mode: "insensitive" } } } },
         { vendor: { slug: { contains: parsed.q, mode: "insensitive" } } },
         { vendor: { city: { contains: parsed.q, mode: "insensitive" } } },
         { vendor: { state: { contains: parsed.q, mode: "insensitive" } } },
         { vendor: { zipCode: { contains: parsed.q, mode: "insensitive" } } },
         { vendor: { serviceAreaNotes: { contains: parsed.q, mode: "insensitive" } } },
-        { vendor: { availabilityNotes: { contains: parsed.q, mode: "insensitive" } } }
+        { vendor: { availabilityNotes: { contains: parsed.q, mode: "insensitive" } } },
+        { vendor: { categories: { some: { category: { name: { contains: parsed.q, mode: "insensitive" } } } } } }
       ]
     });
   }
@@ -352,45 +482,46 @@ export async function getExploreData(input: Record<string, string | string[] | u
     }
   ];
 
-  if (parsed.city && !searchPoint) {
-    partyAndFilters.push({
-      OR: [
-        { city: { contains: parsed.city, mode: "insensitive" } },
-        { zipCode: { contains: parsed.city, mode: "insensitive" } },
-        { location: { contains: parsed.city, mode: "insensitive" } },
-        { formattedAddress: { contains: parsed.city, mode: "insensitive" } }
-      ]
-    });
+  if (searchPoint) partyAndFilters.push(coordinateLocationFilter(parsed, 50));
+
+  if (!searchPoint) {
+    const locationFilters = textLocationFilters(parsed);
+    const locationQuery = parsed.city ?? parsed.locationLabel;
+    if (locationFilters.length) partyAndFilters.push({ OR: [
+      ...locationFilters,
+      ...(locationQuery ? [{ location: { contains: locationQuery, mode: "insensitive" as const } }] : [])
+    ] });
+    if (parsed.zip) partyAndFilters.push({ zipCode: { equals: parsed.zip, mode: "insensitive" } });
   }
 
   if (parsed.categoryId.length > 0) {
     partyAndFilters.push({
       taggedVendors: {
-        some: {
+        some: publicVendorWhere({
           OR: [
             { categories: { some: { categoryId: { in: parsed.categoryId } } } },
             {
               offerings: {
-                some: {
+                some: publicOfferingWhere({
                   active: true,
                   OR: [
                     { categoryId: { in: parsed.categoryId } },
                     { categories: { some: { categoryId: { in: parsed.categoryId } } } }
                   ]
-                }
+                })
               }
             }
           ]
-        }
+        })
       }
     });
   }
 
-  const partyThemeTerms = [
-    ...parsed.theme.flatMap((theme) => getThemeTerms(theme)),
-    ...(parsed.q ? [parsed.q] : [])
+  const partyTermGroups = [
+    parsed.theme.flatMap((theme) => getThemeTerms(theme)),
+    parsed.q ? [parsed.q] : []
   ];
-  if (partyThemeTerms.length > 0) {
+  for (const partyThemeTerms of partyTermGroups.filter((terms) => terms.length > 0)) {
     partyAndFilters.push({
       OR: partyThemeTerms.flatMap((term) => [
         { title: { contains: term, mode: "insensitive" } },
@@ -400,7 +531,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
         { tags: { has: term.toLowerCase() } },
         {
           taggedVendors: {
-            some: {
+            some: publicVendorWhere({
               OR: [
                 { name: { contains: term, mode: "insensitive" } },
                 { bio: { contains: term, mode: "insensitive" } },
@@ -412,11 +543,27 @@ export async function getExploreData(input: Record<string, string | string[] | u
                   }
                 }
               ]
-            }
+            })
           }
         }
       ])
     });
+  }
+
+  const eventCategoriesPromise = db.category.findMany({
+    where: { audience: CategoryAudience.BUYER },
+    orderBy: { name: "asc" }
+  });
+  if (parsed.eventCategoryId) {
+    const eventCategory = (await eventCategoriesPromise).find((category) => category.id === parsed.eventCategoryId);
+    // Parties store their event type as text, rather than an Offering relation.
+    partyAndFilters.push(eventCategory ? {
+      OR: getThemeTerms(eventCategory.name).flatMap((term) => [
+        { title: { contains: term, mode: "insensitive" as const } },
+        { theme: { contains: term, mode: "insensitive" as const } },
+        { tags: { has: term.toLowerCase() } }
+      ])
+    } : { id: { in: [] } });
   }
 
   const orderBy =
@@ -435,11 +582,11 @@ export async function getExploreData(input: Record<string, string | string[] | u
             { createdAt: "desc" as const }
           ];
 
-  const [vendors, offerings, parties, categories, eventCategories] = await Promise.all([
-    db.vendorProfile.findMany({
+  const [vendorPage, offeringPage, partyPage, categories, eventCategories] = await Promise.all([
+    locationPage((page) => db.vendorProfile.findMany({
       where,
-      take: 30,
-      orderBy,
+      ...page,
+      orderBy: [...orderBy, { id: "asc" }],
       select: {
         id: true,
         averageRating: true,
@@ -448,6 +595,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
         createdAt: true,
         locationLat: true,
         locationLng: true,
+        googlePlaceId: true,
         logoCrop: true,
         logoUrl: true,
         name: true,
@@ -472,17 +620,26 @@ export async function getExploreData(input: Record<string, string | string[] | u
         rankingScore: true,
         categories: { include: { category: true } },
         offerings: {
-          where: { active: true },
+          where: publicOfferingWhere({ active: true }),
           select: { id: true, basePriceCents: true, category: { select: { name: true } }, photos: true, title: true, type: true },
           take: 3,
           orderBy: { createdAt: "desc" }
         }
       }
-    }),
-    db.offering.findMany({
+    }), 30,
+    searchPoint ? (vendor) => matchesSearchLocation(vendor, parsed) : undefined,
+    parsed.sort === "distance" ? (left, right) => {
+      const leftDistance = getDistanceSortScore(left, parsed.zip ?? parsed.city, searchPoint);
+      const rightDistance = getDistanceSortScore(right, parsed.zip ?? parsed.city, searchPoint);
+      return (leftDistance === rightDistance ? 0 : leftDistance - rightDistance) ||
+        (right.rankingScore?.score ?? 0) - (left.rankingScore?.score ?? 0);
+    } : undefined),
+    locationPage((page) => db.offering.findMany({
       where: offeringWhere,
-      take: 36,
-      orderBy: parsed.sort === "newest" ? { createdAt: "desc" } : { updatedAt: "desc" },
+      ...page,
+      orderBy: [parsed.sort === "top-rated"
+        ? { vendor: { averageRating: "desc" } }
+        : parsed.sort === "newest" ? { createdAt: "desc" } : { updatedAt: "desc" }, { id: "asc" }],
       select: {
         id: true,
         basePriceCents: true,
@@ -499,6 +656,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
             coverPhoto: true,
             locationLat: true,
             locationLng: true,
+            googlePlaceId: true,
             name: true,
             photos: true,
             reviewCount: true,
@@ -515,11 +673,17 @@ export async function getExploreData(input: Record<string, string | string[] | u
           }
         }
       }
-    }),
-    db.partyEvent.findMany({
+    }), 36,
+    searchPoint ? (offering) => matchesSearchLocation(offering.vendor, parsed) : undefined,
+    parsed.sort === "distance" ? (left, right) => {
+      const leftDistance = getDistanceSortScore(left.vendor, parsed.zip ?? parsed.city, searchPoint);
+      const rightDistance = getDistanceSortScore(right.vendor, parsed.zip ?? parsed.city, searchPoint);
+      return leftDistance === rightDistance ? 0 : leftDistance - rightDistance;
+    } : undefined),
+    locationPage((page) => db.partyEvent.findMany({
       where: { AND: partyAndFilters },
-      take: 48,
-      orderBy: { createdAt: "desc" },
+      ...page,
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       include: {
         user: {
           select: {
@@ -537,100 +701,36 @@ export async function getExploreData(input: Record<string, string | string[] | u
           take: 1
         }
       }
-    }),
+    }), 48,
+    searchPoint ? (party) => matchesSearchLocation(party, parsed) : undefined,
+    searchPoint && parsed.sort === "distance" ? (left, right) => {
+      const leftDistance = distanceMiles(searchPoint, { lat: left.locationLat, lng: left.locationLng });
+      const rightDistance = distanceMiles(searchPoint, { lat: right.locationLat, lng: right.locationLng });
+      return leftDistance === rightDistance ? 0 : leftDistance - rightDistance;
+    } : undefined),
     db.category.findMany({
       where: { audience: CategoryAudience.VENDOR },
       orderBy: { name: "asc" }
     }),
-    db.category.findMany({
-      where: { audience: CategoryAudience.BUYER },
-      orderBy: { name: "asc" }
-    })
+    eventCategoriesPromise
   ]);
-
-  const filteredByPrice = vendors.filter((vendor) => {
-    const price = vendor.startingPriceCents ?? vendor.offerings[0]?.basePriceCents ?? null;
-    if (!price) return true;
-    if (minPriceCents != null && price < minPriceCents) return false;
-    if (maxPriceCents != null && price > maxPriceCents) return false;
-    return true;
-  });
-
-  const filteredByLocation = searchPoint
-    ? filteredByPrice.filter((vendor) => {
-        const miles = distanceMiles(searchPoint, {
-          lat: vendor.locationLat,
-          lng: vendor.locationLng
-        });
-        if (Number.isFinite(miles)) {
-          return miles <= Math.max(parsed.radius ?? 50, vendor.serviceRadiusMiles);
-        }
-
-        const query = parsed.locationLabel ?? parsed.city;
-        const normalizedQuery = normalizeLocation(query);
-        return (
-          !normalizedQuery ||
-          normalizeLocation(vendor.city).includes(normalizedQuery) ||
-          normalizedQuery.includes(normalizeLocation(vendor.city)) ||
-          (vendor.zipCode ? normalizedQuery.includes(vendor.zipCode) : false)
-        );
-      })
-    : filteredByPrice;
-
-  const filteredOfferingsByPrice = offerings.filter((offering) => {
-    const price = offering.basePriceCents ?? offering.vendor.startingPriceCents ?? null;
-    if (!price) return true;
-    if (minPriceCents != null && price < minPriceCents) return false;
-    if (maxPriceCents != null && price > maxPriceCents) return false;
-    return true;
-  });
-
-  const finalOfferings = searchPoint
-    ? filteredOfferingsByPrice.filter((offering) => {
-        const miles = distanceMiles(searchPoint, {
-          lat: offering.vendor.locationLat,
-          lng: offering.vendor.locationLng
-        });
-        if (Number.isFinite(miles)) {
-          return miles <= Math.max(parsed.radius ?? 50, offering.vendor.serviceRadiusMiles);
-        }
-
-        const normalizedQuery = normalizeLocation(parsed.locationLabel ?? parsed.city);
-        return (
-          !normalizedQuery ||
-          normalizeLocation(offering.vendor.city).includes(normalizedQuery) ||
-          normalizedQuery.includes(normalizeLocation(offering.vendor.city)) ||
-          (offering.vendor.zipCode ? normalizedQuery.includes(offering.vendor.zipCode) : false)
-        );
-      })
-    : filteredOfferingsByPrice;
-
-  const finalVendors =
-    parsed.sort === "distance"
-      ? [...filteredByLocation].sort((left, right) => {
-          const scoreDifference =
-            getDistanceSortScore(left, parsed.city, searchPoint) -
-            getDistanceSortScore(right, parsed.city, searchPoint);
-
-          if (scoreDifference !== 0) {
-            return scoreDifference;
-          }
-
-          return (right.rankingScore?.score ?? 0) - (left.rankingScore?.score ?? 0);
-        })
-      : filteredByLocation;
 
   return {
     filters: parsed,
-    offerings: finalOfferings,
-    parties,
-    vendors: finalVendors,
+    offerings: offeringPage.items,
+    parties: partyPage.items,
+    vendors: vendorPage.items,
+    truncated: {
+      vendors: vendorPage.truncated,
+      offerings: offeringPage.truncated,
+      parties: partyPage.truncated
+    },
     categories: sortByOrder(categories, serviceCategoryOrder).map((category) => ({
       ...category,
       name: displayCategoryName(category.name)
     })),
     eventCategories: sortByOrder(
-      eventCategories.filter((category) => eventCategoryOrder.includes(category.name)),
+      eventCategories,
       eventCategoryOrder
     )
   };

@@ -21,6 +21,7 @@ import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorTrustStatus } from "@/lib/vendor-status";
+import { publicOfferingWhere } from "@/lib/public-marketplace";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +29,8 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const [{ db }, session] = await Promise.all([import("@/lib/db"), auth()]);
   const [offering, originalMemberCutoff] = await Promise.all([
-    db.offering.findUnique({
-      where: { id },
+    db.offering.findFirst({
+      where: publicOfferingWhere({ id, active: true }),
       include: {
         vendor: {
           select: {

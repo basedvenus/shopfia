@@ -126,9 +126,9 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
         </div>
         <div className="flex items-center justify-between gap-2">
           <p className="min-w-0 text-xs sm:text-sm">
-            {vendor.startingPriceCents ? "From " : ""}
+            {vendor.startingPriceCents != null ? "From " : ""}
             <span className="font-semibold">
-              {vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Custom pricing"}
+              {vendor.startingPriceCents != null ? formatCurrency(vendor.startingPriceCents) : "Custom pricing"}
             </span>
           </p>
           <Link href={storefrontPath(vendor.slug)} className="relative z-20 hidden sm:block">

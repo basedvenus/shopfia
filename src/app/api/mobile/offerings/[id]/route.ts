@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { publicOfferingWhere } from "@/lib/public-marketplace";
+import { publicUserProfile } from "@/lib/public-user-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -6,8 +8,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const { db } = await import("@/lib/db");
 
-  const offering = await db.offering.findUnique({
-    where: { id },
+  const offering = await db.offering.findFirst({
+    where: publicOfferingWhere({ id, active: true }),
     include: {
       category: true,
       categories: { include: { category: true } },
@@ -40,8 +42,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           sellerRatingAggregate: true,
           user: {
             select: {
-              createdAt: true,
-              email: true,
               id: true,
               username: true
             }
@@ -55,5 +55,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Offering not found." }, { status: 404 });
   }
 
-  return NextResponse.json({ offering });
+  return NextResponse.json({
+    offering: {
+      ...offering,
+      vendor: { ...offering.vendor, user: publicUserProfile(offering.vendor.user) }
+    }
+  });
 }

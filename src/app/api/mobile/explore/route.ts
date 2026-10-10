@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getExploreData } from "@/lib/data/explore";
+import { publicUserProfile } from "@/lib/public-user-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +25,12 @@ export async function GET(request: Request) {
     categories: data.categories,
     eventCategories: data.eventCategories,
     filters: data.filters,
-    offerings: data.offerings,
-    parties: data.parties,
-    vendors: data.vendors
+    offerings: data.offerings.map((offering) => ({
+      ...offering,
+      vendor: { ...offering.vendor, user: publicUserProfile(offering.vendor.user) }
+    })),
+    parties: data.parties.map((party) => ({ ...party, user: publicUserProfile(party.user) })),
+    vendors: data.vendors.map((vendor) => ({ ...vendor, user: publicUserProfile(vendor.user) })),
+    truncated: data.truncated
   });
 }

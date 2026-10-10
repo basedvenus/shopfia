@@ -178,11 +178,44 @@ npm run prisma:seed
 npm test
 ```
 
+`npm test` and `npm run test:watch` run only `tests/unit`. They use a
+disabled loopback `DATABASE_URL` and block construction of real Prisma clients.
+Database-dependent unit tests must explicitly mock `@/lib/db`; an omitted mock
+fails immediately instead of reading or writing the application database.
+
 Included tests cover:
 
 - Auth guard ownership logic
 - Prisma create-flow payload (mocked client)
 - Quote acceptance/payment amount logic
+- Integration database target validation and rollback safety
+
+### Opt-in database integration tests
+
+The inquiry flow test lives in `tests/integration`. It requires a separate,
+disposable local PostgreSQL database with the repository's migrations applied.
+No seed data is needed. Never use a production database, a database containing
+real user data, or a local port forwarded to a remote database.
+
+Both `RUN_DB_INTEGRATION_TESTS=1` and `TEST_DATABASE_URL` must be explicitly set.
+The URL must use PostgreSQL, numeric loopback `127.0.0.1` or `[::1]`, an explicit
+port, and a database name beginning `shopfia_test_`. Query parameters and URL
+fragments are rejected. Application `DATABASE_URL` and `.env` credentials are
+never a fallback for integration tests.
+
+For example, after provisioning and migrating a disposable local database:
+
+```bash
+env -i PATH="$PATH" HOME="$HOME" \
+  RUN_DB_INTEGRATION_TESTS=1 \
+  TEST_DATABASE_URL='postgresql://test:test@127.0.0.1:5433/shopfia_test_inquiries' \
+  npm run test:integration
+```
+
+The inquiry test mocks email delivery and puts all fixture and application
+writes into one transaction that is rolled back on success or failure. It also
+checks that the vendor profile is absent after rollback. These tests do not
+clean up previously leaked data or modify production data.
 
 ### E2E smoke tests (Playwright)
 

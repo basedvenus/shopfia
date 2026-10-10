@@ -9,6 +9,7 @@ import { imageCropToCss, normalizeImageCrop } from "@/lib/image-crop";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
 import { formatCurrency } from "@/lib/utils";
 import { auth } from "@/auth";
+import { publicOfferingWhere, publicVendorWhere } from "@/lib/public-marketplace";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +25,14 @@ export default async function ListingsPage() {
       shop: {
         is: {
           vendorProfile: {
-            isNot: null
+            is: publicVendorWhere()
           }
         }
-      }
+      },
+      OR: [
+        { offering: { is: null } },
+        { offering: { is: publicOfferingWhere() } }
+      ]
     },
     include: {
       offering: {
