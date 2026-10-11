@@ -315,7 +315,7 @@ export default async function PartiesPage({
         <p className="rounded-2xl border bg-white/80 p-5 text-sm text-muted-foreground">
           {partiesUnavailable ? "We couldn’t load published parties. Please try again shortly." : selectedFeed === "Following"
             ? "No parties from the people you follow yet."
-            : partyQuery ? "No published parties match your search." : "No parties have been published yet. Browse the inspiration examples below."}
+            : partyQuery ? "No published parties match your search." : "No parties have been published yet. Share your celebration to start the gallery."}
         </p>
       ) : null}
       <section className="columns-2 gap-2 sm:gap-4 md:columns-3 xl:columns-4">
@@ -403,7 +403,7 @@ export default async function PartiesPage({
             })
           : null}
       </section>
-      {visibleParties.length === 0 ? <p className="p-6 text-muted-foreground">{partyQuery ? "No parties match this search." : "No parties to show yet. Shared celebrations will appear here."}</p> : null}
+
     </div>
   );
 }
