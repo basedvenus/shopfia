@@ -250,7 +250,7 @@ export function ImageUploadField({
   return (
     <div className="grid gap-2">
       <label className="text-sm font-medium">{label}</label>
-      <div className="relative w-fit">
+      <div className={editMenu ? "relative w-fit" : "relative"}>
       <label
         className={`group relative grid cursor-pointer place-items-center overflow-hidden border border-dashed border-border bg-white/80 text-center text-sm text-muted-foreground transition hover:border-primary ${
           isRound ? "h-32 w-32 rounded-full" : "min-h-[150px] rounded-[1.5rem]"
