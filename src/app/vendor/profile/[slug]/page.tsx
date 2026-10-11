@@ -371,7 +371,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             <div className="grid gap-3 sm:grid-cols-3">
               <EditorialStat label={verifiedReviewCount > 0 ? "Verified rating" : "Event credits"} value={verifiedReviewCount > 0 ? verifiedAverageRating.toFixed(1) : String(taggedEvents.length)} theme={theme} />
               <EditorialStat label="Completed events" value={String(completedOrderCount)} theme={theme} />
-              <EditorialStat label="Theme" value={STOREFRONT_LAYOUTS.find((layout) => layout.value === storefrontLayout)!.label} theme={theme} />
+
             </div>
           </div>
         </section>
@@ -893,16 +893,14 @@ function ServiceAreaRadiusCard({
 }) {
   return (
     <div className={`mt-4 grid gap-4 p-4 md:grid-cols-[220px_1fr] md:items-center ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
-      <div className="relative min-h-[180px] overflow-hidden rounded-[1rem] border border-current/15" style={theme.softChipStyle}>
-        <div className="absolute inset-0 opacity-55 [background-image:linear-gradient(90deg,currentColor_1px,transparent_1px),linear-gradient(currentColor_1px,transparent_1px)] [background-size:34px_34px]" />
-        <div className="absolute left-[12%] top-[18%] h-28 w-40 rotate-[-18deg] rounded-full border border-current/20" />
-        <div className="absolute bottom-[8%] right-[10%] h-24 w-32 rotate-[18deg] rounded-full border border-current/20" />
-        <div className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-current/35 bg-white/20" />
-        <div className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-current/25 bg-white/35" />
-        <div className="absolute left-1/2 top-1/2 grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-center text-[10px] font-semibold shadow-sm" style={theme.badgeStyle}>
-          Base
-        </div>
-      </div>
+      <iframe
+        title={`Google Maps: ${city}`}
+        src={`https://maps.google.com/maps?q=${encodeURIComponent(city)}&output=embed`}
+        className="h-[220px] w-full rounded-[1rem] border-0"
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        allowFullScreen
+      />
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={theme.accentTextStyle}>Service radius</p>
         <h3 className="mt-2 text-2xl font-semibold tracking-tight" style={theme.headingStyle}>

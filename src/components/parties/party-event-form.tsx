@@ -67,12 +67,13 @@ export type EditablePartyEvent = {
 
 type PartyEventFormProps = {
   currentUserId: string;
+  composer?: boolean;
   initialParty?: EditablePartyEvent | null;
   users: UserOption[];
   vendors: VendorOption[];
 };
 
-export function PartyEventForm({ currentUserId, initialParty, users, vendors }: PartyEventFormProps) {
+export function PartyEventForm({ currentUserId, composer = false, initialParty, users, vendors }: PartyEventFormProps) {
   const isEditing = Boolean(initialParty);
   const [message, setMessage] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
@@ -243,17 +244,108 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
       }}
       className="grid min-w-0 gap-5"
     >
+      <div className={composer ? "grid min-w-0 items-start gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12" : "grid min-w-0 gap-5"}>
+        <div className={composer ? "min-w-0" : "order-2"}>
+      <div className="grid min-w-0 gap-3">
+        <label
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={onDrop}
+          className={`relative grid cursor-pointer place-items-center overflow-hidden rounded-[1.5rem] border-2 border-dashed border-primary/30 bg-gradient-to-br from-[#fff8f2] to-[#fce7ee] p-6 text-center transition hover:border-primary focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-4 ${composer ? "min-h-[360px] lg:min-h-[540px]" : "min-h-[180px]"}`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="sr-only"
+            onChange={(event) => {
+              if (event.target.files) {
+                void uploadFiles(event.target.files);
+              }
+            }}
+          />
+          {composer && photos[0] ? (
+            <CroppedImage src={photos[0].url} alt="Your party cover preview" crop={photos[0].crop} className="absolute inset-0 h-full w-full object-cover" />
+          ) : null}
+          <span className={`relative grid gap-4 justify-items-center ${composer && photos[0] ? "rounded-3xl bg-white/95 p-6 shadow-soft" : ""}`}>
+            <span className="grid h-16 w-16 place-items-center rounded-full bg-primary/10 text-primary">
+              {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+            </span>
+            <span className="text-xl font-semibold tracking-tight">{isUploading ? "Uploading photos..." : photos.length ? "Add more photos" : "Upload your party photos"}</span>
+            <span className="max-w-sm text-xs leading-5 text-muted-foreground">
+              Choose photos or drag them here. Your first photo becomes the cover.
+            </span>
+          </span>
+        </label>
+
+        {photos.length > 0 ? (
+          <div className="grid gap-3">
+            {photos.map((photo, index) => (
+              <article key={photo.id} className="grid min-w-0 gap-3 rounded-[1.4rem] border bg-white p-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                <div className="relative aspect-square overflow-hidden rounded-[1rem] bg-muted">
+                  <CroppedImage src={photo.url} alt="" crop={photo.crop} className="h-full w-full object-cover object-center" />
+                  {index === 0 ? (
+                    <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium shadow-sm">
+                      Cover
+                    </span>
+                  ) : null}
+                </div>
+                <div className="grid min-w-0 gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold">Photo {index + 1}</p>
+                      <p className="text-xs text-muted-foreground">Tag vendors for this specific image.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {index > 0 ? (
+                        <IconButton label="Make cover" onClick={() => setCoverPhoto(photo.id)}>
+                          <Star className="h-4 w-4" />
+                        </IconButton>
+                      ) : null}
+                      <IconButton label="Reposition photo" onClick={() => setEditingCropPhoto(photo)}>
+                        <ImagePlus className="h-4 w-4" />
+                      </IconButton>
+                      <IconButton label="Move up" disabled={index === 0} onClick={() => movePhoto(photo.id, -1)}>
+                        <ArrowUp className="h-4 w-4" />
+                      </IconButton>
+                      <IconButton label="Move down" disabled={index === photos.length - 1} onClick={() => movePhoto(photo.id, 1)}>
+                        <ArrowDown className="h-4 w-4" />
+                      </IconButton>
+                      <IconButton label="Remove photo" onClick={() => removePhoto(photo.id)}>
+                        <X className="h-4 w-4" />
+                      </IconButton>
+                    </div>
+                  </div>
+                  <PhotoVendorTagger
+                    onAddVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, true)}
+                    onContributionChange={(vendorId, contribution) => setPhotoVendorContribution(photo.id, vendorId, contribution)}
+                    onCreateVendor={(initialName) => setNewVendorModal({ initialName, photoId: photo.id })}
+                    onRemoveVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, false)}
+                    photo={photo}
+                    vendors={vendorOptions}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+        </div>
+        <div className="grid min-w-0 gap-5">
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <Input
           name="title"
-          placeholder="Party Name, e.g. Lemon Garden Brunch"
+          aria-label="Party title"
+          placeholder="Give your party a title"
           required
           defaultValue={initialParty?.title ?? ""}
           className="min-w-0"
         />
         <Input
           name="theme"
-          placeholder="Theme, e.g. Citrus baby shower"
+          aria-label="Party theme"
+          placeholder="Theme or occasion (optional)"
           defaultValue={initialParty?.theme ?? ""}
           className="min-w-0"
         />
@@ -351,97 +443,13 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
         <p className="text-xs text-muted-foreground">Press Enter to turn each tag into a searchable bubble.</p>
       </div>
 
-      <div className="grid min-w-0 gap-3">
-        <label
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={onDrop}
-          className="grid min-h-[180px] cursor-pointer place-items-center rounded-[1.5rem] border border-dashed border-primary/40 bg-white/80 p-5 text-center transition hover:border-primary hover:bg-primary/5"
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="sr-only"
-            onChange={(event) => {
-              if (event.target.files) {
-                void uploadFiles(event.target.files);
-              }
-            }}
-          />
-          <span className="grid gap-3 justify-items-center">
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
-              {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
-            </span>
-            <span className="font-semibold">{isUploading ? "Uploading photos..." : "Drag photos here or click to upload"}</span>
-            <span className="max-w-sm text-xs leading-5 text-muted-foreground">
-              First photo is the cover. Reorder anytime, then tag vendors on each image.
-            </span>
-          </span>
-        </label>
 
-        {photos.length > 0 ? (
-          <div className="grid gap-3">
-            {photos.map((photo, index) => (
-              <article key={photo.id} className="grid min-w-0 gap-3 rounded-[1.4rem] border bg-white p-3 sm:grid-cols-[150px_minmax(0,1fr)]">
-                <div className="relative aspect-square overflow-hidden rounded-[1rem] bg-muted">
-                  <CroppedImage src={photo.url} alt="" crop={photo.crop} className="h-full w-full object-cover object-center" />
-                  {index === 0 ? (
-                    <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium shadow-sm">
-                      Cover
-                    </span>
-                  ) : null}
-                </div>
-                <div className="grid min-w-0 gap-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold">Photo {index + 1}</p>
-                      <p className="text-xs text-muted-foreground">Tag vendors for this specific image.</p>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {index > 0 ? (
-                        <IconButton label="Make cover" onClick={() => setCoverPhoto(photo.id)}>
-                          <Star className="h-4 w-4" />
-                        </IconButton>
-                      ) : null}
-                      <IconButton label="Reposition photo" onClick={() => setEditingCropPhoto(photo)}>
-                        <ImagePlus className="h-4 w-4" />
-                      </IconButton>
-                      <IconButton label="Move up" disabled={index === 0} onClick={() => movePhoto(photo.id, -1)}>
-                        <ArrowUp className="h-4 w-4" />
-                      </IconButton>
-                      <IconButton label="Move down" disabled={index === photos.length - 1} onClick={() => movePhoto(photo.id, 1)}>
-                        <ArrowDown className="h-4 w-4" />
-                      </IconButton>
-                      <IconButton label="Remove photo" onClick={() => removePhoto(photo.id)}>
-                        <X className="h-4 w-4" />
-                      </IconButton>
-                    </div>
-                  </div>
-                  <PhotoVendorTagger
-                    onAddVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, true)}
-                    onContributionChange={(vendorId, contribution) => setPhotoVendorContribution(photo.id, vendorId, contribution)}
-                    onCreateVendor={(initialName) => setNewVendorModal({ initialName, photoId: photo.id })}
-                    onRemoveVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, false)}
-                    photo={photo}
-                    vendors={vendorOptions}
-                  />
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 rounded-[1.2rem] bg-muted/60 p-3 text-sm text-muted-foreground">
-            <ImagePlus className="h-4 w-4" />
-            Uploaded party photos will preview here.
-          </div>
-        )}
-      </div>
-
-      <Button type="submit" disabled={isPending || isUploading || (!isEditing && photos.length === 0)}>
-        {isPending ? "Saving..." : isEditing ? "Save changes" : "Add Party"}
+      <Button type="submit" className={composer ? "h-12 rounded-full text-base font-semibold" : undefined} disabled={isPending || isUploading || (!isEditing && photos.length === 0)}>
+        {isPending ? "Publishing..." : isEditing ? "Save changes" : "Publish party"}
       </Button>
-      {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
+      {message ? <p role="alert" className="text-sm text-destructive">{message}</p> : null}
+        </div>
+      </div>
       {editingCropPhoto ? (
         <ImageCropEditor
           aspectLabel="Party photo crop"

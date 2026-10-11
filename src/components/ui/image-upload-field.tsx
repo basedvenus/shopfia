@@ -1,5 +1,7 @@
 "use client";
 
+import { CheckCircle2 } from "lucide-react";
+
 import { ChangeEvent, useEffect, useState } from "react";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { ImageCropEditor } from "@/components/ui/image-crop-editor";
@@ -67,7 +69,12 @@ export function ImageUploadField({
     preview: string;
   } | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessageValue] = useState<string | null>(null);
+  const [messageKind, setMessageKind] = useState<"success" | "error">("error");
+  function setMessage(value: string | null, kind: "success" | "error" = "error") {
+    setMessageValue(value);
+    setMessageKind(kind);
+  }
   const [failedPreview, setFailedPreview] = useState<string | null>(null);
   const isRound = rounded === "full";
   const value = controlledValue !== undefined ? controlledValue ?? "" : internalValue;
@@ -179,7 +186,8 @@ export function ImageUploadField({
       setMessage(
         result.persisted
           ? "Photo uploaded and saved."
-          : "Photo uploaded. Save draft or publish to keep it on this storefront."
+          : "Photo uploaded. Save draft or publish to keep it on this storefront.",
+        "success"
       );
       return true;
     } catch (error) {
@@ -196,7 +204,7 @@ export function ImageUploadField({
     try {
       const nextValue = await resizeImageFile(file, isRound ? 900 : 1600);
       updateValue(nextValue);
-      setMessage("Image added. Save draft or publish to keep it.");
+      setMessage("Image added. Save draft or publish to keep it.", "success");
       return true;
     } catch {
       setUploadPreviewValue(null);
@@ -264,7 +272,9 @@ export function ImageUploadField({
       <p className="text-xs text-muted-foreground">
         Supported formats: {SUPPORTED_IMAGE_FORMAT_LABEL}. Max size: {formatBytes(MAX_IMAGE_SIZE_BYTES)}.
       </p>
-      {message ? <p className="text-xs text-destructive">{message}</p> : null}
+      {message ? <p role={messageKind === "success" ? "status" : "alert"} className={`flex items-center gap-1.5 text-xs ${messageKind === "success" ? "text-green-700" : "text-destructive"}`}>
+        {messageKind === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" /> : null}{message}
+      </p> : null}
       {failedUpload ? (
         <div className="flex flex-wrap gap-2">
           <button type="button" className="text-xs font-medium text-primary underline-offset-4 hover:underline" onClick={retryFailedUpload}>

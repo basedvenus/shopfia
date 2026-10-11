@@ -9,21 +9,6 @@ import { publicVendorWhere } from "@/lib/public-marketplace";
 
 export const dynamic = "force-dynamic";
 
-const fallbackEvents = [
-  {
-    title: "Citrus Garden Brunch",
-    theme: "Lemon tablescape inspiration",
-    coverImageUrl: "/demo/fairfield-lemon-tablescape.png",
-    slug: "citrus-garden-brunch"
-  },
-  {
-    title: "Tulip Cookie Shower",
-    theme: "Soft floral favors",
-    coverImageUrl: "/demo/vacaville-cookie-tulips.png",
-    slug: "tulip-cookie-shower"
-  }
-];
-
 export default async function MyPartiesPage() {
   const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
   const session = await auth().catch((error) => {
@@ -85,7 +70,17 @@ export default async function MyPartiesPage() {
   ]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
+      <section className="min-w-0 rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-soft sm:p-8 lg:p-10">
+        <header className="mb-8 flex flex-wrap items-start justify-between gap-4 border-b pb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Share your party</h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">Your celebration, your story. Start with the photos that made it special.</p>
+          </div>
+          <Link href="/parties" className="inline-flex h-11 items-center rounded-full border px-5 text-sm font-medium transition hover:bg-muted">Back to parties</Link>
+        </header>
+        <PartyEventForm key="new-party" composer currentUserId={session.user.id} users={users} vendors={vendors} />
+      </section>
       {invitations.length > 0 ? (
         <section className="space-y-4 rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-soft">
           <div>
@@ -128,17 +123,9 @@ export default async function MyPartiesPage() {
           ))}
         </section>
       ) : null}
-      <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-        <div className="min-w-0 space-y-5">
-          <div>
-            <p className="text-sm text-muted-foreground">Social party portfolio</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">My Parties</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Curate parties with real photos, searchable hashtags, and vendor credits tied to the images they helped create.
-            </p>
-          </div>
-
-          {events.length > 0 ? (
+      {events.length > 0 ? (
+        <section className="space-y-5">
+          <h2 className="text-2xl font-semibold tracking-tight">Your published parties</h2>
             <div className="grid auto-rows-[180px] grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
               {events.map((event, index) => {
                 const { crop, image } = getEventImage(event);
@@ -184,49 +171,9 @@ export default async function MyPartiesPage() {
                 );
               })}
             </div>
-          ) : (
-            <div className="grid auto-rows-[220px] grid-cols-2 gap-3 md:grid-cols-4">
-              <div className="col-span-2 row-span-2 rounded-[1.7rem] border border-dashed border-primary/30 bg-white/80 p-5">
-                <div className="flex h-full flex-col justify-between">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                  <div>
-                    <h2 className="text-2xl font-semibold tracking-tight">Start your party portfolio</h2>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Your created parties will fill this space as visual cards you can reopen and edit.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              {fallbackEvents.map((event) => (
-                <Link
-                  key={event.title}
-                  href={`/events/${event.slug}`}
-                  className="relative col-span-2 overflow-hidden rounded-[1.5rem] border border-white/80 bg-muted shadow-sm"
-                >
-                  <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${event.coverImageUrl})` }} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-                    <h3 className="font-semibold">{event.title}</h3>
-                    <p className="text-xs text-white/80">{event.theme}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
 
-        <aside className="min-w-0 rounded-[1.8rem] border border-white/70 bg-white/90 p-4 shadow-soft xl:sticky xl:top-24 xl:self-start">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight">Add Party</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Start with photos, then add tags and vendor credits.
-              </p>
-            </div>
-          </div>
-          <PartyEventForm key="new-party" currentUserId={session.user.id} users={users} vendors={vendors} />
-        </aside>
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -273,24 +220,7 @@ function PublicMyPartiesPreview() {
         </div>
       </section>
 
-      <section className="grid auto-rows-[220px] grid-cols-2 gap-3 md:grid-cols-4">
-        {fallbackEvents.map((event, index) => (
-          <Link
-            key={event.title}
-            href={`/events/${event.slug}`}
-            className={`relative overflow-hidden rounded-[1.5rem] border border-white/80 bg-muted shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${
-              index === 0 ? "col-span-2 row-span-2" : "col-span-2"
-            }`}
-          >
-            <div className="absolute inset-0 bg-cover bg-center transition duration-500 hover:scale-[1.04]" style={{ backgroundImage: `url(${event.coverImageUrl})` }} />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-              <h3 className="font-semibold">{event.title}</h3>
-              <p className="text-xs text-white/80">{event.theme}</p>
-            </div>
-          </Link>
-        ))}
-      </section>
+
     </div>
   );
 }
@@ -307,6 +237,6 @@ function getEventImage(event: {
       }
     : {
         crop: normalizeImageCrop(null),
-        image: event.coverImageUrl ?? event.imageUrls[0] ?? "/demo/fairfield-lemon-tablescape.png"
+        image: event.coverImageUrl ?? event.imageUrls[0] ?? ""
       };
 }

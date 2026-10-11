@@ -1,6 +1,7 @@
+import { FriendSearchForm } from "@/components/parties/friend-search-form";
 import Link from "next/link";
 import { auth } from "@/auth";
-import { Heart, MapPin, Search, Tags, UserPlus } from "lucide-react";
+import { Heart, MapPin, Plus, Search, Tags, UserPlus } from "lucide-react";
 import { toggleFollowAction } from "@/app/actions/auth";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { ProfileBadge } from "@/components/badges/profile-badge";
@@ -8,7 +9,7 @@ import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { db } from "@/lib/db";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
-import { getUniquePartyVendors, partyInspirationExamples } from "@/lib/party-inspiration";
+import { getUniquePartyVendors } from "@/lib/party-inspiration";
 import { storefrontPath } from "@/lib/businesses";
 import { publicVendorWhere } from "@/lib/public-marketplace";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
@@ -200,7 +201,8 @@ export default async function PartiesPage({
               Scroll real celebrations, see the vendors tagged in the moment, and save the details that feel like your next gathering.
             </p>
           </div>
-          <Link href="/my-parties" className="inline-flex rounded-full border border-primary/20 bg-white/80 px-4 py-2 text-sm font-medium text-primary shadow-sm transition hover:bg-white">
+          <Link href="/my-parties" className="inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-full bg-[#a83264] px-7 py-3 text-base font-semibold text-white shadow-md transition hover:bg-[#8f2955] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a83264] focus-visible:ring-offset-4">
+            <Plus className="h-5 w-5" aria-hidden="true" />
             Share your party
           </Link>
         </div>
@@ -216,7 +218,8 @@ export default async function PartiesPage({
             </p>
           </div>
         </div>
-        <form action="/parties" className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <FriendSearchForm>
+          {partyQuery ? <input type="hidden" name="q" value={partyQuery} /> : null}
           {selectedFeed !== "For You" ? (
             <input type="hidden" name="feed" value={selectedFeed.toLowerCase()} />
           ) : null}
@@ -225,14 +228,12 @@ export default async function PartiesPage({
             <input
               name="friend"
               defaultValue={friendQuery}
+              aria-label="Search people by username or display name"
               placeholder="Search username or display name"
               className="h-12 w-full rounded-full border border-border bg-white px-11 text-sm outline-none transition focus:border-primary/45 focus:ring-4 focus:ring-primary/10"
             />
           </label>
-          <button className="h-12 rounded-full bg-foreground px-6 text-sm font-semibold text-background transition hover:bg-foreground/90">
-            Search
-          </button>
-        </form>
+        </FriendSearchForm>
         {friendQuery ? (
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {friendResults.length ? (
@@ -402,24 +403,7 @@ export default async function PartiesPage({
             })
           : null}
       </section>
-      {visibleParties.length === 0 && selectedFeed === "For You" && !partyQuery ? (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Inspiration examples</h2>
-          <p className="text-sm text-muted-foreground">Decorative ideas for your next celebration. These are not published party posts or vendor bookings.</p>
-          <div className="columns-2 gap-3 sm:columns-3 lg:columns-4">
-            {partyInspirationExamples.map((party) => (
-              <Link key={party.slug} href={`/events/${party.slug}`} className="mb-3 block break-inside-avoid overflow-hidden rounded-2xl border bg-white/90 shadow-sm">
-                <CroppedImage src={party.coverImageUrl} alt={party.title} crop={normalizeImageCrop(null)} className="aspect-[4/5] w-full object-cover" />
-                <div className="space-y-1 p-4">
-                  <p className="text-xs text-muted-foreground">Inspiration example</p>
-                  <h3 className="font-semibold">{party.title}</h3>
-                  <p className="text-sm text-muted-foreground">{party.theme}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {visibleParties.length === 0 ? <p className="p-6 text-muted-foreground">{partyQuery ? "No parties match this search." : "No parties to show yet. Shared celebrations will appear here."}</p> : null}
     </div>
   );
 }
