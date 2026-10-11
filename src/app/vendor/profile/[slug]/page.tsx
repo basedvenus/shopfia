@@ -21,6 +21,7 @@ import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { StorefrontNavigation } from "@/components/vendor/storefront-navigation";
 import { StorefrontPortfolioGallery } from "@/components/vendor/storefront-portfolio-gallery";
 import { CopyStorefrontLinkButton } from "@/components/vendor/copy-storefront-link-button";
 import { db } from "@/lib/db";
@@ -30,7 +31,7 @@ import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorProfileBySlug } from "@/lib/data/vendor";
 import { getVendorTrustStatus } from "@/lib/vendor-status";
-import { STOREFRONT_PALETTES, STOREFRONT_SECTION_LABELS, coverageAreaLabels, getStorefrontFontFamilies, getStorefrontPalette, normalizeStorefrontLayout, sanitizeHiddenStorefrontSections, sanitizeStorefrontSectionLabels, sanitizeStorefrontSections, storefrontUrl } from "@/lib/businesses";
+import { STOREFRONT_LAYOUTS, STOREFRONT_PALETTES, STOREFRONT_SECTION_LABELS, coverageAreaLabels, getStorefrontFontFamilies, getStorefrontPalette, normalizeStorefrontLayout, sanitizeHiddenStorefrontSections, sanitizeStorefrontSectionLabels, sanitizeStorefrontSections, storefrontUrl } from "@/lib/businesses";
 
 export const dynamic = "force-dynamic";
 
@@ -322,25 +323,12 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             ) : null}
           </div>
         </div>
-        <nav className="sticky top-16 z-10 flex gap-1 overflow-x-auto border-t bg-white px-3 py-1.5 text-sm font-medium backdrop-blur" style={theme.navStyle}>
-          {[
-            ["#storefront-home", "Home"],
-            ["#services", sectionLabel("all-services")],
-            ["#portfolio", sectionLabel("portfolio")],
-            ["#about", sectionLabel("about")],
-            ["#reviews", sectionLabel("reviews")],
-            ["#faq", sectionLabel("faq")]
-          ].map(([href, label]) => (
-            <a
-              key={href}
-              href={href}
-              className="whitespace-nowrap rounded-full px-3 py-2 text-muted-foreground transition hover:text-foreground"
-              style={label === "Home" ? theme.activeNavItemStyle : undefined}
-            >
-              {label}
-            </a>
-          ))}
-        </nav>
+        <StorefrontNavigation
+          visibleSections={sectionOrder}
+          sectionLabels={sectionLabels}
+          style={theme.navStyle}
+          activeItemStyle={theme.activeNavItemStyle}
+        />
       </header>
 
       <StorefrontTemplateIntro
@@ -383,7 +371,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             <div className="grid gap-3 sm:grid-cols-3">
               <EditorialStat label={verifiedReviewCount > 0 ? "Verified rating" : "Event credits"} value={verifiedReviewCount > 0 ? verifiedAverageRating.toFixed(1) : String(taggedEvents.length)} theme={theme} />
               <EditorialStat label="Completed events" value={String(completedOrderCount)} theme={theme} />
-              <EditorialStat label="Theme" value={vendor.storefrontLayout.toLowerCase()} theme={theme} />
+              <EditorialStat label="Theme" value={STOREFRONT_LAYOUTS.find((layout) => layout.value === storefrontLayout)!.label} theme={theme} />
             </div>
           </div>
         </section>
