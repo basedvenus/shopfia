@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+.party-brand-button {
+  background-color: #f6bcbc;
+  color: #382d2d;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+.party-brand-button:hover:not(:disabled) {
+  background-color: #e8a0aa;
+  color: #382d2d;
+  box-shadow: 0 4px 14px rgb(216 143 157 / 25%);
+}
+.party-brand-button:focus-visible {
+  outline: 2px solid #d88f9d;
+  outline-offset: 3px;
+}
+
 :root {
  --background: 20 30% 97%;
   --foreground: 24 10% 16%;

@@ -259,7 +259,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                       <SocialProfileLink href={profile.tiktokUrl} label="TikTok" icon={<Music2 className="h-4 w-4" />} />
                     ) : null}
                     {profile.partyfulUrl ? (
-                      <SocialProfileLink href={profile.partyfulUrl} label="Partyful" icon={<Sparkles className="h-4 w-4" />} />
+                      <SocialProfileLink href={profile.partyfulUrl} label="Partiful" icon={<Sparkles className="h-4 w-4" />} />
                     ) : null}
                   </div>
                 ) : null}
@@ -428,17 +428,7 @@ function ProfilePartySection({
                   {event.collaborators?.length ? (
                     <p className="mt-1 text-xs text-white/75">Hosted by {getPrimaryHostName(event)}</p>
                   ) : null}
-                  {event.partyfulUrl ? (
-                    <Link
-                      href={event.partyfulUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="relative z-30 mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition hover:bg-white/90"
-                    >
-                      Partyful invite
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
-                  ) : null}
+
                 </div>
               </article>
             );
@@ -504,7 +494,8 @@ function getPartyCardImage(event: {
 
 function formatPartyDate(date: Date) {
   return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
+    month: "long",
+    year: "numeric",
     timeZone: "UTC"
   }).format(date);
 }

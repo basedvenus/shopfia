@@ -69,9 +69,10 @@ describe("truthful party inspiration and credits", () => {
     mocks.explore.mockResolvedValue({ categories: [], eventCategories: [], filters: {}, vendors: [], offerings: [], parties: [], truncated: { vendors: false, offerings: false, parties: false } });
   });
 
-  it("retains the requested homepage sentence and labels decorative images without fake counts", () => {
+  it("shows the celebration introduction and labels decorative images without fake counts", () => {
     const page = HomePage();
-    expect(text(page)).toContain("Your one-stop shop for party planning.");
+    expect(text(page)).toContain("Everything for a");
+    expect(text(page)).toContain("lovely celebration.");
     expect(text(page)).toContain("Inspiration example");
     expect(text(page)).not.toContain("8 vendors tagged");
     expect(text(page)).not.toContain("Lemon Grove Baby Brunch");

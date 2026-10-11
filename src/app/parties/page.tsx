@@ -201,7 +201,7 @@ export default async function PartiesPage({
               Scroll real celebrations, see the vendors tagged in the moment, and save the details that feel like your next gathering.
             </p>
           </div>
-          <Link href="/my-parties" className="inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-full bg-[#a83264] px-7 py-3 text-base font-semibold text-white shadow-md transition hover:bg-[#8f2955] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a83264] focus-visible:ring-offset-4">
+          <Link href="/my-parties" className="inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-full party-brand-button px-7 py-3 text-base font-semibold text-white shadow-md transition  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d88f9d] focus-visible:ring-offset-4">
             <Plus className="h-5 w-5" aria-hidden="true" />
             Share your party
           </Link>

@@ -112,16 +112,16 @@ const featuredParties = [
 
 const howItWorks = [
   {
-    title: "Browse real parties",
+    title: "Pick a theme",
     body: "Find inspiration from baby showers, birthdays, weddings, bridal showers, and more."
   },
   {
-    title: "See every vendor behind the event",
-    body: "Each party can feature tagged vendors, products, and services."
+    title: "Book your vendor",
+    body: "Find your vendors, discuss the details, and book your celebration."
   },
   {
-    title: "Save what you love and book the look",
-    body: "Collect ideas and connect with the people who made them happen."
+    title: "Post your party",
+    body: "Share your photos and tag the vendors who made it happen."
   }
 ];
 
@@ -232,9 +232,21 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="rounded-[8px] border border-primary/20 bg-white/85 px-5 py-8 text-center shadow-sm md:px-10">
-        <p className="mx-auto max-w-5xl text-2xl font-semibold leading-tight text-primary md:text-3xl">
-          Your one-stop shop for party planning.
+      <section className="px-5 py-4 text-center md:px-10 md:py-6">
+        <div aria-hidden="true" className="mx-auto mb-6 h-px w-12 bg-[#a85f5e]/35" />
+        <h2 className="mx-auto max-w-3xl text-3xl font-medium leading-[1.2] tracking-tight text-foreground md:text-4xl">
+          Everything for a{" "}
+          <span
+            className="font-normal italic text-[#a85f5e]"
+            style={{
+              fontFamily: 'var(--font-shopfia-serif), Canela, "Editorial New", "Iowan Old Style", Georgia, serif'
+            }}
+          >
+            lovely celebration.
+          </span>
+        </h2>
+        <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-muted-foreground md:text-base">
+          Discover the inspiration, the details, and the people who bring it all to life.
         </p>
       </section>
 
@@ -413,7 +425,7 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[8px] border border-white/80 bg-foreground text-white shadow-sm">
+      <section className="overflow-hidden rounded-[8px] border border-white/80 bg-white text-black shadow-sm">
         <div className="grid lg:grid-cols-[1.06fr_0.94fr]">
           <div className="p-6 md:p-10">
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
@@ -422,7 +434,7 @@ export default function Page() {
             <h2 className="shopfia-editorial-heading mt-3 max-w-2xl text-3xl tracking-normal md:text-5xl">
               Plan from a real celebration, then make it your own.
             </h2>
-            <p className="mt-5 max-w-xl text-sm leading-7 text-white/82">
+            <p className="mt-5 max-w-xl text-sm leading-7 text-muted-foreground">
               Save citrus brunches, floral showers, bow-filled birthdays, and
               candlelit dinner parties. When you are ready, connect with the
               vendors behind the details you already love.

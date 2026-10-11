@@ -8,7 +8,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { sendWelcomeEmail } from "@/lib/email";
-import { parseImageCrop } from "@/lib/image-crop";
+import { parseImageCrop, type ImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { securityLog } from "@/lib/security/audit-log";
 import { checkServerActionRateLimit } from "@/lib/security/request";
@@ -250,7 +250,7 @@ const profileSchema = z.object({
   bio: z.string().trim().max(280, "Bio is a little too long. Keep it under 280 characters.").optional(),
   instagramUrl: z.string().trim().url("Enter a valid Instagram link.").optional().or(z.literal("")),
   tiktokUrl: z.string().trim().url("Enter a valid TikTok link.").optional().or(z.literal("")),
-  partyfulUrl: z.string().trim().url("Enter a valid Partyful link.").optional().or(z.literal(""))
+  partyfulUrl: z.string().trim().url("Enter a valid Partiful link.").optional().or(z.literal(""))
 });
 
 export async function updateAccountProfileAction(formData: FormData) {
@@ -283,7 +283,7 @@ export async function updateAccountProfileAction(formData: FormData) {
         bio: "Bio",
         instagramUrl: "Instagram link",
         name: "Name",
-        partyfulUrl: "Partyful link",
+        partyfulUrl: "Partiful link",
         tiktokUrl: "TikTok link",
         username: "Username"
       }, "Check your profile details.")
@@ -323,9 +323,11 @@ const partyPhotoPayloadSchema = z.object({
     .object({
       x: z.coerce.number().min(0).max(100),
       y: z.coerce.number().min(0).max(100),
-      zoom: z.coerce.number().min(1).max(3)
+      zoom: z.coerce.number().min(0.25).max(3),
+      brightness: z.coerce.number().min(0.5).max(1.5).default(1),
+      saturation: z.coerce.number().min(0).max(2).default(1)
     })
-    .default({ x: 50, y: 50, zoom: 1 }),
+    .default({ x: 50, y: 50, zoom: 1, brightness: 1, saturation: 1 }),
   vendorIds: z.array(z.string().cuid()).max(8).default([]),
   vendorContributions: z.record(z.string().cuid(), z.string().trim().max(220)).default({}),
   vendorRatings: z.record(z.string().cuid(), z.coerce.number().int().min(1).max(5)).default({})
@@ -337,13 +339,30 @@ const optionalCoordinate = (min: number, max: number) =>
     z.coerce.number().min(min).max(max).optional()
   );
 
+export async function updatePartyCoverCropAction(eventId: string, crop: ImageCrop) {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Sign in to adjust the cover." };
+  const parsed = partyPhotoPayloadSchema.shape.crop.safeParse(crop);
+  if (!parsed.success) return { ok: false, error: "Check the crop settings." };
+  const rate = await checkServerActionRateLimit([{ key: `party-cover:${session.user.id}`, limit: 30, intervalMs: 60_000 }]);
+  if (!rate.ok) return { ok: false, error: "Please wait a minute and try again." };
+  const result = await db.partyEvent.updateMany({ where: { id: eventId, userId: session.user.id }, data: { coverImageCrop: parsed.data } });
+  if (!result.count) return { ok: false, error: "You can only edit your own party." };
+  revalidatePath("/events/[slug]", "page");
+  return { ok: true };
+}
+
 const partyEventFieldsSchema = z.object({
   title: z.string().trim().min(2, "Add an event title.").max(100, "Party name is a little too long."),
   theme: z.string().trim().max(100, "Theme is a little too long.").optional().or(z.literal("")),
   tags: z.array(z.string().trim().min(1).max(30, "Keep tags short and sweet.")).max(12, "Use up to 12 tags.").default([]),
   description: z.string().trim().max(500, "Party notes are a little too long.").optional().or(z.literal("")),
-  eventDate: z.string().trim().optional().or(z.literal("")),
-  partyfulUrl: z.string().trim().url("Enter a valid Partyful invite link.").optional().or(z.literal("")),
+  eventDate: z.string().trim().regex(/^\d{4}-(0[1-9]|1[0-2])(-\d{2})?$/, "Choose a valid event date.").refine((value) => {
+    const day = value.length === 7 ? `${value}-01` : value;
+    const date = new Date(`${day}T00:00:00.000Z`);
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === day;
+  }, "Choose a valid event date.").optional().or(z.literal("")),
+  partyfulUrl: z.string().trim().url("Enter a valid Partiful invite link.").optional().or(z.literal("")),
   location: z.string().trim().max(240, "Location is a little too long.").optional().or(z.literal("")),
   formattedAddress: z.string().trim().max(240, "Location is a little too long.").optional().or(z.literal("")),
   city: z.string().trim().max(80, "City is a little too long.").optional().or(z.literal("")),
@@ -402,6 +421,10 @@ export async function createPartyEventAction(formData: FormData) {
     photos: parsed.data.photos
   });
 
+  if (prepared.orderedPhotos.some((photo) => photo.vendorIds.some((id) => prepared.validVendorIds.has(id) && !photo.vendorRatings[id]))) {
+    return { ok: false, error: "Rate each tagged vendor before saving your party." };
+  }
+
   if (prepared.orderedPhotos.length === 0) {
     return { ok: false, error: "Upload at least one party photo before saving." };
   }
@@ -415,7 +438,7 @@ export async function createPartyEventAction(formData: FormData) {
         theme: parsed.data.theme || null,
         tags: parsed.data.tags,
         description: parsed.data.description || null,
-        eventDate: parsed.data.eventDate ? new Date(parsed.data.eventDate) : null,
+        eventDate: parsed.data.eventDate ? new Date(`${parsed.data.eventDate.length === 7 ? parsed.data.eventDate + "-01" : parsed.data.eventDate}T00:00:00.000Z`) : null,
         partyfulUrl: parsed.data.partyfulUrl || null,
         location: parsed.data.formattedAddress || parsed.data.location || null,
         formattedAddress: parsed.data.formattedAddress || null,
@@ -468,7 +491,7 @@ export async function createPartyEventAction(formData: FormData) {
     );
 
     return partyEvent;
-  });
+  }, { maxWait: 10_000, timeout: 30_000 });
 
   revalidatePath("/parties");
   revalidatePath("/my-parties");
@@ -509,6 +532,7 @@ export async function updatePartyEventAction(formData: FormData) {
       id: true,
       slug: true,
       photos: {
+        orderBy: { sortOrder: "asc" },
         select: {
           id: true
         }
@@ -526,6 +550,9 @@ export async function updatePartyEventAction(formData: FormData) {
     eventId: existingEvent.id
   });
   const keptPhotoIds = prepared.orderedPhotos.map((photo) => photo.id);
+  if (prepared.orderedPhotos.some((photo) => photo.vendorIds.some((id) => prepared.validVendorIds.has(id) && !photo.vendorRatings[id]))) {
+    return { ok: false, error: "Rate each tagged vendor before saving your party." };
+  }
 
   const event = await db.$transaction(async (tx) => {
     await tx.partyPhoto.deleteMany({
@@ -543,8 +570,8 @@ export async function updatePartyEventAction(formData: FormData) {
         theme: parsed.data.theme || null,
         tags: parsed.data.tags,
         description: parsed.data.description || null,
-        eventDate: parsed.data.eventDate ? new Date(parsed.data.eventDate) : null,
-        partyfulUrl: parsed.data.partyfulUrl || null,
+        eventDate: parsed.data.eventDate ? new Date(`${parsed.data.eventDate.length === 7 ? parsed.data.eventDate + "-01" : parsed.data.eventDate}T00:00:00.000Z`) : null,
+
         location: parsed.data.formattedAddress || parsed.data.location || null,
         formattedAddress: parsed.data.formattedAddress || null,
         city: parsed.data.city || null,
@@ -554,6 +581,7 @@ export async function updatePartyEventAction(formData: FormData) {
         locationLng: parsed.data.locationLng ?? null,
         googlePlaceId: parsed.data.googlePlaceId || null,
         coverImageUrl: prepared.imageUrls[0] ?? null,
+        coverImageCrop: prepared.orderedPhotos[0]?.crop ?? { x: 50, y: 50, zoom: 1 },
         imageUrls: prepared.imageUrls,
         taggedVendors: {
           set: prepared.eventVendorIds.map((id) => ({ id }))
@@ -599,7 +627,7 @@ export async function updatePartyEventAction(formData: FormData) {
     );
 
     return updatedEvent;
-  });
+  }, { maxWait: 10_000, timeout: 30_000 });
 
   revalidatePath("/parties");
   revalidatePath("/my-parties");
@@ -903,7 +931,9 @@ function parsePhotoCrop(value: unknown) {
   return {
     x: clampCropNumber(record.x, 0, 100, 50),
     y: clampCropNumber(record.y, 0, 100, 50),
-    zoom: clampCropNumber(record.zoom, 1, 3, 1)
+    zoom: clampCropNumber(record.zoom, 0.25, 3, 1),
+    brightness: clampCropNumber(record.brightness ?? 1, 0.5, 1.5, 1),
+    saturation: clampCropNumber(record.saturation ?? 1, 0, 2, 1)
   };
 }
 
@@ -965,5 +995,27 @@ export async function toggleFollowAction(formData: FormData) {
     revalidatePath(`/vendor/profile/${vendorProfile.slug}`);
     revalidatePath(`/${vendorProfile.slug}`);
   });
+  return { ok: true };
+}
+
+export async function followPartyVendorAction(vendorId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Sign in to follow vendors." };
+  const rate = await checkServerActionRateLimit([
+    { key: `party-vendor-follow:user:${session.user.id}`, limit: 30, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) return { ok: false, error: "Please wait a minute before following more vendors." };
+  const vendor = await db.vendorProfile.findUnique({ where: { id: vendorId }, select: { userId: true, status: true, slug: true } });
+  if (!vendor?.userId || vendor.status === "UNCLAIMED") return { ok: false, error: "This vendor hasn’t claimed their profile yet." };
+  if (vendor.userId === session.user.id) return { ok: false, error: "This is your own vendor profile." };
+  await db.follow.upsert({
+    where: { followerId_followingId: { followerId: session.user.id, followingId: vendor.userId } },
+    create: { followerId: session.user.id, followingId: vendor.userId }, update: {}
+  });
+  revalidatePath("/parties");
+  revalidatePath("/account");
+  revalidatePath("/explore");
+  revalidatePath(`/vendor/profile/${vendor.slug}`);
+  revalidatePath(`/${vendor.slug}`);
   return { ok: true };
 }

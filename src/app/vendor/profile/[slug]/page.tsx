@@ -146,7 +146,14 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   const hiddenSections = sanitizeHiddenStorefrontSections(vendor.storefrontHiddenSections);
   const sectionLabels = sanitizeStorefrontSectionLabels(vendor.storefrontSectionLabels);
   const sectionLabel = (section: keyof typeof STOREFRONT_SECTION_LABELS) => sectionLabels[section] ?? STOREFRONT_SECTION_LABELS[section];
-  const sectionOrder = sanitizeStorefrontSections(vendor.storefrontSectionOrder).filter((section) => !hiddenSections.includes(section));
+  const sectionOrder = sanitizeStorefrontSections(vendor.storefrontSectionOrder).filter((section) => {
+    if (hiddenSections.includes(section)) return false;
+    if (!isUnclaimed) return true;
+    if (section === "portfolio") return portfolioPhotos.length > 0 || Boolean(instagramFeedUrl);
+    if (section === "all-services" || section === "featured-services") return vendor.offerings.length > 0;
+    if (["how-it-works", "faq", "final-quote", "reviews"].includes(section)) return false;
+    return true;
+  });
   const sectionPriority = (section: string) => sectionOrder.indexOf(section) === -1 ? 999 : sectionOrder.indexOf(section);
   const showSection = (section: string) => sectionOrder.includes(section as never);
   const visibleOfferings = vendor.offerings.filter((offering) => !vendor.storefrontHiddenOfferingIds.includes(offering.id));
@@ -239,7 +246,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       <header className="overflow-hidden rounded-[1rem] border bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]" style={theme.headerShellStyle}>
         <div className="flex items-center justify-between gap-3 border-b px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]" style={theme.platformBarStyle}>
           <span>ShopFia Storefront</span>
-          <span className="hidden sm:inline">Verified identity, saved services, quotes, and bookings</span>
+          <span className="hidden sm:inline">{isUnclaimed ? "Community-tagged · Unclaimed business" : "Verified identity, saved services, quotes, and bookings"}</span>
         </div>
         <div className="grid gap-3 p-3 md:grid-cols-[auto_1fr_auto] md:items-center md:p-4">
           <div className={`relative h-20 w-20 overflow-hidden border border-[#eadbd7] bg-[#f8ece9] md:h-24 md:w-24 ${theme.logoRadius}`}>
@@ -499,13 +506,13 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <p className={`mt-4 text-sm leading-6 ${theme.copyClass}`}>
             {vendor.serviceAreaNotes ?? `${vendor.name} serves ${serviceAreaLabel || "local events"} within ${vendor.serviceRadiusMiles} miles.`}
           </p>
-          <ServiceAreaRadiusCard
-            city={serviceAreaLabel || vendor.city || "Local events"}
+          {serviceAreaLabel ? <ServiceAreaRadiusCard
+            city={serviceAreaLabel}
             coverageAreas={coverageAreas}
             radiusMiles={vendor.serviceRadiusMiles}
             serviceAreaNotes={vendor.serviceAreaNotes}
             theme={theme}
-          />
+          /> : null}
           {policies.length ? (
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {policies.slice(0, 4).map((policy) => (
@@ -632,7 +639,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               <Link key={event.slug} href={`/events/${event.slug}`}>
                 <article className={`group overflow-hidden shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
                   <div className="relative aspect-[4/3] bg-muted">
-                    <Image src={event.coverImageUrl} alt={event.title} fill sizes="(min-width: 1280px) 31vw, (min-width: 768px) 48vw, 100vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+                    <Image src={event.coverImageUrl} alt={event.title} unoptimized fill sizes="(min-width: 1280px) 31vw, (min-width: 768px) 48vw, 100vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" />
                   </div>
                   <div className="p-4">
                     <h3 className="font-semibold" style={theme.headingStyle}>{event.title}</h3>

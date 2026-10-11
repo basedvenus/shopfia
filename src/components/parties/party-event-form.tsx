@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition, type DragEvent, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Loader2, Plus, Search, Star, Upload, X } from "lucide-react";
-import { createPartyEventAction, updatePartyEventAction } from "@/app/actions/auth";
+import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { SlidersHorizontal, Trash2, Loader2, Plus, Search, Star, Upload, X, Tag } from "lucide-react";
+import { createPartyEventAction, updatePartyEventAction, followPartyVendorAction } from "@/app/actions/auth";
 import { createUnclaimedVendorAction } from "@/app/actions/vendor";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DEFAULT_IMAGE_CROP, type ImageCrop } from "@/lib/image-crop";
 import { getSafeProfileImage } from "@/lib/profile-image";
+
+import { PARTY_OCCASIONS, occasionTag, inferPartyOccasion } from "@/lib/party-occasions";
 
 const MAX_PARTY_UPLOAD_BYTES = 3.5 * 1024 * 1024;
 const MAX_PARTY_UPLOAD_DIMENSION = 2400;
@@ -75,9 +77,12 @@ type PartyEventFormProps = {
 
 export function PartyEventForm({ currentUserId, composer = false, initialParty, users, vendors }: PartyEventFormProps) {
   const isEditing = Boolean(initialParty);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(initialParty?.photos[0]?.id ?? null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>(() => initialParty?.tags ?? []);
+  const [occasion, setOccasion] = useState(() => inferPartyOccasion(initialParty?.tags ?? [], initialParty?.title ?? ""));
+  const [privateResidence, setPrivateResidence] = useState(initialParty?.location === "Private residence");
   const [photos, setPhotos] = useState<UploadedPartyPhoto[]>(() =>
     (initialParty?.photos ?? []).map((photo) => ({
       ...photo,
@@ -90,23 +95,17 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
   const [editingCropPhoto, setEditingCropPhoto] = useState<UploadedPartyPhoto | null>(null);
   const [newVendorModal, setNewVendorModal] = useState<{ initialName: string; photoId: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function addTag(rawTag = tagInput) {
-    const tag = normalizeTag(rawTag);
-    if (!tag) return;
-    setTags((current) => (current.includes(tag) ? current : [...current, tag].slice(0, 12)));
-    setTagInput("");
-  }
-
-  function removeTag(tag: string) {
-    setTags((current) => current.filter((item) => item !== tag));
-  }
-
   async function uploadFiles(fileList: FileList | File[]) {
     const files = Array.from(fileList).filter((file) => file.type.startsWith("image/"));
-    if (!files.length) return;
+    if (!files.length) {
+      setMessage("Choose photo files to upload. Videos are not supported yet.");
+      return;
+    }
 
     setMessage(null);
     setIsUploading(true);
@@ -125,11 +124,6 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         fileInputRef.current.value = "";
       }
     }
-  }
-
-  function onDrop(event: DragEvent<HTMLLabelElement>) {
-    event.preventDefault();
-    void uploadFiles(event.dataTransfer.files);
   }
 
   function togglePhotoVendor(photoId: string, vendorId: string, forceSelected?: boolean) {
@@ -190,16 +184,13 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
     void fetch(`/api/party-photos/${photoId}`, { method: "DELETE" });
   }
 
-  function movePhoto(photoId: string, direction: -1 | 1) {
-    setPhotos((current) => {
-      const index = current.findIndex((photo) => photo.id === photoId);
-      const nextIndex = index + direction;
-      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
-      const next = [...current];
-      const [photo] = next.splice(index, 1);
-      next.splice(nextIndex, 0, photo);
-      return next;
-    });
+  const selectedPhoto = photos.find((photo) => photo.id === selectedPhotoId) ?? photos[0];
+  function goToVendors() {
+    if (!formRef.current?.reportValidity()) return;
+    if (!photos.length) { setMessage("Add at least one photo first."); return; }
+    setMessage(null);
+    setSelectedPhotoId((current) => current ?? photos[0].id);
+    setStep(2);
   }
 
   function setCoverPhoto(photoId: string) {
@@ -214,17 +205,26 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
 
   return (
     <form
+      ref={formRef}
+      onSubmit={(event) => { if (!isEditing && step === 1) { event.preventDefault(); goToVendors(); } }}
       action={(formData) => {
         setMessage(null);
+        const missingRatingPhoto = photos.find((photo) => photo.vendorIds.some((id) => !photo.vendorRatings?.[id]));
+        if (missingRatingPhoto) {
+          setSelectedPhotoId(missingRatingPhoto.id);
+          setStep(2);
+          setMessage("Rate each tagged vendor before saving your party.");
+          return;
+        }
         if (initialParty) {
           formData.set("eventId", initialParty.id);
         }
-        tags.forEach((tag) => formData.append("tags", tag));
+        if (occasion) formData.append("tags", occasionTag(occasion));
         formData.set("mainHostId", mainHostId);
         coHostIds.forEach((id) => formData.append("coHostIds", id));
         formData.set(
           "photos",
-          JSON.stringify(photos.map(({ crop, id, vendorContributions, vendorIds }) => ({ crop, id, vendorContributions, vendorIds })))
+          JSON.stringify(photos.map(({ crop, id, vendorContributions, vendorIds, vendorRatings }) => ({ crop, id, vendorContributions, vendorIds, vendorRatings })))
         );
 
         startTransition(async () => {
@@ -237,134 +237,100 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
               return;
             }
             window.location.href = `/events/${result.eventSlug}`;
-          } catch (error) {
-            setMessage(error instanceof Error ? error.message : "Could not save party. Please try again.");
+          } catch {
+            setMessage("Your changes could not be saved. Please try again; your edits are still here.");
           }
         });
       }}
       className="grid min-w-0 gap-5"
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => event.preventDefault()}
     >
+      {!isEditing ? <nav aria-label="Party creation steps" className="mb-3 flex flex-wrap gap-3">
+        <button type="button" onClick={() => setStep(1)} aria-current={step === 1 ? "step" : undefined} className={`rounded-full px-5 py-3 text-sm font-semibold ${step === 1 ? "party-brand-button text-white" : "bg-muted"}`}>1. Party details</button>
+        <button type="button" onClick={goToVendors} aria-current={step === 2 ? "step" : undefined} className={`rounded-full px-5 py-3 text-sm font-semibold ${step === 2 ? "party-brand-button text-white" : "bg-muted"}`}>2. Tag vendors</button>
+      </nav> : null}
       <div className={composer ? "grid min-w-0 items-start gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12" : "grid min-w-0 gap-5"}>
         <div className={composer ? "min-w-0" : "order-2"}>
-      <div className="grid min-w-0 gap-3">
-        <label
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={onDrop}
-          className={`relative grid cursor-pointer place-items-center overflow-hidden rounded-[1.5rem] border-2 border-dashed border-primary/30 bg-gradient-to-br from-[#fff8f2] to-[#fce7ee] p-6 text-center transition hover:border-primary focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-4 ${composer ? "min-h-[360px] lg:min-h-[540px]" : "min-h-[180px]"}`}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="sr-only"
-            onChange={(event) => {
-              if (event.target.files) {
-                void uploadFiles(event.target.files);
-              }
-            }}
-          />
-          {composer && photos[0] ? (
-            <CroppedImage src={photos[0].url} alt="Your party cover preview" crop={photos[0].crop} className="absolute inset-0 h-full w-full object-cover" />
-          ) : null}
-          <span className={`relative grid gap-4 justify-items-center ${composer && photos[0] ? "rounded-3xl bg-white/95 p-6 shadow-soft" : ""}`}>
-            <span className="grid h-16 w-16 place-items-center rounded-full bg-primary/10 text-primary">
-              {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
-            </span>
-            <span className="text-xl font-semibold tracking-tight">{isUploading ? "Uploading photos..." : photos.length ? "Add more photos" : "Upload your party photos"}</span>
-            <span className="max-w-sm text-xs leading-5 text-muted-foreground">
-              Choose photos or drag them here. Your first photo becomes the cover.
-            </span>
-          </span>
-        </label>
-
-        {photos.length > 0 ? (
-          <div className="grid gap-3">
-            {photos.map((photo, index) => (
-              <article key={photo.id} className="grid min-w-0 gap-3 rounded-[1.4rem] border bg-white p-3 sm:grid-cols-[150px_minmax(0,1fr)]">
-                <div className="relative aspect-square overflow-hidden rounded-[1rem] bg-muted">
-                  <CroppedImage src={photo.url} alt="" crop={photo.crop} className="h-full w-full object-cover object-center" />
-                  {index === 0 ? (
-                    <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium shadow-sm">
-                      Cover
-                    </span>
-                  ) : null}
-                </div>
-                <div className="grid min-w-0 gap-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold">Photo {index + 1}</p>
-                      <p className="text-xs text-muted-foreground">Tag vendors for this specific image.</p>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {index > 0 ? (
-                        <IconButton label="Make cover" onClick={() => setCoverPhoto(photo.id)}>
-                          <Star className="h-4 w-4" />
-                        </IconButton>
-                      ) : null}
-                      <IconButton label="Reposition photo" onClick={() => setEditingCropPhoto(photo)}>
-                        <ImagePlus className="h-4 w-4" />
-                      </IconButton>
-                      <IconButton label="Move up" disabled={index === 0} onClick={() => movePhoto(photo.id, -1)}>
-                        <ArrowUp className="h-4 w-4" />
-                      </IconButton>
-                      <IconButton label="Move down" disabled={index === photos.length - 1} onClick={() => movePhoto(photo.id, 1)}>
-                        <ArrowDown className="h-4 w-4" />
-                      </IconButton>
-                      <IconButton label="Remove photo" onClick={() => removePhoto(photo.id)}>
-                        <X className="h-4 w-4" />
-                      </IconButton>
-                    </div>
-                  </div>
-                  <PhotoVendorTagger
-                    onAddVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, true)}
-                    onContributionChange={(vendorId, contribution) => setPhotoVendorContribution(photo.id, vendorId, contribution)}
-                    onCreateVendor={(initialName) => setNewVendorModal({ initialName, photoId: photo.id })}
-                    onRemoveVendor={(vendorId) => togglePhotoVendor(photo.id, vendorId, false)}
-                    photo={photo}
-                    vendors={vendorOptions}
-                  />
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : null}
+      <div className="flex min-w-0 flex-col gap-4">
+        <input ref={fileInputRef} type="file" accept="image/*" multiple disabled={isUploading} className="sr-only" onChange={(event) => { if (event.target.files) void uploadFiles(event.target.files); }} />
+        <div onDragEnter={(event) => { event.preventDefault(); setIsDragOver(true); }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; }}
+          onDrop={(event) => {
+            event.preventDefault(); event.stopPropagation(); setIsDragOver(false);
+            const id = event.dataTransfer.getData("application/x-shopfia-photo");
+            if (id && photos.some((photo) => photo.id === id)) setCoverPhoto(id);
+            else if (!isUploading && event.dataTransfer.files.length) void uploadFiles(event.dataTransfer.files);
+          }}
+          className={`overflow-hidden rounded-3xl border-2 transition ${isDragOver ? "border-primary ring-4 ring-primary/20" : "border-border"}`}>
+          <button type="button" onClick={() => { if (photos[0]) { setCoverPickerOpen(true); } else fileInputRef.current?.click(); }}
+            aria-label={photos[0] ? "Select your cover photo" : "Upload your party photos"} className="relative block aspect-[16/10] w-full overflow-hidden bg-muted">
+            {photos[0] ? <CroppedImage src={photos[0].url} crop={photos[0].crop} alt="Party cover photo" className="h-full w-full object-cover" />
+              : <span className="grid h-full place-content-center gap-3 text-center"><Upload className="mx-auto h-10 w-10 text-primary" /><span className="font-semibold">Drag your photos here</span><span className="text-sm text-muted-foreground">Or click to choose photos</span></span>}
+          </button>
+          {photos.length ? <div className="bg-white px-4 py-3 text-sm font-semibold">{isDragOver ? "Drop photos to upload" : "Click to change cover photo"}</div> : null}
+        </div>
+        {photos.length ? <p className="text-xs text-muted-foreground">Click a photo to edit it or add tags.</p> : null}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {photos.map((photo, index) => (
+            <div key={photo.id}
+              className={`relative aspect-square overflow-hidden rounded-2xl border-2 transition ${selectedPhoto?.id === photo.id ? "border-primary" : "border-transparent"}`}>
+              <button type="button" onClick={() => { setSelectedPhotoId(photo.id); setStep(2); }} onDoubleClick={() => setEditingCropPhoto(photo)}
+                aria-label={`Edit photo ${index + 1} and tags`} aria-pressed={selectedPhoto?.id === photo.id} className="block h-full w-full">
+                <CroppedImage src={photo.url} alt={`Party photo ${index + 1}`} crop={photo.crop} className="h-full w-full object-cover" />
+              </button>
+              {photo.vendorIds.length ? <span title={`${photo.vendorIds.length} tagged vendors`} className="pointer-events-none absolute bottom-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-white/95 text-foreground shadow-sm"><Tag className="h-4 w-4" /></span> : null}
+              {index === 0 ? <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-semibold">Cover</span> : null}
+            </div>
+          ))}
+          <button type="button" disabled={isUploading || photos.length >= 16} onClick={() => fileInputRef.current?.click()}
+            onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); if (!isUploading) void uploadFiles(event.dataTransfer.files); }}
+            aria-label="Add more photos" title="Add more photos" className="grid aspect-square place-content-center gap-2 rounded-2xl border-2 border-dashed border-primary/30 bg-white text-primary transition hover:bg-primary/5 disabled:opacity-50">
+            {isUploading ? <Loader2 className="mx-auto h-10 w-10 animate-spin" /> : <Plus className="mx-auto h-12 w-12" />}
+            <span className="text-xs font-semibold">{isUploading ? "Uploading…" : "Add photos"}</span>
+          </button>
+        </div>
       </div>
 
         </div>
         <div className="grid min-w-0 gap-5">
+          <div hidden={!isEditing && step !== 1} className="space-y-5">
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+        <label className="grid min-w-0 gap-2 text-sm font-semibold">
+          Party title <span className="text-xs font-normal text-muted-foreground">Required</span>
         <Input
           name="title"
           aria-label="Party title"
           placeholder="Give your party a title"
+          minLength={2}
+          maxLength={100}
           required
           defaultValue={initialParty?.title ?? ""}
           className="min-w-0"
         />
-        <Input
-          name="theme"
-          aria-label="Party theme"
-          placeholder="Theme or occasion (optional)"
-          defaultValue={initialParty?.theme ?? ""}
-          className="min-w-0"
-        />
+        </label>
+        <input type="hidden" name="theme" value={initialParty?.theme ?? ""} />
       </div>
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-        <Input
-          name="eventDate"
-          type="date"
-          defaultValue={formatDateInputValue(initialParty?.eventDate)}
-          className="min-w-0"
-        />
-        <Input
-          name="partyfulUrl"
-          type="url"
-          placeholder="Public Partyful invite URL"
-          defaultValue={initialParty?.partyfulUrl ?? ""}
-          className="min-w-0"
-        />
-      </div>
+      <label className="grid gap-2 text-sm font-medium">
+        Event date <span className="text-xs font-normal text-muted-foreground">Optional</span>
+        <Input name="eventDate" type="date" defaultValue={formatDateInputValue(initialParty?.eventDate)} className="min-w-0" />
+        <span className="text-xs font-normal text-muted-foreground">Only the month and year appear on your party.</span>
+      </label>
+      <label className="grid gap-2 text-sm font-medium">
+        Party category
+        <select name="occasion" value={occasion} onChange={(event) => setOccasion(event.target.value)} className="h-12 w-full rounded-2xl border bg-white px-4 text-sm">
+          <option value="">Choose a category</option>
+          {PARTY_OCCASIONS.map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+      </label>
+      <div className="grid gap-3">
+        {privateResidence ? (
+          <div className="rounded-2xl bg-primary/5 p-4 text-sm text-muted-foreground">
+            <input type="hidden" name="location" value="Private residence" />
+            Your party will show “Private residence.” No home address is shared.
+          </div>
+        ) : (
       <PlaceAutocompleteInput
         defaultValue={initialParty?.formattedAddress ?? initialParty?.location ?? ""}
         defaultPlace={{
@@ -388,12 +354,13 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         }}
         placeholder="Venue, address, city, or neighborhood"
       />
-      <Textarea
-        name="description"
-        placeholder="Tell the party details: the mood, inspiration, favorite moments, or what made it special..."
-        className="min-h-[110px] min-w-0"
-        defaultValue={initialParty?.description ?? ""}
-      />
+        )}
+        <label className="flex w-fit cursor-pointer items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs font-medium">
+          <input type="checkbox" checked={privateResidence} onChange={(event) => setPrivateResidence(event.target.checked)} className="h-3.5 w-3.5 accent-[#d88f9d]" />
+          Private residence
+        </label>
+      </div>
+      <input type="hidden" name="description" value={initialParty?.description ?? ""} />
 
       <PartyCollaboratorPicker
         coHostIds={coHostIds}
@@ -411,48 +378,63 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         users={users}
       />
 
-      <div className="grid min-w-0 gap-2">
-        <label className="text-sm font-medium">Hashtags</label>
-        <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-2xl border bg-white px-3 py-2">
-          {tags.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => removeTag(tag)}
-              className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-              aria-label={`Remove ${tag}`}
-            >
-              #{tag}
-              <X className="h-3 w-3" />
-            </button>
-          ))}
-          <input
-            value={tagInput}
-            onChange={(event) => setTagInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === ",") {
-                event.preventDefault();
-                addTag();
-              }
-            }}
-            onBlur={() => addTag()}
-            className="min-w-[140px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            placeholder={tags.length ? "Add another tag" : "baby shower, brunch, pastel..."}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">Press Enter to turn each tag into a searchable bubble.</p>
-      </div>
-
-
-      <Button type="submit" className={composer ? "h-12 rounded-full text-base font-semibold" : undefined} disabled={isPending || isUploading || (!isEditing && photos.length === 0)}>
-        {isPending ? "Publishing..." : isEditing ? "Save changes" : "Publish party"}
-      </Button>
+          </div>
+          {(isEditing || step === 2) && selectedPhoto ? (
+            <section className="space-y-5 rounded-3xl border bg-white p-5">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">Edit photo & tags</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">Select a photo on the left to edit it or add tags.</p>
+              </div>
+              <button type="button" onClick={() => setEditingCropPhoto(selectedPhoto)} aria-label="Adjust selected photo brightness and crop" className="block aspect-[4/3] w-full overflow-hidden rounded-2xl">
+                <CroppedImage src={selectedPhoto.url} crop={selectedPhoto.crop} alt="Selected photo preview" className="h-full w-full object-cover" />
+              </button>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-xs text-muted-foreground">Photo {photos.indexOf(selectedPhoto) + 1} of {photos.length}</span>
+                <div className="flex flex-wrap gap-2">
+                  <IconButton label="Adjust brightness, saturation and crop" onClick={() => setEditingCropPhoto(selectedPhoto)}><SlidersHorizontal className="h-4 w-4" /></IconButton>
+                  <IconButton label="Delete photo" onClick={() => removePhoto(selectedPhoto.id)}><Trash2 className="h-4 w-4" /></IconButton>
+                </div>
+              </div>
+              <PhotoVendorTagger key={selectedPhoto.id} currentUserId={currentUserId}
+                onAddVendor={(vendorId) => togglePhotoVendor(selectedPhoto.id, vendorId, true)}
+                onContributionChange={(vendorId, contribution) => setPhotoVendorContribution(selectedPhoto.id, vendorId, contribution)}
+                onRatingChange={(vendorId, rating) => setPhotos((current) => current.map((photo) => photo.vendorIds.includes(vendorId) ? { ...photo, vendorRatings: { ...photo.vendorRatings, [vendorId]: rating } } : photo))}
+                onCreateVendor={(initialName) => setNewVendorModal({ initialName, photoId: selectedPhoto.id })}
+                onRemoveVendor={(vendorId) => togglePhotoVendor(selectedPhoto.id, vendorId, false)}
+                photo={selectedPhoto} vendors={vendorOptions} />
+            </section>
+          ) : null}
+          {!isEditing && step === 1 ? (
+            <Button type="button" className="party-brand-button h-12 rounded-full text-base font-semibold" disabled={isUploading || photos.length === 0} onClick={goToVendors}>Next: tag vendors</Button>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {!isEditing ? <Button type="button" variant="secondary" onClick={() => setStep(1)}>Back to details</Button> : null}
+              <Button type="submit" className="party-brand-button h-12 flex-1 rounded-full text-base font-semibold" disabled={isPending || isUploading || photos.length === 0}>{isPending ? "Saving..." : isEditing ? "Save changes" : "Publish party"}</Button>
+            </div>
+          )}
       {message ? <p role="alert" className="text-sm text-destructive">{message}</p> : null}
         </div>
       </div>
+      {coverPickerOpen ? (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/35 p-4 backdrop-blur-sm">
+          <section role="dialog" aria-modal="true" aria-labelledby="cover-picker-title" onKeyDown={(event) => { if (event.key === "Escape") setCoverPickerOpen(false); }} className="max-h-[85vh] w-full max-w-3xl overflow-auto rounded-3xl bg-white p-6 shadow-xl">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <h2 id="cover-picker-title" className="text-2xl font-bold">Select your cover photo</h2>
+              <button type="button" aria-label="Close cover picker" onClick={() => setCoverPickerOpen(false)} className="rounded-full p-2"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {photos.map((photo, index) => <button key={photo.id} type="button" aria-label={`Choose photo ${index + 1} as cover`} onClick={() => { setCoverPhoto(photo.id); setCoverPickerOpen(false); }} className="relative aspect-square overflow-hidden rounded-2xl">
+                <CroppedImage src={photo.url} crop={photo.crop} alt={`Cover option ${index + 1}`} className="h-full w-full object-cover" />
+                {index === 0 ? <span className="absolute bottom-2 left-2 rounded-full bg-white px-3 py-1 text-xs">Current cover</span> : null}
+              </button>)}
+              <button type="button" disabled={isUploading || photos.length >= 16} onClick={() => fileInputRef.current?.click()} className="grid aspect-square place-content-center gap-2 rounded-2xl border-2 border-dashed border-primary/30 text-primary"><Plus className="mx-auto h-12 w-12" /><span className="text-xs">{isUploading ? "Uploading…" : "Add photos"}</span></button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {editingCropPhoto ? (
         <ImageCropEditor
-          aspectLabel="Party photo crop"
+          aspectLabel="Edit party photo"
           crop={editingCropPhoto.crop}
           imageUrl={editingCropPhoto.url}
           onCancel={() => setEditingCropPhoto(null)}
@@ -460,6 +442,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
             setPhotoCrop(editingCropPhoto.id, crop);
             setEditingCropPhoto(null);
           }}
+          allowAdjustments
           previewClassName="aspect-[4/3]"
         />
       ) : null}
@@ -647,23 +630,23 @@ function PartyCollaboratorPicker({
   return (
     <section className="grid min-w-0 gap-3 rounded-[1.5rem] border bg-white p-4">
       <div>
-        <p className="text-sm font-semibold">Party hosts</p>
+        <p className="text-sm font-semibold">Hosted by</p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Add friends or creators who helped host this party. Co-hosts appear after they accept.
+          Celebrate together. Invite anyone who helped you host.
         </p>
       </div>
 
       <div className="grid gap-2">
-        <label className="text-xs font-medium text-muted-foreground">Main Host</label>
-        <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)]">
+        <div className="grid min-w-0 gap-2">
           <div className="flex min-w-0 items-center gap-3 rounded-2xl border bg-[#fffaf8] px-3 py-2">
             {mainHost ? <UserAvatar user={mainHost} /> : null}
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{getUserDisplayName(mainHost)}</p>
-              <p className="truncate text-xs text-muted-foreground">{getUserHandle(mainHost)}</p>
+              <p className="truncate text-sm font-semibold">{getUserDisplayName(mainHost)}{mainHostId === currentUserId ? " (you)" : ""}</p>
             </div>
           </div>
-          <select
+          <details className="text-xs">
+            <summary className="w-fit cursor-pointer text-muted-foreground">Change host</summary>
+          <select aria-label="Choose party host"
             value={mainHostId}
             onChange={(event) => onMainHostChange(event.target.value)}
             className="h-12 min-w-0 rounded-2xl border bg-white px-3 text-sm outline-none transition focus:border-primary"
@@ -674,19 +657,21 @@ function PartyCollaboratorPicker({
               </option>
             ))}
           </select>
+          </details>
         </div>
       </div>
 
       <div className="grid min-w-0 gap-2">
-        <label className="text-xs font-medium text-muted-foreground">Supporting Hosts / Co-Hosts</label>
+        <label className="text-sm font-semibold" htmlFor="party-cohosts">Add co-hosts</label>
         <div className="relative min-w-0">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
+            id="party-cohosts"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onFocus={() => setIsFocused(true)}
             onBlur={() => window.setTimeout(() => setIsFocused(false), 120)}
-            placeholder="Search friends or usernames"
+            placeholder="Type a name or username"
             className="h-12 w-full rounded-2xl border bg-white pl-10 pr-4 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary"
           />
           {isFocused && matches.length > 0 ? (
@@ -734,7 +719,7 @@ function PartyCollaboratorPicker({
             })}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Optional. Co-hosts can accept before appearing publicly.</p>
+          <p className="text-xs text-muted-foreground">Optional. They’ll appear on the party after accepting your invitation.</p>
         )}
       </div>
     </section>
@@ -770,15 +755,19 @@ function formatDateInputValue(value?: Date | string | null) {
 }
 
 function PhotoVendorTagger({
+  currentUserId,
   onAddVendor,
   onContributionChange,
+  onRatingChange,
   onCreateVendor,
   onRemoveVendor,
   photo,
   vendors
 }: {
+  currentUserId: string;
   onAddVendor: (vendorId: string) => void;
   onContributionChange: (vendorId: string, contribution: string) => void;
+  onRatingChange: (vendorId: string, rating: number) => void;
   onCreateVendor: (initialName: string) => void;
   onRemoveVendor: (vendorId: string) => void;
   photo: UploadedPartyPhoto;
@@ -906,6 +895,20 @@ function PhotoVendorTagger({
                   <X className="h-4 w-4" />
                 </button>
               </div>
+              <VendorFollowPrompt vendor={vendor} currentUserId={currentUserId} />
+              <fieldset className="mt-4">
+                <legend className="text-sm font-semibold">How was your experience with {vendor.name}?</legend>
+                <p className="mt-1 text-xs text-muted-foreground">Required · rate the vendor you used for this party.</p>
+                <div className="mt-2 flex gap-1" role="radiogroup" aria-label={`Rate ${vendor.name}`}>
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <button key={rating} type="button" role="radio" aria-checked={(photo.vendorRatings?.[vendor.id] ?? 0) === rating}
+                      aria-label={`${rating} star${rating === 1 ? "" : "s"}`} onClick={() => onRatingChange(vendor.id, rating)}
+                      className="rounded-lg p-2 text-amber-600 hover:bg-amber-50 focus-visible:outline focus-visible:outline-2">
+                      <Star className={`h-6 w-6 ${(photo.vendorRatings?.[vendor.id] ?? 0) >= rating ? "fill-current" : ""}`} />
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
               <div className="mt-3 grid gap-1.5">
                 <label className="text-xs font-medium text-muted-foreground" htmlFor={`vendor-credit-${photo.id}-${vendor.id}`}>
                   Contribution note
@@ -932,7 +935,7 @@ function PhotoVendorTagger({
 }
 
 function VendorAvatar({ vendor }: { vendor: VendorOption }) {
-  if (vendor.logoUrl) {
+  if (vendor.status !== "UNCLAIMED" && vendor.logoUrl) {
     return (
       <img
         src={vendor.logoUrl}
@@ -1082,11 +1085,27 @@ function replaceExtension(filename: string, extension: string) {
   return safeName.replace(/\.[^.]+$/, "") + `.${extension}`;
 }
 
-function normalizeTag(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/^#+/, "")
-    .replace(/[^a-z0-9]+/g, "")
-    .slice(0, 30);
+
+function VendorFollowPrompt({ vendor }: { vendor: VendorOption; currentUserId: string }) {
+  const [dismissed, setDismissed] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  if (dismissed || vendor.status === "UNCLAIMED") return null;
+  return <div className="mt-3 rounded-xl bg-primary/5 p-3">
+    {following ? <p role="status" className="text-sm font-medium text-green-700">Following {vendor.name}</p> : <>
+      <p className="text-sm font-medium">Would you like to follow {vendor.name}?</p>
+      <div className="mt-2 flex gap-2">
+        <Button type="button" size="sm" disabled={pending} onClick={() => startTransition(async () => {
+          setError(null);
+          try {
+            const result = await followPartyVendorAction(vendor.id);
+            if (result.ok) setFollowing(true); else setError(result.error ?? "Could not follow this vendor.");
+          } catch { setError("Could not follow this vendor. Please try again."); }
+        })}>{pending ? "Following..." : "Follow vendor"}</Button>
+        <Button type="button" size="sm" variant="secondary" onClick={() => setDismissed(true)}>Not now</Button>
+      </div>
+      {error ? <p role="alert" className="mt-2 text-xs text-destructive">{error}</p> : null}
+    </>}
+  </div>;
 }

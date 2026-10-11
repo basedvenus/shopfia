@@ -4,6 +4,8 @@ export type ImageCrop = {
   x: number;
   y: number;
   zoom: number;
+  brightness?: number;
+  saturation?: number;
 };
 
 export const DEFAULT_IMAGE_CROP: ImageCrop = {
@@ -24,7 +26,9 @@ export function normalizeImageCrop(value: unknown): ImageCrop {
   return {
     x: clampNumber(record.x, 0, 100, DEFAULT_IMAGE_CROP.x),
     y: clampNumber(record.y, 0, 100, DEFAULT_IMAGE_CROP.y),
-    zoom: clampNumber(record.zoom, MIN_IMAGE_ZOOM, MAX_IMAGE_ZOOM, DEFAULT_IMAGE_CROP.zoom)
+    zoom: clampNumber(record.zoom, MIN_IMAGE_ZOOM, MAX_IMAGE_ZOOM, DEFAULT_IMAGE_CROP.zoom),
+    brightness: clampNumber(record.brightness ?? 1, 0.5, 1.5, 1),
+    saturation: clampNumber(record.saturation ?? 1, 0, 2, 1)
   };
 }
 
@@ -48,7 +52,8 @@ export function imageCropToCss(crop?: unknown) {
   const normalized = normalizeImageCrop(crop);
   return {
     objectPosition: `${normalized.x}% ${normalized.y}%`,
-    transform: `scale(${normalized.zoom})`
+    transform: `scale(${normalized.zoom})`,
+    filter: `brightness(${normalized.brightness ?? 1}) saturate(${normalized.saturation ?? 1})`
   };
 }
 

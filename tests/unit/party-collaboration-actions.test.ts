@@ -151,10 +151,22 @@ describe("invited-user-only collaboration responses", () => {
 });
 
 describe("party owner rights and persistence wiring", () => {
+  it.each(["create", "update"])("requires a rating for each tagged vendor during %s", async (mode) => {
+    mocks.auth.mockResolvedValue({ user: { id: ownerId } });
+    const vendorId = "c0000000000000000000000005";
+    mocks.db.partyPhoto.findMany.mockResolvedValue([{ id: photoId, updatedAt: new Date("2026-01-01") }]);
+    mocks.db.vendorProfile.findMany.mockResolvedValue([{ id: vendorId }]);
+    const form = editForm();
+    form.set("photos", JSON.stringify([{ id: photoId, vendorIds: [vendorId], vendorRatings: {} }]));
+    expect(await (mode === "create" ? createPartyEventAction(form) : updatePartyEventAction(form))).toEqual({ ok: false, error: "Rate each tagged vendor before saving your party." });
+    expect(mocks.db.$transaction).not.toHaveBeenCalled();
+  });
+
   it("keeps owner edits authorized and stores other users as pending", async () => {
     mocks.auth.mockResolvedValue({ user: { id: ownerId } });
     expect(await updatePartyEventAction(editForm())).toEqual({ ok: true, eventSlug: "test-party" });
     expect(mocks.tx.partyEvent.update).toHaveBeenCalled();
+    expect(mocks.db.$transaction).toHaveBeenCalledWith(expect.any(Function), { maxWait: 10_000, timeout: 30_000 });
     const collaboratorWrites = mocks.tx.partyCollaborator.upsert.mock.calls.map(([call]) => call);
     expect(collaboratorWrites.find((call) => call.create.userId === ownerId).create.status).toBe("ACCEPTED");
     const invitedWrite = collaboratorWrites.find((call) => call.create.userId === inviteeId);

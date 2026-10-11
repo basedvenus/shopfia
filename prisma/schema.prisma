@@ -228,6 +228,7 @@ model User {
   avatar                 UserAvatar?
   partyPhotos            PartyPhoto[]
   partyEvents            PartyEvent[]
+  partyComments          PartyComment[]
   partyCollaborations    PartyCollaborator[]
   partyPhotoVendorRatings PartyPhotoVendorRating[]
   following              Follow[]          @relation("Follower")
@@ -472,11 +473,27 @@ model PartyEvent {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   photos        PartyPhoto[]
   collaborators PartyCollaborator[]
+  comments      PartyComment[]
   taggedVendors VendorProfile[] @relation("PartyEventTaggedVendors")
   favorites     Favorite[] @relation("PartyEventFavorites")
 
   @@index([locationLat, locationLng])
   @@index([googlePlaceId])
+}
+
+model PartyComment {
+  id        String @id @default(cuid())
+  eventId   String
+  userId    String
+  parentId  String?
+  body      String @db.VarChar(1000)
+  createdAt DateTime @default(now())
+  event     PartyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    PartyComment? @relation("PartyCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   PartyComment[] @relation("PartyCommentReplies")
+  @@index([eventId, createdAt])
+  @@index([parentId])
 }
 
 model PartyCollaborator {

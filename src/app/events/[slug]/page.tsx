@@ -1,9 +1,12 @@
+import { partyCategoryLabel, inferPartyOccasion, occasionTag } from "@/lib/party-occasions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Heart, MapPin, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
 import { PartyEventForm, type EditablePartyEvent } from "@/components/parties/party-event-form";
+import { PartyCoverEditor } from "@/components/parties/party-cover-editor";
+import { PartyComments } from "@/components/parties/party-comments";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +18,6 @@ import { getPartyInspirationExample, getUniquePartyVendors } from "@/lib/party-i
 import { isQuarantinedVendorId, publicVendorWhere } from "@/lib/public-marketplace";
 import {
   canShowPartyManagementLinks,
-  getPartyDescriptionForViewer,
   getVisiblePartyCollaborators
 } from "@/lib/party-public-view";
 import { getOriginalMemberCutoffDate, getProfileBadge } from "@/lib/profile-badges";
@@ -81,7 +83,8 @@ export default async function EventPage({
 
   const title = event?.title ?? fallback?.title ?? "Party";
   const theme = event?.theme ?? fallback?.theme ?? null;
-  const tags = event?.tags?.length ? event.tags : fallback?.tags ?? [];
+  const inferredOccasion = event ? inferPartyOccasion(event.tags, event.title) : "";
+  const tags = inferredOccasion ? [occasionTag(inferredOccasion)] : event?.tags?.length ? event.tags : fallback?.tags ?? [];
   const legacyImages = event?.imageUrls?.length ? event.imageUrls : event?.coverImageUrl ? [event.coverImageUrl] : fallback?.imageUrls ?? [];
   const photos = event?.photos?.length
     ? event.photos.map((photo) => ({
@@ -103,7 +106,7 @@ export default async function EventPage({
       vendorContributions: {}
       }));
   const safePhotos = photos;
-  const hero = event?.coverImageUrl ?? safePhotos[0]?.url ?? fallback?.coverImageUrl ?? null;
+  const hero = safePhotos[0]?.url ?? event?.coverImageUrl ?? fallback?.coverImageUrl ?? null;
   const vendors = getUniquePartyVendors({
     taggedVendors: event?.taggedVendors ?? [],
     photos: safePhotos
@@ -121,11 +124,6 @@ export default async function EventPage({
   const hostHandle = host?.username ? `@${host.username}` : host?.name ?? "ShopFia host";
   const currentUserId = session?.user?.id ?? null;
   const isOwner = Boolean(currentUserId && host?.id && currentUserId === host.id);
-  const description = getPartyDescriptionForViewer({
-    eventDescription: event?.description,
-    fallbackDescription: fallback?.description,
-    isOwner
-  });
   const showManagementLinks = canShowPartyManagementLinks(isOwner, Boolean(event));
   const visibleCollaborators = getVisiblePartyCollaborators(event?.collaborators ?? [], host);
   const editRequested = resolvedSearchParams.edit === "1" || resolvedSearchParams.edit === "true";
@@ -166,6 +164,7 @@ export default async function EventPage({
           url: partyPhotoUrl(photo.id, photo.updatedAt, { width: 1400 }),
           crop: normalizeImageCrop(photo.crop),
           vendorIds: photo.taggedVendors.map((vendor) => vendor.id),
+          vendorRatings: Object.fromEntries(photo.vendorRatings.filter((credit) => credit.rating !== null).map((credit) => [credit.vendorId, credit.rating!])),
           vendorContributions: Object.fromEntries(
             photo.vendorRatings
               .filter((credit) => credit.contributionNote)
@@ -215,52 +214,28 @@ export default async function EventPage({
     await toggleFollowAction(formData);
   }
 
+  if (isEditing && formParty) {
+    return <section className="space-y-7 rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft sm:p-8">
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
+        <div><p className="text-sm text-muted-foreground">Editing party</p><h1 className="mt-2 text-3xl font-bold tracking-tight">Edit {formParty.title}</h1><p className="mt-2 text-sm text-muted-foreground">Update your story, select photos, and credit your vendors.</p></div>
+        <Link href={`/events/${formParty.slug}`} className="inline-flex h-11 items-center rounded-full border px-5 text-sm font-medium">View public party</Link>
+      </header>
+      <PartyEventForm composer currentUserId={currentUserId ?? ""} initialParty={formParty} users={editUsers} vendors={editVendors} />
+    </section>;
+  }
   return (
     <div className="space-y-8">
-      {isEditing && formParty ? (
-        <section className="grid gap-5 rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft lg:grid-cols-[0.72fr_1.28fr]">
-          <div className="flex flex-col justify-between gap-6 rounded-[1.6rem] bg-muted/60 p-5">
-            <div>
-              <p className="text-sm text-muted-foreground">Editing party</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight">Edit {formParty.title}</h1>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                Update the notes, location, hashtag bubbles, gallery order, cover photo, and vendor tags attached to each image.
-              </p>
-            </div>
-            <div className="relative min-h-[260px] overflow-hidden rounded-[1.4rem] bg-muted shadow-sm">
-              {hero ? <CroppedImage src={hero} alt="" crop={safePhotos[0]?.crop} className="absolute inset-0 h-full w-full object-cover" /> : null}
-            </div>
-            <Link href={`/events/${formParty.slug}`} className="inline-flex">
-              <Button type="button" variant="secondary">
-                <ArrowLeft className="h-4 w-4" />
-                View public party
-              </Button>
-            </Link>
-          </div>
-          <div className="rounded-[1.6rem] border bg-white p-4">
-            <PartyEventForm
-              currentUserId={currentUserId ?? ""}
-              initialParty={formParty}
-              users={editUsers}
-              vendors={editVendors}
-            />
-          </div>
-        </section>
-      ) : null}
-
       <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
         <div className="relative min-h-[480px]">
-          {hero ? <CroppedImage src={hero} alt="" crop={safePhotos[0]?.crop} className="absolute inset-0 h-full w-full object-cover" /> : null}
+          {hero ? <PartyCoverEditor eventId={event?.id} slug={event?.slug} imageUrl={hero} crop={normalizeImageCrop(event?.coverImageCrop ?? safePhotos[0]?.crop)} editable={isOwner} /> : null}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="relative flex min-h-[480px] flex-col justify-end p-6 text-white md:p-8">
             <div className="mb-3 flex flex-wrap gap-2">
               <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{event ? "Party" : "Inspiration example"}</Badge>
-              {theme ? <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{theme}</Badge> : null}
+              {theme && !event ? <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{theme}</Badge> : null}
             </div>
             <h1 className="max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">{title}</h1>
-            {description ? (
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">{description}</p>
-            ) : null}
+
             {event?.location ? (
               <div className="mt-3 inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs text-white/85 backdrop-blur">
                 <MapPin className="h-3.5 w-3.5" />
@@ -273,13 +248,7 @@ export default async function EventPage({
                   {formatPartyDate(event.eventDate)}
                 </span>
               ) : null}
-              {event?.partyfulUrl ? (
-                <Button asChild size="sm" variant="secondary" className="border-white/80 bg-white text-foreground shadow-soft hover:bg-white/90">
-                  <Link href={event.partyfulUrl} target="_blank" rel="noreferrer">
-                    Partyful invite
-                  </Link>
-                </Button>
-              ) : null}
+
             </div>
             {host ? (
               <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -349,7 +318,7 @@ export default async function EventPage({
             <div className="mt-4 flex flex-wrap gap-2">
               {tags.map((tag) => (
                 <span key={tag} className="rounded-full bg-white/15 px-3 py-1 text-xs backdrop-blur">
-                  #{tag}
+                  {partyCategoryLabel(tag)}
                 </span>
               ))}
             </div>
@@ -409,10 +378,9 @@ export default async function EventPage({
                     className="rounded-[1.25rem] border border-[#eadbd7] bg-white/85 p-3 transition hover:-translate-y-0.5 hover:shadow-soft"
                   >
                     <a href={taggedPhotoAnchor} className="flex items-center gap-3">
-                      <span
-                        className="h-14 w-14 shrink-0 rounded-full border border-white/80 bg-muted bg-cover bg-center shadow-sm"
-                        style={{ backgroundImage: `url(${vendor.logoUrl ?? vendor.coverPhoto ?? "/demo/fairfield-lemon-tablescape.png"})` }}
-                      />
+                      {vendor.status !== "UNCLAIMED" && vendor.logoUrl ? (
+                        <img src={vendor.logoUrl} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover" />
+                      ) : null}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-foreground">{vendor.name}</span>
                         <span className="mt-0.5 block truncate text-xs font-medium text-primary/75">{categoryLabel}</span>
@@ -443,6 +411,7 @@ export default async function EventPage({
         </div>
       </section>
 
+      {event ? <PartyComments eventId={event.id} hostId={event.userId} signedIn={Boolean(currentUserId)} slug={event.slug} /> : null}
       {showManagementLinks ? (
         <Link href="/my-parties" className="inline-flex">
           <Button variant="secondary">Back to My Parties</Button>
@@ -487,7 +456,8 @@ function getVendorCategoryLabel(vendor: { categories?: Array<{ category: { name:
 
 function formatPartyDate(date: Date) {
   return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
+    month: "long",
+    year: "numeric",
     timeZone: "UTC"
   }).format(date);
 }
