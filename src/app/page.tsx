@@ -152,7 +152,13 @@ export default function Page() {
           </div>
           <h1 className="mt-7 text-5xl font-semibold leading-[1.02] tracking-normal text-foreground md:text-6xl lg:text-7xl">
             Find the vendors behind{" "}
-            <span className="shopfia-editorial-heading font-normal italic text-primary">
+            <span
+              className="shopfia-editorial-heading font-normal italic text-primary"
+              style={{
+                fontFamily: 'var(--font-shopfia-serif), Canela, "Editorial New", "Iowan Old Style", Georgia, serif',
+                fontWeight: 500
+              }}
+            >
               every party.
             </span>
           </h1>
