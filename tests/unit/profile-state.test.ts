@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createElement, useLayoutEffect } from "react";
+import { createElement, useLayoutEffect, type ComponentProps } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { ProfileProvider, useProfile } from "@/components/account/profile-provider";
 import { ProfileImage } from "@/components/account/profile-image";
@@ -10,6 +10,7 @@ import { CroppedImage } from "@/components/ui/cropped-image";
 import type { SharedUserProfile } from "@/lib/user-profile";
 
 const mocks = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn(), complete: vi.fn(), path: "/explore" }));
+vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => createElement("a", props) }));
 vi.mock("next/navigation", () => ({ usePathname: () => mocks.path, useRouter: () => mocks }));
 vi.mock("@/app/actions/auth", () => ({ completeRequiredProfileAction: mocks.complete }));
 
@@ -67,9 +68,42 @@ describe("profile state reconciliation", () => {
     act(() => upload({ profile: profile({ username: null, image: "/uploaded.jpg" }) }));
     expect(current.profile).toMatchObject({ username: "completed", image: "/uploaded.jpg" });
   });
-  it("still routes genuinely incomplete profiles to onboarding", () => {
-    mount(profile({ username: null }), createElement(RequiredProfileGate, { key: "gate" }));
-    expect(mocks.replace).toHaveBeenCalledWith("/account/setup");
+  it.each([{ username: null }, { name: null }, { name: null, username: null }])(
+    "offers setup without redirecting incomplete profiles: %j", (missing) => {
+      const original = profile(missing);
+      const root = mount(original, createElement(RequiredProfileGate));
+      expect(JSON.stringify(root.toJSON())).toContain("Your profile is missing");
+      expect(root.root.findAllByType("a").map((link) => link.props.href)).toEqual([
+        "/account/setup", "/account/setup#account-recovery"
+      ]);
+      expect(current.profile).toEqual(original);
+      expect(mocks.replace).not.toHaveBeenCalled();
+    }
+  );
+  it("keeps navigation available across tabs, Back, and a refreshed incomplete snapshot", () => {
+    const root = mount(profile({ username: null }), createElement(RequiredProfileGate));
+    for (const path of ["/account/setup", "/explore", "/messages", "/my-parties", "/account", "/explore", "/account/setup", "/explore"]) {
+      mocks.path = path;
+      refresh(root, profile({ username: null }), createElement(RequiredProfileGate));
+      expect(mocks.replace).not.toHaveBeenCalled();
+      expect(root.root.findAllByType("aside")).toHaveLength(path === "/account/setup" ? 0 : 1);
+    }
+    act(() => root.unmount());
+    const reloaded = mount(profile({ username: null }), createElement(RequiredProfileGate));
+    expect(reloaded.root.findAllByType("aside")).toHaveLength(1);
+    expect(mocks.replace).not.toHaveBeenCalled();
+  });
+  it("reconciles notices when completing setup, signing out, or switching accounts", () => {
+    const root = mount(profile({ username: null }), createElement(RequiredProfileGate));
+    act(() => current.updateProfile({ username: "completed" }, "user_1"));
+    expect(root.toJSON()).toBeNull();
+    refresh(root, null, createElement(RequiredProfileGate));
+    expect(root.toJSON()).toBeNull();
+    refresh(root, profile({ id: "user_2", name: null }), createElement(RequiredProfileGate));
+    expect(root.root.findAllByType("aside")).toHaveLength(1);
+    refresh(root, profile({ id: "user_3" }), createElement(RequiredProfileGate));
+    expect(root.toJSON()).toBeNull();
+    expect(mocks.replace).not.toHaveBeenCalled();
   });
   it("does not apply an old completion response to a different signed-in account", async () => {
     let finish!: (result: { ok: boolean; profile: SharedUserProfile }) => void;

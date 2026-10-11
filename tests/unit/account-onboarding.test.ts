@@ -127,6 +127,37 @@ describe("safe onboarding completion", () => {
 });
 
 describe("setup and account reads", () => {
+  it.each([{ username: null }, { name: null }, { name: null, username: null }])(
+    "allows Account navigation with missing fields without writing replacements: %j", async (missing) => {
+      mocks.db.user.findUnique.mockResolvedValue(profile(missing));
+      const nodes = elements(await AccountPage({}));
+      expect(nodes.some((node) => node.props.href === "/messages")).toBe(true);
+      expect(mocks.redirect).not.toHaveBeenCalled();
+      expect(mocks.db.user.update).not.toHaveBeenCalled();
+      expect(mocks.db.user.updateMany).not.toHaveBeenCalled();
+    }
+  );
+  it("provides setup-later links alongside the new-user form without a write", async () => {
+    mocks.db.user.findUnique.mockResolvedValue(profile({ username: null, name: null }));
+    const nodes = elements(await SetupPage());
+    expect(nodes.some((node) => node.type === RequiredProfileForm)).toBe(true);
+    expect(nodes.some((node) => node.props.href === "/explore")).toBe(true);
+    expect(nodes.some((node) => node.props.href === "/account")).toBe(true);
+    expect(mocks.db.user.updateMany).not.toHaveBeenCalled();
+  });
+  it("does not present an empty replacement dashboard for a missing account row", async () => {
+    mocks.db.user.findUnique.mockResolvedValue(null);
+    const nodes = elements(await AccountPage({}));
+    expect(nodes.some((node) => node.type === AccountRecovery)).toBe(true);
+    expect(nodes.some((node) => node.props.href === "/messages")).toBe(false);
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+  it("still requires authentication for setup and shows sign-in for Account", async () => {
+    mocks.auth.mockResolvedValue(null);
+    await expect(SetupPage()).rejects.toThrow("NEXT_REDIRECT:/account");
+    await AccountPage({});
+    expect(mocks.db.user.findUnique).not.toHaveBeenCalled();
+  });
   it("redirects complete accounts instead of offering new setup", async () => {
     await expect(SetupPage()).rejects.toThrow("NEXT_REDIRECT:/account");
   });

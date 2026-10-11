@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { redirect } from "next/navigation";
 import { RequiredProfileForm } from "@/components/account/required-profile-form";
 import { auth } from "@/auth";
@@ -38,6 +40,7 @@ export default async function RequiredProfileSetupPage() {
           sign back in with your existing login.
         </p>
         <AccountRecovery email={session.user.email} />
+        <Link href="/explore" className="font-semibold underline">Continue browsing</Link>
       </section>
     );
   }
@@ -62,6 +65,14 @@ export default async function RequiredProfileSetupPage() {
           </p>
         </div>
         <div className="grid gap-5 p-5 md:p-8">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button asChild variant="secondary"><Link href="/explore">Set up later and browse</Link></Button>
+            <Link href="/account" className="text-sm font-semibold underline">Go to Account</Link>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Setup is optional for browsing. Skipping it does not change your saved
+            profile, photo, or storefront access.
+          </p>
           <AccountRecovery email={user.email} />
           <RequiredProfileForm
             profileId={user.id}

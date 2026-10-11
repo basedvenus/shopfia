@@ -181,9 +181,9 @@ export default async function RootLayout({
           Skip to main content
         </a>
         <ProfileProvider initialProfile={initialProfile}>
-          <RequiredProfileGate />
           <SiteNav />
           <main id="main-content" className="container py-6 pb-28 md:pb-6">
+            <RequiredProfileGate />
             {children}
           </main>
         </ProfileProvider>

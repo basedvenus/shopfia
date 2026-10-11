@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { CalendarHeart, Heart, MessageCircle, PackageCheck, PenLine, Store } from "lucide-react";
 import { createReviewAction } from "@/app/actions/reviews";
+import { AccountRecovery } from "@/components/account/account-recovery";
 import { AccountProfileEditor } from "@/components/account/account-profile-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -148,14 +148,20 @@ export default async function AccountPage({
   }
 
   const [accountUser, orders, quoteRequests, favoriteCount, conversationCount] = accountData;
-  const hasVendorBusinesses = Boolean(accountUser?.vendorProfile);
-
-  if (!accountUser?.username || !accountUser.name) {
-    redirect("/account/setup");
+  if (!accountUser) {
+    return (
+      <section className="mx-auto grid max-w-xl gap-4 rounded-3xl border bg-white p-6">
+        <h1 className="text-2xl font-semibold">Your profile could not be loaded.</h1>
+        <p className="text-muted-foreground">Try reloading, or check your existing login before creating a new profile.</p>
+        <AccountRecovery email={session.user.email} />
+        <Link href="/explore" className="font-semibold underline">Continue browsing</Link>
+      </section>
+    );
   }
+  const hasVendorBusinesses = Boolean(accountUser.vendorProfile);
 
   const displayName = accountUser?.name || session.user.name || "ShopFia Member";
-  const handle = accountUser?.username ? `@${accountUser.username}` : "@choose-your-handle";
+  const handle = accountUser?.username ? `@${accountUser.username}` : "Username not set";
   const initials = displayName
     .split(" ")
     .filter(Boolean)
