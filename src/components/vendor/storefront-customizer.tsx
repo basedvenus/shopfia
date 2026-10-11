@@ -43,6 +43,7 @@ import {
 } from "@/lib/businesses";
 import { DEFAULT_IMAGE_CROP, normalizeImageCrop, type ImageCrop } from "@/lib/image-crop";
 import { formatCurrency } from "@/lib/utils";
+import { STOREFRONT_LOOKS, recommendStorefrontLook } from "@/lib/storefront-looks";
 
 type EditorService = {
   active: boolean;
@@ -181,6 +182,11 @@ export function StorefrontCustomizer({
   publicUrl: string;
   saved?: boolean;
 }) {
+  const [guidedStep, setGuidedStep] = useState(1);
+  const [advanced, setAdvanced] = useState(false);
+  const [guidedError, setGuidedError] = useState("");
+  const guidedPanelRef = useRef<HTMLElement>(null);
+  const guidedHeadingRef = useRef<HTMLHeadingElement>(null);
   const [activeSection, setActiveSection] = useState<string>("hero");
   const [activeTool, setActiveTool] = useState<EditorTool>("content");
   const [panelCollapsed, setPanelCollapsed] = useState(false);
@@ -194,6 +200,11 @@ export function StorefrontCustomizer({
   const [draggedPhotoIndex, setDraggedPhotoIndex] = useState<number | null>(null);
   const [collapsedFaqIds, setCollapsedFaqIds] = useState<string[]>([]);
   const [form, setForm] = useState<FormState>(() => createInitialState(business));
+  const recommendedLook = recommendStorefrontLook(`${form.name} ${form.bio} ${business.categories.map((item) => item.category.name).join(" ")}`);
+  useEffect(() => {
+    if (!advanced) guidedHeadingRef.current?.focus({ preventScroll: true });
+    guidedPanelRef.current?.scrollTo({ top: 0 });
+  }, [guidedStep, advanced]);
 
   const visibleSections = useMemo(
     () => form.sectionOrder.filter((section) => !form.hiddenSections.includes(section)),
@@ -325,6 +336,7 @@ export function StorefrontCustomizer({
   }
 
   function selectSection(section: string) {
+    setAdvanced(true);
     setActiveSection(section);
     setActiveTool(toolForSection(section));
     setPanelCollapsed(false);
@@ -514,7 +526,7 @@ export function StorefrontCustomizer({
             <Save className="h-4 w-4" />
             Save draft
           </Button>
-          <Button type="submit" name="intent" value="publish" onClick={() => setStatus("Publishing")}>
+          <Button type="submit" name="intent" value="publish" className={!advanced && guidedStep < 3 ? "hidden" : ""} onClick={() => setStatus("Publishing")}>
             <Send className="h-4 w-4" />
             Publish
           </Button>
@@ -526,6 +538,82 @@ export function StorefrontCustomizer({
         </div>
       ) : null}
 
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee5e1] bg-[#fffaf8] px-5 py-3">
+        <nav aria-label="Storefront setup" className="flex flex-wrap gap-2">
+          {["Your business", "Choose your look", "Photos & preview"].map((label, index) => (
+            <button key={label} type="button" aria-current={!advanced && guidedStep === index + 1 ? "step" : undefined}
+              onClick={() => { setAdvanced(false); setGuidedStep(index + 1); setGuidedError(""); }}
+              className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${!advanced && guidedStep === index + 1 ? "bg-[#f9dedb] text-[#493634]" : "text-muted-foreground hover:bg-white"}`}>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-xs font-semibold">{index + 1}</span>{label}
+            </button>
+          ))}
+        </nav>
+        <button type="button" className="text-sm text-muted-foreground underline underline-offset-4" onClick={() => setAdvanced(!advanced)}>
+          {advanced ? "Back to simple setup" : "More customization"}
+        </button>
+      </div>
+      {!advanced ? (
+        <div className="grid min-w-0 lg:grid-cols-[minmax(340px,0.85fr)_minmax(0,1.15fr)]">
+          <section ref={guidedPanelRef} className="min-w-0 space-y-6 p-5 sm:p-8 lg:max-h-[calc(100vh-245px)] lg:overflow-y-auto" aria-label="Guided storefront setup">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Step {guidedStep} of 3</p>
+              <h2 ref={guidedHeadingRef} tabIndex={-1} className="mt-3 text-3xl font-semibold tracking-tight outline-none">{guidedStep === 1 ? "Let’s meet your business." : guidedStep === 2 ? "A look that feels like you." : "Let your work shine."}</h2>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{guidedStep === 1 ? "A few details are all we need to help you get started." : guidedStep === 2 ? "Fonts, colors, and layout—already paired for you. You can always customize them later." : "Add your real photos, check the preview, and publish when you’re ready."}</p>
+            </div>
+            {guidedStep === 1 ? (
+              <div className="space-y-5">
+                <Field label="What’s your business’s name?"><Input aria-label="Business name" value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Your business name" /></Field>
+                <Field label="Tell us about your business"><Textarea aria-label="Tell us about your business" className="min-h-[130px]" value={form.bio} onChange={(event) => update("bio", event.target.value)} placeholder="What do you create? What makes your business special?" /></Field>
+                <p className="text-xs leading-5 text-muted-foreground">Your answer becomes your About text and helps us suggest a look. Keep it short if you like.</p>
+                <ImageUploadField name="setup-logo" label="Your logo (optional)" value={form.logoUrl} valueCrop={form.logoCrop} onChangePreview={(value) => update("logoUrl", value)} onCropChange={(crop) => update("logoCrop", crop)} uploadEndpoint={mediaUploadEndpoint} helperText="Your logo keeps its own lettering. Choose a coordinated font in the next step." />
+              </div>
+            ) : guidedStep === 2 ? (
+              <div className="space-y-5">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[...STOREFRONT_LOOKS].sort((a, b) => Number(b.id === recommendedLook.id) - Number(a.id === recommendedLook.id)).map((look) => {
+                    const palette = getPreviewPalette(look.palette);
+                    const selected = form.palette === look.palette && form.fontStyle === look.fontStyle && form.layout === look.layout && form.imageShape === look.imageShape;
+                    const recommended = look.id === recommendedLook.id;
+                    return <button key={look.id} type="button" aria-pressed={selected} onClick={() => {
+                      setForm((current) => ({ ...current, palette: look.palette, fontStyle: look.fontStyle, layout: look.layout, imageShape: look.imageShape, textTone: "AUTO" })); markDirty();
+                    }} className={`overflow-hidden rounded-2xl border text-left transition hover:-translate-y-0.5 ${selected ? "border-[#b66d77] ring-2 ring-[#f5d5da]" : "border-[#eae2de]"}`}>
+                      <div className="relative p-4" style={{ backgroundColor: palette.swatches[2], color: palette.swatches[3] }}>
+                        {form.logoUrl ? <CroppedImage src={form.logoUrl} alt="Your logo" crop={form.logoCrop} className="mb-3 h-9 w-9 rounded-full object-cover" /> : <div className="mb-3 h-2 w-10 rounded-full" style={{ backgroundColor: palette.accent }} />}
+                        <div className="min-h-16 break-words text-2xl leading-tight" style={{ fontFamily: getStorefrontFontFamilies(look.fontStyle).heading }}>{form.name || "Your business"}</div>
+                        <div className="mt-4 grid grid-cols-3 gap-1.5">{[0, 1, 2].map((index) => <div key={index} className="aspect-square overflow-hidden rounded-lg" style={{ backgroundColor: palette.swatches[0] }}>{form.photoUrls[index] || (index === 0 && form.coverPhoto) ? <img alt="" src={form.photoUrls[index] || form.coverPhoto} className="h-full w-full object-cover" /> : null}</div>)}</div>
+                        <span className="mt-3 inline-block rounded-full px-3 py-1.5 text-[10px] font-semibold" style={{ backgroundColor: palette.accent, color: look.palette === "ESPRESSO" ? "#ffffff" : palette.swatches[3] }}>Request a quote</span>
+                      </div>
+                      <div className="flex h-5">{palette.swatches.map((color) => <span key={color} className="flex-1" style={{ backgroundColor: color }} />)}</div>
+                      <div className="p-3"><div className="flex items-center justify-between gap-2 text-sm font-semibold">{look.name}{selected ? <Check className="h-4 w-4" /> : recommended ? <span className="text-[10px] font-normal text-muted-foreground">Suggested</span> : null}</div><p className="mt-1 text-xs leading-5 text-muted-foreground">{look.note}</p></div>
+                    </button>;
+                  })}
+                </div>
+                <p className="text-xs leading-5 text-muted-foreground">Your current design stays in place until you select a look. No photos, services, or reviews are replaced.</p>
+                <details className="rounded-2xl border border-[#eae2de] p-4"><summary className="cursor-pointer text-sm font-medium">Fine-tune colors, fonts, and shapes</summary><div className="mt-5"><DesignControls form={form} update={update} /></div></details>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <ImageUploadField name="setup-cover" label="Cover photo" value={form.coverPhoto} valueCrop={form.coverPhotoCrop} onChangePreview={(value) => update("coverPhoto", value)} onCropChange={(crop) => update("coverPhotoCrop", crop)} uploadEndpoint={mediaUploadEndpoint} />
+                <ImageUploadField name="setup-portfolio" label="Add photos of your work" uploadMode="preserve" uploadEndpoint={mediaUploadEndpoint} onChangePreview={(value) => { if (value) update("photoUrls", [...form.photoUrls.filter(Boolean), value]); }} />
+                <div className="grid grid-cols-3 gap-2">{form.photoUrls.filter(Boolean).map((photo, index) => <div key={`${photo}-${index}`} className="relative aspect-square overflow-hidden rounded-xl"><img src={photo} alt={`Portfolio photo ${index + 1}`} className="h-full w-full object-cover" /><button type="button" aria-label={`Remove portfolio photo ${index + 1}`} onClick={() => removePhoto(index)} className="absolute right-1 top-1 rounded-full bg-white p-1.5 text-muted-foreground"><Trash2 className="h-3.5 w-3.5" /></button></div>)}</div>
+                <details className="rounded-2xl border border-[#eae2de] p-4"><summary className="cursor-pointer text-sm font-medium">Your services · {form.services.filter((service) => service.active).length} listed</summary><div className="mt-4"><button type="button" className="text-sm underline underline-offset-4" onClick={() => { setAdvanced(true); selectTool("services"); }}>Add or edit your services</button></div></details>
+                <p className="text-xs leading-5 text-muted-foreground">Your reviews and tagged parties stay connected to your storefront. Only your real content appears.</p>
+              </div>
+            )}
+            {guidedError ? <p role="alert" className="text-sm text-red-700">{guidedError}</p> : null}
+            <div className="flex items-center justify-between gap-3 border-t border-[#eee5e1] pt-5">
+              <button type="button" disabled={guidedStep === 1} className="text-sm text-muted-foreground disabled:invisible" onClick={() => setGuidedStep(guidedStep - 1)}>Back</button>
+              {guidedStep < 3 ? <Button type="button" onClick={() => { if (!form.name.trim()) { setGuidedStep(1); setGuidedError("Add your business name to continue."); return; } setGuidedError(""); setGuidedStep(guidedStep + 1); }}>{guidedStep === 1 ? "Choose your look" : "Add your photos"}</Button> : <Button type="submit" name="intent" value="publish" onClick={() => setStatus("Publishing")}>Publish storefront</Button>}
+            </div>
+          </section>
+          <div className="min-w-0 bg-[#f4f0ed] p-3 sm:p-6 lg:max-h-[calc(100vh-245px)] lg:overflow-y-auto">
+            <p className="mb-4 text-center text-xs text-muted-foreground">Your storefront preview · {previewMode === "mobile" ? "Mobile" : "Desktop"}</p>
+            <div data-testid="guided-storefront-preview" className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
+              <StorefrontPreview activeSection="" business={business} draggedPhotoIndex={null} form={form} mediaUploadEndpoint={mediaUploadEndpoint} movePhoto={movePhoto} moveService={moveService} previewMode={previewMode} removePhoto={removePhoto} sectionLabel={sectionLabel} setActiveSection={selectSection} setDraggedPhotoIndex={setDraggedPhotoIndex} setServiceVisible={setServiceVisible} update={update} updateService={updateService} visibleSections={visibleSections} />
+            </div>
+          </div>
+        </div>
+      ) : (
       <div
         className="grid min-h-[calc(100vh-190px)] min-w-0 lg:grid-cols-[260px_minmax(0,1fr)_var(--editor-panel-width)]"
         style={{ "--editor-panel-width": panelCollapsed ? "64px" : "430px" } as CSSProperties}
@@ -695,6 +783,7 @@ export function StorefrontCustomizer({
           )}
         </aside>
       </div>
+      )}
     </form>
   );
 }
