@@ -1,100 +1,443 @@
-import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, CakeSlice, Camera, Flower2, GlassWater, Heart, MapPin, PartyPopper, Search, Sparkles, CalendarHeart } from "lucide-react";
-import styles from "./home.module.css";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  BadgeCheck,
+  Bookmark,
+  CalendarHeart,
+  Camera,
+  CakeSlice,
+  Flower2,
+  GlassWater,
+  Heart,
+  PartyPopper,
+  Sparkles,
+  Tags
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { partyInspirationExamples } from "@/lib/party-inspiration";
 
-const description = "Find local vendors for your next celebration. Browse services, compare the details, and connect with vendors near you.";
-export const metadata: Metadata = {
-  title: { absolute: "ShopFia - Find Local Vendors for Your Party" },
-  description,
-  openGraph: { title: "ShopFia - Find Local Vendors for Your Party", description, url: "https://www.shopfia.app", siteName: "ShopFia", type: "website", images: [{ url: "/og-shopfia.svg", width: 1200, height: 630, alt: "ShopFia event inspiration preview" }] },
-  twitter: { card: "summary_large_image", title: "ShopFia - Find Local Vendors for Your Party", description, images: ["/og-shopfia.svg"] }
-};
-
-// Decorative inspiration only. These existing assets do not represent vendor work or real event credits.
-const inspirationTiles = [
-  { title: "Positano Brunch", image: "/demo/fairfield-lemon-tablescape.png", alt: "Lemon and blush floral brunch table inspiration", href: "/events/citrus-garden-brunch" },
-  { title: "Spring Cookies", image: "/demo/vacaville-cookie-tulips.png", alt: "Pastel flower-shaped cookie inspiration", href: "/events/tulip-cookie-shower" },
-  { title: "Table Arrangements", image: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=900&q=80", alt: "Fresh floral arrangement inspiration", href: "/explore?q=florals" },
-  { title: "Tablescapes", image: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1100&q=80", alt: "Decorated reception table inspiration", href: "/explore?q=rentals" }
+const partyImages = [
+  ...partyInspirationExamples.map((party, index) => ({
+    title: party.title,
+    image: party.coverImageUrl,
+    href: `/events/${party.slug}`,
+    detail: party.theme,
+    className: index === 0 ? "md:col-span-2 md:row-span-2" : ""
+  })),
+  {
+    title: "Blush Garden Tables",
+    image:
+      "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1100&q=80",
+    href: "/parties",
+    detail: "Decor, florals, and rental inspiration",
+    className: ""
+  },
+  {
+    title: "Candlelit Dessert Moment",
+    image:
+      "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1100&q=80",
+    href: "/parties",
+    detail: "Save the look for your next celebration",
+    className: "md:col-span-2"
+  }
 ];
 
-const categories = [
-  { name: "Cakes", icon: CakeSlice },
-  { name: "Balloons", icon: PartyPopper },
-  { name: "Florals", icon: Flower2 },
-  { name: "Decor", icon: Sparkles },
-  { name: "Cookies", icon: Heart },
-  { name: "Rentals", icon: CalendarHeart },
-  { name: "Photography", icon: Camera },
-  { name: "Bartending", icon: GlassWater }
+const categoryCards = [
+  {
+    name: "Cakes",
+    image:
+      "https://images.unsplash.com/photo-1535141192574-5d4897c12636?auto=format&fit=crop&w=900&q=80",
+    icon: CakeSlice
+  },
+  {
+    name: "Balloons",
+    image:
+      "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=900&q=80",
+    icon: PartyPopper
+  },
+  {
+    name: "Florals",
+    image:
+      "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=900&q=80",
+    icon: Flower2
+  },
+  {
+    name: "Decor",
+    image:
+      "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=900&q=80",
+    icon: Sparkles
+  },
+  {
+    name: "Cookies",
+    image: "/demo/vacaville-cookie-tulips.png",
+    icon: Heart
+  },
+  {
+    name: "Rentals",
+    image:
+      "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80",
+    icon: CalendarHeart
+  },
+  {
+    name: "Photography",
+    image:
+      "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=900&q=80",
+    icon: Camera
+  },
+  {
+    name: "Bartending",
+    image:
+      "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=900&q=80",
+    icon: GlassWater
+  }
 ];
 
-const steps = [
-  { title: "Find your service", body: "Search by service and location to find vendors near you." },
-  { title: "Compare the details", body: "Explore photos, services, and available pricing on vendor profiles." },
-  { title: "Connect with your vendor", body: "Send an inquiry to discuss your date, availability, and next steps." }
+const featuredParties = [
+  ...partyInspirationExamples.map((party) => ({
+    title: party.title,
+    meta: party.theme,
+    image: party.coverImageUrl,
+    href: `/events/${party.slug}`
+  })),
+  {
+    title: "Backyard Floral Dinner",
+    meta: "Garden party · rentals, stems, place settings",
+    image:
+      "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1000&q=80",
+    href: "/parties"
+  }
+];
+
+const howItWorks = [
+  {
+    title: "Browse real parties",
+    body: "Find inspiration from baby showers, birthdays, weddings, bridal showers, and more."
+  },
+  {
+    title: "See every vendor behind the event",
+    body: "Each party can feature tagged vendors, products, and services."
+  },
+  {
+    title: "Save what you love and book the look",
+    body: "Collect ideas and connect with the people who made them happen."
+  }
+];
+
+const partyStyles = [
+  "Garden baby showers",
+  "Bow and pearl birthdays",
+  "Citrus brunch tables",
+  "Modern bridal showers",
+  "Pastel dessert bars",
+  "Backyard dinner parties"
+];
+
+const recentVendors = [
+  "Cake artists creating sculptural dessert tables",
+  "Florists behind soft, romantic centerpieces",
+  "Balloon stylists building statement entrances",
+  "Rental teams styling linens, chairs, and bars"
 ];
 
 export default function Page() {
   return (
-    <div className={styles.home}>
-      <section className={styles.hero} aria-labelledby="home-title">
-        <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}><MapPin size={15} aria-hidden="true" /> Find vendors near you</p>
-          <h1 id="home-title">Your one-stop shop for party planning.</h1>
-          <p className={styles.intro}>Find the local vendors to bring your celebration to life.</p>
-          <div className={styles.actions}>
-            <Link href="/explore" className={styles.primary}>Find Local Vendors <ArrowRight size={17} aria-hidden="true" /></Link>
-            <Link href="/parties" className={styles.secondary}>Explore Real Events <ArrowUpRight size={16} aria-hidden="true" /></Link>
+    <div className="-mt-6 space-y-20 pb-12 font-sans">
+      <section className="grid min-h-[calc(100vh-5rem)] items-center gap-10 overflow-hidden py-8 lg:grid-cols-[0.84fr_1.16fr]">
+        <div className="max-w-2xl">
+          <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
+            <span className="h-px w-12 bg-[#a85f5e]" />
+            <span>Real celebrations, shoppable inspiration</span>
           </div>
-          <p className={styles.heroNote}>Your vision. Your vendors. Your kind of party.</p>
-        </div>
-        <div className={styles.visual}>
-          <div className={styles.collage}>
-            {inspirationTiles.map((tile, index) => (
-              <Link key={tile.title} href={tile.href} className={styles.tile} aria-label={`${tile.title} — inspiration example`}>
-                <Image src={tile.image} alt={tile.alt} fill priority={index === 0} sizes={index === 0 ? "(min-width: 1024px) 31vw, 55vw" : "(min-width: 1024px) 18vw, 45vw"} className={styles.tileImage} />
-                <div className={styles.tileShade} />
-                <span className={styles.tileLabel}>{tile.title}</span>
-                <ArrowUpRight className={styles.tileArrow} size={18} aria-hidden="true" />
-              </Link>
+          <h1 className="mt-7 text-5xl font-semibold leading-[1.02] tracking-normal text-foreground md:text-6xl lg:text-7xl">
+            Find the vendors behind{" "}
+            <span className="shopfia-editorial-heading font-normal italic text-primary">
+              every party.
+            </span>
+          </h1>
+          <p className="mt-6 max-w-xl text-base leading-8 text-muted-foreground md:text-lg">
+            Browse real celebrations to discover the cake artists, florists,
+            balloon stylists, decorators, rentals, and vendors behind every detail.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/parties">
+              <Button size="lg" className="h-12 rounded-[8px] px-8">
+                Explore Real Parties
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/explore">
+              <Button
+                size="lg"
+                variant="secondary"
+                className="h-12 rounded-[8px] px-8"
+              >
+                Find Local Vendors
+              </Button>
+            </Link>
+          </div>
+          <div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-2">
+            {[
+              "Every vendor is discovered through a real celebration.",
+              "Built from real parties, not anonymous reviews."
+            ].map((line) => (
+              <div
+                key={line}
+                className="flex items-start gap-3 rounded-[8px] border border-white/80 bg-white/80 p-4 text-sm leading-6 text-muted-foreground shadow-sm"
+              >
+                <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#a85f5e]" />
+                <span>{line}</span>
+              </div>
             ))}
           </div>
-          <p className={styles.imageNote}>Inspiration examples</p>
         </div>
-      </section>
 
-      <section className={styles.section} aria-labelledby="services-title">
-        <div className={styles.sectionHeading}>
-          <div><p className={styles.eyebrow}>Start with what you need</p><h2 id="services-title">Find your party people.</h2></div>
-          <Link href="/categories" className={styles.textLink}>All categories <ArrowRight size={16} aria-hidden="true" /></Link>
-        </div>
-        <div className={styles.categories}>
-          {categories.map(({ name, icon: Icon }) => (
-            <Link key={name} href={`/explore?q=${encodeURIComponent(name.toLowerCase())}`} className={styles.category}>
-              <Icon size={27} strokeWidth={1.35} aria-hidden="true" /><span>{name}</span><ArrowUpRight className={styles.categoryArrow} size={15} aria-hidden="true" />
+        <div className="grid auto-rows-[142px] grid-cols-2 gap-3 sm:auto-rows-[170px] md:grid-cols-4 md:auto-rows-[154px]">
+          {partyImages.map((party, index) => (
+            <Link
+              key={party.title}
+              href={party.href}
+              className={`group relative overflow-hidden rounded-[8px] border border-white/80 bg-muted shadow-sm ${party.className}`}
+            >
+              <Image
+                src={party.image}
+                alt={party.title}
+                fill
+                priority={index === 0}
+                sizes={
+                  index === 0
+                    ? "(min-width: 1024px) 34vw, 100vw"
+                    : "(min-width: 1024px) 18vw, 50vw"
+                }
+                className="object-cover transition duration-500 group-hover:scale-[1.03]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-foreground opacity-0 transition group-hover:opacity-100">
+                <ArrowUpRight className="h-4 w-4" />
+              </div>
+              <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                <p className="mb-1 text-xs text-white/90">Inspiration example</p>
+                <h2 className="text-lg font-semibold leading-tight">{party.title}</h2>
+                <p className="mt-1 text-xs leading-5 text-white/90">{party.detail}</p>
+              </div>
             </Link>
           ))}
         </div>
       </section>
 
-      <section className={`${styles.section} ${styles.how}`} aria-labelledby="how-title">
-        <div className={styles.sectionHeading}><div><p className={styles.eyebrow}>How ShopFia works</p><h2 id="how-title">A little less searching. A lot more celebrating.</h2></div></div>
-        <ol className={styles.steps}>
-          {steps.map((step, index) => <li key={step.title}><span className={styles.stepNumber}>0{index + 1}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}
-        </ol>
+      <section className="rounded-[8px] border border-primary/20 bg-white/85 px-5 py-8 text-center shadow-sm md:px-10">
+        <p className="mx-auto max-w-5xl text-2xl font-semibold leading-tight text-primary md:text-3xl">
+          Your one-stop shop for party planning.
+        </p>
       </section>
 
-      <section className={`${styles.section} ${styles.events}`} aria-labelledby="events-title">
-        <div><p className={styles.eyebrow}>A little inspiration, too</p><h2 id="events-title">Discover through real events, then find your vendor.</h2><p className={styles.bodyCopy}>Explore shared celebrations and the vendors tagged in them.</p></div>
-        <Link href="/parties" className={styles.secondary}>Explore Real Events <ArrowUpRight size={16} aria-hidden="true" /></Link>
+      <section className="space-y-6">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
+              Trending Categories
+            </p>
+            <h2 className="shopfia-editorial-heading mt-2 text-3xl tracking-normal md:text-4xl">
+              Discover through real events, then save the look.
+            </h2>
+          </div>
+          <Link
+            href="/categories"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-primary"
+          >
+            Browse all categories
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {categoryCards.map((category) => {
+            const Icon = category.icon;
+
+            return (
+              <Link
+                key={category.name}
+                href={`/explore?q=${encodeURIComponent(category.name.toLowerCase())}`}
+                className="group relative aspect-[4/5] overflow-hidden rounded-[8px] border border-white/80 bg-muted shadow-sm"
+              >
+                <Image
+                  src={category.image}
+                  alt={`${category.name} party inspiration`}
+                  fill
+                  sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                  className="object-cover transition duration-500 group-hover:scale-[1.04]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/20 to-transparent" />
+                <div className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/90 text-primary">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                  <h3 className="text-2xl font-semibold">{category.name}</h3>
+                  <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-white/90">
+                    Vendors behind the party
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </section>
 
-      <section className={styles.finalCta} aria-labelledby="ready-title">
-        <div><h2 id="ready-title">Let’s bring your party together.</h2><p>Start with the service you need.</p></div>
-        <Link href="/explore" className={styles.primary}><Search size={17} aria-hidden="true" /> Find Local Vendors</Link>
+      <section className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
+            Inspiration examples
+          </p>
+          <h2 className="shopfia-editorial-heading mt-2 text-3xl tracking-normal md:text-4xl">
+            Start with the celebration, not a search form.
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-muted-foreground">
+            ShopFia is for the moment when you see a beautiful shower, brunch,
+            wedding, or birthday and want to know who made every detail happen.
+            Browse the event, tap the tags, and save the vendors behind the party.
+          </p>
+          <Link href="/parties" className="mt-6 inline-flex">
+            <Button className="rounded-[8px]">
+              Explore Real Parties
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          {featuredParties.map((party) => (
+            <Link
+              key={party.title}
+              href={party.href}
+              className="group overflow-hidden rounded-[8px] border border-white/80 bg-white/85 shadow-sm"
+            >
+              <div className="relative aspect-[4/5] overflow-hidden">
+                <Image
+                  src={party.image}
+                  alt={party.title}
+                  fill
+                  sizes="(min-width: 1024px) 20vw, 100vw"
+                  className="object-cover transition duration-500 group-hover:scale-[1.04]"
+                />
+              </div>
+              <div className="p-4">
+                <p className="mb-1 text-xs text-muted-foreground">Inspiration example</p>
+                <h3 className="font-semibold leading-tight">{party.title}</h3>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  {party.meta}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-6">
+        <div className="max-w-3xl">
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
+            How ShopFia Works
+          </p>
+          <h2 className="shopfia-editorial-heading mt-2 text-3xl tracking-normal md:text-4xl">
+            From saved inspiration to the vendors behind every detail.
+          </h2>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {howItWorks.map((step, index) => (
+            <article
+              key={step.title}
+              className="rounded-[8px] border border-white/80 bg-white/85 p-6 shadow-sm"
+            >
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-accent font-semibold text-primary">
+                {index + 1}
+              </div>
+              <h2 className="mt-5 text-xl font-semibold">{step.title}</h2>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                {step.body}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-[8px] border border-white/80 bg-white/85 p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Bookmark className="h-5 w-5 text-primary" />
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
+              Popular Party Styles
+            </p>
+          </div>
+          <h2 className="shopfia-editorial-heading mt-4 text-3xl tracking-normal">
+            Inspiration that feels ready to collect.
+          </h2>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {partyStyles.map((style) => (
+              <Link
+                key={style}
+                href={`/parties?q=${encodeURIComponent(style)}`}
+                className="rounded-full border border-primary/20 bg-accent/60 px-4 py-2 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-accent"
+              >
+                {style}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[8px] border border-white/80 bg-white/85 p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Tags className="h-5 w-5 text-primary" />
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
+              Recently Added Vendors
+            </p>
+          </div>
+          <h2 className="shopfia-editorial-heading mt-4 text-3xl tracking-normal">
+            Book the people who made it happen.
+          </h2>
+          <div className="mt-6 grid gap-3">
+            {recentVendors.map((vendor) => (
+              <div
+                key={vendor}
+                className="flex items-center justify-between gap-3 rounded-[8px] border border-border/70 bg-background/70 px-4 py-3 text-sm text-muted-foreground"
+              >
+                <span>{vendor}</span>
+                <ArrowUpRight className="h-4 w-4 shrink-0 text-primary" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-[8px] border border-white/80 bg-foreground text-white shadow-sm">
+        <div className="grid lg:grid-cols-[1.06fr_0.94fr]">
+          <div className="p-6 md:p-10">
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
+              Seasonal Inspiration
+            </p>
+            <h2 className="shopfia-editorial-heading mt-3 max-w-2xl text-3xl tracking-normal md:text-5xl">
+              Plan from a real celebration, then make it your own.
+            </h2>
+            <p className="mt-5 max-w-xl text-sm leading-7 text-white/82">
+              Save citrus brunches, floral showers, bow-filled birthdays, and
+              candlelit dinner parties. When you are ready, connect with the
+              vendors behind the details you already love.
+            </p>
+            <Link href="/parties" className="mt-7 inline-flex">
+              <Button variant="secondary" className="rounded-[8px]">
+                Browse Seasonal Ideas
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+          <div className="relative min-h-[280px]">
+            <Image
+              src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1200&q=80"
+              alt="Elegant seasonal party table inspiration"
+              fill
+              sizes="(min-width: 1024px) 42vw, 100vw"
+              className="object-cover"
+            />
+          </div>
+        </div>
       </section>
     </div>
   );
