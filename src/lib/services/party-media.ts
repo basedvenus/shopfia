@@ -1,4 +1,4 @@
-import { getTikTokVideo, isTikTokShareUrl } from "@/lib/party-media";
+import { getTikTokVideo, isTikTokShareUrl, getPinterestBoard, isPinterestShareUrl } from "@/lib/party-media";
 
 /** Follow short share links only on TikTok's fixed hosts, with a bounded timeout. */
 export async function resolvePartyTikTokUrl(value: string | undefined): Promise<string | null> {
@@ -18,4 +18,28 @@ export async function resolvePartyTikTokUrl(value: string | undefined): Promise<
     current = next;
   }
   throw new Error("Could not open that TikTok share link. Paste the full video link from your browser.");
+}
+
+/** Resolve Pinterest's short-link chain without following arbitrary hosts. */
+export async function resolvePartyPinterestUrl(value: string | undefined): Promise<string | null> {
+  if (!value?.trim()) return null;
+  const direct = getPinterestBoard(value);
+  if (direct) return direct;
+  if (!isPinterestShareUrl(value)) throw new Error("Enter a Pinterest board link.");
+  let current = value.trim();
+  const signal = AbortSignal.timeout(5000);
+  for (let hop = 0; hop < 4; hop++) {
+    const url = new URL(current);
+    const allowedRedirect = url.protocol === "https:" && !url.username && !url.password && !url.port &&
+      url.hostname === "api.pinterest.com" && /^\/url_shortener\/[a-zA-Z0-9_-]{4,80}\/redirect\/$/.test(url.pathname);
+    if (!isPinterestShareUrl(current) && !allowedRedirect) break;
+    const response = await fetch(current, { method: "HEAD", redirect: "manual", signal, cache: "no-store" });
+    const location = response.headers.get("location");
+    if (response.status < 300 || response.status >= 400 || !location) break;
+    const next = new URL(location, current).href;
+    const board = getPinterestBoard(next);
+    if (board) return board;
+    current = next;
+  }
+  throw new Error("Could not resolve this Pinterest board. Try its full pinterest.com board link.");
 }

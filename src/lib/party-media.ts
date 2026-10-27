@@ -51,3 +51,8 @@ export function getPinterestBoard(value?: string | null) {
   if (!match || ["pin", "search", "ideas", "settings", "login", "signup", "today"].includes(match[1].toLowerCase()) || ["_saved", "_created"].includes(match[2].toLowerCase())) return null;
   return `https://www.pinterest.com/${match[1]}/${match[2]}/`;
 }
+
+export function isPinterestShareUrl(value?: string | null) {
+  const url = httpsUrl(value);
+  return Boolean(url && url.hostname === "pin.it" && /^\/[a-zA-Z0-9_-]{4,80}\/?$/.test(url.pathname));
+}

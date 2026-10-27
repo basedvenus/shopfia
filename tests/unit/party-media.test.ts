@@ -66,3 +66,31 @@ it("accepts Pinterest mood boards and rejects profile or unrelated links", async
   expect(getPinterestBoard("https://www.pinterest.com/pin/123456789/")).toBeNull();
   expect(getPinterestBoard("https://evil.test/venus/party-mood/")).toBeNull();
 });
+
+it("resolves Pinterest short links through its allowlisted redirect service", async () => {
+  const { resolvePartyPinterestUrl } = await import("@/lib/services/party-media");
+  const fetcher = vi.fn()
+    .mockResolvedValueOnce(new Response(null, { status: 308, headers: { location: "https://api.pinterest.com/url_shortener/7gQwNcKp1/redirect/" } }))
+    .mockResolvedValueOnce(new Response(null, { status: 302, headers: { location: "https://www.pinterest.com/basedvenus/halloween-bday/?sender=test" } }));
+  vi.stubGlobal("fetch", fetcher);
+  expect(await resolvePartyPinterestUrl("https://pin.it/7gQwNcKp1")).toBe("https://www.pinterest.com/basedvenus/halloween-bday/");
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(fetcher.mock.calls[1][1]).toMatchObject({ method: "HEAD", redirect: "manual" });
+});
+it("does not follow Pinterest redirects to unrelated or credential-bearing URLs", async () => {
+  const { resolvePartyPinterestUrl } = await import("@/lib/services/party-media");
+  for (const location of ["https://127.0.0.1/private", "https://api.pinterest.com.evil.test/url_shortener/abcd/redirect/", "https://user:pass@api.pinterest.com/url_shortener/abcd/redirect/"]) {
+    const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 302, headers: { location } }));
+    vi.stubGlobal("fetch", fetcher);
+    await expect(resolvePartyPinterestUrl("https://pin.it/abcd1234")).rejects.toThrow();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  }
+});
+it("keeps full Pinterest board links network-free and rejects profile share destinations", async () => {
+  const { resolvePartyPinterestUrl } = await import("@/lib/services/party-media");
+  const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 302, headers: { location: "https://www.pinterest.com/basedvenus/" } }));
+  vi.stubGlobal("fetch", fetcher);
+  expect(await resolvePartyPinterestUrl("https://www.pinterest.com/basedvenus/halloween-bday/?tracking=1")).toBe("https://www.pinterest.com/basedvenus/halloween-bday/");
+  expect(fetcher).not.toHaveBeenCalled();
+  await expect(resolvePartyPinterestUrl("https://pin.it/abcd1234")).rejects.toThrow();
+});

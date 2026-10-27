@@ -334,7 +334,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
           {spotifyUrl.trim() && !getSpotifyPlaylist(spotifyUrl) ? <span role="status" className="text-xs text-destructive">Paste a public Spotify playlist link.</span> : null}
         </label>
         <h2 className="text-lg font-semibold">Mood board</h2>
-        <label className="grid min-w-0 gap-2 text-sm font-medium">Pinterest mood board <span className="text-xs font-normal text-muted-foreground">Optional</span><Input name="pinterestUrl" type="url" maxLength={2048} defaultValue={initialParty?.pinterestUrl ?? ""} placeholder="https://www.pinterest.com/yourname/party-board/" /></label>
+        <label className="grid min-w-0 gap-2 text-sm font-medium">Pinterest mood board <span className="text-xs font-normal text-muted-foreground">Optional</span><Input name="pinterestUrl" type="url" maxLength={2048} defaultValue={initialParty?.pinterestUrl ?? ""} placeholder="Pinterest board URL or pin.it share link" /></label>
         <PartyMedia tiktokUrls={tiktokUrls} appleMusicUrl={appleMusicUrl} spotifyUrl={spotifyUrl} />
       </section>
       </div>
