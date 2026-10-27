@@ -34,10 +34,10 @@ export default async function ResetPasswordPage({
           ) : (
             <div className="grid gap-3">
               <p className="text-sm text-muted-foreground">
-                This reset link is missing details. Request a new link from the sign-in screen.
+                This reset link is missing details. Request a new link to reset your password.
               </p>
               <Button asChild>
-                <Link href="/account">Return to Sign In</Link>
+                <Link href="/account/forgot-password">Request a new reset link</Link>
               </Button>
             </div>
           )}
