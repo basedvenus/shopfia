@@ -1,0 +1,28 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const mocks = vi.hoisted(() => ({ session: vi.fn(), rate: vi.fn(), category: vi.fn(), findVendor: vi.fn(), create: vi.fn(), revalidate: vi.fn() }));
+vi.mock("@/lib/auth/guards", () => ({ requireSession: mocks.session, requireRole: vi.fn(), requireVerifiedVendorProfile: vi.fn() }));
+vi.mock("@/lib/security/request", () => ({ checkServerActionRateLimit: mocks.rate }));
+vi.mock("@/lib/db", () => ({ db: { category: { upsert: mocks.category }, vendorProfile: { findUnique: mocks.findVendor, create: mocks.create } } }));
+vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
+import { createUnclaimedVendorAction } from "@/app/actions/vendor";
+const input = { name: "Sample Florist", city: "Fairfield", state: "CA", categories: ["Florals"], bookingChannel: "Instagram DM", bookingDetails: "Private booking contact", instagramHandle: "sampleflorist", website: "sampleflorist.example" };
+beforeEach(() => { vi.clearAllMocks(); mocks.session.mockResolvedValue({ user: { id: "reporter" } }); mocks.rate.mockResolvedValue({ ok: true }); mocks.findVendor.mockResolvedValue(null); mocks.category.mockResolvedValue({ id: "category" }); mocks.create.mockResolvedValue({ id: "vendor", name: input.name, city: input.city, state: input.state, slug: "sample-florist", status: "UNCLAIMED" }); });
+describe("guided unclaimed vendor creation", () => {
+  it("stores business location and private reporter-owned booking details atomically", async () => {
+    const result = await createUnclaimedVendorAction(input);
+    expect(result.ok).toBe(true);
+    expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ city: "Fairfield", state: "CA", status: "UNCLAIMED", verified: false, communitySubmissions: { create: { userId: "reporter", bookingChannel: "Instagram DM", bookingDetails: "Private booking contact" } } }) }));
+    expect(mocks.create.mock.calls[0][0].select).not.toHaveProperty("communitySubmissions");
+    expect(result.vendor).not.toHaveProperty("bookingDetails");
+    expect(mocks.create.mock.calls[0][0].data).not.toHaveProperty("userId");
+  });
+  it.each([
+    { city: "" }, { categories: [] }, { bookingChannel: "" }, { bookingChannel: "made-up-channel" }
+  ])("requires city, a vendor type, and an honest booking method: %j", async (change) => {
+    expect(await createUnclaimedVendorAction({ ...input, ...change })).toMatchObject({ ok: false });
+    expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.category).not.toHaveBeenCalled();
+  });
+  it("honors rate limits before creating a profile", async () => {
+    mocks.rate.mockResolvedValue({ ok: false }); expect(await createUnclaimedVendorAction(input)).toMatchObject({ ok: false }); expect(mocks.create).not.toHaveBeenCalled();
+  });
+});

@@ -265,8 +265,8 @@ describe("county privacy and expanded party links", () => {
     form.append("tiktokUrls", "https://www.tiktok.com/@scout2015/video/6718335390845095173");
     form.append("tiktokUrls", "https://www.tiktok.com/@scout2015/video/6718335390845095174");
     form.set("spotifyUrl", "https://open.spotify.com/playlist/37i9dQZF1DZ06evO3eIivx?si=test");
-    form.set("pinterestUrl", "https://www.pinterest.com/testprofile/?tracking=1");
+    form.set("pinterestUrl", "https://www.pinterest.com/testprofile/party-board/?tracking=1");
     expect(await updatePartyEventAction(form)).toMatchObject({ ok: true });
-    expect(mocks.tx.partyEvent.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ tiktokUrls: expect.arrayContaining([expect.stringContaining("6718335390845095173"), expect.stringContaining("6718335390845095174")]), spotifyUrl: "https://open.spotify.com/playlist/37i9dQZF1DZ06evO3eIivx", pinterestUrl: "https://www.pinterest.com/testprofile/" }) }));
+    expect(mocks.tx.partyEvent.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ tiktokUrls: expect.arrayContaining([expect.stringContaining("6718335390845095173"), expect.stringContaining("6718335390845095174")]), spotifyUrl: "https://open.spotify.com/playlist/37i9dQZF1DZ06evO3eIivx", pinterestUrl: "https://www.pinterest.com/testprofile/party-board/" }) }));
   });
 });

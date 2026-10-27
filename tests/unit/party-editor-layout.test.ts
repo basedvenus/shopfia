@@ -20,7 +20,7 @@ describe("party editor organization", () => {
     expect(html).toContain('name="tiktokUrls"');
     expect(html).toContain("Add another video");
     expect(html).toContain("Spotify playlist");
-    expect(html).toContain("Pinterest profile");
+    expect(html).toContain("Pinterest mood board");
     expect(html).toContain('aria-label="County" required=""');
     expect(html).toContain('value="06095" selected=""');
   });

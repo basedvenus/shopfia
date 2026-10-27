@@ -15,7 +15,7 @@ import { checkServerActionRateLimit } from "@/lib/security/request";
 import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 import { friendlyValidationMessage } from "@/lib/validators/messages";
 import { getAccountSetupDestination } from "@/lib/account-setup";
-import { getTikTokVideo, isTikTokShareUrl, getAppleMusicPlaylist, getSpotifyPlaylist, getPinterestProfile } from "@/lib/party-media";
+import { getTikTokVideo, isTikTokShareUrl, getAppleMusicPlaylist, getSpotifyPlaylist, getPinterestBoard } from "@/lib/party-media";
 import { getCounty, privatePartyLocation } from "@/lib/party-location";
 import { resolvePartyTikTokUrl } from "@/lib/services/party-media";
 import { deliverPartyNotificationEmails } from "@/lib/services/party-notifications";
@@ -365,7 +365,7 @@ const partyEventFieldsSchema = z.object({
   countyState: z.string().trim().max(2).optional(),
   tiktokUrls: z.array(z.string().trim().max(2048).refine((value) => Boolean(getTikTokVideo(value)) || isTikTokShareUrl(value), "Enter a TikTok video link.")).max(8, "Add up to 8 party videos.").default([]),
   spotifyUrl: z.string().trim().max(2048).refine((value) => !value || Boolean(getSpotifyPlaylist(value)), "Enter a Spotify playlist link.").optional(),
-  pinterestUrl: z.string().trim().max(2048).refine((value) => !value || Boolean(getPinterestProfile(value)), "Enter a Pinterest profile link.").optional(),
+  pinterestUrl: z.string().trim().max(2048).refine((value) => !value || Boolean(getPinterestBoard(value)), "Enter a Pinterest mood board link.").optional(),
   tiktokUrl: z.string().trim().max(2048).refine((value) => !value || Boolean(getTikTokVideo(value)) || isTikTokShareUrl(value), "Enter a TikTok video link.").optional(),
   appleMusicUrl: z.string().trim().max(2048).refine((value) => !value || Boolean(getAppleMusicPlaylist(value)), "Enter a public Apple Music playlist link.").optional(),
   title: z.string().trim().min(2, "Add an event title.").max(100, "Party name is a little too long."),
@@ -454,7 +454,7 @@ export async function createPartyEventAction(formData: FormData) {
   }
   const tiktokUrl = tiktokUrls[0] ?? null;
   const spotifyUrl = getSpotifyPlaylist(parsed.data.spotifyUrl)?.url ?? null;
-  const pinterestUrl = getPinterestProfile(parsed.data.pinterestUrl);
+  const pinterestUrl = getPinterestBoard(parsed.data.pinterestUrl);
   const privateLocation = parsed.data.location === "Private residence" ? privatePartyLocation(parsed.data.countyFips) : null;
   const appleMusicUrl = getAppleMusicPlaylist(parsed.data.appleMusicUrl)?.url ?? null;
 
@@ -604,7 +604,7 @@ export async function updatePartyEventAction(formData: FormData) {
   }
   const tiktokUrl = tiktokUrls[0] ?? null;
   const spotifyUrl = getSpotifyPlaylist(parsed.data.spotifyUrl)?.url ?? null;
-  const pinterestUrl = getPinterestProfile(parsed.data.pinterestUrl);
+  const pinterestUrl = getPinterestBoard(parsed.data.pinterestUrl);
   const privateLocation = parsed.data.location === "Private residence" ? privatePartyLocation(parsed.data.countyFips) : null;
   const appleMusicUrl = getAppleMusicPlaylist(parsed.data.appleMusicUrl)?.url ?? null;
 
@@ -763,7 +763,7 @@ function getPartyValidationMessage(issues: z.ZodIssue[]) {
   return friendlyValidationMessage(issues, {
     city: "City",
     countyFips: "County",
-    pinterestUrl: "Pinterest profile",
+    pinterestUrl: "Pinterest mood board",
     spotifyUrl: "Spotify playlist",
     tiktokUrls: "Party videos",
     tiktokUrl: "TikTok video",

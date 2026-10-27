@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { SlidersHorizontal, Trash2, Loader2, Plus, Search, Star, Upload, X, Tag } from "lucide-react";
 import { createPartyEventAction, updatePartyEventAction, followPartyVendorAction } from "@/app/actions/auth";
-import { createUnclaimedVendorAction } from "@/app/actions/vendor";
+import { UnclaimedVendorModal } from "@/components/parties/unclaimed-vendor-modal";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
@@ -22,7 +22,7 @@ const MAX_PARTY_UPLOAD_BYTES = 3.5 * 1024 * 1024;
 const MAX_PARTY_UPLOAD_DIMENSION = 2400;
 const SUPPORTED_PARTY_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
-type VendorOption = {
+export type VendorOption = {
   id: string;
   name: string;
   username: string | null;
@@ -315,8 +315,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
           </button>
         </div>
       <section className="grid min-w-0 gap-4 rounded-3xl border bg-white p-4" aria-label="Party links">
-        <div><h2 className="text-sm font-semibold">Video &amp; music</h2><p className="mt-1 text-xs text-muted-foreground">Add a video of your party and the playlist that set the mood.</p></div>
-        <div className="grid gap-3"><h2 className="text-lg font-semibold">Party videos</h2><p className="text-xs text-muted-foreground">Add up to 8 public TikTok videos.</p>
+        <div className="grid gap-3"><h2 className="text-lg font-semibold">Videos</h2><p className="text-xs text-muted-foreground">Add up to 8 public TikTok videos.</p>
           {tiktokUrls.map((url, index) => <div key={index} className="grid gap-2">
             <label className="grid gap-2 text-sm font-medium">TikTok video {index + 1}<Input name="tiktokUrls" type="url" maxLength={2048} value={url} onChange={(event) => setTikTokUrls((current) => current.map((value, i) => i === index ? event.target.value : value))} placeholder="https://www.tiktok.com/@you/video/…" /></label>
             {url.trim() && !getTikTokVideo(url) && !isTikTokShareUrl(url) ? <p role="status" className="text-xs text-destructive">Paste a TikTok video link.</p> : null}
@@ -324,7 +323,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
           </div>)}
           <Button type="button" variant="secondary" className="w-fit" disabled={tiktokUrls.length >= 8} onClick={() => setTikTokUrls((current) => [...current, ""])}>Add another video</Button>
         </div>
-        <h2 className="text-lg font-semibold">Party playlists</h2>
+        <h2 className="text-lg font-semibold">Playlists</h2>
         <label className="grid min-w-0 gap-2 text-sm font-medium">Apple Music playlist <span className="text-xs font-normal text-muted-foreground">Optional</span>
           <Input name="appleMusicUrl" type="url" maxLength={2048} value={appleMusicUrl} onChange={(event) => setAppleMusicUrl(event.target.value)} placeholder="https://music.apple.com/us/playlist/…" aria-describedby="party-playlist-help" />
           <span id="party-playlist-help" className="text-xs font-normal text-muted-foreground">Paste a public playlist link. Its cover and player appear automatically.</span>
@@ -334,7 +333,8 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
           <Input name="spotifyUrl" type="url" maxLength={2048} value={spotifyUrl} onChange={(event) => setSpotifyUrl(event.target.value)} placeholder="https://open.spotify.com/playlist/…" />
           {spotifyUrl.trim() && !getSpotifyPlaylist(spotifyUrl) ? <span role="status" className="text-xs text-destructive">Paste a public Spotify playlist link.</span> : null}
         </label>
-        <label className="grid min-w-0 gap-2 text-sm font-medium">Pinterest profile <span className="text-xs font-normal text-muted-foreground">Optional</span><Input name="pinterestUrl" type="url" maxLength={2048} defaultValue={initialParty?.pinterestUrl ?? ""} placeholder="https://www.pinterest.com/yourname/" /></label>
+        <h2 className="text-lg font-semibold">Mood board</h2>
+        <label className="grid min-w-0 gap-2 text-sm font-medium">Pinterest mood board <span className="text-xs font-normal text-muted-foreground">Optional</span><Input name="pinterestUrl" type="url" maxLength={2048} defaultValue={initialParty?.pinterestUrl ?? ""} placeholder="https://www.pinterest.com/yourname/party-board/" /></label>
         <PartyMedia tiktokUrls={tiktokUrls} appleMusicUrl={appleMusicUrl} spotifyUrl={spotifyUrl} />
       </section>
       </div>
@@ -549,118 +549,6 @@ function IconButton({
     >
       {children}
     </button>
-  );
-}
-
-const UNCLAIMED_VENDOR_CATEGORIES = [
-  "Backdrops",
-  "Balloons",
-  "Cakes & Desserts",
-  "Catering & Beverages",
-  "Children's Entertainment",
-  "Entertainment",
-  "Florals",
-  "Party Rentals",
-  "Styling & Decor"
-] as const;
-
-function UnclaimedVendorModal({
-  initialName,
-  onClose,
-  onCreated
-}: {
-  initialName: string;
-  onClose: () => void;
-  onCreated: (vendor: VendorOption) => void;
-}) {
-  const [name, setName] = useState(initialName);
-  const [instagramHandle, setInstagramHandle] = useState("");
-  const [website, setWebsite] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  function toggleCategory(category: string, checked: boolean) {
-    setCategories((current) =>
-      checked
-        ? current.includes(category) ? current : [...current, category]
-        : current.filter((item) => item !== category)
-    );
-  }
-
-  return (
-    <div className="fixed inset-0 z-[80] grid place-items-center bg-[#2f2626]/35 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md overflow-hidden rounded-[1.5rem] border border-white/70 bg-[#fffaf7] shadow-[0_28px_80px_rgba(72,44,43,0.22)]">
-        <div className="flex items-start justify-between gap-4 border-b border-[#eadbd7] px-5 py-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Unclaimed vendor</p>
-            <h2 className="mt-1 text-xl font-semibold">Add New Vendor</h2>
-            <p className="mt-1 text-sm leading-5 text-muted-foreground">
-              Add a lightweight profile so this party can credit the business now.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-muted-foreground shadow-sm transition hover:text-foreground"
-            aria-label="Close add vendor"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="grid gap-3 p-5">
-          <label className="grid gap-1.5 text-sm font-semibold">
-            Business Name
-            <Input value={name} onChange={(event) => setName(event.target.value)} className="h-11 rounded-[1rem] bg-white" required />
-          </label>
-          <div className="grid gap-2 text-sm font-semibold">
-            Categories
-            <div className="flex flex-wrap gap-2">
-              {UNCLAIMED_VENDOR_CATEGORIES.map((item) => (
-                <label key={item} className="inline-flex cursor-pointer items-center gap-2 rounded-full border bg-white px-3 py-2 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={categories.includes(item)}
-                    onChange={(event) => toggleCategory(item, event.target.checked)}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  {item}
-                </label>
-              ))}
-            </div>
-          </div>
-          <label className="grid gap-1.5 text-sm font-semibold">
-            Instagram Handle <span className="font-normal text-muted-foreground">(optional)</span>
-            <Input value={instagramHandle} onChange={(event) => setInstagramHandle(event.target.value)} placeholder="@businessname" className="h-11 rounded-[1rem] bg-white" />
-          </label>
-          <label className="grid gap-1.5 text-sm font-semibold">
-            Website <span className="font-normal text-muted-foreground">(optional)</span>
-            <Input value={website} onChange={(event) => setWebsite(event.target.value)} placeholder="business.com" className="h-11 rounded-[1rem] bg-white" />
-          </label>
-          {error ? <p className="rounded-[1rem] bg-primary/10 px-3 py-2 text-sm text-primary">{error}</p> : null}
-        </div>
-        <div className="flex justify-end gap-2 border-t border-[#eadbd7] bg-white px-5 py-4">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button
-            type="button"
-            disabled={isPending}
-            onClick={() => {
-              setError(null);
-              startTransition(async () => {
-                const result = await createUnclaimedVendorAction({ categories, instagramHandle, name, website });
-                if (!result.ok || !result.vendor) {
-                  setError(result.error ?? "Could not add that vendor yet.");
-                  return;
-                }
-                onCreated(result.vendor);
-              });
-            }}
-          >
-            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            Add Vendor
-          </Button>
-        </div>
-      </div>
-    </div>
   );
 }
 

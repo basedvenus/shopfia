@@ -246,6 +246,7 @@ model User {
   partyContributions     PartyContribution[]
   notifications          Notification[]
   partyEmailNotifications Boolean @default(false)
+  vendorSubmissions      VendorCommunitySubmission[]
   partyPhotoVendorRatings PartyPhotoVendorRating[]
   following              Follow[]          @relation("Follower")
   followers              Follow[]          @relation("Following")
@@ -341,6 +342,7 @@ model VendorProfile {
   slug                      String                @unique
   username                  String?               @unique
   status                    VendorProfileStatus   @default(CLAIMED)
+  communitySubmissions      VendorCommunitySubmission[]
   name                      String
   website                   String?
   instagramUrl              String?
@@ -1200,4 +1202,18 @@ model Notification {
   event       PartyEvent? @relation(fields: [eventId], references: [id], onDelete: Cascade)
   @@index([userId, readAt, createdAt])
   @@index([eventId, emailSentAt])
+}
+
+
+model VendorCommunitySubmission {
+  id             String @id @default(cuid())
+  vendorId       String
+  userId         String
+  bookingChannel String
+  bookingDetails String?
+  createdAt      DateTime @default(now())
+  vendor         VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([vendorId])
+  @@index([userId])
 }

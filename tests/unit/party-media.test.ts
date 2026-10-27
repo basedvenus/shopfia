@@ -58,3 +58,11 @@ it("stacks media in narrow editor columns", () => {
   expect(html).toContain("repeat(auto-fit, minmax(min(100%, 340px), 1fr))");
   expect(html).not.toContain("sm:grid-cols-2");
 });
+
+it("accepts Pinterest mood boards and rejects profile or unrelated links", async () => {
+  const { getPinterestBoard } = await import("@/lib/party-media");
+  expect(getPinterestBoard("https://www.pinterest.com/venus/party-mood/?tracking=1")).toBe("https://www.pinterest.com/venus/party-mood/");
+  expect(getPinterestBoard("https://www.pinterest.com/venus/")).toBeNull();
+  expect(getPinterestBoard("https://www.pinterest.com/pin/123456789/")).toBeNull();
+  expect(getPinterestBoard("https://evil.test/venus/party-mood/")).toBeNull();
+});

@@ -1,5 +1,6 @@
 "use server";
 
+import { UNCLAIMED_VENDOR_CATEGORIES, VENDOR_BOOKING_CHANNELS } from "@/lib/unclaimed-vendor";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { CategoryAudience, OffsiteAdsTier, Prisma, UserRole, VendorProfileStatus, VerificationDocumentType } from "@prisma/client";
@@ -47,26 +48,22 @@ function slugify(value: FormDataEntryValue | null) {
     .replace(/(^-|-$)/g, "");
 }
 
-const UNCLAIMED_VENDOR_CATEGORIES = [
-  "Backdrops",
-  "Balloons",
-  "Cakes & Desserts",
-  "Catering & Beverages",
-  "Children's Entertainment",
-  "Entertainment",
-  "Florals",
-  "Party Rentals",
-  "Styling & Decor"
-] as const;
-
 const unclaimedVendorSchema = z.object({
+  city: z.string().trim().min(2, "Vendor city is required.").max(80),
+  state: z.string().trim().max(40).optional(),
+  bookingChannel: z.enum(VENDOR_BOOKING_CHANNELS, { errorMap: () => ({ message: "Choose how you contacted or booked this vendor." }) }),
+  bookingDetails: z.string().trim().max(500).optional(),
   name: z.string().trim().min(2, "Business Name is required.").max(120, "Business Name is too long."),
   instagramHandle: z.string().trim().max(80).optional(),
   website: z.string().trim().max(255).optional(),
-  categories: z.array(z.enum(UNCLAIMED_VENDOR_CATEGORIES)).min(1, "Choose at least one category.").max(9, "Choose up to 9 categories.")
+  categories: z.array(z.enum(UNCLAIMED_VENDOR_CATEGORIES)).min(1, "Choose at least one category.").max(UNCLAIMED_VENDOR_CATEGORIES.length)
 });
 
 export async function createUnclaimedVendorAction(input: {
+  city: string;
+  state?: string;
+  bookingChannel: string;
+  bookingDetails?: string;
   categories?: string[];
   category?: string;
   instagramHandle?: string;
@@ -91,6 +88,8 @@ export async function createUnclaimedVendorAction(input: {
     return {
       ok: false,
       error: firstValidationMessage(parsed.error, {
+        city: "Vendor city",
+        bookingChannel: "Booking method",
         name: "Business Name",
         instagramHandle: "Instagram Handle",
         website: "Website",
@@ -125,7 +124,9 @@ export async function createUnclaimedVendorAction(input: {
       website,
       instagramUrl,
       bio: "This business was tagged by the ShopFia community and has not claimed their profile yet.",
-      city: "",
+      city: parsed.data.city,
+      state: parsed.data.state || null,
+      communitySubmissions: { create: { userId: session.user.id, bookingChannel: parsed.data.bookingChannel, bookingDetails: parsed.data.bookingDetails || null } },
       verified: false,
       categories: {
         create: categoryRecords.map((category) => ({ categoryId: category.id }))

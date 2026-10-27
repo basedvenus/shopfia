@@ -1,5 +1,6 @@
+import { PartyPhotoGallery } from "@/components/parties/party-photo-gallery";
 import { PartyContributions } from "@/components/parties/party-contributions";
-import { getPinterestProfile } from "@/lib/party-media";
+import { getPinterestBoard } from "@/lib/party-media";
 import { PartyMedia } from "@/components/parties/party-media";
 import { partyCategoryLabel, inferPartyOccasion, occasionTag } from "@/lib/party-occasions";
 import Link from "next/link";
@@ -13,7 +14,6 @@ import { PartyComments } from "@/components/parties/party-comments";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CroppedImage } from "@/components/ui/cropped-image";
 import { storefrontPath } from "@/lib/businesses";
 import { normalizePartyPhotoCrop, normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
@@ -94,6 +94,7 @@ export default async function EventPage({
     ? event.photos.map((photo) => ({
       id: photo.id,
       url: partyPhotoUrl(photo.id, photo.updatedAt, { width: 1400 }),
+      fullUrl: partyPhotoUrl(photo.id, photo.updatedAt),
       crop: normalizePartyPhotoCrop(photo.crop),
       taggedVendors: photo.taggedVendors.filter((vendor) => !isQuarantinedVendorId(vendor.id)),
       vendorContributions: Object.fromEntries(
@@ -105,6 +106,7 @@ export default async function EventPage({
     : legacyImages.map((image, index) => ({
       id: `${image}-${index}`,
       url: image,
+      fullUrl: image,
       crop: normalizeImageCrop(null),
       taggedVendors: event?.taggedVendors.filter((vendor) => !isQuarantinedVendorId(vendor.id)) ?? [],
       vendorContributions: {}
@@ -342,37 +344,9 @@ export default async function EventPage({
 
       <section className="grid items-start gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="grid min-w-0 gap-5">
-        <div id="party-gallery" className="grid scroll-mt-24 auto-rows-[190px] grid-cols-2 gap-3 md:grid-cols-4">
-          {safePhotos.length === 0 ? <p className="col-span-full rounded-2xl bg-muted/60 p-5 text-sm text-muted-foreground">No party photos have been added yet.</p> : null}
-          {safePhotos.map((photo, index) => (
-            <div
-              key={photo.id}
-              className={`relative overflow-hidden rounded-[1.4rem] border border-white/80 bg-muted shadow-sm ${
-                index === 0 ? "col-span-2 row-span-2" : ""
-              }`}
-            >
-              <CroppedImage
-                src={photo.url}
-                alt={`${title} party photo ${index + 1}`}
-                crop={photo.crop}
-                className="absolute inset-0 h-full w-full object-cover"
-                loading={index === 0 ? "eager" : "lazy"}
-              />
-              {photo.taggedVendors.map((vendor) =>
-                firstPhotoIdByVendor.get(vendor.id) === photo.id ? (
-                  <span
-                    key={vendor.id}
-                    id={`vendor-${vendor.id}-photos`}
-                    className="pointer-events-none absolute inset-1 rounded-[1.2rem] transition target:ring-4 target:ring-primary/45 target:ring-offset-2 target:ring-offset-background"
-                    aria-hidden="true"
-                  />
-                ) : null
-              )}
-            </div>
-          ))}
-        </div>
+          <PartyPhotoGallery title={title} photos={safePhotos.map((photo) => ({ id: photo.id, url: photo.url, fullUrl: photo.fullUrl, crop: photo.crop, vendorAnchors: photo.taggedVendors.filter((vendor) => firstPhotoIdByVendor.get(vendor.id) === photo.id).map((vendor) => `vendor-${vendor.id}-photos`) }))} />
           <PartyMedia tiktokUrl={event?.tiktokUrl} tiktokUrls={[...(event?.tiktokUrls ?? []), ...(event?.contributions ?? []).flatMap((item) => item.tiktokUrl ? [item.tiktokUrl] : [])]} appleMusicUrl={event?.appleMusicUrl} appleMusicUrls={(event?.contributions ?? []).flatMap((item) => item.appleMusicUrl ? [item.appleMusicUrl] : [])} spotifyUrl={event?.spotifyUrl} spotifyUrls={(event?.contributions ?? []).flatMap((item) => item.spotifyUrl ? [item.spotifyUrl] : [])} />
-          {getPinterestProfile(event?.pinterestUrl) ? <a href={getPinterestProfile(event?.pinterestUrl)!} target="_blank" rel="noopener noreferrer" className="w-fit rounded-full border bg-white px-5 py-3 text-sm font-medium">View Pinterest profile</a> : null}
+          {getPinterestBoard(event?.pinterestUrl) ? <a href={getPinterestBoard(event?.pinterestUrl)!} target="_blank" rel="noopener noreferrer" className="w-fit rounded-full border bg-white px-5 py-3 text-sm font-medium">View Pinterest mood board</a> : null}
         </div>
 
         <div className="min-w-0 rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft">
