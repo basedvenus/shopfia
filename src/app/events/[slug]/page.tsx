@@ -332,9 +332,8 @@ export default async function EventPage({
         </div>
       </section>
 
-      <PartyMedia tiktokUrl={event?.tiktokUrl} appleMusicUrl={event?.appleMusicUrl} />
-
-      <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+      <section className="grid items-start gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid min-w-0 gap-5">
         <div id="party-gallery" className="grid scroll-mt-24 auto-rows-[190px] grid-cols-2 gap-3 md:grid-cols-4">
           {safePhotos.length === 0 ? <p className="col-span-full rounded-2xl bg-muted/60 p-5 text-sm text-muted-foreground">No party photos have been added yet.</p> : null}
           {safePhotos.map((photo, index) => (
@@ -364,8 +363,10 @@ export default async function EventPage({
             </div>
           ))}
         </div>
+          <PartyMedia tiktokUrl={event?.tiktokUrl} appleMusicUrl={event?.appleMusicUrl} />
+        </div>
 
-        <div className="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft">
+        <div className="min-w-0 rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft">
           <h2 className="text-2xl font-semibold tracking-tight">Featured Vendors</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             {event ? "The creative team credited by this party’s host." : "This is a decorative inspiration example. No vendor participation is implied."}
