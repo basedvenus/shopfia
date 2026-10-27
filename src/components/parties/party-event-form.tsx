@@ -11,6 +11,7 @@ import { CountySelector } from "@/components/parties/county-selector";
 import { PartyMedia } from "@/components/parties/party-media";
 import { getAppleMusicPlaylist, getTikTokVideo, isTikTokShareUrl, getSpotifyPlaylist } from "@/lib/party-media";
 import { ImageCropEditor } from "@/components/ui/image-crop-editor";
+import { partyPhotoEditorUrl } from "@/lib/party-photo-url";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DEFAULT_IMAGE_CROP, normalizePartyPhotoCrop, type ImageCrop } from "@/lib/image-crop";
@@ -97,6 +98,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
   const [photos, setPhotos] = useState<UploadedPartyPhoto[]>(() =>
     (initialParty?.photos ?? []).map((photo) => ({
       ...photo,
+      url: partyPhotoEditorUrl(photo.url),
       crop: { ...normalizePartyPhotoCrop(photo.crop), zoom: Math.max(1, photo.crop.zoom) },
       vendorContributions: photo.vendorContributions ?? {}
     }))
@@ -933,6 +935,7 @@ async function uploadPartyPhoto(file: File) {
 
   return {
     ...result.photo,
+    url: partyPhotoEditorUrl(result.photo.url),
     crop: DEFAULT_IMAGE_CROP,
     vendorIds: [],
     vendorContributions: {},

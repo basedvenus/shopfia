@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronLeft, ChevronRight, X, Expand, Pause, Play } from "lucide-react";
 import { CroppedImage } from "@/components/ui/cropped-image";
-import { type ImageCrop, normalizeImageCrop } from "@/lib/image-crop";
+import { type ImageCrop } from "@/lib/image-crop";
 
 type Photo = { id: string; url: string; fullUrl: string; crop: ImageCrop; vendorAnchors: string[] };
 export function PartyPhotoGallery({ title, photos }: { title: string; photos: Photo[] }) {
@@ -56,12 +56,12 @@ export function PartyPhotoGallery({ title, photos }: { title: string; photos: Ph
         <Dialog.Description id="party-viewer-description" className="sr-only">Full photo viewer. Use previous and next buttons, arrow keys, or swipe to browse. Press Escape to close.</Dialog.Description>
         <Dialog.Close aria-label="Close photo viewer" className="absolute right-0 top-0 grid h-10 w-10 place-items-center rounded-full bg-white/15 hover:bg-white/25"><X className="h-5 w-5" /></Dialog.Close>
         <div className="relative grid min-h-0 flex-1 place-items-center" style={{ touchAction: "pan-y pinch-zoom" }} onTouchStart={(event) => { touch.current = event.touches.length === 1 ? { x: event.touches[0].clientX, y: event.touches[0].clientY } : null; }} onTouchEnd={(event) => { if (!touch.current || !event.changedTouches.length) return; const dx = event.changedTouches[0].clientX - touch.current.x; const dy = event.changedTouches[0].clientY - touch.current.y; touch.current = null; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.2 && photos.length > 1) move(dx < 0 ? 1 : -1); }}>
-          {current ? <img key={current.id} src={current.fullUrl} alt={`${title} photo ${(active ?? 0) + 1}, full image`} className="absolute inset-0 h-full w-full object-contain" style={{ filter: `brightness(${normalizeImageCrop(current.crop).brightness ?? 1}) saturate(${normalizeImageCrop(current.crop).saturation ?? 1})` }} onError={() => setFailed(current.id)} /> : null}
-          {current && failed === current.id ? <p role="alert" className="absolute rounded-xl bg-black/80 p-4">Could not load this photo. Try opening the original below.</p> : null}
+          {current ? <img key={current.id} src={current.fullUrl} alt={`${title} photo ${(active ?? 0) + 1}, saved crop`} className="absolute inset-0 h-full w-full object-contain" onError={() => setFailed(current.id)} /> : null}
+          {current && failed === current.id ? <p role="alert" className="absolute rounded-xl bg-black/80 p-4">Could not load this photo. Try opening the photo below.</p> : null}
         </div>
         <div className="flex items-center justify-center gap-4 pb-[env(safe-area-inset-bottom)]">
           {photos.length > 1 ? <button type="button" aria-label="Previous photo" onClick={() => move(-1)} className="grid h-11 w-11 place-items-center rounded-full bg-white/15 hover:bg-white/25"><ChevronLeft /></button> : null}
-          {current ? <a href={current.fullUrl} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/30 px-5 py-2 text-sm underline-offset-4 hover:underline">Open original</a> : null}
+          {current ? <a href={current.fullUrl} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/30 px-5 py-2 text-sm underline-offset-4 hover:underline">Open photo</a> : null}
           {photos.length > 1 ? <button type="button" aria-label="Next photo" onClick={() => move(1)} className="grid h-11 w-11 place-items-center rounded-full bg-white/15 hover:bg-white/25"><ChevronRight /></button> : null}
         </div>
       </Dialog.Content>

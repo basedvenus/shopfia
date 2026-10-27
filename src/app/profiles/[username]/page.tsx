@@ -180,14 +180,6 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
       .map((collaboration) => collaboration.event)
       .filter((event) => !profile.partyEvents.some((ownedEvent) => ownedEvent.id === event.id))
   ].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const upcomingPartyEvents = profilePartyEvents
-    .filter((event) => event.eventDate && event.eventDate >= today)
-    .sort((left, right) => (left.eventDate?.getTime() ?? 0) - (right.eventDate?.getTime() ?? 0));
-  const pastPartyEvents = profilePartyEvents
-    .filter((event) => !event.eventDate || event.eventDate < today)
-    .sort((left, right) => (right.eventDate ?? right.createdAt).getTime() - (left.eventDate ?? left.createdAt).getTime());
 
   return (
     <div className="space-y-8">
@@ -267,7 +259,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                   <span>{profile._count.followers} followers</span>
                   <span>{profile._count.following} following</span>
                   <span>{profilePartyEvents.length} parties</span>
-                  <span>{profileReviews.length} reviews</span>
+                  {profileStorefronts.length ? <span>{profileReviews.length} reviews</span> : null}
                 </div>
               </div>
             </div>
@@ -284,7 +276,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         </div>
       </section>
 
-      <section className="space-y-4">
+      {profileStorefronts.length ? <section className="space-y-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Reviews</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -328,17 +320,12 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
             </CardContent>
           </Card>
         )}
-      </section>
+      </section> : null}
 
       <ProfilePartySection
-        emptyText="Upcoming parties will appear here when this host adds a future date."
-        events={upcomingPartyEvents}
-        title="Upcoming Parties"
-      />
-      <ProfilePartySection
-        emptyText="Past parties will appear here when this host publishes celebrations."
-        events={pastPartyEvents}
-        title="Past Parties"
+        emptyText="Parties will appear here when this host publishes celebrations or accepts a party invitation."
+        events={profilePartyEvents}
+        title="Parties"
       />
     </div>
   );

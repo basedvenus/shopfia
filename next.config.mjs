@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingIncludes: { "/**": ["./public/logo.png"] },
   images: {
     localPatterns: [
       { pathname: "/api/vendor-media/**" },

@@ -3,6 +3,7 @@ import sharp from "sharp";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { assertSameOrigin, enforceRequestRateLimit } from "@/lib/security/request";
+import { renderPartyPhoto } from "@/lib/render-party-photo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export async function GET(
     select: {
       contribution: { select: { status: true, event: { select: { userId: true } } } },
       contentType: true,
+      crop: true,
       data: true,
       eventId: true,
       size: true,
@@ -36,13 +38,22 @@ export async function GET(
 
   // Uploaded drafts are private until their owner attaches them to a public party.
   const isDraft = photo.eventId === null;
-  if (isDraft) {
+  const editing = new URL(request.url).searchParams.get("edit") === "1";
+  if (isDraft || editing) {
     const session = await auth();
-    if (!session?.user?.id || (session.user.id !== photo.userId && !(photo.contribution?.status === "PENDING" && photo.contribution.event.userId === session.user.id))) {
+    if (!session?.user?.id || (session.user.id !== photo.userId && (editing || !(photo.contribution?.status === "PENDING" && photo.contribution.event.userId === session.user.id)))) {
       return NextResponse.json({ error: "Photo not found." }, { status: 404, headers: { "Cache-Control": "private, no-store" } });
     }
   }
-  const cacheControl = isDraft ? "private, no-store" : "public, max-age=31536000, immutable";
+  const cacheControl = "private, no-store";
+
+  if (!editing) {
+    const rendered = await renderPartyPhoto(Buffer.from(photo.data), photo.crop, parseImageWidth(new URL(request.url).searchParams.get("w")) ?? 2400);
+    return new Response(new Uint8Array(rendered), { headers: {
+      "Cache-Control": cacheControl, "Content-Type": "image/webp", "Content-Length": String(rendered.byteLength),
+      "Last-Modified": photo.updatedAt.toUTCString()
+    } });
+  }
 
   const width = parseImageWidth(new URL(request.url).searchParams.get("w"));
   if (width && photo.contentType !== "image/gif") {
