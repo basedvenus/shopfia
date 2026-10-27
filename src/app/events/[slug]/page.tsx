@@ -132,6 +132,11 @@ export default async function EventPage({
   const isOwner = Boolean(currentUserId && host?.id && currentUserId === host.id);
   const showManagementLinks = canShowPartyManagementLinks(isOwner, Boolean(event));
   const visibleCollaborators = getVisiblePartyCollaborators((event?.collaborators ?? []).filter((person) => person.role !== "GUEST"), host);
+  const pendingCoHosts = isOwner && event ? await db.partyCollaborator.findMany({
+    where: { eventId: event.id, event: { userId: currentUserId! }, role: "CO_HOST", status: "PENDING" },
+    select: { id: true, user: { select: { name: true, username: true } } },
+    orderBy: { createdAt: "asc" }
+  }) : [];
   const guests = (event?.collaborators ?? []).filter((person) => person.role === "GUEST" && person.status === "ACCEPTED");
   const editRequested = resolvedSearchParams.edit === "1" || resolvedSearchParams.edit === "true";
   const isEditing = Boolean(editRequested && isOwner && event);
@@ -245,16 +250,16 @@ export default async function EventPage({
           {hero ? <PartyCoverEditor eventId={event?.id} slug={event?.slug} imageUrl={hero} crop={normalizeImageCrop(event?.coverImageCrop ?? safePhotos[0]?.crop)} editable={isOwner} /> : null}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="relative flex min-h-[480px] flex-col justify-end p-6 text-white md:p-8">
-            <div className="mb-3 flex flex-wrap gap-2">
-              <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{event ? "Party" : "Inspiration example"}</Badge>
-              {theme && !event ? <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{theme}</Badge> : null}
-            </div>
+            {!event ? <div className="mb-3 flex flex-wrap gap-2">
+              <Badge className="bg-white/15 text-white backdrop-blur" variant="default">Inspiration example</Badge>
+              {theme ? <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{theme}</Badge> : null}
+            </div> : null}
             <h1 className="max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">{title}</h1>
 
-            {event?.location ? (
+            {event?.location && event.location !== "Private residence" ? (
               <div className="mt-3 inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs text-white/85 backdrop-blur">
                 <MapPin className="h-3.5 w-3.5" />
-                {event.location === "Private residence" && event.county ? `Private residence · ${event.county}, ${event.state}` : event.location}
+                {event.location}
               </div>
             ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
@@ -331,6 +336,8 @@ export default async function EventPage({
                 </p>
               </div>
             ) : null}
+            {pendingCoHosts.length ? <div className="mt-3 flex flex-wrap gap-2" aria-label="Pending co-host invitations">{pendingCoHosts.map((person) => <span key={person.id} className="rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs">Co-host: {person.user.name ?? person.user.username ?? "Invited co-host"} · invitation pending</span>)}</div> : null}
+            {!isOwner && currentUserId && event?.collaborators.some((person) => person.userId === currentUserId && person.status === "ACCEPTED") ? <a href="#party-contributions" className="mt-4 w-fit rounded-full bg-white px-4 py-2 text-sm font-semibold text-foreground">Add photos, videos or playlists</a> : null}
             <div className="mt-4 flex flex-wrap gap-2">
               {tags.map((tag) => (
                 <span key={tag} className="rounded-full bg-white/15 px-3 py-1 text-xs backdrop-blur">

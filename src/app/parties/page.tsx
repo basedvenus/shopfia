@@ -356,10 +356,10 @@ export default async function PartiesPage({
                     </div>
                     <div className="absolute inset-x-0 bottom-0 p-2.5 text-white sm:p-5">
                       <h2 className="line-clamp-2 text-sm font-semibold tracking-tight sm:text-2xl">{party.title}</h2>
-                      {party.location || party.city ? (
+                      {party.location !== "Private residence" && (party.location || party.city) ? (
                         <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-white/80 sm:mt-2 sm:gap-1.5 sm:text-sm">
                           <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="line-clamp-1">{party.location === "Private residence" && party.county ? `Private residence · ${party.county}, ${party.state}` : party.city ?? party.location ?? [party.city, party.state].filter(Boolean).join(", ")}</span>
+                          <span className="line-clamp-1">{party.city ?? party.location ?? [party.city, party.state].filter(Boolean).join(", ")}</span>
                         </p>
                       ) : null}
                     </div>

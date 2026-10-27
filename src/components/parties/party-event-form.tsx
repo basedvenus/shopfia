@@ -374,7 +374,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         {privateResidence ? (
           <div className="grid gap-3 rounded-2xl bg-primary/5 p-4 text-sm text-muted-foreground">
             <input type="hidden" name="location" value="Private residence" />
-            <p>Only your county will appear publicly. Your home address is never shared.</p>
+            <p>Your county helps people find nearby parties. It isn’t displayed on your party, and your home address stays private.</p>
             <CountySelector initialFips={initialParty?.countyFips} required />
           </div>
         ) : (
