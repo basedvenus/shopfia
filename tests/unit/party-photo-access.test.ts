@@ -43,3 +43,12 @@ it("allows only the party host to review a pending guest photo privately", async
   mocks.auth.mockResolvedValue({ user: { id: "unrelated" } });
   expect((await read()).status).toBe(404);
 });
+
+
+it("returns the full image when no thumbnail width was requested", async () => {
+  mocks.findUnique.mockResolvedValue({ ...photo, contentType: "image/png", eventId: "published-party" });
+  const result = await read("?original=1");
+  expect(result.status).toBe(200);
+  expect(result.headers.get("Content-Type")).toBe("image/png");
+  expect(mocks.toBuffer).not.toHaveBeenCalled();
+});

@@ -94,7 +94,7 @@ export default async function EventPage({
     ? event.photos.map((photo) => ({
       id: photo.id,
       url: partyPhotoUrl(photo.id, photo.updatedAt, { width: 1400 }),
-      fullUrl: partyPhotoUrl(photo.id, photo.updatedAt),
+      fullUrl: partyPhotoUrl(photo.id, photo.updatedAt, { original: true }),
       crop: normalizePartyPhotoCrop(photo.crop),
       taggedVendors: photo.taggedVendors.filter((vendor) => !isQuarantinedVendorId(vendor.id)),
       vendorContributions: Object.fromEntries(

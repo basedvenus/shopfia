@@ -73,6 +73,7 @@ export async function GET(
 }
 
 function parseImageWidth(value: string | null) {
+  if (!value?.trim()) return null;
   const width = Number(value);
   if (!Number.isFinite(width)) return null;
   return Math.min(Math.max(Math.round(width), 96), 2400);
