@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronLeft, ChevronRight, X, Expand } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Expand, Pause, Play } from "lucide-react";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { type ImageCrop, normalizeImageCrop } from "@/lib/image-crop";
 
@@ -36,11 +36,10 @@ export function PartyPhotoGallery({ title, photos }: { title: string; photos: Ph
       {featured && photos.length > 1 ? <div className="relative col-span-2 row-span-2 aspect-[4/3] self-start overflow-hidden rounded-[1.4rem] border border-white/80 bg-muted shadow-sm" onMouseEnter={() => setInteracting(true)} onMouseLeave={() => setInteracting(false)} onFocusCapture={() => setInteracting(true)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setInteracting(false); }}>
         <Dialog.Trigger asChild><button type="button" aria-label={`Enlarge slideshow photo ${featuredIndex + 1}`} className="absolute inset-0 h-full w-full focus-visible:ring-2 focus-visible:ring-primary" onClick={(event) => { opener.current = event.currentTarget; setFailed(null); setActive(featuredIndex); }}>
           <CroppedImage src={featured.url} alt={`${title} slideshow photo ${featuredIndex + 1}`} crop={featured.crop} frameFit="contain" className="absolute inset-0 h-full w-full" loading="eager" />
-          <span className="absolute right-2 top-2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">{featuredIndex + 1} / {photos.length}</span>
         </button></Dialog.Trigger>
         <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 text-white">
           <button type="button" aria-label="Previous slideshow photo" className="grid h-10 w-10 place-items-center rounded-full bg-black/60" onClick={() => setSlide((index) => (index - 1 + photos.length) % photos.length)}><ChevronLeft className="h-5 w-5" /></button>
-          <button type="button" className="rounded-full bg-black/60 px-4 py-2 text-xs" onClick={() => setPlaying((value) => !value)}>{playing ? "Pause slideshow" : "Play slideshow"}</button>
+          <button type="button" aria-label={playing ? "Pause slideshow" : "Play slideshow"} className="grid h-10 w-10 place-items-center rounded-full bg-black/60" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause aria-hidden="true" className="h-5 w-5" /> : <Play aria-hidden="true" className="h-5 w-5" />}</button>
           <button type="button" aria-label="Next slideshow photo" className="grid h-10 w-10 place-items-center rounded-full bg-black/60" onClick={() => setSlide((index) => (index + 1) % photos.length)}><ChevronRight className="h-5 w-5" /></button>
         </div>
       </div> : null}
