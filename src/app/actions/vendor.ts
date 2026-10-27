@@ -1,5 +1,6 @@
 "use server";
 
+import { US_STATE_CODES } from "@/lib/us-states";
 import { UNCLAIMED_VENDOR_CATEGORIES, VENDOR_BOOKING_CHANNELS } from "@/lib/unclaimed-vendor";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -50,7 +51,7 @@ function slugify(value: FormDataEntryValue | null) {
 
 const unclaimedVendorSchema = z.object({
   city: z.string().trim().min(2, "Vendor city is required.").max(80),
-  state: z.string().trim().max(40).optional(),
+  state: z.enum(US_STATE_CODES, { errorMap: () => ({ message: "Choose a state or region." }) }),
   bookingChannel: z.enum(VENDOR_BOOKING_CHANNELS, { errorMap: () => ({ message: "Choose how you contacted or booked this vendor." }) }),
   bookingDetails: z.string().trim().max(500).optional(),
   name: z.string().trim().min(2, "Business Name is required.").max(120, "Business Name is too long."),

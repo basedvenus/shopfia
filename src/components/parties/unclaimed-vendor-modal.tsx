@@ -1,4 +1,5 @@
 "use client";
+import { US_STATES } from "@/lib/us-states";
 import { useState, useTransition } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Loader2, X } from "lucide-react";
@@ -23,7 +24,7 @@ export function UnclaimedVendorModal({ initialName, onClose, onCreated }: { init
   const [pending, startTransition] = useTransition();
   function next() {
     setError("");
-    if (step === 1 && (name.trim().length < 2 || city.trim().length < 2)) { setError("Add the business name and city to continue."); return; }
+    if (step === 1 && (name.trim().length < 2 || city.trim().length < 2 || !state)) { setError("Add the business name, city, and state to continue."); return; }
     if (step === 2 && !categories.length) { setError("Choose at least one vendor type."); return; }
     setStep((current) => current + 1);
   }
@@ -34,13 +35,13 @@ export function UnclaimedVendorModal({ initialName, onClose, onCreated }: { init
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm" />
       <Dialog.Content className="fixed left-1/2 top-1/2 z-[91] flex max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border bg-[#fffaf7] shadow-xl outline-none" onKeyDown={(event) => { if (event.key === "Enter" && event.target instanceof HTMLInputElement) { event.preventDefault(); if (step < 3) next(); } }}>
-        <div className="border-b p-5 pr-16"><p className="text-xs font-semibold uppercase tracking-widest text-primary">Unclaimed vendor · Step {step} of 3</p><Dialog.Title className="mt-2 text-2xl font-semibold">{step === 1 ? "Who helped with your party?" : step === 2 ? "What do they offer?" : "How did you book them?"}</Dialog.Title><Dialog.Description className="mt-2 text-sm text-muted-foreground">{step === 1 ? "Add the business name and the city where they’re based." : step === 2 ? "Choose the services they provided. You can select more than one." : "Public business links help people find the right vendor. Your booking details stay private."}</Dialog.Description></div>
+        <div className="border-b p-5 pr-16"><p className="text-xs font-semibold uppercase tracking-widest text-primary">Unclaimed vendor · Step {step} of 3</p><Dialog.Title className="mt-2 text-2xl font-semibold">{step === 1 ? "Who helped with your party?" : step === 2 ? "What do they offer?" : "How did you book them?"}</Dialog.Title><Dialog.Description className="mt-2 text-sm text-muted-foreground">{step === 1 ? "Add the business name and the city and state where they’re based." : step === 2 ? "Choose the services they provided. You can select more than one." : "Public business links help people find the right vendor. Your booking details stay private."}</Dialog.Description></div>
         <Dialog.Close aria-label="Close add vendor" disabled={pending} className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white"><X className="h-5 w-5" /></Dialog.Close>
         <div className="grid gap-4 overflow-y-auto p-5">
           {step === 1 ? <>
             <label className="grid gap-2 text-sm font-medium">Vendor name<Input autoFocus value={name} maxLength={120} onChange={(event) => setName(event.target.value)} /></label>
             <label className="grid gap-2 text-sm font-medium">Vendor city<Input value={city} maxLength={80} onChange={(event) => setCity(event.target.value)} placeholder="e.g. Fairfield" /></label>
-            <label className="grid gap-2 text-sm font-medium">State or region (optional)<Input value={state} maxLength={40} onChange={(event) => setState(event.target.value)} placeholder="e.g. California" /></label>
+            <label className="grid gap-2 text-sm font-medium">State or region<select required value={state} onChange={(event) => setState(event.target.value)} className="h-12 rounded-xl border bg-white px-3"><option value="">Choose a state or region</option>{US_STATES.map((entry) => <option key={entry.code} value={entry.code}>{entry.name}</option>)}</select></label>
           </> : step === 2 ? <fieldset className="grid gap-2"><legend className="mb-3 text-sm font-medium">Vendor type</legend>{UNCLAIMED_VENDOR_CATEGORIES.map((category) => <label key={category} className="flex items-center gap-3 rounded-xl border bg-white px-3 py-2 text-sm"><input type="checkbox" checked={categories.includes(category)} onChange={(event) => setCategories((current) => event.target.checked ? [...current, category] : current.filter((value) => value !== category))} />{category}</label>)}</fieldset> : <>
             <label className="grid gap-2 text-sm font-medium">How did you contact or book them?<select value={bookingChannel} onChange={(event) => setBookingChannel(event.target.value)} className="h-12 rounded-xl border bg-white px-3"><option value="">Choose a method</option>{VENDOR_BOOKING_CHANNELS.map((channel) => <option key={channel} value={channel}>{channel}</option>)}</select></label>
             <label className="grid gap-2 text-sm font-medium">{bookingDetailsLabel}<Textarea required={needsBookingDetails} value={bookingDetails} maxLength={500} onChange={(event) => setBookingDetails(event.target.value)} placeholder={bookingDetailsPlaceholder} /><span className="text-xs font-normal text-muted-foreground">Private to you and ShopFia; never shown on the public profile.</span></label>

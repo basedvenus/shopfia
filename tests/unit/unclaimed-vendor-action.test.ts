@@ -17,7 +17,7 @@ describe("guided unclaimed vendor creation", () => {
     expect(mocks.create.mock.calls[0][0].data).not.toHaveProperty("userId");
   });
   it.each([
-    { city: "" }, { categories: [] }, { bookingChannel: "" }, { bookingChannel: "made-up-channel" }
+    { city: "" }, { state: "" }, { state: "invalid" }, { categories: [] }, { bookingChannel: "" }, { bookingChannel: "made-up-channel" }
   ])("requires city, a vendor type, and an honest booking method: %j", async (change) => {
     expect(await createUnclaimedVendorAction({ ...input, ...change })).toMatchObject({ ok: false });
     expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.category).not.toHaveBeenCalled();
