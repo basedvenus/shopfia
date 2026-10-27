@@ -31,7 +31,7 @@ export function PartyPhotoGallery({ title, photos }: { title: string; photos: Ph
   const current = active === null ? null : photos[active];
   function move(delta: number) { setFailed(null); setActive((index) => index === null ? null : (index + delta + photos.length) % photos.length); }
   return <Dialog.Root open={active !== null} onOpenChange={(open) => { if (!open) setActive(null); }}>
-    <div id="party-gallery" className="grid scroll-mt-24 auto-rows-[190px] grid-cols-2 gap-3 md:grid-cols-4">
+    <div id="party-gallery" className="grid scroll-mt-24 grid-cols-2 gap-3 md:grid-cols-4">
       {!photos.length ? <p className="col-span-full rounded-2xl bg-muted/60 p-5 text-sm text-muted-foreground">No party photos have been added yet.</p> : null}
       {featured && photos.length > 1 ? <div className="relative col-span-2 row-span-2 overflow-hidden rounded-[1.4rem] border border-white/80 bg-muted shadow-sm" onMouseEnter={() => setInteracting(true)} onMouseLeave={() => setInteracting(false)} onFocusCapture={() => setInteracting(true)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setInteracting(false); }}>
         <Dialog.Trigger asChild><button type="button" aria-label={`Enlarge slideshow photo ${featuredIndex + 1}`} className="absolute inset-0 h-full w-full focus-visible:ring-2 focus-visible:ring-primary" onClick={(event) => { opener.current = event.currentTarget; setFailed(null); setActive(featuredIndex); }}>
@@ -44,7 +44,7 @@ export function PartyPhotoGallery({ title, photos }: { title: string; photos: Ph
           <button type="button" aria-label="Next slideshow photo" className="grid h-10 w-10 place-items-center rounded-full bg-black/60" onClick={() => setSlide((index) => (index + 1) % photos.length)}><ChevronRight className="h-5 w-5" /></button>
         </div>
       </div> : null}
-      {photos.map((photo, index) => <Dialog.Trigger key={photo.id} asChild><button type="button" aria-label={`Enlarge ${title} photo ${index + 1}`} onClick={(event) => { opener.current = event.currentTarget; setFailed(null); setActive(index); }} className={`group relative overflow-hidden rounded-[1.4rem] border border-white/80 bg-muted shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary `}>
+      {photos.map((photo, index) => <Dialog.Trigger key={photo.id} asChild><button type="button" aria-label={`Enlarge ${title} photo ${index + 1}`} onClick={(event) => { opener.current = event.currentTarget; setFailed(null); setActive(index); }} style={{ aspectRatio: photo.crop.aspectRatio ?? 4 / 3 }} className={`group relative self-start overflow-hidden rounded-[1.4rem] border border-white/80 bg-muted shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary `}>
         <CroppedImage src={photo.url} alt={`${title} party photo ${index + 1}`} crop={photo.crop} frameFit="contain" className="absolute inset-0 h-full w-full object-cover" loading={index === 0 ? "eager" : "lazy"} />
         <span className="absolute bottom-2 right-2 grid h-8 w-8 place-items-center rounded-full bg-black/45 text-white"><Expand className="h-4 w-4" /></span>
         {photo.vendorAnchors.map((id) => <span key={id} id={id} className="pointer-events-none absolute inset-1 rounded-[1.2rem] transition target:ring-4 target:ring-primary/45 target:ring-offset-2 target:ring-offset-background" aria-hidden="true" />)}
