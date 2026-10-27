@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   db: {
     $transaction: vi.fn(),
+    notification: { updateMany: vi.fn() },
     partyCollaborator: { updateMany: vi.fn() },
     partyEvent: { findFirst: vi.fn() },
     partyPhoto: { findMany: vi.fn() },
@@ -16,10 +17,12 @@ const mocks = vi.hoisted(() => ({
     partyEvent: { create: vi.fn(), update: vi.fn() },
     partyPhoto: { deleteMany: vi.fn(), update: vi.fn() },
     partyPhotoVendorRating: { deleteMany: vi.fn(), upsert: vi.fn() },
-    partyCollaborator: { updateMany: vi.fn(), upsert: vi.fn() },
+    notification: { createMany: vi.fn() },
+    partyCollaborator: { updateMany: vi.fn(), upsert: vi.fn(), findMany: vi.fn() },
     user: { findMany: vi.fn() }
   }
 }));
+vi.mock("@/lib/services/party-notifications", () => ({ deliverPartyNotificationEmails: vi.fn(async () => undefined) }));
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/db", () => ({ db: mocks.db }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -73,6 +76,7 @@ beforeEach(() => {
   );
   mocks.db.partyPhoto.findMany.mockResolvedValue([]);
   mocks.db.vendorProfile.findMany.mockResolvedValue([]);
+  mocks.tx.partyCollaborator.findMany.mockResolvedValue([]);
   mocks.tx.user.findMany.mockResolvedValue([{ id: ownerId }, { id: inviteeId }]);
   mocks.tx.partyEvent.create.mockResolvedValue({ id: eventId, slug: "test-party" });
   mocks.tx.partyEvent.update.mockResolvedValue({ slug: "test-party" });
@@ -237,5 +241,32 @@ describe("party media persistence", () => {
     const form = editForm(); form.set(field, "https://example.com/not-a-player");
     expect(await updatePartyEventAction(form)).toMatchObject({ ok: false });
     expect(mocks.db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("county privacy and expanded party links", () => {
+  it("requires a county for a private residence", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: ownerId } });
+    const form = editForm(); form.set("location", "Private residence");
+    expect(await updatePartyEventAction(form)).toMatchObject({ ok: false });
+    expect(mocks.db.$transaction).not.toHaveBeenCalled();
+  });
+  it("discards precise private location fields in favor of the canonical county", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: ownerId } });
+    const form = editForm(); form.set("location", "Private residence"); form.set("countyState", "CA"); form.set("countyFips", "06095");
+    form.set("locationFormattedAddress", "123 Private Street"); form.set("locationCity", "Private city"); form.set("locationZipCode", "99999"); form.set("locationLat", "37.12345"); form.set("locationLng", "-122.12345"); form.set("locationPlaceId", "private-place-id");
+    expect(await updatePartyEventAction(form)).toMatchObject({ ok: true });
+    expect(mocks.tx.partyEvent.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ county: "Solano County", countyFips: "06095", state: "CA", formattedAddress: null, city: null, zipCode: null, googlePlaceId: null }) }));
+    expect(mocks.tx.partyEvent.update.mock.calls[0][0].data.locationLat).not.toBe(37.12345);
+  });
+  it("stores multiple videos, Spotify, and Pinterest with tracking removed", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: ownerId } });
+    const form = editForm();
+    form.append("tiktokUrls", "https://www.tiktok.com/@scout2015/video/6718335390845095173");
+    form.append("tiktokUrls", "https://www.tiktok.com/@scout2015/video/6718335390845095174");
+    form.set("spotifyUrl", "https://open.spotify.com/playlist/37i9dQZF1DZ06evO3eIivx?si=test");
+    form.set("pinterestUrl", "https://www.pinterest.com/testprofile/?tracking=1");
+    expect(await updatePartyEventAction(form)).toMatchObject({ ok: true });
+    expect(mocks.tx.partyEvent.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ tiktokUrls: expect.arrayContaining([expect.stringContaining("6718335390845095173"), expect.stringContaining("6718335390845095174")]), spotifyUrl: "https://open.spotify.com/playlist/37i9dQZF1DZ06evO3eIivx", pinterestUrl: "https://www.pinterest.com/testprofile/" }) }));
   });
 });

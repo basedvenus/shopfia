@@ -40,7 +40,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://images.unsplash.com https://res.cloudinary.com https://*.stripe.com",
               "connect-src 'self' https://api.stripe.com https://*.stripe.com https://*.stripe.network https://*.supabase.co wss://*.supabase.co",
-              "frame-src https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.tiktok.com https://embed.music.apple.com",
+              "frame-src https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.tiktok.com https://embed.music.apple.com https://open.spotify.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",

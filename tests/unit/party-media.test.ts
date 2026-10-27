@@ -51,3 +51,10 @@ describe("party media links", () => {
     expect(renderToStaticMarkup(createElement(PartyMedia, {}))).toBe("");
   });
 });
+
+// Editor columns must size players by their available width, not the viewport.
+it("stacks media in narrow editor columns", () => {
+  const html = renderToStaticMarkup(createElement(PartyMedia, { tiktokUrl: video, appleMusicUrl: playlist }));
+  expect(html).toContain("repeat(auto-fit, minmax(min(100%, 340px), 1fr))");
+  expect(html).not.toContain("sm:grid-cols-2");
+});

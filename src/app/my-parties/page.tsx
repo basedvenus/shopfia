@@ -3,7 +3,7 @@ import { Camera, MapPin, Pencil, Sparkles } from "lucide-react";
 import { PartyEventForm } from "@/components/parties/party-event-form";
 import { PartyInvitationResponse } from "@/components/parties/party-invitation-response";
 import { CroppedImage } from "@/components/ui/cropped-image";
-import { normalizeImageCrop } from "@/lib/image-crop";
+import { normalizePartyPhotoCrop, normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { publicVendorWhere } from "@/lib/public-marketplace";
 
@@ -82,10 +82,10 @@ export default async function MyPartiesPage() {
         <PartyEventForm key="new-party" composer currentUserId={session.user.id} users={users} vendors={vendors} />
       </section>
       {invitations.length > 0 ? (
-        <section className="space-y-4 rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-soft">
+        <section id="party-invitations" className="scroll-mt-24 space-y-4 rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-soft">
           <div>
             <h2 className="text-xl font-semibold tracking-tight">Party invitations</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Accept to appear publicly as a host on a party.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Accept to show the party on your profile and submit memories for host approval.</p>
           </div>
           {invitations.map((invitation) => (
             <article key={invitation.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4">
@@ -105,8 +105,8 @@ export default async function MyPartiesPage() {
       {hostedParties.length > 0 ? (
         <section className="space-y-4 rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-soft">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight">Parties you host</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Leaving removes your public host attribution from a party.</p>
+            <h2 className="text-xl font-semibold tracking-tight">Parties you’re part of</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Leaving removes the party from your profile and your public attribution.</p>
           </div>
           {hostedParties.map((collaboration) => (
             <article key={collaboration.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4">
@@ -232,7 +232,7 @@ function getEventImage(event: {
 }) {
   return event.photos[0]
     ? {
-        crop: normalizeImageCrop(event.photos[0].crop),
+        crop: normalizePartyPhotoCrop(event.photos[0].crop),
         image: partyPhotoUrl(event.photos[0].id, event.photos[0].updatedAt, { width: 900 })
       }
     : {

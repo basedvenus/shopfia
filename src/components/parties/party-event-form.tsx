@@ -7,12 +7,13 @@ import { createUnclaimedVendorAction } from "@/app/actions/vendor";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
+import { CountySelector } from "@/components/parties/county-selector";
 import { PartyMedia } from "@/components/parties/party-media";
-import { getAppleMusicPlaylist, getTikTokVideo, isTikTokShareUrl } from "@/lib/party-media";
+import { getAppleMusicPlaylist, getTikTokVideo, isTikTokShareUrl, getSpotifyPlaylist } from "@/lib/party-media";
 import { ImageCropEditor } from "@/components/ui/image-crop-editor";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { DEFAULT_IMAGE_CROP, type ImageCrop } from "@/lib/image-crop";
+import { DEFAULT_IMAGE_CROP, normalizePartyPhotoCrop, type ImageCrop } from "@/lib/image-crop";
 import { getSafeProfileImage } from "@/lib/profile-image";
 
 import { PARTY_OCCASIONS, occasionTag, inferPartyOccasion } from "@/lib/party-occasions";
@@ -57,6 +58,11 @@ export type EditablePartyEvent = {
   eventDate?: Date | string | null;
   partyfulUrl?: string | null;
   tiktokUrl?: string | null;
+  tiktokUrls?: string[];
+  spotifyUrl?: string | null;
+  pinterestUrl?: string | null;
+  county?: string | null;
+  countyFips?: string | null;
   appleMusicUrl?: string | null;
   location: string | null;
   formattedAddress?: string | null;
@@ -91,13 +97,14 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
   const [photos, setPhotos] = useState<UploadedPartyPhoto[]>(() =>
     (initialParty?.photos ?? []).map((photo) => ({
       ...photo,
-      crop: { ...photo.crop, zoom: Math.max(1, photo.crop.zoom) },
+      crop: { ...normalizePartyPhotoCrop(photo.crop), zoom: Math.max(1, photo.crop.zoom) },
       vendorContributions: photo.vendorContributions ?? {}
     }))
   );
   const [vendorOptions, setVendorOptions] = useState<VendorOption[]>(vendors);
   const [mainHostId, setMainHostId] = useState(initialParty?.mainHostId ?? currentUserId);
-  const [tiktokUrl, setTikTokUrl] = useState(initialParty?.tiktokUrl ?? "");
+  const [tiktokUrls, setTikTokUrls] = useState<string[]>(() => initialParty?.tiktokUrls?.length ? initialParty.tiktokUrls : [initialParty?.tiktokUrl ?? ""]);
+  const [spotifyUrl, setSpotifyUrl] = useState(initialParty?.spotifyUrl ?? "");
   const [appleMusicUrl, setAppleMusicUrl] = useState(initialParty?.appleMusicUrl ?? "");
   const [guestIds, setGuestIds] = useState<string[]>(() => initialParty?.guestIds ?? []);
   const [coHostIds, setCoHostIds] = useState<string[]>(() => initialParty?.coHostIds ?? []);
@@ -266,8 +273,8 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         <button type="button" onClick={() => setStep(1)} aria-current={step === 1 ? "step" : undefined} className={`rounded-full px-5 py-3 text-sm font-semibold ${step === 1 ? "party-brand-button text-white" : "bg-muted"}`}>1. Party details</button>
         <button type="button" onClick={goToVendors} aria-current={step === 2 ? "step" : undefined} className={`rounded-full px-5 py-3 text-sm font-semibold ${step === 2 ? "party-brand-button text-white" : "bg-muted"}`}>2. Tag vendors</button>
       </nav> : null}
-      <div className={composer ? "grid min-w-0 items-start gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12" : "grid min-w-0 gap-5"}>
-        <div className={composer ? "min-w-0" : "order-2"}>
+      <div className={(composer || isEditing) ? "grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-8" : "grid min-w-0 gap-5"}>
+        <div className={(composer || isEditing) ? "min-w-0" : "order-2"}>
       <div className="flex min-w-0 flex-col gap-4">
         <input ref={fileInputRef} type="file" accept="image/*" multiple disabled={isUploading} className="sr-only" onChange={(event) => { if (event.target.files) void uploadFiles(event.target.files); }} />
         <div onDragEnter={(event) => { event.preventDefault(); setIsDragOver(true); }}
@@ -307,11 +314,34 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
             <span className="text-xs font-semibold">{isUploading ? "Uploading…" : "Add photos"}</span>
           </button>
         </div>
+      <section className="grid min-w-0 gap-4 rounded-3xl border bg-white p-4" aria-label="Party links">
+        <div><h2 className="text-sm font-semibold">Video &amp; music</h2><p className="mt-1 text-xs text-muted-foreground">Add a video of your party and the playlist that set the mood.</p></div>
+        <div className="grid gap-3"><h2 className="text-lg font-semibold">Party videos</h2><p className="text-xs text-muted-foreground">Add up to 8 public TikTok videos.</p>
+          {tiktokUrls.map((url, index) => <div key={index} className="grid gap-2">
+            <label className="grid gap-2 text-sm font-medium">TikTok video {index + 1}<Input name="tiktokUrls" type="url" maxLength={2048} value={url} onChange={(event) => setTikTokUrls((current) => current.map((value, i) => i === index ? event.target.value : value))} placeholder="https://www.tiktok.com/@you/video/…" /></label>
+            {url.trim() && !getTikTokVideo(url) && !isTikTokShareUrl(url) ? <p role="status" className="text-xs text-destructive">Paste a TikTok video link.</p> : null}
+            {tiktokUrls.length > 1 ? <button type="button" className="w-fit text-xs text-muted-foreground underline" onClick={() => setTikTokUrls((current) => current.filter((_, i) => i !== index))}>Remove video {index + 1}</button> : null}
+          </div>)}
+          <Button type="button" variant="secondary" className="w-fit" disabled={tiktokUrls.length >= 8} onClick={() => setTikTokUrls((current) => [...current, ""])}>Add another video</Button>
+        </div>
+        <h2 className="text-lg font-semibold">Party playlists</h2>
+        <label className="grid min-w-0 gap-2 text-sm font-medium">Apple Music playlist <span className="text-xs font-normal text-muted-foreground">Optional</span>
+          <Input name="appleMusicUrl" type="url" maxLength={2048} value={appleMusicUrl} onChange={(event) => setAppleMusicUrl(event.target.value)} placeholder="https://music.apple.com/us/playlist/…" aria-describedby="party-playlist-help" />
+          <span id="party-playlist-help" className="text-xs font-normal text-muted-foreground">Paste a public playlist link. Its cover and player appear automatically.</span>
+          {appleMusicUrl.trim() && !getAppleMusicPlaylist(appleMusicUrl) ? <span role="status" className="text-xs text-destructive">Paste a public Apple Music playlist link.</span> : null}
+        </label>
+        <label className="grid min-w-0 gap-2 text-sm font-medium">Spotify playlist <span className="text-xs font-normal text-muted-foreground">Optional</span>
+          <Input name="spotifyUrl" type="url" maxLength={2048} value={spotifyUrl} onChange={(event) => setSpotifyUrl(event.target.value)} placeholder="https://open.spotify.com/playlist/…" />
+          {spotifyUrl.trim() && !getSpotifyPlaylist(spotifyUrl) ? <span role="status" className="text-xs text-destructive">Paste a public Spotify playlist link.</span> : null}
+        </label>
+        <label className="grid min-w-0 gap-2 text-sm font-medium">Pinterest profile <span className="text-xs font-normal text-muted-foreground">Optional</span><Input name="pinterestUrl" type="url" maxLength={2048} defaultValue={initialParty?.pinterestUrl ?? ""} placeholder="https://www.pinterest.com/yourname/" /></label>
+        <PartyMedia tiktokUrls={tiktokUrls} appleMusicUrl={appleMusicUrl} spotifyUrl={spotifyUrl} />
+      </section>
       </div>
 
         </div>
         <div className="grid min-w-0 gap-5">
-          <div hidden={!isEditing && step !== 1} className="space-y-5">
+          <div hidden={!isEditing && step !== 1} className={isEditing ? "order-2 space-y-5" : "space-y-5"}>
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <label className="grid min-w-0 gap-2 text-sm font-semibold">
           Party title <span className="text-xs font-normal text-muted-foreground">Required</span>
@@ -342,9 +372,10 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
       </label>
       <div className="grid gap-3">
         {privateResidence ? (
-          <div className="rounded-2xl bg-primary/5 p-4 text-sm text-muted-foreground">
+          <div className="grid gap-3 rounded-2xl bg-primary/5 p-4 text-sm text-muted-foreground">
             <input type="hidden" name="location" value="Private residence" />
-            Your party will show “Private residence.” No home address is shared.
+            <p>Only your county will appear publicly. Your home address is never shared.</p>
+            <CountySelector initialFips={initialParty?.countyFips} required />
           </div>
         ) : (
       <PlaceAutocompleteInput
@@ -378,21 +409,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
       </div>
       <input type="hidden" name="description" value={initialParty?.description ?? ""} />
 
-      <section className="grid min-w-0 gap-4 rounded-3xl border bg-white p-4" aria-label="Party links">
-        <div><h2 className="text-sm font-semibold">Video &amp; music</h2><p className="mt-1 text-xs text-muted-foreground">Add a video of your party and the playlist that set the mood.</p></div>
-        <label className="grid min-w-0 gap-2 text-sm font-medium">TikTok video <span className="text-xs font-normal text-muted-foreground">Optional</span>
-          <Input name="tiktokUrl" type="url" maxLength={2048} value={tiktokUrl} onChange={(event) => setTikTokUrl(event.target.value)} placeholder="https://www.tiktok.com/@you/video/…" aria-describedby="party-tiktok-help" />
-          <span id="party-tiktok-help" className="text-xs font-normal text-muted-foreground">Public videos can play right on your party page.</span>
-          {tiktokUrl.trim() && !getTikTokVideo(tiktokUrl) && !isTikTokShareUrl(tiktokUrl) ? <span role="status" className="text-xs text-destructive">Paste a TikTok video link.</span> : null}
-          {isTikTokShareUrl(tiktokUrl) ? <span className="text-xs font-normal text-muted-foreground">Your share link will be resolved when you save.</span> : null}
-        </label>
-        <label className="grid min-w-0 gap-2 text-sm font-medium">Apple Music playlist <span className="text-xs font-normal text-muted-foreground">Optional</span>
-          <Input name="appleMusicUrl" type="url" maxLength={2048} value={appleMusicUrl} onChange={(event) => setAppleMusicUrl(event.target.value)} placeholder="https://music.apple.com/us/playlist/…" aria-describedby="party-playlist-help" />
-          <span id="party-playlist-help" className="text-xs font-normal text-muted-foreground">Paste a public playlist link. Its cover and player appear automatically.</span>
-          {appleMusicUrl.trim() && !getAppleMusicPlaylist(appleMusicUrl) ? <span role="status" className="text-xs text-destructive">Paste a public Apple Music playlist link.</span> : null}
-        </label>
-        <PartyMedia tiktokUrl={tiktokUrl} appleMusicUrl={appleMusicUrl} />
-      </section>
+
 
       <PartyCollaboratorPicker
         guestIds={guestIds}
@@ -426,7 +443,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
 
           </div>
           {(isEditing || step === 2) && selectedPhoto ? (
-            <section className="space-y-5 rounded-3xl border bg-white p-5">
+            <section className={isEditing ? "order-1 space-y-5 rounded-3xl border bg-white p-5" : "space-y-5 rounded-3xl border bg-white p-5"}>
               <div>
                 <h2 className="text-2xl font-bold tracking-tight">Edit photo & tags</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">Select a photo on the left to edit it or add tags.</p>
@@ -453,7 +470,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
           {!isEditing && step === 1 ? (
             <Button type="button" className="party-brand-button h-12 rounded-full text-base font-semibold" disabled={isUploading || photos.length === 0} onClick={goToVendors}>Next: tag vendors</Button>
           ) : (
-            <div className="flex flex-wrap gap-3">
+            <div className="order-3 flex flex-wrap gap-3">
               {!isEditing ? <Button type="button" variant="secondary" onClick={() => setStep(1)}>Back to details</Button> : null}
               <Button type="submit" className="party-brand-button h-12 flex-1 rounded-full text-base font-semibold" disabled={isPending || isUploading || photos.length === 0}>{isPending ? "Saving..." : isEditing ? "Save changes" : "Publish party"}</Button>
             </div>
@@ -490,6 +507,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
             setEditingCover(false);
             setEditingCropPhoto(null);
           }}
+          preserveFrame
           minZoom={1}
           allowAdjustments
           previewClassName={editingCover ? "aspect-[16/10]" : "aspect-[4/3]"}

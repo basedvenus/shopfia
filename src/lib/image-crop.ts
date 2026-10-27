@@ -6,6 +6,7 @@ export type ImageCrop = {
   zoom: number;
   brightness?: number;
   saturation?: number;
+  aspectRatio?: number;
 };
 
 export const DEFAULT_IMAGE_CROP: ImageCrop = {
@@ -28,8 +29,15 @@ export function normalizeImageCrop(value: unknown): ImageCrop {
     y: clampNumber(record.y, 0, 100, DEFAULT_IMAGE_CROP.y),
     zoom: clampNumber(record.zoom, MIN_IMAGE_ZOOM, MAX_IMAGE_ZOOM, DEFAULT_IMAGE_CROP.zoom),
     brightness: clampNumber(record.brightness ?? 1, 0.5, 1.5, 1),
-    saturation: clampNumber(record.saturation ?? 1, 0, 2, 1)
+    saturation: clampNumber(record.saturation ?? 1, 0, 2, 1),
+    ...(record.aspectRatio != null ? { aspectRatio: clampNumber(record.aspectRatio, 0.1, 10, 4 / 3) } : {})
   };
+}
+
+/** Older party crops were composed in the editor's 4:3 frame. */
+export function normalizePartyPhotoCrop(value: unknown): ImageCrop {
+  const crop = normalizeImageCrop(value);
+  return { ...crop, aspectRatio: crop.aspectRatio ?? 4 / 3 };
 }
 
 export function parseImageCrop(value: FormDataEntryValue | null | undefined): Prisma.InputJsonObject | undefined {

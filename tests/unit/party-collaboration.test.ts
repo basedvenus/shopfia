@@ -32,7 +32,9 @@ const tx = {
     findMany: vi.fn(async ({ where }: { where: { id: { in: string[] } } }) =>
       userIds.filter((id) => where.id.in.includes(id)).map((id) => ({ id })))
   },
+  notification: { createMany: vi.fn() },
   partyCollaborator: {
+    findMany: vi.fn(async () => rows.map((row) => ({ userId: row.userId, status: row.status }))),
     updateMany: vi.fn(async ({ where, data }: { where: Record<string, unknown>; data: Partial<Collaboration> }) => {
       const affected = rows.filter((row) => matches(row, where));
       affected.forEach((row) => Object.assign(row, data));

@@ -206,6 +206,18 @@ enum StorefrontImageShape {
   SQUARE
 }
 
+enum PartyContributionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PartyContributionKind {
+  PHOTO
+  TIKTOK
+  PLAYLIST
+}
+
 model User {
   id                     String            @id @default(cuid())
   name                   String?
@@ -231,6 +243,9 @@ model User {
   partyEvents            PartyEvent[]
   partyComments          PartyComment[]
   partyCollaborations    PartyCollaborator[]
+  partyContributions     PartyContribution[]
+  notifications          Notification[]
+  partyEmailNotifications Boolean @default(false)
   partyPhotoVendorRatings PartyPhotoVendorRating[]
   following              Follow[]          @relation("Follower")
   followers              Follow[]          @relation("Following")
@@ -469,6 +484,11 @@ model PartyEvent {
   imageCrops    Json?
   partyfulUrl   String?
   tiktokUrl     String?
+  tiktokUrls    String[] @default([])
+  spotifyUrl    String?
+  pinterestUrl  String?
+  county        String?
+  countyFips    String?
   appleMusicUrl String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -477,6 +497,8 @@ model PartyEvent {
   photos        PartyPhoto[]
   collaborators PartyCollaborator[]
   comments      PartyComment[]
+  contributions PartyContribution[]
+  notifications Notification[]
   taggedVendors VendorProfile[] @relation("PartyEventTaggedVendors")
   favorites     Favorite[] @relation("PartyEventFavorites")
 
@@ -534,6 +556,7 @@ model PartyPhoto {
   event         PartyEvent? @relation(fields: [eventId], references: [id], onDelete: Cascade)
   taggedVendors VendorProfile[] @relation("PartyPhotoTaggedVendors")
   vendorRatings PartyPhotoVendorRating[]
+  contribution  PartyContribution?
 
   @@index([eventId, sortOrder])
   @@index([userId, createdAt])
@@ -1140,4 +1163,41 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+
+model PartyContribution {
+  id         String @id @default(cuid())
+  eventId    String
+  userId     String
+  kind       PartyContributionKind
+  status     PartyContributionStatus @default(PENDING)
+  photoId    String? @unique
+  tiktokUrl  String?
+  appleMusicUrl String?
+  spotifyUrl String?
+  createdAt  DateTime @default(now())
+  reviewedAt DateTime?
+  event      PartyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photo      PartyPhoto? @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  @@index([eventId, status, createdAt])
+  @@index([userId, createdAt])
+}
+
+model Notification {
+  id          String @id @default(cuid())
+  userId      String
+  eventId     String?
+  kind        String
+  title       String
+  href        String
+  dedupeKey   String @unique
+  readAt      DateTime?
+  emailSentAt DateTime?
+  createdAt   DateTime @default(now())
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event       PartyEvent? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  @@index([userId, readAt, createdAt])
+  @@index([eventId, emailSentAt])
 }

@@ -11,6 +11,7 @@ import {
   MessagesSquare,
   User
 } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/components/account/profile-provider";
@@ -90,6 +91,7 @@ export function SiteNavClient({
             })}
           </nav>
           <div className="flex items-center gap-2">
+            {signedIn && profile?.id ? <NotificationBell userId={profile.id} /> : null}
             {signedIn ? (
               <AccountMenu initials={initials} signOutAction={signOutAction} />
             ) : (

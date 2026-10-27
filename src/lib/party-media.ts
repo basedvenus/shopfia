@@ -35,3 +35,19 @@ export function getAppleMusicPlaylist(value?: string | null) {
     embedUrl: `https://embed.music.apple.com${path}?theme=auto`
   };
 }
+
+export function getSpotifyPlaylist(value?: string | null) {
+  const url = httpsUrl(value);
+  if (!url || url.hostname !== "open.spotify.com") return null;
+  const match = url.pathname.match(/^\/(?:intl-[a-z]{2}\/)?(?:embed\/)?playlist\/([a-zA-Z0-9]{22})\/?$/);
+  if (!match) return null;
+  return { url: `https://open.spotify.com/playlist/${match[1]}`, embedUrl: `https://open.spotify.com/embed/playlist/${match[1]}` };
+}
+
+export function getPinterestProfile(value?: string | null) {
+  const url = httpsUrl(value);
+  if (!url || !["www.pinterest.com", "pinterest.com"].includes(url.hostname)) return null;
+  const match = url.pathname.match(/^\/([a-zA-Z0-9_]{3,30})\/?$/);
+  if (!match || ["pin", "search", "ideas", "settings", "login", "signup", "today"].includes(match[1].toLowerCase())) return null;
+  return `https://www.pinterest.com/${match[1]}/`;
+}

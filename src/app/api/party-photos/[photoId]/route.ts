@@ -20,6 +20,7 @@ export async function GET(
   const photo = await db.partyPhoto.findUnique({
     where: { id: photoId },
     select: {
+      contribution: { select: { status: true, event: { select: { userId: true } } } },
       contentType: true,
       data: true,
       eventId: true,
@@ -37,7 +38,7 @@ export async function GET(
   const isDraft = photo.eventId === null;
   if (isDraft) {
     const session = await auth();
-    if (!session?.user?.id || session.user.id !== photo.userId) {
+    if (!session?.user?.id || (session.user.id !== photo.userId && !(photo.contribution?.status === "PENDING" && photo.contribution.event.userId === session.user.id))) {
       return NextResponse.json({ error: "Photo not found." }, { status: 404, headers: { "Cache-Control": "private, no-store" } });
     }
   }

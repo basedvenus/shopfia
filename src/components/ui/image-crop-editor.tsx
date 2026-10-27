@@ -11,6 +11,7 @@ type ImageCropEditorProps = {
   crop?: ImageCrop | null;
   imageUrl: string;
   minZoom?: number;
+  preserveFrame?: boolean;
   onCancel: () => void;
   onSave: (crop: ImageCrop) => void;
   previewClassName?: string;
@@ -22,6 +23,7 @@ export function ImageCropEditor({
   allowAdjustments = false,
   crop,
   imageUrl,
+  preserveFrame = false,
   minZoom = MIN_IMAGE_ZOOM,
   onCancel,
   onSave,
@@ -31,6 +33,7 @@ export function ImageCropEditor({
   const [draft, setDraft] = useState<ImageCrop>(() => ({ ...normalizeImageCrop(crop), zoom: Math.max(minZoom, normalizeImageCrop(crop).zoom) }));
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const dragRef = useRef<{ x: number; y: number; crop: ImageCrop } | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -116,6 +119,7 @@ export function ImageCropEditor({
 
         <div className="p-5">
           <div
+            ref={previewRef}
             className={`relative mx-auto overflow-hidden rounded-[1.4rem] bg-muted touch-none ${previewClassName}`}
             style={previewAspectRatio ? { aspectRatio: previewAspectRatio } : undefined}
             onPointerDown={beginDrag}
@@ -198,7 +202,10 @@ export function ImageCropEditor({
           <Button type="button" variant="secondary" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="button" disabled={!imageLoaded || imageFailed} onClick={() => onSave(draft)}>
+          <Button type="button" disabled={!imageLoaded || imageFailed} onClick={() => {
+            const frame = previewRef.current?.getBoundingClientRect();
+            onSave(preserveFrame && frame?.height ? { ...draft, aspectRatio: frame.width / frame.height } : draft);
+          }}>
             Save photo edits
           </Button>
         </div>

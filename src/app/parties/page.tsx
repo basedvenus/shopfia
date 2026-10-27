@@ -1,3 +1,5 @@
+import { CountySelector } from "@/components/parties/county-selector";
+import { getCounty, countyDistance } from "@/lib/party-location";
 import { FriendSearchForm } from "@/components/parties/friend-search-form";
 import Link from "next/link";
 import { auth } from "@/auth";
@@ -7,7 +9,7 @@ import { CroppedImage } from "@/components/ui/cropped-image";
 import { ProfileBadge } from "@/components/badges/profile-badge";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { db } from "@/lib/db";
-import { normalizeImageCrop } from "@/lib/image-crop";
+import { normalizePartyPhotoCrop, normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { getUniquePartyVendors } from "@/lib/party-inspiration";
 import { storefrontPath } from "@/lib/businesses";
@@ -23,7 +25,7 @@ type FeedTab = (typeof feedTabs)[number];
 export default async function PartiesPage({
   searchParams
 }: {
-  searchParams?: Promise<{ feed?: string; friend?: string; q?: string }> | { feed?: string; friend?: string; q?: string };
+  searchParams?: Promise<{ feed?: string; friend?: string; q?: string; county?: string }> | { feed?: string; friend?: string; q?: string; county?: string };
 }) {
   const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
   const [session, originalMemberCutoff] = await Promise.all([
@@ -37,6 +39,7 @@ export default async function PartiesPage({
     })
   ]);
   const selectedFeed = getSelectedFeed(resolvedSearchParams.feed);
+  const nearbyCounty = getCounty(resolvedSearchParams.county);
   const friendQuery = normalizeFriendQuery(resolvedSearchParams.friend);
   const partyQuery = normalizeFriendQuery(resolvedSearchParams.q);
   const followingIds = session?.user?.id
@@ -63,6 +66,8 @@ export default async function PartiesPage({
             { location: { contains: partyQuery, mode: "insensitive" as const } },
             { formattedAddress: { contains: partyQuery, mode: "insensitive" as const } },
             { city: { contains: partyQuery, mode: "insensitive" as const } },
+            { county: { contains: partyQuery, mode: "insensitive" as const } },
+            { state: { contains: partyQuery, mode: "insensitive" as const } },
             { tags: { has: partyQuery.toLowerCase() } },
             {
               taggedVendors: {
@@ -177,7 +182,7 @@ export default async function PartiesPage({
         ).map((favorite) => favorite.partyEventId).filter(Boolean) as string[]
       )
     : new Set<string>();
-  const visibleParties = getPartiesForFeed(parties, selectedFeed, followingIds);
+  const visibleParties = getPartiesForFeed(parties, selectedFeed, followingIds, nearbyCounty);
 
   async function toggleFollow(formData: FormData) {
     "use server";
@@ -308,6 +313,13 @@ export default async function PartiesPage({
         </div>
       </nav>
 
+      {selectedFeed === "Nearby" ? <form action="/parties" className="grid gap-3 rounded-3xl border bg-white p-5">
+        <input type="hidden" name="feed" value="nearby" />
+        <h2 className="font-semibold">Find parties near your county</h2>
+        <CountySelector key={nearbyCounty?.fips ?? "none"} initialFips={nearbyCounty?.fips} countyName="county" required />
+        <button type="submit" className="w-fit rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">Find nearby parties</button>
+        <p className="text-xs text-muted-foreground">{nearbyCounty ? `Sorted by approximate distance from ${nearbyCounty.name}, ${nearbyCounty.state}. Private residences use county-level locations.` : "Choose your county to sort parties by approximate distance."}</p>
+      </form> : null}
       <p className="text-sm text-muted-foreground">
         {partiesUnavailable ? "Party feed unavailable" : `${visibleParties.length} published ${visibleParties.length === 1 ? "party" : "parties"}`}
       </p>
@@ -347,7 +359,7 @@ export default async function PartiesPage({
                       {party.location || party.city ? (
                         <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-white/80 sm:mt-2 sm:gap-1.5 sm:text-sm">
                           <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="line-clamp-1">{party.city ?? party.location ?? [party.city, party.state].filter(Boolean).join(", ")}</span>
+                          <span className="line-clamp-1">{party.location === "Private residence" && party.county ? `Private residence · ${party.county}, ${party.state}` : party.city ?? party.location ?? [party.city, party.state].filter(Boolean).join(", ")}</span>
                         </p>
                       ) : null}
                     </div>
@@ -443,6 +455,8 @@ function getSelectedFeed(value?: string): FeedTab {
 function getPartiesForFeed<T extends {
   city: string | null;
   state: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
   createdAt: Date;
   user: { id: string };
   collaborators: Array<{ userId: string }>;
@@ -450,7 +464,7 @@ function getPartiesForFeed<T extends {
   photos: Array<{ taggedVendors: Array<{ id: string; userId: string | null }> }>;
   tags: string[];
   imageUrls: string[];
-}>(parties: T[], feed: FeedTab, followingIds: Set<string>) {
+}>(parties: T[], feed: FeedTab, followingIds: Set<string>, nearbyCounty: ReturnType<typeof getCounty>) {
   if (feed === "Following") {
     const followed = parties.filter((party) => {
       if (followingIds.has(party.user.id)) return true;
@@ -464,7 +478,7 @@ function getPartiesForFeed<T extends {
   }
 
   if (feed === "Nearby") {
-    return [...parties].sort((left, right) => nearbyScore(left) - nearbyScore(right));
+    return nearbyCounty ? [...parties].sort((left, right) => countyDistance(left, nearbyCounty) - countyDistance(right, nearbyCounty)) : parties;
   }
 
   if (feed === "Trending") {
@@ -472,16 +486,6 @@ function getPartiesForFeed<T extends {
   }
 
   return parties;
-}
-
-function nearbyScore(party: { city: string | null; state: string | null }) {
-  const location = `${party.city ?? ""} ${party.state ?? ""}`.toLowerCase();
-  if (location.includes("fairfield")) return 0;
-  if (location.includes("vacaville")) return 1;
-  if (location.includes("vallejo")) return 2;
-  if (location.includes("benicia")) return 3;
-  if (location.includes("ca") || location.includes("california")) return 10;
-  return 20;
 }
 
 function trendingScore(party: {
@@ -531,7 +535,7 @@ function getEventImage(event: {
 }) {
   return event.photos[0]
     ? {
-        crop: normalizeImageCrop(event.photos[0].crop),
+        crop: normalizePartyPhotoCrop(event.photos[0].crop),
         image: partyPhotoUrl(event.photos[0].id, event.photos[0].updatedAt, { width: 900 })
       }
     : {

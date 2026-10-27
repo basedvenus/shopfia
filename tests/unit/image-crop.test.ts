@@ -34,3 +34,10 @@ describe("image crop utilities", () => {
     expect(imageCropToCss(null).filter).toBe("brightness(1) saturate(1)");
   });
 });
+
+it("preserves saved frame geometry without changing legacy general image crops", async () => {
+  const { normalizePartyPhotoCrop } = await import("@/lib/image-crop");
+  expect(normalizeImageCrop({ x: 50, y: 50, zoom: 1 })).not.toHaveProperty("aspectRatio");
+  expect(normalizePartyPhotoCrop({ x: 50, y: 50, zoom: 1 }).aspectRatio).toBe(4 / 3);
+  expect(normalizePartyPhotoCrop({ x: 50, y: 50, zoom: 1, aspectRatio: 1.6 }).aspectRatio).toBe(1.6);
+});

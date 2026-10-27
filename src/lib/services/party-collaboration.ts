@@ -2,6 +2,7 @@ import { PartyCollaborationStatus, PartyCollaboratorRole, type Prisma } from "@p
 
 // Called only after the create/edit action authenticates the event owner.
 export async function persistPartyCollaborators({
+  eventTitle = "a party",
   coHostIds,
   guestIds = [],
   eventId,
@@ -10,6 +11,7 @@ export async function persistPartyCollaborators({
   ownerId,
   tx
 }: {
+  eventTitle?: string;
   coHostIds: string[];
   guestIds?: string[];
   eventId: string;
@@ -18,6 +20,8 @@ export async function persistPartyCollaborators({
   ownerId: string;
   tx: Prisma.TransactionClient;
 }) {
+  const existing = await tx.partyCollaborator.findMany({ where: { eventId }, select: { userId: true, status: true } });
+  const existingStatuses = new Map(existing.map((item) => [item.userId, item.status]));
   const requestedIds = Array.from(new Set([mainHostId, ...coHostIds, ...guestIds, ownerId].filter(Boolean)));
   const users = await tx.user.findMany({
     where: { id: { in: requestedIds } },
@@ -70,4 +74,14 @@ export async function persistPartyCollaborators({
       });
     })
   );
+  const invitations = collaborators.filter((person) => person.userId !== invitedById &&
+    (!existingStatuses.has(person.userId) || existingStatuses.get(person.userId) === "PENDING"));
+  if (invitations.length) await tx.notification.createMany({
+    data: invitations.map((person) => ({
+      userId: person.userId, eventId, kind: "PARTY_INVITATION",
+      title: `You were invited to ${eventTitle} as ${person.role === "GUEST" ? "a guest" : person.role === "MAIN_HOST" ? "the host" : "a co-host"}`,
+      href: "/my-parties#party-invitations", dedupeKey: `party-invite:${eventId}:${person.userId}`
+    })), skipDuplicates: true
+  });
+
 }

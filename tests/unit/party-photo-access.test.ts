@@ -33,3 +33,13 @@ describe("party photo read authorization", () => {
     mocks.findUnique.mockResolvedValue(null); expect((await read()).status).toBe(404);
   });
 });
+
+
+it("allows only the party host to review a pending guest photo privately", async () => {
+  mocks.findUnique.mockResolvedValue({ ...photo, userId: "guest", contribution: { status: "PENDING", event: { userId: "host" } } });
+  mocks.auth.mockResolvedValue({ user: { id: "host" } });
+  const result = await read();
+  expect(result.status).toBe(200); expect(result.headers.get("Cache-Control")).toBe("private, no-store");
+  mocks.auth.mockResolvedValue({ user: { id: "unrelated" } });
+  expect((await read()).status).toBe(404);
+});

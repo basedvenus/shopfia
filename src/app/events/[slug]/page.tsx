@@ -1,3 +1,5 @@
+import { PartyContributions } from "@/components/parties/party-contributions";
+import { getPinterestProfile } from "@/lib/party-media";
 import { PartyMedia } from "@/components/parties/party-media";
 import { partyCategoryLabel, inferPartyOccasion, occasionTag } from "@/lib/party-occasions";
 import Link from "next/link";
@@ -13,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { storefrontPath } from "@/lib/businesses";
-import { normalizeImageCrop } from "@/lib/image-crop";
+import { normalizePartyPhotoCrop, normalizeImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { getPartyInspirationExample, getUniquePartyVendors } from "@/lib/party-inspiration";
 import { isQuarantinedVendorId, publicVendorWhere } from "@/lib/public-marketplace";
@@ -68,6 +70,7 @@ export default async function EventPage({
             vendorRatings: true
           }
         },
+        contributions: { where: { status: "APPROVED" }, select: { tiktokUrl: true, appleMusicUrl: true, spotifyUrl: true }, orderBy: { createdAt: "asc" }, take: 100 },
         collaborators: {
           where: { status: "ACCEPTED" },
           orderBy: [{ role: "asc" }, { createdAt: "asc" }],
@@ -91,7 +94,7 @@ export default async function EventPage({
     ? event.photos.map((photo) => ({
       id: photo.id,
       url: partyPhotoUrl(photo.id, photo.updatedAt, { width: 1400 }),
-      crop: normalizeImageCrop(photo.crop),
+      crop: normalizePartyPhotoCrop(photo.crop),
       taggedVendors: photo.taggedVendors.filter((vendor) => !isQuarantinedVendorId(vendor.id)),
       vendorContributions: Object.fromEntries(
         photo.vendorRatings
@@ -154,6 +157,11 @@ export default async function EventPage({
         eventDate: event.eventDate,
         partyfulUrl: event.partyfulUrl,
         tiktokUrl: event.tiktokUrl,
+        tiktokUrls: event.tiktokUrls,
+        spotifyUrl: event.spotifyUrl,
+        pinterestUrl: event.pinterestUrl,
+        county: event.county,
+        countyFips: event.countyFips,
         appleMusicUrl: event.appleMusicUrl,
         location: event.location,
         formattedAddress: event.formattedAddress,
@@ -166,7 +174,7 @@ export default async function EventPage({
         photos: event.photos.map((photo) => ({
           id: photo.id,
           url: partyPhotoUrl(photo.id, photo.updatedAt, { width: 1400 }),
-          crop: normalizeImageCrop(photo.crop),
+          crop: normalizePartyPhotoCrop(photo.crop),
           vendorIds: photo.taggedVendors.map((vendor) => vendor.id),
           vendorRatings: Object.fromEntries(photo.vendorRatings.filter((credit) => credit.rating !== null).map((credit) => [credit.vendorId, credit.rating!])),
           vendorContributions: Object.fromEntries(
@@ -244,7 +252,7 @@ export default async function EventPage({
             {event?.location ? (
               <div className="mt-3 inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs text-white/85 backdrop-blur">
                 <MapPin className="h-3.5 w-3.5" />
-                {event.location}
+                {event.location === "Private residence" && event.county ? `Private residence · ${event.county}, ${event.state}` : event.location}
               </div>
             ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
@@ -363,7 +371,8 @@ export default async function EventPage({
             </div>
           ))}
         </div>
-          <PartyMedia tiktokUrl={event?.tiktokUrl} appleMusicUrl={event?.appleMusicUrl} />
+          <PartyMedia tiktokUrl={event?.tiktokUrl} tiktokUrls={[...(event?.tiktokUrls ?? []), ...(event?.contributions ?? []).flatMap((item) => item.tiktokUrl ? [item.tiktokUrl] : [])]} appleMusicUrl={event?.appleMusicUrl} appleMusicUrls={(event?.contributions ?? []).flatMap((item) => item.appleMusicUrl ? [item.appleMusicUrl] : [])} spotifyUrl={event?.spotifyUrl} spotifyUrls={(event?.contributions ?? []).flatMap((item) => item.spotifyUrl ? [item.spotifyUrl] : [])} />
+          {getPinterestProfile(event?.pinterestUrl) ? <a href={getPinterestProfile(event?.pinterestUrl)!} target="_blank" rel="noopener noreferrer" className="w-fit rounded-full border bg-white px-5 py-3 text-sm font-medium">View Pinterest profile</a> : null}
         </div>
 
         <div className="min-w-0 rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft">
@@ -419,6 +428,8 @@ export default async function EventPage({
           </div>
         </div>
       </section>
+
+      {event && currentUserId ? <PartyContributions eventId={event.id} userId={currentUserId} isOwner={isOwner} canContribute={event.collaborators.some((person) => person.userId === currentUserId && person.status === "ACCEPTED")} /> : null}
 
       {event ? <PartyComments eventId={event.id} hostId={event.userId} signedIn={Boolean(currentUserId)} slug={event.slug} /> : null}
       {showManagementLinks ? (
