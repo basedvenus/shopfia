@@ -4,6 +4,7 @@ vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/db", () => ({ db: { partyPhoto: { findUnique: mocks.findUnique } } }));
 vi.mock("@/lib/security/request", () => ({ enforceRequestRateLimit: () => null, assertSameOrigin: () => true }));
 vi.mock("sharp", () => ({ default: () => ({ rotate: () => ({ resize: () => ({ webp: () => ({ toBuffer: mocks.toBuffer }) }) }) }) }));
+vi.mock("@/lib/render-party-photo", () => ({ renderPartyPhoto: mocks.toBuffer }));
 import { GET } from "@/app/api/party-photos/[photoId]/route";
 const read = (width = "") => GET(new Request(`https://example.test/api/party-photos/photo${width}`), { params: Promise.resolve({ photoId: "photo" }) });
 const photo = { contentType: "image/gif", data: Buffer.from("GIF89a-mock"), size: 11, updatedAt: new Date("2026-01-01"), eventId: null, userId: "owner" };
@@ -27,7 +28,7 @@ describe("party photo read authorization", () => {
   });
   it("preserves anonymous access to a photo attached to a public party", async () => {
     mocks.findUnique.mockResolvedValue({ ...photo, eventId: "public-party" });
-    const result = await read(); expect(result.status).toBe(200); expect(result.headers.get("Cache-Control")).toContain("public"); expect(mocks.auth).not.toHaveBeenCalled();
+    const result = await read(); expect(result.status).toBe(200); expect(result.headers.get("Cache-Control")).toContain("no-store"); expect(mocks.auth).not.toHaveBeenCalled();
   });
   it("returns 404 for missing photos", async () => {
     mocks.findUnique.mockResolvedValue(null); expect((await read()).status).toBe(404);
@@ -45,10 +46,27 @@ it("allows only the party host to review a pending guest photo privately", async
 });
 
 
-it("returns the full image when no thumbnail width was requested", async () => {
+it("serves rendered pixels even when a visitor requests original=1", async () => {
   mocks.findUnique.mockResolvedValue({ ...photo, contentType: "image/png", eventId: "published-party" });
   const result = await read("?original=1");
   expect(result.status).toBe(200);
-  expect(result.headers.get("Content-Type")).toBe("image/png");
+  expect(result.headers.get("Content-Type")).toBe("image/webp");
+  expect(mocks.toBuffer).toHaveBeenCalled();
+});
+
+it("denies original editing pixels to anonymous visitors and other accounts", async () => {
+  mocks.findUnique.mockResolvedValue({ ...photo, eventId: "published-party" });
+  expect((await read("?edit=1")).status).toBe(404);
+  mocks.auth.mockResolvedValue({ user: { id: "someone-else" } });
+  expect((await read("?edit=1")).status).toBe(404);
+});
+
+it("allows only the owner to load private original pixels for editing", async () => {
+  mocks.findUnique.mockResolvedValue({ ...photo, eventId: "published-party" });
+  mocks.auth.mockResolvedValue({ user: { id: "owner" } });
+  const result = await read("?edit=1");
+  expect(result.status).toBe(200);
+  expect(result.headers.get("Content-Type")).toBe("image/gif");
+  expect(result.headers.get("Cache-Control")).toBe("private, no-store");
   expect(mocks.toBuffer).not.toHaveBeenCalled();
 });

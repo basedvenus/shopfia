@@ -23,7 +23,7 @@ export function NotificationBell({ userId }: { userId: string }) {
       finally { controller = null; }
     }
     void refresh();
-    const interval = window.setInterval(() => void refresh(), 60_000);
+    const interval = window.setInterval(() => void refresh(), 15_000);
     const onFocus = () => void refresh();
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);

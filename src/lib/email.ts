@@ -1,4 +1,5 @@
 import { createTransport } from "nodemailer";
+import { join } from "node:path";
 import { authProviderConfig } from "@/lib/auth/provider-config";
 import { securityLog } from "@/lib/security/audit-log";
 
@@ -27,7 +28,7 @@ function getTransport() {
 }
 
 function button(label: string, href: string) {
-  return `<a href="${href}" style="display:inline-block;border-radius:999px;background:#E3A7A7;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;">${label}</a>`;
+  return `<a href="${href}" style="display:inline-block;border-radius:999px;background:#edb5b4;color:#4a3033;text-decoration:none;font-weight:700;padding:12px 20px;">${label}</a>`;
 }
 
 function escapeHtml(value: string) {
@@ -49,9 +50,9 @@ function shell({ body, preview, title }: { body: string; preview: string; title:
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;border-radius:28px;background:#ffffff;border:1px solid #f1d8d2;overflow:hidden;">
             <tr>
-              <td style="background:linear-gradient(135deg,#f4cfca,#fff8f5,#f9e0c7);padding:34px 30px 22px;">
-                <p style="margin:0 0 8px;color:#9b6b65;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">ShopFia</p>
-                <h1 style="margin:0;color:#2f2626;font-family:Georgia,serif;font-size:34px;line-height:1.08;">${title}</h1>
+              <td style="background:#fff0e6;background-image:linear-gradient(135deg,#f8dfdc,#fff8f5,#fce6d4);padding:30px 30px 26px;">
+                <img src="cid:shopfia-logo" alt="ShopFia" width="156" style="display:block;width:156px;max-width:100%;height:auto;margin:0 0 24px;border:0;" />
+                <h1 style="margin:0;color:#4a3535;font-family:'Instrument Sans',Arial,Helvetica,sans-serif;font-weight:700;font-size:32px;letter-spacing:-1px;line-height:1.15;">${title}</h1>
               </td>
             </tr>
             <tr>
@@ -90,7 +91,8 @@ async function sendEmail({
       html,
       subject,
       text,
-      to
+      to,
+      attachments: [{ filename: "shopfia-logo.png", path: join(process.cwd(), "public", "logo.png"), cid: "shopfia-logo", contentDisposition: "inline" }]
     });
 
     return { ok: true, skipped: false };

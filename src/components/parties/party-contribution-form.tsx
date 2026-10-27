@@ -23,7 +23,13 @@ export function PartyContributionForm({ eventId }: { eventId: string }) {
           if (!response.ok) { setMessage(body.error ?? "Could not upload this photo."); return; }
           form.set("photoId", body.photo.id);
         }
-        const result = await submitPartyContributionAction(form);
+        // The image was uploaded above. Sending it again exceeds Server Action limits.
+        const submission = new FormData();
+        for (const key of ["eventId", "kind", "photoId", "url"]) {
+          const value = form.get(key);
+          if (typeof value === "string") submission.set(key, value);
+        }
+        const result = await submitPartyContributionAction(submission);
         if (!result.ok) { setMessage(result.error ?? "Could not submit this item."); return; }
         setMessage("Sent to the host for approval. Only you and the host can see it until it is approved.");
         router.refresh();

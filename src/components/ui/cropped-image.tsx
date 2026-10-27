@@ -22,7 +22,10 @@ export function CroppedImage({
   onError,
   src
 }: CroppedImageProps) {
-  const normalized = normalizeImageCrop(crop);
+  const publicPartyPhoto = src.startsWith("/api/party-photos/") && new URL(src, "https://www.shopfia.app").searchParams.get("edit") !== "1";
+  const normalized = publicPartyPhoto
+    ? { ...normalizeImageCrop(crop), x: 50, y: 50, zoom: 1, brightness: 1, saturation: 1 }
+    : normalizeImageCrop(crop);
   if (normalized.aspectRatio) {
     const ratio = normalized.aspectRatio;
     const fit = frameFit === "contain" ? "min" : "max";
@@ -43,7 +46,7 @@ export function CroppedImage({
       onError={onError}
       className={className}
       style={{
-        ...imageCropToCss(crop)
+        ...imageCropToCss(normalized)
       }}
     />
   );

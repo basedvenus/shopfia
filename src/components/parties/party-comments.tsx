@@ -2,7 +2,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MessageCircle } from "lucide-react";
-type Comment = { id: string; body: string; createdAt: string; user: { id: string; name: string | null; username: string | null }; replies?: Comment[] };
+import { ProfileImage } from "@/components/account/profile-image";
+import type { ImageCrop } from "@/lib/image-crop";
+type Comment = { id: string; body: string; createdAt: string; user: { id: string; name: string | null; username: string | null; image?: string | null; imageCrop?: ImageCrop | null }; replies?: Comment[] };
 
 export function PartyComments({ eventId, hostId, signedIn, slug }: { eventId: string; hostId: string; signedIn: boolean; slug: string }) {
   const [comments, setComments] = useState<Comment[]>([]);
@@ -31,6 +33,9 @@ export function PartyComments({ eventId, hostId, signedIn, slug }: { eventId: st
     const name = comment.user.name ?? comment.user.username ?? "ShopFia member";
     return <article key={comment.id} className={isReply ? "ml-6 border-l border-primary/20 py-3 pl-4" : "border-b py-5"}>
       <div className="flex flex-wrap items-center gap-2 text-sm">
+        <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-accent">
+          <ProfileImage image={comment.user.image} crop={comment.user.imageCrop} alt={`${name}'s profile photo`} initials={name.slice(0, 1).toUpperCase()} />
+        </div>
         {comment.user.username ? <Link className="font-semibold" href={`/profiles/${comment.user.username}`}>{name}</Link> : <span className="font-semibold">{name}</span>}
         {comment.user.id === hostId ? <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Party host</span> : null}
         <time className="text-xs text-muted-foreground" dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleDateString()}</time>
