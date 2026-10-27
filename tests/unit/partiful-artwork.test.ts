@@ -14,7 +14,7 @@ describe("artwork-only Partiful previews", () => {
     expect(getPartifulInvite(url)).toBeNull();
   });
   it("extracts artwork alone, with either metadata attribute order", () => {
-    const html = `<meta property="og:description" content="Private address and guests"><meta content="${poster.replaceAll("&", "&amp;")}" property="og:image">`;
+    const html = `<meta property="og:description" content="Private address and guests"><meta content="${poster.replace(/&/g, "&amp;")}" property="og:image">`;
     expect(getPartifulArtwork(html)).toBe(poster);
     expect(getPartifulArtwork('<meta property="og:image" content="https://localhost/private.png">')).toBeNull();
   });
