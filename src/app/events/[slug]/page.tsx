@@ -1,6 +1,5 @@
 import { PartyPhotoGallery } from "@/components/parties/party-photo-gallery";
 import { PartyContributions } from "@/components/parties/party-contributions";
-import { getPinterestBoard } from "@/lib/party-media";
 import { PartyMedia } from "@/components/parties/party-media";
 import { partyCategoryLabel, inferPartyOccasion, occasionTag } from "@/lib/party-occasions";
 import Link from "next/link";
@@ -352,8 +351,7 @@ export default async function EventPage({
       <section className="grid items-start gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="grid min-w-0 gap-5">
           <PartyPhotoGallery title={title} photos={safePhotos.map((photo) => ({ id: photo.id, url: photo.url, fullUrl: photo.fullUrl, crop: photo.crop, vendorAnchors: photo.taggedVendors.filter((vendor) => firstPhotoIdByVendor.get(vendor.id) === photo.id).map((vendor) => `vendor-${vendor.id}-photos`) }))} />
-          <PartyMedia tiktokUrl={event?.tiktokUrl} tiktokUrls={[...(event?.tiktokUrls ?? []), ...(event?.contributions ?? []).flatMap((item) => item.tiktokUrl ? [item.tiktokUrl] : [])]} appleMusicUrl={event?.appleMusicUrl} appleMusicUrls={(event?.contributions ?? []).flatMap((item) => item.appleMusicUrl ? [item.appleMusicUrl] : [])} spotifyUrl={event?.spotifyUrl} spotifyUrls={(event?.contributions ?? []).flatMap((item) => item.spotifyUrl ? [item.spotifyUrl] : [])} />
-          {getPinterestBoard(event?.pinterestUrl) ? <a href={getPinterestBoard(event?.pinterestUrl)!} target="_blank" rel="noopener noreferrer" className="w-fit rounded-full border bg-white px-5 py-3 text-sm font-medium">View Pinterest mood board</a> : null}
+          <PartyMedia pinterestUrl={event?.pinterestUrl} tiktokUrl={event?.tiktokUrl} tiktokUrls={[...(event?.tiktokUrls ?? []), ...(event?.contributions ?? []).flatMap((item) => item.tiktokUrl ? [item.tiktokUrl] : [])]} appleMusicUrl={event?.appleMusicUrl} appleMusicUrls={(event?.contributions ?? []).flatMap((item) => item.appleMusicUrl ? [item.appleMusicUrl] : [])} spotifyUrl={event?.spotifyUrl} spotifyUrls={(event?.contributions ?? []).flatMap((item) => item.spotifyUrl ? [item.spotifyUrl] : [])} />
         </div>
 
         <div className="min-w-0 rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft">

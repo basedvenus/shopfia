@@ -40,7 +40,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://images.unsplash.com https://res.cloudinary.com https://*.stripe.com",
               "connect-src 'self' https://api.stripe.com https://*.stripe.com https://*.stripe.network https://*.supabase.co wss://*.supabase.co",
-              "frame-src https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.tiktok.com https://embed.music.apple.com https://open.spotify.com",
+              "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.tiktok.com https://embed.music.apple.com https://open.spotify.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -48,6 +48,13 @@ const nextConfig = {
               "upgrade-insecure-requests"
             ].join("; ")
           }
+        ]
+      },
+      {
+        source: "/api/pinterest-board",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: "default-src 'none'; script-src 'unsafe-inline' https://assets.pinterest.com https://widgets.pinterest.com; style-src 'unsafe-inline'; img-src https://*.pinimg.com https://assets.pinterest.com data:; connect-src https://widgets.pinterest.com; base-uri 'none'; form-action 'none'; frame-ancestors 'self'" }
         ]
       }
     ];

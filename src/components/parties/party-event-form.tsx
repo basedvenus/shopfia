@@ -104,6 +104,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
   const [vendorOptions, setVendorOptions] = useState<VendorOption[]>(vendors);
   const [mainHostId, setMainHostId] = useState(initialParty?.mainHostId ?? currentUserId);
   const [tiktokUrls, setTikTokUrls] = useState<string[]>(() => initialParty?.tiktokUrls?.length ? initialParty.tiktokUrls : [initialParty?.tiktokUrl ?? ""]);
+  const [pinterestUrl, setPinterestUrl] = useState(initialParty?.pinterestUrl ?? "");
   const [spotifyUrl, setSpotifyUrl] = useState(initialParty?.spotifyUrl ?? "");
   const [appleMusicUrl, setAppleMusicUrl] = useState(initialParty?.appleMusicUrl ?? "");
   const [guestIds, setGuestIds] = useState<string[]>(() => initialParty?.guestIds ?? []);
@@ -301,7 +302,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
               className={`relative aspect-[4/3] overflow-hidden rounded-2xl border-2 transition ${selectedPhoto?.id === photo.id ? "border-primary" : "border-transparent"}`}>
               <button type="button" onClick={() => { setSelectedPhotoId(photo.id); setStep(2); }} onDoubleClick={() => setEditingCropPhoto(photo)}
                 aria-label={`Edit photo ${index + 1} and tags`} aria-pressed={selectedPhoto?.id === photo.id} className="block h-full w-full">
-                <CroppedImage src={photo.url} alt={`Party photo ${index + 1}`} crop={photo.crop} className="h-full w-full object-cover" />
+                <CroppedImage src={photo.url} alt={`Party photo ${index + 1}`} crop={photo.crop} frameFit="contain" className="h-full w-full object-cover" />
               </button>
               {photo.vendorIds.length ? <span title={`${photo.vendorIds.length} tagged vendors`} className="pointer-events-none absolute bottom-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-white/95 text-foreground shadow-sm"><Tag className="h-4 w-4" /></span> : null}
               {index === 0 ? <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-semibold">Cover</span> : null}
@@ -334,8 +335,8 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
           {spotifyUrl.trim() && !getSpotifyPlaylist(spotifyUrl) ? <span role="status" className="text-xs text-destructive">Paste a public Spotify playlist link.</span> : null}
         </label>
         <h2 className="text-lg font-semibold">Mood board</h2>
-        <label className="grid min-w-0 gap-2 text-sm font-medium">Pinterest mood board <span className="text-xs font-normal text-muted-foreground">Optional</span><Input name="pinterestUrl" type="url" maxLength={2048} defaultValue={initialParty?.pinterestUrl ?? ""} placeholder="Pinterest board URL or pin.it share link" /></label>
-        <PartyMedia tiktokUrls={tiktokUrls} appleMusicUrl={appleMusicUrl} spotifyUrl={spotifyUrl} />
+        <label className="grid min-w-0 gap-2 text-sm font-medium">Pinterest mood board <span className="text-xs font-normal text-muted-foreground">Optional</span><Input name="pinterestUrl" type="url" maxLength={2048} value={pinterestUrl} onChange={(event) => setPinterestUrl(event.target.value)} placeholder="Pinterest board URL or pin.it share link" /></label>
+        <PartyMedia pinterestUrl={pinterestUrl} tiktokUrls={tiktokUrls} appleMusicUrl={appleMusicUrl} spotifyUrl={spotifyUrl} />
       </section>
       </div>
 
@@ -449,7 +450,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">Select a photo on the left to edit it or add tags.</p>
               </div>
               <button type="button" onClick={() => setEditingCropPhoto(selectedPhoto)} aria-label="Adjust selected photo brightness and crop" className="block aspect-[4/3] w-full overflow-hidden rounded-2xl">
-                <CroppedImage src={selectedPhoto.url} crop={selectedPhoto.crop} alt="Selected photo preview" className="h-full w-full object-cover" />
+                <CroppedImage src={selectedPhoto.url} crop={selectedPhoto.crop} frameFit="contain" alt="Selected photo preview" className="h-full w-full object-cover" />
               </button>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-xs text-muted-foreground">Photo {photos.indexOf(selectedPhoto) + 1} of {photos.length}</span>

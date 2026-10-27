@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronLeft, ChevronRight, X, Expand } from "lucide-react";
 import { CroppedImage } from "@/components/ui/cropped-image";
@@ -8,6 +8,23 @@ import { type ImageCrop, normalizeImageCrop } from "@/lib/image-crop";
 type Photo = { id: string; url: string; fullUrl: string; crop: ImageCrop; vendorAnchors: string[] };
 export function PartyPhotoGallery({ title, photos }: { title: string; photos: Photo[] }) {
   const [active, setActive] = useState<number | null>(null);
+  const [slide, setSlide] = useState(photos.length > 1 ? 1 : 0);
+  const [playing, setPlaying] = useState(false);
+  const [interacting, setInteracting] = useState(false);
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPlaying(!preference.matches);
+    const update = () => setPlaying(!preference.matches);
+    preference.addEventListener("change", update);
+    return () => preference.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    if (!playing || interacting || active !== null || photos.length < 2) return;
+    const timer = window.setInterval(() => { if (!document.hidden) setSlide((index) => (index + 1) % photos.length); }, 5000);
+    return () => window.clearInterval(timer);
+  }, [playing, interacting, active, photos.length]);
+  const featuredIndex = slide % Math.max(1, photos.length);
+  const featured = photos[featuredIndex];
   const [failed, setFailed] = useState<string | null>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
   const touch = useRef<{ x: number; y: number } | null>(null);
@@ -16,8 +33,19 @@ export function PartyPhotoGallery({ title, photos }: { title: string; photos: Ph
   return <Dialog.Root open={active !== null} onOpenChange={(open) => { if (!open) setActive(null); }}>
     <div id="party-gallery" className="grid scroll-mt-24 auto-rows-[190px] grid-cols-2 gap-3 md:grid-cols-4">
       {!photos.length ? <p className="col-span-full rounded-2xl bg-muted/60 p-5 text-sm text-muted-foreground">No party photos have been added yet.</p> : null}
-      {photos.map((photo, index) => <Dialog.Trigger key={photo.id} asChild><button type="button" aria-label={`Enlarge ${title} photo ${index + 1}`} onClick={(event) => { opener.current = event.currentTarget; setFailed(null); setActive(index); }} className={`group relative overflow-hidden rounded-[1.4rem] border border-white/80 bg-muted shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${index === 0 ? "col-span-2 row-span-2" : ""}`}>
-        <CroppedImage src={photo.url} alt={`${title} party photo ${index + 1}`} crop={photo.crop} className="absolute inset-0 h-full w-full object-cover" loading={index === 0 ? "eager" : "lazy"} />
+      {featured && photos.length > 1 ? <div className="relative col-span-2 row-span-2 overflow-hidden rounded-[1.4rem] border border-white/80 bg-muted shadow-sm" onMouseEnter={() => setInteracting(true)} onMouseLeave={() => setInteracting(false)} onFocusCapture={() => setInteracting(true)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setInteracting(false); }}>
+        <Dialog.Trigger asChild><button type="button" aria-label={`Enlarge slideshow photo ${featuredIndex + 1}`} className="absolute inset-0 h-full w-full focus-visible:ring-2 focus-visible:ring-primary" onClick={(event) => { opener.current = event.currentTarget; setFailed(null); setActive(featuredIndex); }}>
+          <CroppedImage src={featured.url} alt={`${title} slideshow photo ${featuredIndex + 1}`} crop={featured.crop} frameFit="contain" className="absolute inset-0 h-full w-full" loading="eager" />
+          <span className="absolute right-2 top-2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">{featuredIndex + 1} / {photos.length}</span>
+        </button></Dialog.Trigger>
+        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 text-white">
+          <button type="button" aria-label="Previous slideshow photo" className="grid h-10 w-10 place-items-center rounded-full bg-black/60" onClick={() => setSlide((index) => (index - 1 + photos.length) % photos.length)}><ChevronLeft className="h-5 w-5" /></button>
+          <button type="button" className="rounded-full bg-black/60 px-4 py-2 text-xs" onClick={() => setPlaying((value) => !value)}>{playing ? "Pause slideshow" : "Play slideshow"}</button>
+          <button type="button" aria-label="Next slideshow photo" className="grid h-10 w-10 place-items-center rounded-full bg-black/60" onClick={() => setSlide((index) => (index + 1) % photos.length)}><ChevronRight className="h-5 w-5" /></button>
+        </div>
+      </div> : null}
+      {photos.map((photo, index) => <Dialog.Trigger key={photo.id} asChild><button type="button" aria-label={`Enlarge ${title} photo ${index + 1}`} onClick={(event) => { opener.current = event.currentTarget; setFailed(null); setActive(index); }} className={`group relative overflow-hidden rounded-[1.4rem] border border-white/80 bg-muted shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary `}>
+        <CroppedImage src={photo.url} alt={`${title} party photo ${index + 1}`} crop={photo.crop} frameFit="contain" className="absolute inset-0 h-full w-full object-cover" loading={index === 0 ? "eager" : "lazy"} />
         <span className="absolute bottom-2 right-2 grid h-8 w-8 place-items-center rounded-full bg-black/45 text-white"><Expand className="h-4 w-4" /></span>
         {photo.vendorAnchors.map((id) => <span key={id} id={id} className="pointer-events-none absolute inset-1 rounded-[1.2rem] transition target:ring-4 target:ring-primary/45 target:ring-offset-2 target:ring-offset-background" aria-hidden="true" />)}
       </button></Dialog.Trigger>)}

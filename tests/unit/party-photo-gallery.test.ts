@@ -10,6 +10,14 @@ describe("public party gallery", () => {
     expect(html).toContain('id="vendor-florist-photos"');
     expect(html).toContain('id="party-gallery"');
   });
+  it("gives the cover a normal thumbnail and uses a separate slideshow with the complete saved frame", () => {
+    const photos = ["one", "two"].map((id) => ({ id, url: `/photos/${id}`, fullUrl: `/photos/${id}`, crop: { x: 50, y: 50, zoom: 1.2, aspectRatio: 4 / 3 }, vendorAnchors: [] }));
+    const html = renderToStaticMarkup(createElement(PartyPhotoGallery, { title: "Birthday", photos }));
+    expect(html).toContain('aria-label="Enlarge slideshow photo 2"');
+    expect(html).toContain("Play slideshow");
+    expect(html.match(/col-span-2 row-span-2/g)).toHaveLength(1);
+    expect(html).toContain("width:min(100cqw");
+  });
   it("handles a party with no photos", () => {
     expect(renderToStaticMarkup(createElement(PartyPhotoGallery, { title: "Party", photos: [] }))).toContain("No party photos have been added yet.");
   });
