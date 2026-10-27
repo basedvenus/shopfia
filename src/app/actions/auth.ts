@@ -738,9 +738,7 @@ export async function updatePartyCollaborationAction(formData: FormData) {
     return { ok: false, error: "Choose a valid collaboration action." };
   }
 
-  let notificationEventId: string | undefined;
-  const collaboration = await db.$transaction(async (tx) => {
-    const updated = await tx.partyCollaborator.updateMany({
+  const collaboration = await db.partyCollaborator.updateMany({
     where: {
       id: collaborationId,
       userId: session.user.id,
@@ -751,22 +749,6 @@ export async function updatePartyCollaborationAction(formData: FormData) {
         : PartyCollaborationStatus.PENDING
     },
     data: { status: nextStatus }
-    });
-    if (updated.count && action === "accept") {
-      const invitation = await tx.partyCollaborator.findFirst({
-        where: { id: collaborationId, userId: session.user.id },
-        select: { eventId: true, role: true, event: { select: { userId: true, slug: true, title: true } }, user: { select: { name: true, username: true } } }
-      });
-      if (invitation && invitation.event.userId !== session.user.id) {
-        notificationEventId = invitation.eventId;
-        await tx.notification.createMany({ data: [{
-          userId: invitation.event.userId, eventId: invitation.eventId, kind: "PARTY_INVITATION_ACCEPTED",
-          title: `${invitation.user.name ?? invitation.user.username ?? "A guest"} accepted your invitation to ${invitation.event.title}`,
-          href: `/events/${invitation.event.slug}`, dedupeKey: `party-accepted:${collaborationId}`
-        }], skipDuplicates: true });
-      }
-    }
-    return updated;
   });
 
   if (collaboration.count === 0) {
@@ -777,7 +759,6 @@ export async function updatePartyCollaborationAction(formData: FormData) {
     where: { userId: session.user.id, kind: "PARTY_INVITATION", readAt: null, event: { collaborators: { some: { id: collaborationId, userId: session.user.id } } } },
     data: { readAt: new Date() }
   });
-  if (notificationEventId) await deliverPartyNotificationEmails(notificationEventId).catch(() => undefined);
   revalidatePath("/notifications");
   revalidatePath("/my-parties");
   revalidatePath("/parties");

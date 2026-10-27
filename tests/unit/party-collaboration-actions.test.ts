@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => ({
     partyVendorRating: { upsert: vi.fn() },
     partyPhotoVendorRating: { deleteMany: vi.fn(), upsert: vi.fn() },
     notification: { createMany: vi.fn() },
-    partyCollaborator: { updateMany: vi.fn(), upsert: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
+    partyCollaborator: { updateMany: vi.fn(), upsert: vi.fn(), findMany: vi.fn() },
     user: { findMany: vi.fn() }
   }
 }));
@@ -73,8 +73,6 @@ beforeEach(() => {
     return { count: affected.length };
   });
   mocks.db.$transaction.mockImplementation(async (callback) => callback(mocks.tx));
-  mocks.tx.partyCollaborator.updateMany.mockImplementation((args) => mocks.db.partyCollaborator.updateMany(args));
-  mocks.tx.partyCollaborator.findFirst.mockResolvedValue({ eventId, role: "CO_HOST", event: { userId: ownerId, slug: "test-party", title: "Test Party" }, user: { name: "Guest", username: "guest" } });
   mocks.db.partyEvent.findFirst.mockImplementation(async ({ where }) =>
     where.id === eventId && where.userId === ownerId ? { id: eventId, slug: "test-party", photos: [] } : null
   );
@@ -89,17 +87,6 @@ beforeEach(() => {
 });
 
 describe("invited-user-only collaboration responses", () => {
-  it("notifies the host once when an invitee accepts", async () => {
-    expect(await updatePartyCollaborationAction(response("accept"))).toEqual({ ok: true });
-    expect(mocks.tx.notification.createMany).toHaveBeenCalledWith({ data: [expect.objectContaining({ userId: ownerId, eventId, kind: "PARTY_INVITATION_ACCEPTED", dedupeKey: "party-accepted:invitation" })], skipDuplicates: true });
-    mocks.tx.notification.createMany.mockClear();
-    expect(await updatePartyCollaborationAction(response("accept"))).toMatchObject({ ok: false });
-    expect(mocks.tx.notification.createMany).not.toHaveBeenCalled();
-  });
-  it("does not claim an acceptance when an invitation is declined", async () => {
-    await updatePartyCollaborationAction(response("decline"));
-    expect(mocks.tx.notification.createMany).not.toHaveBeenCalled();
-  });
   it.each(["accept", "decline"])("lets the signed-in recipient %s a pending invitation", async (action) => {
     expect(await updatePartyCollaborationAction(response(action))).toEqual({ ok: true });
     expect(rows[0].status).toBe(action === "accept" ? "ACCEPTED" : "DECLINED");
@@ -196,6 +183,7 @@ describe("party owner rights and persistence wiring", () => {
     expect(mocks.db.partyVendorRating.findMany).toHaveBeenCalledWith({ where: { eventId, userId: ownerId }, select: { vendorId: true, rating: true } });
     expect(mocks.tx.partyVendorRating.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { rating: 4 } }));
   });
+
   it.each(["create", "update"])("requires a rating for each tagged vendor during %s", async (mode) => {
     mocks.auth.mockResolvedValue({ user: { id: ownerId } });
     const vendorId = "c0000000000000000000000005";
