@@ -8,12 +8,15 @@ export function PartyMedia({ pinterestUrl, tiktokUrl, tiktokUrls = [], appleMusi
   const board = getPinterestBoard(pinterestUrl);
   if (!videos.length && !apples.length && !spotifys.length && !board) return null;
   return <section aria-label="Party links and inspiration" className="grid min-w-0 gap-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))" }}>
-    {videos.map((video, index) => <article key={video.url} className="min-w-0 rounded-3xl border bg-white p-2 shadow-sm sm:p-4">
-      <h2 className="mb-3 text-lg font-semibold">{videos.length > 1 ? `Party video ${index + 1}` : "Party video"}</h2>
-      <iframe src={video.embedUrl} title={index ? `Party TikTok video ${index + 1}` : "Party TikTok video"} loading="lazy" allow="fullscreen; encrypted-media" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="mx-auto aspect-[9/16] w-full max-w-[360px] rounded-2xl border-0" />
-      <a href={video.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-primary underline">Open on TikTok</a>
-      <p className="mt-1 text-xs text-muted-foreground">The video must be public and allow embedding.</p>
-    </article>)}
+    {videos.length ? <section aria-label="Party Videos" className="col-span-full min-w-0 rounded-3xl border bg-white p-2 shadow-sm sm:p-4">
+      <h2 className="mb-3 text-lg font-semibold">Party Videos</h2>
+      <ul className="grid min-w-0 list-none gap-5 p-0" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))" }}>
+        {videos.map((video, index) => <li key={video.url} className="min-w-0">
+          <iframe src={video.embedUrl} title={`Party TikTok video ${index + 1}`} loading="lazy" allow="fullscreen; encrypted-media" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="mx-auto aspect-[9/16] w-full max-w-[360px] rounded-2xl border-0" />
+          <a href={video.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-primary underline">Open on TikTok</a>
+        </li>)}
+      </ul>
+    </section> : null}
     {apples.map((playlist, index) => <article key={playlist.url} className="min-w-0 rounded-3xl border bg-white p-2 shadow-sm sm:p-4">
       <h2 className="mb-3 text-lg font-semibold">Apple Music playlist</h2>
       <iframe src={playlist.embedUrl} title={index ? `Party Apple Music playlist ${index + 1}` : "Party Apple Music playlist"} loading="lazy" allow="encrypted-media; fullscreen" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" className="h-[450px] w-full rounded-2xl border-0" />
