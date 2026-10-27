@@ -22,6 +22,11 @@ describe("guided unclaimed vendor creation", () => {
     expect(await createUnclaimedVendorAction({ ...input, ...change })).toMatchObject({ ok: false });
     expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.category).not.toHaveBeenCalled();
   });
+  it.each(["Other", "Website or booking form"])("requires specifics for %s", async (bookingChannel) => {
+    expect(await createUnclaimedVendorAction({ ...input, bookingChannel, bookingDetails: " " })).toMatchObject({ ok: false });
+    expect(mocks.create).not.toHaveBeenCalled();
+    expect(await createUnclaimedVendorAction({ ...input, bookingChannel, bookingDetails: "business.example/booking" })).toMatchObject({ ok: true });
+  });
   it("honors rate limits before creating a profile", async () => {
     mocks.rate.mockResolvedValue({ ok: false }); expect(await createUnclaimedVendorAction(input)).toMatchObject({ ok: false }); expect(mocks.create).not.toHaveBeenCalled();
   });

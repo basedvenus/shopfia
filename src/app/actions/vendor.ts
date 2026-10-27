@@ -57,6 +57,10 @@ const unclaimedVendorSchema = z.object({
   instagramHandle: z.string().trim().max(80).optional(),
   website: z.string().trim().max(255).optional(),
   categories: z.array(z.enum(UNCLAIMED_VENDOR_CATEGORIES)).min(1, "Choose at least one category.").max(UNCLAIMED_VENDOR_CATEGORIES.length)
+}).superRefine((value, context) => {
+  if ((value.bookingChannel === "Other" || value.bookingChannel === "Website or booking form") && (value.bookingDetails?.length ?? 0) < 2) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["bookingDetails"], message: value.bookingChannel === "Other" ? "Tell us how you booked this vendor." : "Add the website or booking form you used." });
+  }
 });
 
 export async function createUnclaimedVendorAction(input: {

@@ -27,6 +27,9 @@ export function UnclaimedVendorModal({ initialName, onClose, onCreated }: { init
     if (step === 2 && !categories.length) { setError("Choose at least one vendor type."); return; }
     setStep((current) => current + 1);
   }
+  const needsBookingDetails = bookingChannel === "Other" || bookingChannel === "Website or booking form";
+  const bookingDetailsLabel = bookingChannel === "Other" ? "How did you book them?" : bookingChannel === "Website or booking form" ? "Which website or booking form did you use?" : "Booking contact or notes (optional)";
+  const bookingDetailsPlaceholder = bookingChannel === "Other" ? "Describe how you found and booked the business." : bookingChannel === "Website or booking form" ? "Paste the website or booking page link, or enter its name." : "The email, number, or contact you used to book the business.";
   return <Dialog.Root open onOpenChange={(open) => { if (!open && !pending) onClose(); }}>
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm" />
@@ -40,7 +43,7 @@ export function UnclaimedVendorModal({ initialName, onClose, onCreated }: { init
             <label className="grid gap-2 text-sm font-medium">State or region (optional)<Input value={state} maxLength={40} onChange={(event) => setState(event.target.value)} placeholder="e.g. California" /></label>
           </> : step === 2 ? <fieldset className="grid gap-2"><legend className="mb-3 text-sm font-medium">Vendor type</legend>{UNCLAIMED_VENDOR_CATEGORIES.map((category) => <label key={category} className="flex items-center gap-3 rounded-xl border bg-white px-3 py-2 text-sm"><input type="checkbox" checked={categories.includes(category)} onChange={(event) => setCategories((current) => event.target.checked ? [...current, category] : current.filter((value) => value !== category))} />{category}</label>)}</fieldset> : <>
             <label className="grid gap-2 text-sm font-medium">How did you contact or book them?<select value={bookingChannel} onChange={(event) => setBookingChannel(event.target.value)} className="h-12 rounded-xl border bg-white px-3"><option value="">Choose a method</option>{VENDOR_BOOKING_CHANNELS.map((channel) => <option key={channel} value={channel}>{channel}</option>)}</select></label>
-            <label className="grid gap-2 text-sm font-medium">Booking contact or notes (optional)<Textarea value={bookingDetails} maxLength={500} onChange={(event) => setBookingDetails(event.target.value)} placeholder="The email, number, or contact you used to book the business." /><span className="text-xs font-normal text-muted-foreground">Private to you and ShopFia; never shown on the public profile.</span></label>
+            <label className="grid gap-2 text-sm font-medium">{bookingDetailsLabel}<Textarea required={needsBookingDetails} value={bookingDetails} maxLength={500} onChange={(event) => setBookingDetails(event.target.value)} placeholder={bookingDetailsPlaceholder} /><span className="text-xs font-normal text-muted-foreground">Private to you and ShopFia; never shown on the public profile.</span></label>
             <label className="grid gap-2 text-sm font-medium">Public business Instagram (optional)<Input value={instagramHandle} maxLength={80} onChange={(event) => setInstagramHandle(event.target.value)} placeholder="@businessname" /></label>
             <label className="grid gap-2 text-sm font-medium">Public business website (optional)<Input value={website} maxLength={255} onChange={(event) => setWebsite(event.target.value)} placeholder="business.com" /></label>
           </>}
@@ -51,6 +54,7 @@ export function UnclaimedVendorModal({ initialName, onClose, onCreated }: { init
           {step < 3 ? <Button type="button" onClick={next}>Next</Button> : <Button type="button" disabled={pending} onClick={() => {
             setError("");
             if (!bookingChannel) { setError("Choose how you contacted or booked the vendor."); return; }
+            if (needsBookingDetails && bookingDetails.trim().length < 2) { setError(bookingChannel === "Other" ? "Tell us how you booked this vendor." : "Add the website or booking form you used."); return; }
             startTransition(async () => {
               try {
                 const result = await createUnclaimedVendorAction({ name, city, state, categories, bookingChannel, bookingDetails, instagramHandle, website });
