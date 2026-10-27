@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { SlidersHorizontal, Trash2, Loader2, Plus, Search, Star, Upload, X, Tag } from "lucide-react";
 import { createPartyEventAction, updatePartyEventAction, followPartyVendorAction } from "@/app/actions/auth";
 import { UnclaimedVendorModal } from "@/components/parties/unclaimed-vendor-modal";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { CountySelector } from "@/components/parties/county-selector";
 import { collectPartyVendorRatings } from "@/lib/party-vendor-ratings";
+import { PartyPhotoActions } from "@/components/parties/party-photo-actions";
 import { PartifulArtwork } from "@/components/parties/partiful-artwork";
 import { getPartifulInvite } from "@/lib/partiful";
 import { PartyMedia } from "@/components/parties/party-media";
@@ -115,6 +116,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
   const [appleMusicUrl, setAppleMusicUrl] = useState(initialParty?.appleMusicUrl ?? "");
   const [guestIds, setGuestIds] = useState<string[]>(() => initialParty?.guestIds ?? []);
   const [coHostIds, setCoHostIds] = useState<string[]>(() => initialParty?.coHostIds ?? []);
+  const [photoActionsOpen, setPhotoActionsOpen] = useState(false);
   const [editingCropPhoto, setEditingCropPhoto] = useState<UploadedPartyPhoto | null>(null);
   const [newVendorModal, setNewVendorModal] = useState<{ initialName: string; photoId: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -220,6 +222,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
     setMessage(null);
     setSelectedPhotoId((current) => current ?? photos[0].id);
     setStep(2);
+    setPhotoActionsOpen(true);
   }
 
   function setCoverPhoto(photoId: string) {
@@ -232,6 +235,17 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
     });
   }
 
+  const photoTagger = selectedPhoto ? (
+    <PhotoVendorTagger key={selectedPhoto.id} currentUserId={currentUserId}
+                onAddVendor={(vendorId) => togglePhotoVendor(selectedPhoto.id, vendorId, true)}
+                onContributionChange={(vendorId, contribution) => setPhotoVendorContribution(selectedPhoto.id, vendorId, contribution)}
+                partyVendorRatings={partyVendorRatings}
+                onRatingChange={(vendorId, rating) => setPartyVendorRatings((current) => ({ ...current, [vendorId]: rating }))}
+                onCreateVendor={(initialName) => setNewVendorModal({ initialName, photoId: selectedPhoto.id })}
+                onRemoveVendor={(vendorId) => togglePhotoVendor(selectedPhoto.id, vendorId, false)}
+                photo={selectedPhoto} vendors={vendorOptions} />
+  ) : null;
+
   return (
     <form
       ref={formRef}
@@ -242,6 +256,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         if (missingRatingPhoto) {
           setSelectedPhotoId(missingRatingPhoto.id);
           setStep(2);
+          setPhotoActionsOpen(true);
           setMessage("Rate each tagged vendor before saving your party.");
           return;
         }
@@ -294,19 +309,19 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
             else if (!isUploading && event.dataTransfer.files.length) { uploadAsCoverRef.current = true; void uploadFiles(event.dataTransfer.files); }
           }}
           className={`overflow-hidden rounded-3xl border-2 transition ${isDragOver ? "border-primary ring-4 ring-primary/20" : "border-border"}`}>
-          <button type="button" onClick={() => { if (photos[0]) { setCoverPickerOpen(true); } else { uploadAsCoverRef.current = true; fileInputRef.current?.click(); } }}
-            aria-label={photos[0] ? "Select your cover photo" : "Upload your party photos"} className="relative block aspect-[16/10] w-full overflow-hidden bg-muted">
+          <button type="button" onClick={() => { if (photos[0]) { setSelectedPhotoId(photos[0].id); setStep(2); setPhotoActionsOpen(true); } else { uploadAsCoverRef.current = true; fileInputRef.current?.click(); } }}
+            aria-label={photos[0] ? "Open cover photo preview and actions" : "Upload your party photos"} className="relative block aspect-[16/10] w-full overflow-hidden bg-muted">
             {photos[0] ? <CroppedImage src={photos[0].url} crop={photos[0].crop} alt="Party cover photo" className="h-full w-full object-cover" />
               : <span className="grid h-full place-content-center gap-3 text-center"><Upload className="mx-auto h-10 w-10 text-primary" /><span className="font-semibold">Drag your photos here</span><span className="text-sm text-muted-foreground">Or click to choose photos</span></span>}
           </button>
-          {photos.length ? <div className="bg-white px-4 py-3 text-sm font-semibold">{isDragOver ? "Drop photos to upload" : "Click to change cover photo"}</div> : null}
+          {photos.length ? <div className="flex flex-wrap items-center justify-between gap-2 bg-white px-4 py-3 text-sm"><span>{isDragOver ? "Drop photos to upload" : "Tap the cover to edit or delete it"}</span><button type="button" onClick={() => setCoverPickerOpen(true)} className="min-h-11 rounded-full border px-4 font-semibold">Change cover</button></div> : null}
         </div>
-        {photos.length ? <p className="text-xs text-muted-foreground">Click a photo to edit it or add tags.</p> : null}
+        {photos.length ? <p className="text-xs text-muted-foreground">Tap a photo to enlarge it, edit it, or delete it.</p> : null}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {photos.map((photo, index) => (
             <div key={photo.id}
               className={`relative aspect-[4/3] overflow-hidden rounded-2xl border-2 transition ${selectedPhoto?.id === photo.id ? "border-primary" : "border-transparent"}`}>
-              <button type="button" onClick={() => { setSelectedPhotoId(photo.id); setStep(2); }} onDoubleClick={() => setEditingCropPhoto(photo)}
+              <button type="button" onClick={() => { setSelectedPhotoId(photo.id); setStep(2); setPhotoActionsOpen(true); }}
                 aria-label={`Edit photo ${index + 1} and tags`} aria-pressed={selectedPhoto?.id === photo.id} className="block h-full w-full">
                 <CroppedImage src={photo.url} alt={`Party photo ${index + 1}`} crop={photo.crop} frameFit="contain" className="h-full w-full object-cover" />
               </button>
@@ -321,6 +336,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
             <span className="text-xs font-semibold">{isUploading ? "Uploading…" : "Add photos"}</span>
           </button>
         </div>
+        {selectedPhoto ? <Button type="button" variant="secondary" className="h-12 w-full lg:hidden" onClick={() => setPhotoActionsOpen(true)}><SlidersHorizontal className="h-4 w-4" />Edit photo {photos.indexOf(selectedPhoto) + 1} & tag vendors</Button> : null}
       <section className="grid min-w-0 gap-4 rounded-3xl border bg-white p-4" aria-label="Party links">
         <div className="grid gap-3"><h2 className="text-lg font-semibold">Videos</h2><p className="text-xs text-muted-foreground">Add up to 8 public TikTok videos.</p>
           {tiktokUrls.map((url, index) => <div key={index} className="grid gap-2">
@@ -457,19 +473,19 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
 
           </div>
           {(isEditing || step === 2) && selectedPhoto ? (
-            <section className={isEditing ? "order-1 space-y-5 rounded-3xl border bg-white p-5" : "space-y-5 rounded-3xl border bg-white p-5"}>
+            <section className={isEditing ? "order-1 space-y-5 rounded-3xl border bg-white p-5 hidden lg:block" : "space-y-5 rounded-3xl border bg-white p-5 hidden lg:block"}>
               <div>
                 <h2 className="text-2xl font-bold tracking-tight">Edit photo & tags</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">Use the photo controls below to edit each photo and tag its vendors.</p>
               </div>
-              <button type="button" onClick={() => setEditingCropPhoto(selectedPhoto)} aria-label="Adjust selected photo brightness and crop" className="block aspect-[4/3] w-full overflow-hidden rounded-2xl">
+              <button type="button" onClick={() => setPhotoActionsOpen(true)} aria-label="Open selected photo preview and actions" className="block aspect-[4/3] w-full overflow-hidden rounded-2xl">
                 <CroppedImage src={selectedPhoto.url} crop={selectedPhoto.crop} frameFit="contain" alt="Selected photo preview" className="h-full w-full object-cover" />
               </button>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-xs text-muted-foreground">Photo {photos.indexOf(selectedPhoto) + 1} of {photos.length}</span>
                 <div className="flex flex-wrap gap-2">
-                  <IconButton label="Adjust brightness, saturation and crop" onClick={() => setEditingCropPhoto(selectedPhoto)}><SlidersHorizontal className="h-4 w-4" /></IconButton>
-                  <IconButton label="Delete photo" onClick={() => removePhoto(selectedPhoto.id)}><Trash2 className="h-4 w-4" /></IconButton>
+                  <Button type="button" variant="secondary" onClick={() => setEditingCropPhoto(selectedPhoto)}><SlidersHorizontal className="h-4 w-4" />Edit photo</Button>
+                  <Button type="button" variant="secondary" className="text-destructive" onClick={() => removePhoto(selectedPhoto.id)}><Trash2 className="h-4 w-4" />Delete photo</Button>
                 </div>
               </div>
               {photos.length > 1 ? (
@@ -487,14 +503,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
                   </div>
                 </nav>
               ) : null}
-              <PhotoVendorTagger key={selectedPhoto.id} currentUserId={currentUserId}
-                onAddVendor={(vendorId) => togglePhotoVendor(selectedPhoto.id, vendorId, true)}
-                onContributionChange={(vendorId, contribution) => setPhotoVendorContribution(selectedPhoto.id, vendorId, contribution)}
-                partyVendorRatings={partyVendorRatings}
-                onRatingChange={(vendorId, rating) => setPartyVendorRatings((current) => ({ ...current, [vendorId]: rating }))}
-                onCreateVendor={(initialName) => setNewVendorModal({ initialName, photoId: selectedPhoto.id })}
-                onRemoveVendor={(vendorId) => togglePhotoVendor(selectedPhoto.id, vendorId, false)}
-                photo={selectedPhoto} vendors={vendorOptions} />
+              {photoTagger}
             </section>
           ) : null}
           {!isEditing && step === 1 ? (
@@ -515,6 +524,19 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
       {message ? <p role="alert" className="text-sm text-destructive">{message}</p> : null}
         </div>
       </div>
+      {photoActionsOpen && selectedPhoto ? (
+        <PartyPhotoActions
+          photo={selectedPhoto} index={photos.indexOf(selectedPhoto)} count={photos.length} isEditing={isEditing}
+          onClose={() => setPhotoActionsOpen(false)}
+          onRestoreFocus={() => (formRef.current?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]') ?? formRef.current?.querySelector<HTMLButtonElement>('button[aria-label="Upload your party photos"]'))?.focus()}
+          onEdit={() => { setPhotoActionsOpen(false); setEditingCropPhoto(selectedPhoto); }}
+          onDelete={() => { setPhotoActionsOpen(false); removePhoto(selectedPhoto.id); }}
+          onPrevious={() => { const index = photos.indexOf(selectedPhoto); if (index > 0) setSelectedPhotoId(photos[index - 1].id); }}
+          onNext={() => { const index = photos.indexOf(selectedPhoto); if (index < photos.length - 1) setSelectedPhotoId(photos[index + 1].id); }}
+        >
+          <section aria-label="Tag vendors in this photo" className="space-y-3 border-t pt-4"><h3 className="font-semibold">Tag vendors in this photo</h3>{photoTagger}</section>
+        </PartyPhotoActions>
+      ) : null}
       {coverPickerOpen ? (
         <div className="fixed inset-0 z-[80] grid place-items-center bg-black/35 p-4 backdrop-blur-sm">
           <section role="dialog" aria-modal="true" aria-labelledby="cover-picker-title" onKeyDown={(event) => { if (event.key === "Escape") setCoverPickerOpen(false); }} className="max-h-[85vh] w-full max-w-3xl overflow-auto rounded-3xl bg-white p-6 shadow-xl">
@@ -537,10 +559,11 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
           aspectLabel={editingCover ? "Edit cover photo" : "Edit party photo"}
           crop={editingCropPhoto.crop}
           imageUrl={editingCropPhoto.url}
-          onCancel={() => { setEditingCropPhoto(null); setEditingCover(false); }}
+          onCancel={() => { setEditingCropPhoto(null); if (!editingCover) setPhotoActionsOpen(true); setEditingCover(false); }}
           onSave={(crop) => {
             setPhotoCrop(editingCropPhoto.id, crop);
             if (editingCover) setCoverPhoto(editingCropPhoto.id);
+            else setPhotoActionsOpen(true);
             setEditingCover(false);
             setEditingCropPhoto(null);
           }}
@@ -561,31 +584,6 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         />
       ) : null}
     </form>
-  );
-}
-
-function IconButton({
-  children,
-  disabled,
-  label,
-  onClick
-}: {
-  children: ReactNode;
-  disabled?: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="grid h-8 w-8 place-items-center rounded-full border bg-white text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {children}
-    </button>
   );
 }
 
@@ -813,7 +811,7 @@ function PhotoVendorTagger({
         <Plus className="h-4 w-4" />
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-semibold text-foreground">Add New Vendor</span>
+        <span className="block truncate text-sm font-semibold text-foreground">Add vendor or store</span>
         <span className="block truncate text-xs text-muted-foreground">
           Create an unclaimed profile for “{trimmedQuery}”
         </span>
@@ -831,7 +829,7 @@ function PhotoVendorTagger({
           onChange={(event) => setQuery(event.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => window.setTimeout(() => setIsFocused(false), 120)}
-          placeholder="Search vendor name or username"
+          placeholder="Search vendors, stores, or usernames"
           className="h-11 rounded-full border-[#eadbd7] bg-white pl-9 shadow-none"
         />
         {showDropdown ? (

@@ -7,6 +7,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("@/app/actions/auth", () => ({ createPartyEventAction: vi.fn(), updatePartyEventAction: vi.fn(), followPartyVendorAction: vi.fn() }));
 vi.mock("@/app/actions/vendor", () => ({ createUnclaimedVendorAction: vi.fn() }));
 vi.mock("@/components/location/place-autocomplete-input", () => ({ PlaceAutocompleteInput: () => null }));
+import { PartyPhotoActions } from "@/components/parties/party-photo-actions";
+import { ImageCropEditor } from "@/components/ui/image-crop-editor";
 import { PartyEventForm } from "@/components/parties/party-event-form";
 const photo = { id: "photo", url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='800'%3E%3Crect width='800' height='800' fill='%23000000'/%3E%3Crect y='100' width='800' height='600' fill='%23e3a7a7'/%3E%3Ctext x='230' y='300' font-size='60' fill='%23ffffff'%3EParty photo%3C/text%3E%3C/svg%3E", crop: { x: 50, y: 50, zoom: 1 }, vendorIds: [], vendorContributions: {} };
 const party = { id: "party", slug: "test-party", title: "Test party", theme: null, tags: [], description: null, location: "Private residence", countyFips: "06095", photos: [photo], appleMusicUrl: "https://music.apple.com/us/playlist/todays-hits/pl.f4d106fed2bd41149aaacabb233eb5eb", tiktokUrls: ["https://www.tiktok.com/@scout2015/video/6718335390845095173", "https://www.tiktok.com/@scout2015/video/6718335390845095174"] };
@@ -24,10 +26,39 @@ describe("party editor organization", () => {
     expect(view.root.findByProps({ "aria-label": "Tag vendors in photo 1" }).props["aria-pressed"]).toBe(true);
     act(() => view.unmount());
   });
+  it("opens photo actions on one tap, edits the selected photo, and deletes the correct photo", () => {
+    const fetcher = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetcher);
+    let view!: ReactTestRenderer;
+    act(() => { view = create(createElement(PartyEventForm, { currentUserId: "owner", initialParty: { ...party, photos: [photo, { ...photo, id: "second" }] }, composer: true, users: [], vendors: [] })); });
+    act(() => view.root.findByProps({ "aria-label": "Edit photo 2 and tags" }).props.onClick());
+    expect(view.root.findByType(PartyPhotoActions).props.photo.id).toBe("second");
+    expect(view.root.findByType(PartyPhotoActions).props.children.props["aria-label"]).toBe("Tag vendors in this photo");
+    expect(view.root.findByType(PartyPhotoActions).props.children.props.children[1].props.photo.id).toBe("second");
+    act(() => view.root.findByType(PartyPhotoActions).props.onPrevious());
+    expect(view.root.findByType(PartyPhotoActions).props.children.props.children[1].props.photo.id).toBe("photo");
+    act(() => view.root.findByType(PartyPhotoActions).props.onNext());
+    act(() => view.root.findByType(PartyPhotoActions).props.onEdit());
+    expect(view.root.findAllByType(PartyPhotoActions)).toHaveLength(0);
+    expect(view.root.findByType(ImageCropEditor).props.aspectLabel).toBe("Edit party photo");
+    act(() => view.root.findByType(ImageCropEditor).props.onCancel());
+    act(() => view.root.findByProps({ "aria-label": "Edit photo 2 and tags" }).props.onClick());
+    act(() => view.root.findByType(PartyPhotoActions).props.onDelete());
+    expect(view.root.findAllByProps({ "aria-label": "Edit photo 2 and tags" })).toHaveLength(0);
+    expect(view.root.findAllByType(PartyPhotoActions)).toHaveLength(0);
+    expect(fetcher).toHaveBeenCalledWith("/api/party-photos/second", { method: "DELETE" });
+    expect(view.root.findByProps({ "aria-label": "Edit photo 1 and tags" })).toBeDefined();
+    act(() => view.root.findByProps({ "aria-label": "Open cover photo preview and actions" }).props.onClick());
+    expect(view.root.findByType(PartyPhotoActions).props.photo.id).toBe("photo");
+    act(() => view.unmount());
+    vi.unstubAllGlobals();
+  });
   it("places videos and playlists below the photo grid on the left and moves the tag panel up", () => {
     const html = renderToStaticMarkup(createElement(PartyEventForm, { currentUserId: "owner", initialParty: party, composer: true, users: [], vendors: [] }));
     if (process.env.PARTY_PREVIEW_OUTPUT) { mkdirSync(path.dirname(process.env.PARTY_PREVIEW_OUTPUT), { recursive: true }); writeFileSync(process.env.PARTY_PREVIEW_OUTPUT, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"></head><body><main class="container py-8"><p class="mb-5 text-sm">Local layout verification · sample party</p>${html}</main></body></html>`); }
     expect(html.indexOf('aria-label="Edit photo 1 and tags"')).toBeLessThan(html.indexOf('aria-label="Party links"'));
+    expect(html.indexOf("Edit photo 1 &amp; tag vendors")).toBeGreaterThan(0);
+    expect(html.indexOf("Edit photo 1 &amp; tag vendors")).toBeLessThan(html.indexOf('aria-label="Party links"'));
     expect(html.indexOf('aria-label="Party links"')).toBeLessThan(html.indexOf('aria-label="Party title"'));
     expect(html).toContain('class="order-1 space-y-5');
     expect(html).toContain('class="order-2 space-y-5');

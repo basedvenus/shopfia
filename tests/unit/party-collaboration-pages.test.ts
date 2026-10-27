@@ -1,3 +1,6 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 
@@ -5,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   db: {
     partyEvent: { findFirst: vi.fn(), findMany: vi.fn() },
-    partyCollaborator: { findMany: vi.fn() },
+    partyCollaborator: { findMany: vi.fn(), findFirst: vi.fn() },
     vendorProfile: { findMany: vi.fn() },
     user: { findMany: vi.fn(), findUnique: vi.fn() },
     notification: { findMany: vi.fn() },
@@ -59,6 +62,7 @@ beforeEach(() => {
   mocks.db.user.findUnique.mockResolvedValue({ partyEmailNotifications: false });
   mocks.db.notification.findMany.mockResolvedValue([]);
   mocks.db.follow.findUnique.mockResolvedValue(null);
+  mocks.db.partyCollaborator.findFirst.mockResolvedValue(null);
   mocks.db.partyCollaborator.findMany.mockImplementation(async ({ where }) => {
     if (where.eventId) {
       if (where.eventId !== event.id || where.event.userId !== event.userId) return [];
@@ -105,6 +109,24 @@ describe("owner editor collaborator selection", () => {
     expect(publicText).not.toContain("pending-cohost");
   });
 
+  it("organizes the mobile overview with one host row and collapsed pending invitations", async () => {
+    mocks.db.partyEvent.findFirst.mockResolvedValue({ ...event, title: "The best three years of our life !!", location: "4710 Natomas Blvd Ste 190, Sacramento, CA 95835, USA", eventDate: new Date("2025-11-01"), tags: ["kidsbirthday"], coverImageUrl: "/demo/fairfield-lemon-tablescape.png" });
+    const page = await EventPage({ params: Promise.resolve({ slug: event.slug }) });
+    const overview = elements(page).find((node) => node.props["aria-label"] === "Party overview")!;
+    const html = renderToStaticMarkup(overview);
+    expect(html).toContain("Hosted by");
+    expect(html).not.toContain("Posted by");
+    expect(html).toContain("Kids’ Birthday");
+    expect(html).toContain('<details');
+    expect(html).not.toContain('<details open');
+    expect(html).not.toContain('aria-label="Edit party and photos"');
+    expect(html.match(/>Edit party</g)).toHaveLength(1);
+    if (process.env.PARTY_HEADER_PREVIEW_OUTPUT) {
+      mkdirSync(path.dirname(process.env.PARTY_HEADER_PREVIEW_OUTPUT), { recursive: true });
+      writeFileSync(process.env.PARTY_HEADER_PREVIEW_OUTPUT, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"></head><body style="font-family:Arial,sans-serif"><main class="container py-6">${html}</main></body></html>`);
+    }
+  });
+
   it("shows a pending co-host status only to the event owner viewing their header", async () => {
     const page = await EventPage({ params: Promise.resolve({ slug: event.slug }) });
     expect(mocks.db.partyCollaborator.findMany).toHaveBeenCalledWith({
@@ -113,6 +135,31 @@ describe("owner editor collaborator selection", () => {
       orderBy: { createdAt: "asc" }
     });
     expect(elements(page).some((node) => node.props["aria-label"] === "Pending co-host invitations")).toBe(true);
+  });
+});
+
+describe("invitation on its party page", () => {
+  it.each(["GUEST", "CO_HOST"])("offers the invited %s a response on the party itself", async (role) => {
+    mocks.auth.mockResolvedValue({ user: { id: "recipient" } });
+    mocks.db.partyCollaborator.findFirst.mockResolvedValue({ id: "my-invite", role });
+    const page = await EventPage({ params: Promise.resolve({ slug: event.slug }) });
+    expect(mocks.db.partyCollaborator.findFirst).toHaveBeenCalledWith({
+      where: { eventId: "party", userId: "recipient", status: "PENDING", role: { in: ["GUEST", "CO_HOST"] } },
+      select: { id: true, role: true }
+    });
+    expect(elements(page).find((node) => node.type === PartyInvitationResponse)?.props.collaborationId).toBe("my-invite");
+    expect(elements(page).some((node) => node.props["aria-label"] === "Your party invitation")).toBe(true);
+  });
+  it.each(["accepted", "unrelated", "declined", "removed"])("has no invitation prompt for %s visitors", async (userId) => {
+    mocks.auth.mockResolvedValue({ user: { id: userId } });
+    const page = await EventPage({ params: Promise.resolve({ slug: event.slug }) });
+    expect(elements(page).some((node) => node.type === PartyInvitationResponse)).toBe(false);
+  });
+  it.each([null, "owner"])("never loads a response for %s", async (userId) => {
+    mocks.auth.mockResolvedValue(userId ? { user: { id: userId } } : null);
+    const page = await EventPage({ params: Promise.resolve({ slug: event.slug }) });
+    expect(mocks.db.partyCollaborator.findFirst).not.toHaveBeenCalled();
+    expect(elements(page).some((node) => node.type === PartyInvitationResponse)).toBe(false);
   });
 });
 

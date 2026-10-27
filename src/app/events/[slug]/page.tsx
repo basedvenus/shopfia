@@ -1,5 +1,6 @@
 import { PartyPhotoGallery } from "@/components/parties/party-photo-gallery";
 import { PartyContributions } from "@/components/parties/party-contributions";
+import { PartyInvitationResponse } from "@/components/parties/party-invitation-response";
 import { PartifulArtwork } from "@/components/parties/partiful-artwork";
 import { PartyMedia } from "@/components/parties/party-media";
 import { partyCategoryLabel, inferPartyOccasion, occasionTag } from "@/lib/party-occasions";
@@ -128,9 +129,14 @@ export default async function EventPage({
   }
   const host = event?.user ?? null;
   const hostBadge = getProfileBadge(host, originalMemberCutoff);
-  const hostHandle = host?.username ? `@${host.username}` : host?.name ?? "ShopFia host";
   const currentUserId = session?.user?.id ?? null;
   const isOwner = Boolean(currentUserId && host?.id && currentUserId === host.id);
+  const pendingInvitation = currentUserId && event && !isOwner
+    ? await db.partyCollaborator.findFirst({
+        where: { eventId: event.id, userId: currentUserId, status: "PENDING", role: { in: ["GUEST", "CO_HOST"] } },
+        select: { id: true, role: true }
+      })
+    : null;
   const showManagementLinks = canShowPartyManagementLinks(isOwner, Boolean(event));
   const visibleCollaborators = getVisiblePartyCollaborators((event?.collaborators ?? []).filter((person) => person.role !== "GUEST"), host);
   const pendingCoHosts = isOwner && event ? await db.partyCollaborator.findMany({
@@ -138,6 +144,8 @@ export default async function EventPage({
     select: { id: true, user: { select: { name: true, username: true } } },
     orderBy: { createdAt: "asc" }
   }) : [];
+  const canContribute = Boolean(!isOwner && currentUserId && event?.collaborators.some((person) => person.userId === currentUserId && person.status === "ACCEPTED"));
+  const showHeaderActions = Boolean(showManagementLinks && event || currentUserId && host && currentUserId !== host.id || canContribute);
   const guests = (event?.collaborators ?? []).filter((person) => person.role === "GUEST" && person.status === "ACCEPTED");
   const editRequested = resolvedSearchParams.edit === "1" || resolvedSearchParams.edit === "true";
   const isEditing = Boolean(editRequested && isOwner && event);
@@ -247,106 +255,72 @@ export default async function EventPage({
   }
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
-        <div className="relative min-h-[480px]">
-          {hero ? <PartyCoverEditor eventId={event?.id} slug={event?.slug} imageUrl={hero} crop={normalizeImageCrop(event?.coverImageCrop ?? safePhotos[0]?.crop)} editable={isOwner} /> : null}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          <div className="relative flex min-h-[480px] flex-col justify-end p-6 text-white md:p-8">
-            {!event ? <div className="mb-3 flex flex-wrap gap-2">
-              <Badge className="bg-white/15 text-white backdrop-blur" variant="default">Inspiration example</Badge>
-              {theme ? <Badge className="bg-white/15 text-white backdrop-blur" variant="default">{theme}</Badge> : null}
+      {pendingInvitation ? (
+        <section aria-label="Your party invitation" className="space-y-4 rounded-3xl border border-primary/25 bg-primary/5 p-5 sm:p-6">
+          <div>
+            <h2 className="text-xl font-semibold">You’re invited!</h2>
+            <p className="mt-2 text-sm text-muted-foreground">You’ve been invited to {title} as {pendingInvitation.role === "GUEST" ? "a guest" : "a co-host"}. Would you like to accept or decline?</p>
+          </div>
+          <PartyInvitationResponse collaborationId={pendingInvitation.id} />
+        </section>
+      ) : null}
+      <section aria-label="Party overview" className="overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-soft">
+        <div className="relative md:min-h-[480px]">
+          <div className="relative aspect-[4/3] overflow-hidden md:absolute md:inset-0 md:aspect-auto">
+            {hero ? <PartyCoverEditor eventId={event?.id} slug={event?.slug} imageUrl={hero} crop={normalizeImageCrop(event?.coverImageCrop ?? safePhotos[0]?.crop)} editable={false} /> : null}
+          </div>
+          <div className="pointer-events-none absolute inset-0 hidden bg-gradient-to-t from-black/85 via-black/35 to-transparent md:block" />
+          <div className="relative flex min-w-0 flex-col gap-4 p-5 text-foreground md:min-h-[480px] md:justify-end md:p-8 md:text-white">
+            {!event ? <div className="flex flex-wrap gap-2">
+              <Badge variant="default">Inspiration example</Badge>
+              {theme ? <Badge variant="default">{theme}</Badge> : null}
             </div> : null}
-            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">{title}</h1>
-
-            {event?.location && event.location !== "Private residence" ? (
-              <div className="mt-3 inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs text-white/85 backdrop-blur">
-                <MapPin className="h-3.5 w-3.5" />
-                {event.location}
-              </div>
-            ) : null}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {event?.eventDate ? (
-                <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs text-white/85 backdrop-blur">
-                  {formatPartyDate(event.eventDate)}
-                </span>
-              ) : null}
-
+            <h1 className="max-w-3xl break-words text-3xl font-semibold leading-tight tracking-tight md:text-5xl">{title}</h1>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {event?.eventDate ? <span className="rounded-full bg-muted px-3 py-1.5 md:bg-white/15">{formatPartyDate(event.eventDate)}</span> : null}
+              {tags.map((tag) => <span key={tag} className="rounded-full bg-primary/10 px-3 py-1.5 md:bg-white/15">{partyCategoryLabel(tag)}</span>)}
             </div>
-            {host ? (
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <div className="text-sm text-white/85">
-                  Posted by{" "}
-                  {host.username ? (
-                    <Link href={`/profiles/${host.username}`} className="font-semibold text-white underline-offset-4 hover:underline">
-                      {host.name ?? "ShopFia host"}
-                    </Link>
-                  ) : (
-                    <span className="font-semibold text-white">{host.name ?? "ShopFia host"}</span>
-                  )}{" "}
-                  <span className="text-white/70">{hostHandle}</span>
-                  <ProfileBadge badge={hostBadge} light className="ml-2 align-middle" />
-                </div>
-                {showManagementLinks && event ? (
-                  <Link href={`/events/${event.slug}?edit=1`}>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      className="border-white/80 bg-white text-foreground shadow-soft hover:bg-white/90"
-                    >
-                      Edit party
-                    </Button>
-                  </Link>
-                ) : null}
-                {session?.user?.id && session.user.id !== host.id ? (
-                  <form action={toggleFollow}>
-                    <input type="hidden" name="followingId" value={host.id} />
-                    <Button type="submit" size="sm" variant="secondary">
-                      {isFollowingHost ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}
-                      {isFollowingHost ? "Following" : "Follow"}
-                    </Button>
-                  </form>
-                ) : null}
-              </div>
+            {event?.location && event.location !== "Private residence" ? (
+              <p className="flex min-w-0 items-start gap-2 text-sm leading-6 text-muted-foreground md:text-white/85">
+                <MapPin className="mt-1 h-4 w-4 shrink-0" />
+                <span className="break-words">{event.location}</span>
+              </p>
             ) : null}
-            {guests.length > 0 ? <div className="mb-4 text-white"><p className="text-sm font-semibold">Guests</p><div className="flex flex-wrap gap-2">{guests.map((guest) => <Link key={guest.id} href={guest.user.username ? `/profiles/${guest.user.username}` : "#"} className="rounded-full bg-white/20 px-3 py-1 text-sm">{guest.user.name ?? guest.user.username ?? "Guest"}</Link>)}</div></div> : null}
             {visibleCollaborators.length > 0 ? (
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <div className="flex -space-x-2">
+              <div className="flex min-w-0 items-center gap-3 border-t border-border/60 pt-4 md:border-white/20">
+                <div className="flex shrink-0 -space-x-2">
                   {visibleCollaborators.slice(0, 5).map((collaborator) => (
-                    <Link
-                      key={collaborator.id}
-                      href={collaborator.user.username ? `/profiles/${collaborator.user.username}` : "#"}
-                      className="grid h-9 w-9 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/20 text-xs font-semibold text-white shadow-sm"
-                      title={collaborator.user.name ?? collaborator.user.username ?? "ShopFia host"}
-                    >
-                      {getSafeProfileImage(collaborator.user.image) ? (
-                        <img
-                          key={collaborator.user.image}
-                          src={getSafeProfileImage(collaborator.user.image) ?? ""}
-                          alt={collaborator.user.name ?? collaborator.user.username ?? "ShopFia host"}
-                          className="block h-full w-full object-cover object-center"
-                        />
-                      ) : (
-                        (collaborator.user.name ?? collaborator.user.username ?? "SF").slice(0, 2).toUpperCase()
-                      )}
+                    <Link key={collaborator.id} href={collaborator.user.username ? `/profiles/${collaborator.user.username}` : "#"} className="grid h-9 w-9 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/20 text-xs font-semibold shadow-sm" title={collaborator.user.name ?? collaborator.user.username ?? "ShopFia host"}>
+                      {getSafeProfileImage(collaborator.user.image) ? <img src={getSafeProfileImage(collaborator.user.image) ?? ""} alt={collaborator.user.name ?? collaborator.user.username ?? "ShopFia host"} className="block h-full w-full object-cover object-center" /> : (collaborator.user.name ?? collaborator.user.username ?? "SF").slice(0, 2).toUpperCase()}
                     </Link>
                   ))}
                 </div>
-                <p className="text-sm text-white/85">
-                  Hosted by {renderHostedBy(visibleCollaborators)}
-                </p>
+                <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+                  <p className="min-w-0 break-words">Hosted by {renderHostedBy(visibleCollaborators)}</p>
+                  {host && visibleCollaborators.some((person) => person.user.id === host.id) ? <ProfileBadge badge={hostBadge} /> : null}
+                </div>
               </div>
             ) : null}
-            {pendingCoHosts.length ? <div className="mt-3 flex flex-wrap gap-2" aria-label="Pending co-host invitations">{pendingCoHosts.map((person) => <span key={person.id} className="rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs">Co-host: {person.user.name ?? person.user.username ?? "Invited co-host"} · invitation pending</span>)}</div> : null}
-            {!isOwner && currentUserId && event?.collaborators.some((person) => person.userId === currentUserId && person.status === "ACCEPTED") ? <a href="#party-contributions" className="mt-4 w-fit rounded-full bg-white px-4 py-2 text-sm font-semibold text-foreground">Add photos, videos or playlists</a> : null}
-            <div className="mt-4 flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <span key={tag} className="rounded-full bg-white/15 px-3 py-1 text-xs backdrop-blur">
-                  {partyCategoryLabel(tag)}
-                </span>
-              ))}
-            </div>
+            {host && !visibleCollaborators.some((person) => person.user.id === host.id) ? (
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground md:text-white/85">
+                <p>Posted by {host.username ? <Link href={`/profiles/${host.username}`} className="font-semibold underline-offset-4 hover:underline">{host.name ?? host.username}</Link> : host.name ?? "ShopFia host"}</p>
+                <ProfileBadge badge={hostBadge} />
+              </div>
+            ) : null}
+            {guests.length > 0 ? <div className="space-y-2"><p className="text-sm font-semibold">Guests</p><div className="flex flex-wrap gap-2">{guests.map((guest) => <Link key={guest.id} href={guest.user.username ? `/profiles/${guest.user.username}` : "#"} className="rounded-full bg-muted px-3 py-1 text-sm md:bg-white/20">{guest.user.name ?? guest.user.username ?? "Guest"}</Link>)}</div></div> : null}
+            {pendingCoHosts.length ? (
+              <details className="rounded-2xl border border-border/60 p-3 text-sm md:border-white/20" aria-label="Pending co-host invitations">
+                <summary className="cursor-pointer font-medium">Pending co-host invitations ({pendingCoHosts.length})</summary>
+                <ul className="mt-2 space-y-1 text-muted-foreground md:text-white/85">{pendingCoHosts.map((person) => <li key={person.id}>{person.user.name ?? person.user.username ?? "Invited co-host"} · invitation pending</li>)}</ul>
+              </details>
+            ) : null}
+            {showHeaderActions ? (
+              <div className="flex flex-wrap items-center gap-3">
+                {showManagementLinks && event ? <Button asChild size="sm" variant="secondary" className="bg-white text-foreground shadow-sm"><Link href={`/events/${event.slug}?edit=1`}>Edit party</Link></Button> : null}
+                {session?.user?.id && host && session.user.id !== host.id ? <form action={toggleFollow}><input type="hidden" name="followingId" value={host.id} /><Button type="submit" size="sm" variant="secondary">{isFollowingHost ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}{isFollowingHost ? "Following" : "Follow"}</Button></form> : null}
+                {canContribute ? <Button asChild size="sm" variant="secondary"><a href="#party-contributions">Add photos, videos or playlists</a></Button> : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
@@ -439,11 +413,11 @@ function renderHostedBy(
           <span key={collaborator.user.username ?? `${name}-${index}`}>
             {index === 1 ? (collaborators.length === 2 ? " and " : ", ") : ""}
             {collaborator.user.username ? (
-              <Link href={`/profiles/${collaborator.user.username}`} className="font-semibold text-white underline-offset-4 hover:underline">
+              <Link href={`/profiles/${collaborator.user.username}`} className="font-semibold text-inherit underline-offset-4 hover:underline">
                 {name}
               </Link>
             ) : (
-              <span className="font-semibold text-white">{name}</span>
+              <span className="font-semibold text-inherit">{name}</span>
             )}
           </span>
         );

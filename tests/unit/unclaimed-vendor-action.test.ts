@@ -16,6 +16,16 @@ describe("guided unclaimed vendor creation", () => {
     expect(result.vendor).not.toHaveProperty("bookingDetails");
     expect(mocks.create.mock.calls[0][0].data).not.toHaveProperty("userId");
   });
+  it("credits a local store branch for a custom cake without requiring a vendor account", async () => {
+    const result = await createUnclaimedVendorAction({ ...input, name: "Baskin-Robbins", city: "Fairfield", categories: ["Stores & Local Shops", "Cakes & Desserts"], bookingChannel: "In-store purchase or custom order", bookingDetails: "Custom birthday cake ordered at the local shop" });
+    expect(result.ok).toBe(true);
+    expect(mocks.category.mock.calls.map(([query]) => query.where.name)).toEqual(["Stores & Local Shops", "Cakes & Desserts"]);
+    const saved = mocks.create.mock.calls[0][0].data;
+    expect(saved).toMatchObject({ name: "Baskin-Robbins", city: "Fairfield", state: "CA", status: "UNCLAIMED" });
+    expect(saved.communitySubmissions.create.bookingChannel).toBe("In-store purchase or custom order");
+    expect(saved).not.toHaveProperty("userId");
+    expect(result.vendor).not.toHaveProperty("bookingDetails");
+  });
   it.each([
     { city: "" }, { state: "" }, { state: "invalid" }, { categories: [] }, { bookingChannel: "" }, { bookingChannel: "made-up-channel" }
   ])("requires city, a vendor type, and an honest booking method: %j", async (change) => {

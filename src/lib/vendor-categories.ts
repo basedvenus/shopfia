@@ -3,6 +3,7 @@ export const VENDOR_CATEGORIES = [
   { name: "Backdrops", iconName: "image" },
   { name: "Balloons", iconName: "party-popper" },
   { name: "Cakes & Desserts", iconName: "cake" },
+  { name: "Stores & Local Shops", iconName: "store" },
   { name: "Catering & Beverages", iconName: "utensils-crossed" },
   { name: "Entertainment", iconName: "music" },
   { name: "Florals", iconName: "flower-2" },

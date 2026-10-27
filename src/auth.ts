@@ -11,12 +11,13 @@ import { authProviderConfig } from "@/lib/auth/provider-config";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { sendWelcomeEmail } from "@/lib/email";
 import { securityLog } from "@/lib/security/audit-log";
+import { lookupSessionAccount } from "@/lib/auth/session-resilience";
 import { getUserProfileImage } from "@/lib/profile-image";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(db) as Adapter,
   secret: authProviderConfig.authSecret,
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   trustHost: true,
   providers: [
     Credentials({
@@ -123,7 +124,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         const freshUser = token.sub
-          ? await db.user.findUnique({
+          ? await lookupSessionAccount(() => db.user.findUnique({
               where: { id: token.sub },
               select: {
                 id: true,
@@ -134,7 +135,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 role: true,
                 username: true
               }
-            }).catch((error) => {
+            })).catch((error) => {
               console.error("ShopFia session refresh failed", error);
               return null;
             })
