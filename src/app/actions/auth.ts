@@ -1,4 +1,5 @@
 "use server";
+import { collectPartyVendorRatings, persistPartyVendorRatings } from "@/lib/party-vendor-ratings";
 
 import { createHash } from "crypto";
 import { hash } from "bcryptjs";
@@ -531,6 +532,7 @@ export async function createPartyEventAction(formData: FormData) {
       })
     );
 
+    await persistPartyVendorRatings(tx, partyEvent.id, session.user.id, prepared.eventVendorIds, prepared.vendorRatings);
     return partyEvent;
   }, { maxWait: 10_000, timeout: 30_000 });
 
@@ -694,6 +696,7 @@ export async function updatePartyEventAction(formData: FormData) {
       })
     );
 
+    await persistPartyVendorRatings(tx, existingEvent.id, session.user.id, prepared.eventVendorIds, prepared.vendorRatings);
     return updatedEvent;
   }, { maxWait: 10_000, timeout: 30_000 });
 
@@ -735,7 +738,9 @@ export async function updatePartyCollaborationAction(formData: FormData) {
     return { ok: false, error: "Choose a valid collaboration action." };
   }
 
-  const collaboration = await db.partyCollaborator.updateMany({
+  let notificationEventId: string | undefined;
+  const collaboration = await db.$transaction(async (tx) => {
+    const updated = await tx.partyCollaborator.updateMany({
     where: {
       id: collaborationId,
       userId: session.user.id,
@@ -746,6 +751,22 @@ export async function updatePartyCollaborationAction(formData: FormData) {
         : PartyCollaborationStatus.PENDING
     },
     data: { status: nextStatus }
+    });
+    if (updated.count && action === "accept") {
+      const invitation = await tx.partyCollaborator.findFirst({
+        where: { id: collaborationId, userId: session.user.id },
+        select: { eventId: true, role: true, event: { select: { userId: true, slug: true, title: true } }, user: { select: { name: true, username: true } } }
+      });
+      if (invitation && invitation.event.userId !== session.user.id) {
+        notificationEventId = invitation.eventId;
+        await tx.notification.createMany({ data: [{
+          userId: invitation.event.userId, eventId: invitation.eventId, kind: "PARTY_INVITATION_ACCEPTED",
+          title: `${invitation.user.name ?? invitation.user.username ?? "A guest"} accepted your invitation to ${invitation.event.title}`,
+          href: `/events/${invitation.event.slug}`, dedupeKey: `party-accepted:${collaborationId}`
+        }], skipDuplicates: true });
+      }
+    }
+    return updated;
   });
 
   if (collaboration.count === 0) {
@@ -756,6 +777,7 @@ export async function updatePartyCollaborationAction(formData: FormData) {
     where: { userId: session.user.id, kind: "PARTY_INVITATION", readAt: null, event: { collaborators: { some: { id: collaborationId, userId: session.user.id } } } },
     data: { readAt: new Date() }
   });
+  if (notificationEventId) await deliverPartyNotificationEmails(notificationEventId).catch(() => undefined);
   revalidatePath("/notifications");
   revalidatePath("/my-parties");
   revalidatePath("/parties");
@@ -848,7 +870,10 @@ async function preparePartyPhotoPersistence({
     }
   });
   const uploadedPhotoIds = new Set(uploadedPhotos.map((photo) => photo.id));
-  const orderedPhotos = photos.filter((photo) => uploadedPhotoIds.has(photo.id));
+  const ownedPhotos = photos.filter((photo) => uploadedPhotoIds.has(photo.id));
+  const savedRatings = eventId ? await db.partyVendorRating.findMany({ where: { eventId, userId }, select: { vendorId: true, rating: true } }) : [];
+  const vendorRatings = collectPartyVendorRatings(ownedPhotos, Object.fromEntries(savedRatings.map((item) => [item.vendorId, item.rating])));
+  const orderedPhotos = ownedPhotos.map((photo) => ({ ...photo, vendorRatings: Object.fromEntries(photo.vendorIds.filter((id) => vendorRatings[id]).map((id) => [id, vendorRatings[id]])) }));
 
   const validVendors = await db.vendorProfile.findMany({
     where: {
@@ -880,6 +905,7 @@ async function preparePartyPhotoPersistence({
     eventVendorIds,
     imageUrls,
     orderedPhotos,
+    vendorRatings,
     validVendorIds
   };
 }
@@ -928,12 +954,12 @@ async function persistPartyPhotoVendorCredits({
         },
         update: {
           contributionNote: normalizeContributionNote(photo.vendorContributions[vendorId]),
-          rating: photo.vendorRatings[vendorId] ?? null
+          rating: null
         },
         create: {
           contributionNote: normalizeContributionNote(photo.vendorContributions[vendorId]),
           photoId: photo.id,
-          rating: photo.vendorRatings[vendorId] ?? null,
+          rating: null,
           userId,
           vendorId
         }

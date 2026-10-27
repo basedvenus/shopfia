@@ -1,3 +1,4 @@
+import { ShareUnclaimedVendor } from "@/components/vendor/share-unclaimed-vendor";
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
@@ -220,7 +221,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className={`flex flex-col gap-8 rounded-[1.25rem] bg-gradient-to-br ${palette.className} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
+    <div className={`flex flex-col gap-3 rounded-[1.75rem] p-4 md:p-8 ${theme.shellClass}`} style={theme.bodyStyle}>
       {isOwnerViewing ? (
         <div className="sticky top-0 z-30 flex flex-col gap-2 rounded-[1rem] border border-[#eadbd7] bg-white/95 px-3 py-2 shadow-[0_12px_34px_rgba(47,38,38,0.10)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
@@ -243,10 +244,10 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           </div>
         </div>
       ) : null}
-      <header className="overflow-hidden rounded-[1rem] border bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]" style={theme.headerShellStyle}>
+      <header className="overflow-hidden" style={theme.headerShellStyle}>
         <div className="flex items-center justify-between gap-3 border-b px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]" style={theme.platformBarStyle}>
           <span>ShopFia Storefront</span>
-          <span className="hidden sm:inline">{isUnclaimed ? "Community-tagged · Unclaimed business" : "Verified identity, saved services, quotes, and bookings"}</span>
+          <span className="hidden sm:inline">{isUnclaimed ? "Community-tagged · Unclaimed business" : "Services, photos, and real party credits"}</span>
         </div>
         <div className="grid gap-3 p-3 md:grid-cols-[auto_1fr_auto] md:items-center md:p-4">
           <div className={`relative h-20 w-20 overflow-hidden border border-[#eadbd7] bg-[#f8ece9] md:h-24 md:w-24 ${theme.logoRadius}`}>
@@ -286,7 +287,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
                   {serviceAreaLabel}
-                  {vendor.serviceRadiusMiles ? ` + ${vendor.serviceRadiusMiles} mi` : ""}
+                  {!isUnclaimed && vendor.serviceRadiusMiles ? ` + ${vendor.serviceRadiusMiles} mi` : ""}
                 </span>
               ) : null}
             </div>
@@ -295,9 +296,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 <Star className="h-4 w-4 fill-current text-amber-500" />
                 {verifiedReviewCount > 0 ? `${verifiedAverageRating.toFixed(1)} (${verifiedReviewCount})` : "No reviews yet"}
               </span>
-              <span>{completedOrderCount} completed ShopFia event{completedOrderCount === 1 ? "" : "s"}</span>
-              <span>{followerCount} follower{followerCount === 1 ? "" : "s"}</span>
-              <span>{savedVendorCount} save{savedVendorCount === 1 ? "" : "s"}</span>
+              {completedOrderCount > 0 ? <span>{completedOrderCount} completed ShopFia event{completedOrderCount === 1 ? "" : "s"}</span> : null}
+              {followerCount > 0 ? <span>{followerCount} follower{followerCount === 1 ? "" : "s"}</span> : null}
+              {savedVendorCount > 0 ? <span>{savedVendorCount} save{savedVendorCount === 1 ? "" : "s"}</span> : null}
             </div>
           </div>
 
@@ -338,6 +339,13 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         />
       </header>
 
+      {isUnclaimed ? <section aria-label="Unclaimed business" className="rounded-3xl border-2 border-primary/40 bg-white p-5 sm:p-6">
+        <p className="text-xs font-bold uppercase tracking-widest text-primary">Unclaimed business</p>
+        <h2 className="mt-2 text-xl font-semibold">Know {vendor.name}?</h2>
+        <p className="mt-2 text-sm text-muted-foreground">This is a community-created listing. The business has not created or verified this profile, and its service area has not been confirmed.</p>
+        <p className="mt-2 text-sm">Share this profile with the owner so they can learn about ShopFia and request an ownership review.</p>
+        <ShareUnclaimedVendor name={vendor.name} url={publicStorefrontUrl} />
+      </section> : null}
       <StorefrontTemplateIntro
         completedOrderCount={completedOrderCount}
         coverCrop={coverCrop}
@@ -740,7 +748,7 @@ function StorefrontTemplateIntro({
   const detailPanel = (
     <div className={`grid gap-4 p-5 text-sm ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
       <TemplateFact label="Starting at" value={vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Custom quote"} theme={theme} />
-      <TemplateFact label="Service area" value={vendor.serviceAreaNotes ?? `${serviceAreaLabel || "Local events"} within ${vendor.serviceRadiusMiles} miles`} theme={theme} />
+      <TemplateFact label="Service area" value={isUnclaimed ? "Service area not confirmed by the business" : vendor.serviceAreaNotes ?? `${serviceAreaLabel || "Local events"} within ${vendor.serviceRadiusMiles} miles`} theme={theme} />
       <TemplateFact label="Lead time" value={vendor.availabilityNotes ?? "Availability confirmed in ShopFia messages"} theme={theme} />
       <TemplateFact label="ShopFia events" value={`${completedOrderCount} completed`} theme={theme} />
       {verifiedCredentials.length ? (
@@ -770,14 +778,13 @@ function StorefrontTemplateIntro({
       <section id="storefront-home" className="scroll-mt-28 overflow-hidden" style={{ order: 0 }}>
         <div className={`grid gap-5 p-5 md:grid-cols-[1fr_auto] md:items-center md:p-8 ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
           <div className="flex min-w-0 flex-wrap items-center gap-4">
-            {logo}
             <div className="min-w-0">
-              <h2 className="text-3xl font-semibold tracking-tight md:text-4xl" style={theme.headingStyle}>{vendor.name}</h2>
+              {heroHeadline !== vendor.name ? <h2 className="text-3xl font-semibold tracking-tight md:text-4xl" style={theme.headingStyle}>{heroHeadline}</h2> : null}
               <div className={`mt-2 flex flex-wrap gap-3 text-sm ${theme.copyClass}`}>
                 <span className="inline-flex items-center gap-1"><Star className="h-4 w-4 fill-current text-amber-500" />{verifiedReviewCount > 0 ? `${verifiedAverageRating.toFixed(1)} (${verifiedReviewCount})` : "No reviews yet"}</span>
-                <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" />{serviceAreaLabel || vendor.city} within {vendor.serviceRadiusMiles} miles</span>
+                <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" />{serviceAreaLabel || vendor.city}{isUnclaimed ? " · Service area not confirmed" : ` within ${vendor.serviceRadiusMiles} miles`}</span>
               </div>
-              <p className={`mt-3 max-w-2xl text-sm leading-6 ${theme.copyClass}`}>{introCopy}</p>
+              <p className={`mt-3 max-w-2xl text-xl leading-8 ${theme.copyClass}`}>{introCopy}</p>
             </div>
           </div>
           {quoteButton}
@@ -789,13 +796,13 @@ function StorefrontTemplateIntro({
 
   if (layout === "BRAND_SPOTLIGHT") {
     return (
-      <section id="storefront-home" className={`scroll-mt-28 overflow-hidden p-6 text-white md:p-10 ${theme.heroRadius}`} style={{ ...theme.accentBlockStyle, order: 0 }}>
+      <section id="storefront-home" className={`scroll-mt-28 overflow-hidden p-6 md:p-10 ${theme.heroRadius}`} style={{ ...theme.cardStyle, order: 0 }}>
         <div className="mx-auto grid max-w-5xl justify-items-center gap-6 text-center">
           {logo}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">Featured storefront</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Featured storefront</p>
             <h2 className="mt-4 text-4xl font-semibold leading-tight md:text-6xl" style={theme.headingStyle}>{heroHeadline}</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-white/86">{introCopy}</p>
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground">{introCopy}</p>
           </div>
           <div className="w-full max-w-4xl">{detailPanel}</div>
           {quoteButton}
@@ -813,7 +820,7 @@ function StorefrontTemplateIntro({
             <h2 className="text-3xl font-semibold tracking-tight" style={theme.headingStyle}>{vendor.name}</h2>
             <p className={`mt-3 text-sm leading-6 ${theme.copyClass}`}>{introCopy}</p>
           </div>
-          <span className={`inline-flex items-center gap-1 text-sm ${theme.copyClass}`}><MapPin className="h-4 w-4" />{serviceAreaLabel || vendor.city} within {vendor.serviceRadiusMiles} miles</span>
+          <span className={`inline-flex items-center gap-1 text-sm ${theme.copyClass}`}><MapPin className="h-4 w-4" />{serviceAreaLabel || vendor.city}{isUnclaimed ? " · Service area not confirmed" : ` within ${vendor.serviceRadiusMiles} miles`}</span>
           {quoteButton}
         </aside>
         <div className="grid gap-5">
@@ -839,7 +846,7 @@ function StorefrontTemplateIntro({
 
   return (
     <section id="storefront-home" className={`grid scroll-mt-28 overflow-hidden ${theme.cardClass} ${theme.sectionRadius} md:grid-cols-[minmax(0,1fr)_minmax(360px,0.88fr)]`} style={{ ...theme.cardStyle, order: 0 }}>
-      <div className="relative min-h-[360px] bg-muted md:min-h-[540px]">
+      <div className={`relative min-h-[360px] overflow-hidden bg-[#f6f4f1] md:min-h-[460px] ${theme.imageRadius}`}>
         {hero ? (
           <Image
             src={hero}
@@ -853,10 +860,9 @@ function StorefrontTemplateIntro({
           <NeutralVendorPlaceholder label={primaryCategory} />
         )}
       </div>
-      <div className="grid content-center justify-items-center gap-5 p-6 text-center md:p-10">
-        {logo}
+      <div className="grid content-center justify-items-start gap-5 p-6 text-left md:p-10">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em]" style={theme.accentTextStyle}>Featured storefront</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em]" style={theme.accentTextStyle}>{primaryCategory}</p>
           <h2 className="mt-4 text-4xl font-semibold leading-tight md:text-6xl" style={theme.headingStyle}>{heroHeadline}</h2>
           <p className={`mx-auto mt-4 max-w-lg text-base leading-7 ${theme.copyClass}`}>{introCopy}</p>
         </div>
@@ -1103,7 +1109,7 @@ function getStorefrontTheme({
   const logoRadius = imageShape === "SQUARE" ? "rounded-[0.35rem]" : imageShape === "SOFT" ? "rounded-[1rem]" : "rounded-full";
   const fontFamilies = getStorefrontFontFamilies(fontStyle);
   const paletteConfig = STOREFRONT_PALETTES.find((item) => item.value === palette) ?? STOREFRONT_PALETTES[0];
-  const accent = paletteConfig.accent;
+  const accent = palette === "MATCHA_SOFT" ? "#526747" : palette === "BLUSH" ? "#92505d" : palette === "LAVENDER" ? "#725481" : paletteConfig.accent;
   const ctaBackground = "gradient" in paletteConfig ? paletteConfig.gradient : accent;
   const ctaText = "ctaText" in paletteConfig ? paletteConfig.ctaText : "#ffffff";
   const accentSoft = `${accent}24`;
@@ -1117,11 +1123,11 @@ function getStorefrontTheme({
     activeNavItemStyle: { backgroundColor: accentSoft, color: isDark ? "#ffffff" : "#2f2626" } as CSSProperties,
     bodyStyle: { fontFamily: fontFamilies.body } as CSSProperties,
     badgeStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
-    cardStyle: { borderColor: isDark ? `${accent}44` : `${accent}40` } as CSSProperties,
-    cardClass: isDark ? "border border-white/15 bg-[#201b1e]/88 text-white" : "border bg-white/88 text-[#2f2626]",
+    cardStyle: { borderWidth: 0, boxShadow: "0 6px 24px rgba(74,45,62,0.05)", backgroundColor: isDark ? "#242124" : "#ffffff" } as CSSProperties,
+    cardClass: isDark ? "text-white" : "text-[#2f2626]",
     ctaStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
     copyClass: isDark ? "text-white/86" : "text-[#5f5550]",
-    headerShellStyle: { borderColor: `${accent}55` } as CSSProperties,
+    headerShellStyle: { borderWidth: 0, boxShadow: "none" } as CSSProperties,
     headingStyle: { fontFamily: fontFamilies.heading } as CSSProperties,
     heroChipStyle: { backgroundColor: `${accent}33`, borderColor: `${accent}99`, color: "#ffffff" } as CSSProperties,
     heroCtaStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
@@ -1129,13 +1135,13 @@ function getStorefrontTheme({
     imageRadius,
     logoRadius,
     mutedClass: isDark ? "text-white/62" : "text-muted-foreground",
-    navStyle: { borderColor: `${accent}33` } as CSSProperties,
+    navStyle: { borderWidth: 0 } as CSSProperties,
     outlineBadgeStyle: { backgroundColor: accentWash, borderColor: `${accent}66`, color: isDark ? "#ffffff" : "#4b403c" } as CSSProperties,
-    platformBarStyle: { backgroundColor: accentWash, borderColor: `${accent}33`, color: isDark ? "#ffffffcc" : "#5f5550" } as CSSProperties,
+    platformBarStyle: { backgroundColor: "transparent", borderWidth: 0, color: isDark ? "#ffffffcc" : "#5f5550" } as CSSProperties,
     profileMetricClass: isDark ? "text-white/78" : "text-[#4b403c]",
     secondaryButtonStyle: { backgroundColor: accentWash, borderColor: `${accent}66`, color: isDark ? "#ffffff" : "#4b403c" } as CSSProperties,
     sectionRadius,
-    shellClass: isDark ? "text-white" : "text-[#2f2626]",
+    shellClass: isDark ? "bg-[#181619] text-white" : "bg-[#fbf0f3] text-[#2f2626]",
     floatingButtonStyle: { backgroundColor: isDark ? "#201b1eee" : "#fffffff2", borderColor: `${accent}66`, color: accent } as CSSProperties,
     softChipStyle: { backgroundColor: accentSoft, color: isDark ? "#ffffffcc" : "#5f5550" } as CSSProperties
   };

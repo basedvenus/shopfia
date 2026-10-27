@@ -8,9 +8,11 @@ import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete
 import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { CountySelector } from "@/components/parties/county-selector";
+import { collectPartyVendorRatings } from "@/lib/party-vendor-ratings";
 import { PartyMedia } from "@/components/parties/party-media";
 import { getAppleMusicPlaylist, getTikTokVideo, isTikTokShareUrl, getSpotifyPlaylist } from "@/lib/party-media";
 import { ImageCropEditor } from "@/components/ui/image-crop-editor";
+import { partyPhotoEditorUrl } from "@/lib/party-photo-url";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DEFAULT_IMAGE_CROP, normalizePartyPhotoCrop, type ImageCrop } from "@/lib/image-crop";
@@ -49,6 +51,7 @@ type UploadedPartyPhoto = {
 };
 
 export type EditablePartyEvent = {
+  vendorRatings?: Record<string, number>;
   id: string;
   slug: string;
   title: string;
@@ -97,10 +100,12 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
   const [photos, setPhotos] = useState<UploadedPartyPhoto[]>(() =>
     (initialParty?.photos ?? []).map((photo) => ({
       ...photo,
+      url: partyPhotoEditorUrl(photo.url),
       crop: { ...normalizePartyPhotoCrop(photo.crop), zoom: Math.max(1, photo.crop.zoom) },
       vendorContributions: photo.vendorContributions ?? {}
     }))
   );
+  const [partyVendorRatings, setPartyVendorRatings] = useState(() => collectPartyVendorRatings(initialParty?.photos ?? [], initialParty?.vendorRatings));
   const [vendorOptions, setVendorOptions] = useState<VendorOption[]>(vendors);
   const [mainHostId, setMainHostId] = useState(initialParty?.mainHostId ?? currentUserId);
   const [tiktokUrls, setTikTokUrls] = useState<string[]>(() => initialParty?.tiktokUrls?.length ? initialParty.tiktokUrls : [initialParty?.tiktokUrl ?? ""]);
@@ -232,7 +237,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
       onSubmit={(event) => { if (!isEditing && step === 1) { event.preventDefault(); goToVendors(); } }}
       action={(formData) => {
         setMessage(null);
-        const missingRatingPhoto = photos.find((photo) => photo.vendorIds.some((id) => !photo.vendorRatings?.[id]));
+        const missingRatingPhoto = photos.find((photo) => photo.vendorIds.some((id) => !partyVendorRatings[id]));
         if (missingRatingPhoto) {
           setSelectedPhotoId(missingRatingPhoto.id);
           setStep(2);
@@ -248,7 +253,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         coHostIds.forEach((id) => formData.append("coHostIds", id));
         formData.set(
           "photos",
-          JSON.stringify(photos.map(({ crop, id, vendorContributions, vendorIds, vendorRatings }) => ({ crop, id, vendorContributions, vendorIds, vendorRatings })))
+          JSON.stringify(photos.map(({ crop, id, vendorContributions, vendorIds }) => ({ crop, id, vendorContributions, vendorIds, vendorRatings: Object.fromEntries(vendorIds.filter((vendorId) => partyVendorRatings[vendorId]).map((vendorId) => [vendorId, partyVendorRatings[vendorId]])) })))
         );
 
         startTransition(async () => {
@@ -462,7 +467,8 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
               <PhotoVendorTagger key={selectedPhoto.id} currentUserId={currentUserId}
                 onAddVendor={(vendorId) => togglePhotoVendor(selectedPhoto.id, vendorId, true)}
                 onContributionChange={(vendorId, contribution) => setPhotoVendorContribution(selectedPhoto.id, vendorId, contribution)}
-                onRatingChange={(vendorId, rating) => setPhotos((current) => current.map((photo) => photo.vendorIds.includes(vendorId) ? { ...photo, vendorRatings: { ...photo.vendorRatings, [vendorId]: rating } } : photo))}
+                partyVendorRatings={partyVendorRatings}
+                onRatingChange={(vendorId, rating) => setPartyVendorRatings((current) => ({ ...current, [vendorId]: rating }))}
                 onCreateVendor={(initialName) => setNewVendorModal({ initialName, photoId: selectedPhoto.id })}
                 onRemoveVendor={(vendorId) => togglePhotoVendor(selectedPhoto.id, vendorId, false)}
                 photo={selectedPhoto} vendors={vendorOptions} />
@@ -715,6 +721,7 @@ function formatDateInputValue(value?: Date | string | null) {
 }
 
 function PhotoVendorTagger({
+  partyVendorRatings,
   currentUserId,
   onAddVendor,
   onContributionChange,
@@ -727,12 +734,14 @@ function PhotoVendorTagger({
   currentUserId: string;
   onAddVendor: (vendorId: string) => void;
   onContributionChange: (vendorId: string, contribution: string) => void;
+  partyVendorRatings: Record<string, number>;
   onRatingChange: (vendorId: string, rating: number) => void;
   onCreateVendor: (initialName: string) => void;
   onRemoveVendor: (vendorId: string) => void;
   photo: UploadedPartyPhoto;
   vendors: VendorOption[];
 }) {
+  const [editingRating, setEditingRating] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const selectedVendors = vendors.filter((vendor) => photo.vendorIds.includes(vendor.id));
@@ -856,19 +865,19 @@ function PhotoVendorTagger({
                 </button>
               </div>
               <VendorFollowPrompt vendor={vendor} currentUserId={currentUserId} />
-              <fieldset className="mt-4">
+              {partyVendorRatings[vendor.id] && editingRating !== vendor.id ? <div className="mt-4 flex flex-wrap items-center gap-2 text-sm"><span>Your rating: {partyVendorRatings[vendor.id]} / 5 · once per party</span><button type="button" className="text-primary underline" onClick={() => setEditingRating(vendor.id)}>Edit rating</button></div> : <fieldset className="mt-4">
                 <legend className="text-sm font-semibold">How was your experience with {vendor.name}?</legend>
-                <p className="mt-1 text-xs text-muted-foreground">Required · rate the vendor you used for this party.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Required once per party · your rating applies to every photo you tag.</p>
                 <div className="mt-2 flex gap-1" role="radiogroup" aria-label={`Rate ${vendor.name}`}>
                   {[1, 2, 3, 4, 5].map((rating) => (
-                    <button key={rating} type="button" role="radio" aria-checked={(photo.vendorRatings?.[vendor.id] ?? 0) === rating}
-                      aria-label={`${rating} star${rating === 1 ? "" : "s"}`} onClick={() => onRatingChange(vendor.id, rating)}
+                    <button key={rating} type="button" role="radio" aria-checked={(partyVendorRatings[vendor.id] ?? 0) === rating}
+                      aria-label={`${rating} star${rating === 1 ? "" : "s"}`} onClick={() => { onRatingChange(vendor.id, rating); setEditingRating(null); }}
                       className="rounded-lg p-2 text-amber-600 hover:bg-amber-50 focus-visible:outline focus-visible:outline-2">
-                      <Star className={`h-6 w-6 ${(photo.vendorRatings?.[vendor.id] ?? 0) >= rating ? "fill-current" : ""}`} />
+                      <Star className={`h-6 w-6 ${(partyVendorRatings[vendor.id] ?? 0) >= rating ? "fill-current" : ""}`} />
                     </button>
                   ))}
                 </div>
-              </fieldset>
+              </fieldset>}
               <div className="mt-3 grid gap-1.5">
                 <label className="text-xs font-medium text-muted-foreground" htmlFor={`vendor-credit-${photo.id}-${vendor.id}`}>
                   Contribution note
@@ -933,6 +942,7 @@ async function uploadPartyPhoto(file: File) {
 
   return {
     ...result.photo,
+    url: partyPhotoEditorUrl(result.photo.url),
     crop: DEFAULT_IMAGE_CROP,
     vendorIds: [],
     vendorContributions: {},

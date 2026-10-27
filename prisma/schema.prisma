@@ -247,6 +247,7 @@ model User {
   notifications          Notification[]
   partyEmailNotifications Boolean @default(false)
   vendorSubmissions      VendorCommunitySubmission[]
+  partyVendorRatings PartyVendorRating[]
   partyPhotoVendorRatings PartyPhotoVendorRating[]
   following              Follow[]          @relation("Follower")
   followers              Follow[]          @relation("Following")
@@ -417,6 +418,7 @@ model VendorProfile {
   inquiries                 Inquiry[]
   taggedPartyEvents         PartyEvent[]            @relation("PartyEventTaggedVendors")
   taggedPartyPhotos         PartyPhoto[]            @relation("PartyPhotoTaggedVendors")
+  partyVendorRatings        PartyVendorRating[]
   partyPhotoRatings         PartyPhotoVendorRating[]
   storefrontMedia           VendorStorefrontMedia[]
 
@@ -500,6 +502,7 @@ model PartyEvent {
   collaborators PartyCollaborator[]
   comments      PartyComment[]
   contributions PartyContribution[]
+  vendorRatings PartyVendorRating[]
   notifications Notification[]
   taggedVendors VendorProfile[] @relation("PartyEventTaggedVendors")
   favorites     Favorite[] @relation("PartyEventFavorites")
@@ -562,6 +565,21 @@ model PartyPhoto {
 
   @@index([eventId, sortOrder])
   @@index([userId, createdAt])
+}
+
+model PartyVendorRating {
+  id        String @id @default(cuid())
+  eventId   String
+  userId    String
+  vendorId  String
+  rating    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  event     PartyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  @@unique([eventId, userId, vendorId])
+  @@index([vendorId, createdAt])
 }
 
 model PartyPhotoVendorRating {

@@ -69,6 +69,7 @@ export default async function EventPage({
             vendorRatings: true
           }
         },
+        vendorRatings: { where: { userId: session?.user?.id ?? "" }, select: { vendorId: true, rating: true } },
         contributions: { where: { status: "APPROVED" }, select: { tiktokUrl: true, appleMusicUrl: true, spotifyUrl: true }, orderBy: { createdAt: "asc" }, take: 100 },
         collaborators: {
           where: { status: "ACCEPTED" },
@@ -177,12 +178,13 @@ export default async function EventPage({
         locationLat: event.locationLat,
         locationLng: event.locationLng,
         googlePlaceId: event.googlePlaceId,
+        vendorRatings: Object.fromEntries(event.vendorRatings.map((rating) => [rating.vendorId, rating.rating])),
         photos: event.photos.map((photo) => ({
           id: photo.id,
           url: partyPhotoUrl(photo.id, photo.updatedAt, { width: 1400 }),
           crop: normalizePartyPhotoCrop(photo.crop),
           vendorIds: photo.taggedVendors.map((vendor) => vendor.id),
-          vendorRatings: Object.fromEntries(photo.vendorRatings.filter((credit) => credit.rating !== null).map((credit) => [credit.vendorId, credit.rating!])),
+          vendorRatings: Object.fromEntries(event.vendorRatings.filter((rating) => photo.taggedVendors.some((vendor) => vendor.id === rating.vendorId)).map((rating) => [rating.vendorId, rating.rating])),
           vendorContributions: Object.fromEntries(
             photo.vendorRatings
               .filter((credit) => credit.contributionNote)
@@ -372,9 +374,9 @@ export default async function EventPage({
                 return (
                   <article
                     key={vendor.id}
-                    className="rounded-[1.25rem] border border-[#eadbd7] bg-white/85 p-3 transition hover:-translate-y-0.5 hover:shadow-soft"
+                    className="relative rounded-[1.25rem] border border-[#eadbd7] bg-white/85 p-3 transition hover:-translate-y-0.5 hover:shadow-soft"
                   >
-                    <a href={taggedPhotoAnchor} className="flex items-center gap-3">
+                    <Link href={storefrontPath(vendor.slug)} aria-label={`View ${vendor.name} storefront`} className="flex items-center gap-3 after:absolute after:inset-0 after:rounded-[1.25rem] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-primary">
                       {vendor.status !== "UNCLAIMED" && vendor.logoUrl ? (
                         <img src={vendor.logoUrl} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover" />
                       ) : null}
@@ -387,12 +389,12 @@ export default async function EventPage({
                             : "Tagged on this party"}
                         </span>
                       </span>
-                    </a>
+                    </Link>
                     <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#f1e2dd] pt-3">
-                      <a href={taggedPhotoAnchor} className="text-xs font-semibold text-primary underline-offset-4 hover:underline">
+                      <a href={taggedPhotoAnchor} className="relative z-10 text-xs font-semibold text-primary underline-offset-4 hover:underline">
                         Show tagged photos
                       </a>
-                      <Link href={storefrontPath(vendor.slug)} className="text-xs font-semibold text-foreground underline-offset-4 hover:underline">
+                      <Link href={storefrontPath(vendor.slug)} className="relative z-10 text-xs font-semibold text-foreground underline-offset-4 hover:underline">
                         View storefront
                       </Link>
                     </div>
