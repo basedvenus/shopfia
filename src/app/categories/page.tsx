@@ -1,3 +1,4 @@
+import { VENDOR_CATEGORY_NAMES } from "@/lib/vendor-categories";
 import Link from "next/link";
 import { Armchair, Baby, BriefcaseBusiness, CakeSlice, Clapperboard, Flower2, Gift, GraduationCap, HeartHandshake, PanelsTopLeft, PartyPopper, Sparkles, UtensilsCrossed } from "lucide-react";
 import { CategoryAudience } from "@prisma/client";
@@ -80,17 +81,7 @@ export default async function CategoriesPage() {
   );
 }
 
-const serviceCategoryOrder = [
-  "Backdrops",
-  "Balloons",
-  "Cakes & Desserts",
-  "Catering & Beverages",
-  "Children's Entertainment",
-  "Entertainment",
-  "Florals",
-  "Party Rentals",
-  "Styling & Decor"
-];
+const serviceCategoryOrder: string[] = [...VENDOR_CATEGORY_NAMES];
 
 const eventCategoryOrder = [
   "Baby Shower",
@@ -137,7 +128,6 @@ function CategoryIcon({ name }: { name: string }) {
     Backdrops: PanelsTopLeft,
     "Cakes & Desserts": CakeSlice,
     "Catering & Beverages": UtensilsCrossed,
-    "Children's Entertainment": Baby,
     Entertainment: Clapperboard,
     Florals: Flower2,
     "Party Rentals": Armchair,

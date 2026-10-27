@@ -1,5 +1,6 @@
 "use server";
 
+import { normalizeVendorCategoryId, normalizeVendorCategoryName } from "@/lib/vendor-categories";
 import { US_STATE_CODES } from "@/lib/us-states";
 import { UNCLAIMED_VENDOR_CATEGORIES, VENDOR_BOOKING_CHANNELS } from "@/lib/unclaimed-vendor";
 import { revalidatePath } from "next/cache";
@@ -87,7 +88,7 @@ export async function createUnclaimedVendorAction(input: {
 
   const parsed = unclaimedVendorSchema.safeParse({
     ...input,
-    categories: input.categories?.length ? input.categories : input.category ? [input.category] : []
+    categories: [...new Set((input.categories?.length ? input.categories : input.category ? [input.category] : []).map(normalizeVendorCategoryName))]
   });
   if (!parsed.success) {
     return {
@@ -762,7 +763,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
     storefrontAccentColor: formData.get("storefrontAccentColor") || undefined,
     storefrontSectionOrder: formDataToArray(formData, "storefrontSectionOrder"),
     logoUrl: formData.get("logoUrl") || undefined,
-    categoryIds: formDataToArray(formData, "categoryIds"),
+    categoryIds: [...new Set(formDataToArray(formData, "categoryIds").map(normalizeVendorCategoryId))],
     photoUrls: formDataToArray(formData, "photoUrls")
   });
   if (!result.success) {
@@ -963,8 +964,8 @@ export async function upsertOfferingAction(formData: FormData) {
     description: formData.get("description"),
     basePriceCents: formData.get("basePriceCents") || (dollarsToCents(formData.get("startingPrice")) ?? undefined),
     messageForPricing: formData.get("messageForPricing") === "on",
-    categoryId: formData.get("categoryId") || undefined,
-    categoryIds: formDataToArray(formData, "categoryIds"),
+    categoryId: formData.get("categoryId") ? normalizeVendorCategoryId(String(formData.get("categoryId"))) : undefined,
+    categoryIds: [...new Set(formDataToArray(formData, "categoryIds").map(normalizeVendorCategoryId))],
     eventCategoryIds: formDataToArray(formData, "eventCategoryIds"),
     tags: [],
     photos: formDataToArray(formData, "photos"),

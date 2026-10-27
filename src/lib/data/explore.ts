@@ -1,3 +1,4 @@
+import { VENDOR_CATEGORY_NAMES, normalizeVendorCategoryId } from "@/lib/vendor-categories";
 import { CategoryAudience, Prisma } from "@prisma/client";
 import { exploreSearchSchema } from "@/lib/validators/search";
 import type { z } from "zod";
@@ -181,17 +182,7 @@ async function locationPage<T>(
   return { items: matches.slice(0, limit), truncated: skip >= maxCandidates };
 }
 
-const serviceCategoryOrder = [
-  "Backdrops",
-  "Balloons",
-  "Cakes & Desserts",
-  "Catering & Beverages",
-  "Children's Entertainment",
-  "Entertainment",
-  "Florals",
-  "Party Rentals",
-  "Styling & Decor"
-];
+const serviceCategoryOrder: string[] = [...VENDOR_CATEGORY_NAMES];
 
 const eventCategoryOrder = [
   "Baby Shower",
@@ -242,7 +233,7 @@ export async function getExploreData(input: Record<string, string | string[] | u
     lat: clean(input.lat),
     lng: clean(input.lng),
     theme: input.theme,
-    categoryId: input.categoryId,
+    categoryId: Array.isArray(input.categoryId) ? [...new Set(input.categoryId.map(normalizeVendorCategoryId))] : input.categoryId ? normalizeVendorCategoryId(input.categoryId) : undefined,
     eventCategoryId: clean(input.eventCategoryId),
     minPrice: clean(input.minPrice),
     maxPrice: clean(input.maxPrice),

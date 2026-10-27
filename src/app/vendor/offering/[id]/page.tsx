@@ -1,3 +1,4 @@
+import { VENDOR_CATEGORY_NAMES } from "@/lib/vendor-categories";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -191,17 +192,7 @@ function getImageCrops(value: unknown) {
     .filter((crop): crop is { x: number; y: number; zoom: number } => Boolean(crop));
 }
 
-const categoryOrder = [
-  "Backdrops",
-  "Balloons",
-  "Cakes & Desserts",
-  "Catering & Beverages",
-  "Children's Entertainment",
-  "Entertainment",
-  "Florals",
-  "Party Rentals",
-  "Styling & Decor"
-];
+const categoryOrder: string[] = [...VENDOR_CATEGORY_NAMES];
 
 const eventCategoryOrder = [
   "Baby Shower",

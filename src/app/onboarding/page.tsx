@@ -1,3 +1,4 @@
+import { VENDOR_CATEGORY_NAMES } from "@/lib/vendor-categories";
 import { CategoryAudience, UserRole } from "@prisma/client";
 import { upsertVendorProfileAction } from "@/app/actions/vendor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -387,17 +388,7 @@ export default async function VendorOnboardingPage({
   );
 }
 
-const categoryOrder = [
-  "Backdrops",
-  "Balloons",
-  "Cakes & Desserts",
-  "Catering & Beverages",
-  "Children's Entertainment",
-  "Entertainment",
-  "Florals",
-  "Party Rentals",
-  "Styling & Decor"
-];
+const categoryOrder: string[] = [...VENDOR_CATEGORY_NAMES];
 
 function displayCategoryName(name: string) {
   return name;

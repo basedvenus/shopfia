@@ -68,5 +68,5 @@ export default async function NewBusinessServicePage({ params }: { params: Promi
 }
 
 function displayCategoryName(name: string) {
-  return name === "Children's Entertainment" ? "Kids Entertainment" : name;
+  return name;
 }
