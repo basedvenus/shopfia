@@ -1,3 +1,4 @@
+import { PartyMedia } from "@/components/parties/party-media";
 import { partyCategoryLabel, inferPartyOccasion, occasionTag } from "@/lib/party-occasions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -125,7 +126,8 @@ export default async function EventPage({
   const currentUserId = session?.user?.id ?? null;
   const isOwner = Boolean(currentUserId && host?.id && currentUserId === host.id);
   const showManagementLinks = canShowPartyManagementLinks(isOwner, Boolean(event));
-  const visibleCollaborators = getVisiblePartyCollaborators(event?.collaborators ?? [], host);
+  const visibleCollaborators = getVisiblePartyCollaborators((event?.collaborators ?? []).filter((person) => person.role !== "GUEST"), host);
+  const guests = (event?.collaborators ?? []).filter((person) => person.role === "GUEST" && person.status === "ACCEPTED");
   const editRequested = resolvedSearchParams.edit === "1" || resolvedSearchParams.edit === "true";
   const isEditing = Boolean(editRequested && isOwner && event);
   // Keep pending invitations selected during owner edits without adding them to
@@ -151,6 +153,8 @@ export default async function EventPage({
         description: event.description,
         eventDate: event.eventDate,
         partyfulUrl: event.partyfulUrl,
+        tiktokUrl: event.tiktokUrl,
+        appleMusicUrl: event.appleMusicUrl,
         location: event.location,
         formattedAddress: event.formattedAddress,
         city: event.city,
@@ -174,6 +178,7 @@ export default async function EventPage({
         mainHostId:
           editableCollaborators.find((collaborator) => collaborator.role === "MAIN_HOST")?.userId ??
           event.userId,
+        guestIds: editableCollaborators.filter((collaborator) => collaborator.role === "GUEST").map((collaborator) => collaborator.userId),
         coHostIds: editableCollaborators
           .filter((collaborator) => collaborator.role === "CO_HOST")
           .map((collaborator) => collaborator.userId)
@@ -287,6 +292,7 @@ export default async function EventPage({
                 ) : null}
               </div>
             ) : null}
+            {guests.length > 0 ? <div className="mb-4 text-white"><p className="text-sm font-semibold">Guests</p><div className="flex flex-wrap gap-2">{guests.map((guest) => <Link key={guest.id} href={guest.user.username ? `/profiles/${guest.user.username}` : "#"} className="rounded-full bg-white/20 px-3 py-1 text-sm">{guest.user.name ?? guest.user.username ?? "Guest"}</Link>)}</div></div> : null}
             {visibleCollaborators.length > 0 ? (
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <div className="flex -space-x-2">
@@ -325,6 +331,8 @@ export default async function EventPage({
           </div>
         </div>
       </section>
+
+      <PartyMedia tiktokUrl={event?.tiktokUrl} appleMusicUrl={event?.appleMusicUrl} />
 
       <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div id="party-gallery" className="grid scroll-mt-24 auto-rows-[190px] grid-cols-2 gap-3 md:grid-cols-4">

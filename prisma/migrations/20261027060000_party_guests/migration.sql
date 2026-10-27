@@ -1,0 +1,1 @@
+ALTER TYPE "PartyCollaboratorRole" ADD VALUE IF NOT EXISTS 'GUEST';

@@ -15,6 +15,8 @@ import { checkServerActionRateLimit } from "@/lib/security/request";
 import { serializeUserProfile, userProfileSelect } from "@/lib/user-profile";
 import { friendlyValidationMessage } from "@/lib/validators/messages";
 import { getAccountSetupDestination } from "@/lib/account-setup";
+import { getTikTokVideo, isTikTokShareUrl, getAppleMusicPlaylist } from "@/lib/party-media";
+import { resolvePartyTikTokUrl } from "@/lib/services/party-media";
 import { persistPartyCollaborators } from "@/lib/services/party-collaboration";
 
 const signUpSchema = z.object({
@@ -353,6 +355,8 @@ export async function updatePartyCoverCropAction(eventId: string, crop: ImageCro
 }
 
 const partyEventFieldsSchema = z.object({
+  tiktokUrl: z.string().trim().max(2048).refine((value) => !value || Boolean(getTikTokVideo(value)) || isTikTokShareUrl(value), "Enter a TikTok video link.").optional(),
+  appleMusicUrl: z.string().trim().max(2048).refine((value) => !value || Boolean(getAppleMusicPlaylist(value)), "Enter a public Apple Music playlist link.").optional(),
   title: z.string().trim().min(2, "Add an event title.").max(100, "Party name is a little too long."),
   theme: z.string().trim().max(100, "Theme is a little too long.").optional().or(z.literal("")),
   tags: z.array(z.string().trim().min(1).max(30, "Keep tags short and sweet.")).max(12, "Use up to 12 tags.").default([]),
@@ -372,7 +376,8 @@ const partyEventFieldsSchema = z.object({
   locationLng: optionalCoordinate(-180, 180),
   googlePlaceId: z.string().trim().max(180, "Location details are a little too long.").optional().or(z.literal("")),
   mainHostId: z.string().cuid().optional().or(z.literal("")),
-  coHostIds: z.array(z.string().cuid()).max(12).default([])
+  coHostIds: z.array(z.string().cuid()).max(12).default([]),
+  guestIds: z.array(z.string().cuid()).max(100).default([])
 });
 
 const createPartyEventSchema = partyEventFieldsSchema.extend({
@@ -429,6 +434,14 @@ export async function createPartyEventAction(formData: FormData) {
     return { ok: false, error: "Upload at least one party photo before saving." };
   }
 
+  let tiktokUrl: string | null;
+  try {
+    tiktokUrl = await resolvePartyTikTokUrl(parsed.data.tiktokUrl);
+  } catch {
+    return { ok: false, error: "Could not open that TikTok link. Paste the full video link from your browser." };
+  }
+  const appleMusicUrl = getAppleMusicPlaylist(parsed.data.appleMusicUrl)?.url ?? null;
+
   const event = await db.$transaction(async (tx) => {
     const partyEvent = await tx.partyEvent.create({
       data: {
@@ -438,6 +451,8 @@ export async function createPartyEventAction(formData: FormData) {
         theme: parsed.data.theme || null,
         tags: parsed.data.tags,
         description: parsed.data.description || null,
+        tiktokUrl,
+        appleMusicUrl,
         eventDate: parsed.data.eventDate ? new Date(`${parsed.data.eventDate.length === 7 ? parsed.data.eventDate + "-01" : parsed.data.eventDate}T00:00:00.000Z`) : null,
         partyfulUrl: parsed.data.partyfulUrl || null,
         location: parsed.data.formattedAddress || parsed.data.location || null,
@@ -461,6 +476,7 @@ export async function createPartyEventAction(formData: FormData) {
       invitedById: session.user.id,
       mainHostId: parsed.data.mainHostId || session.user.id,
       coHostIds: parsed.data.coHostIds,
+      guestIds: parsed.data.guestIds,
       ownerId: session.user.id,
       tx
     });
@@ -554,6 +570,14 @@ export async function updatePartyEventAction(formData: FormData) {
     return { ok: false, error: "Rate each tagged vendor before saving your party." };
   }
 
+  let tiktokUrl: string | null;
+  try {
+    tiktokUrl = await resolvePartyTikTokUrl(parsed.data.tiktokUrl);
+  } catch {
+    return { ok: false, error: "Could not open that TikTok link. Paste the full video link from your browser." };
+  }
+  const appleMusicUrl = getAppleMusicPlaylist(parsed.data.appleMusicUrl)?.url ?? null;
+
   const event = await db.$transaction(async (tx) => {
     await tx.partyPhoto.deleteMany({
       where: {
@@ -570,6 +594,8 @@ export async function updatePartyEventAction(formData: FormData) {
         theme: parsed.data.theme || null,
         tags: parsed.data.tags,
         description: parsed.data.description || null,
+        tiktokUrl,
+        appleMusicUrl,
         eventDate: parsed.data.eventDate ? new Date(`${parsed.data.eventDate.length === 7 ? parsed.data.eventDate + "-01" : parsed.data.eventDate}T00:00:00.000Z`) : null,
 
         location: parsed.data.formattedAddress || parsed.data.location || null,
@@ -597,6 +623,7 @@ export async function updatePartyEventAction(formData: FormData) {
       invitedById: session.user.id,
       mainHostId: parsed.data.mainHostId || session.user.id,
       coHostIds: parsed.data.coHostIds,
+      guestIds: parsed.data.guestIds,
       ownerId: session.user.id,
       tx
     });
@@ -691,6 +718,9 @@ export async function updatePartyCollaborationAction(formData: FormData) {
 function getPartyValidationMessage(issues: z.ZodIssue[]) {
   return friendlyValidationMessage(issues, {
     city: "City",
+    tiktokUrl: "TikTok video",
+    appleMusicUrl: "Apple Music playlist",
+    guestIds: "Guests",
     coHostIds: "Co-hosts",
     description: "Party notes",
     formattedAddress: "Location",
@@ -728,6 +758,9 @@ function parsePartyEventFormData(formData: FormData) {
     locationLat: formData.get("locationLat") || undefined,
     locationLng: formData.get("locationLng") || undefined,
     googlePlaceId: formData.get("locationPlaceId") || undefined,
+    tiktokUrl: String(formData.get("tiktokUrl") ?? ""),
+    appleMusicUrl: String(formData.get("appleMusicUrl") ?? ""),
+    guestIds: formData.getAll("guestIds").map(String).filter(Boolean),
     mainHostId: formData.get("mainHostId") || undefined,
     coHostIds: formData
       .getAll("coHostIds")

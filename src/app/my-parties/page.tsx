@@ -94,7 +94,7 @@ export default async function MyPartiesPage() {
                   {invitation.event.title}
                 </Link>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Invited as {invitation.role === "MAIN_HOST" ? "main host" : "co-host"}
+                  Invited as {invitation.role === "MAIN_HOST" ? "main host" : invitation.role === "GUEST" ? "guest" : "co-host"}
                 </p>
               </div>
               <PartyInvitationResponse collaborationId={invitation.id} />
@@ -115,7 +115,7 @@ export default async function MyPartiesPage() {
                   {collaboration.event.title}
                 </Link>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {collaboration.role === "MAIN_HOST" ? "Main host" : "Co-host"}
+                  {collaboration.role === "MAIN_HOST" ? "Main host" : collaboration.role === "GUEST" ? "Guest" : "Co-host"}
                 </p>
               </div>
               <PartyInvitationResponse collaborationId={collaboration.id} mode="accepted" />

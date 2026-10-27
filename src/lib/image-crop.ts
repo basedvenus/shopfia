@@ -52,7 +52,7 @@ export function imageCropToCss(crop?: unknown) {
   const normalized = normalizeImageCrop(crop);
   return {
     objectPosition: `${normalized.x}% ${normalized.y}%`,
-    transform: `scale(${normalized.zoom})`,
+    transform: `translate(${(50 - normalized.x) * Math.max(0, normalized.zoom - 1)}%, ${(50 - normalized.y) * Math.max(0, normalized.zoom - 1)}%) scale(${normalized.zoom})`,
     filter: `brightness(${normalized.brightness ?? 1}) saturate(${normalized.saturation ?? 1})`
   };
 }

@@ -193,3 +193,49 @@ describe("party owner rights and persistence wiring", () => {
     ]);
   });
 });
+
+
+describe("party guest form persistence", () => {
+  it("passes guest selections through the authorized edit action", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: ownerId } });
+    const form = editForm();
+    form.delete("coHostIds");
+    form.append("guestIds", inviteeId);
+    expect(await updatePartyEventAction(form)).toEqual({ ok: true, eventSlug: "test-party" });
+    expect(mocks.tx.partyCollaborator.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ userId: inviteeId, role: "GUEST", status: "PENDING" })
+    }));
+  });
+});
+
+
+describe("party media persistence", () => {
+  it.each(["create", "update"])("persists normalized video and playlist links during %s", async (mode) => {
+    mocks.auth.mockResolvedValue({ user: { id: ownerId } });
+    mocks.db.partyPhoto.findMany.mockResolvedValue([{ id: photoId, updatedAt: new Date("2026-01-01") }]);
+    const form = editForm();
+    form.set("photos", JSON.stringify([{ id: photoId, vendorIds: [] }]));
+    form.set("tiktokUrl", "https://www.tiktok.com/@scout2015/video/6718335390845095173?share=1");
+    form.set("appleMusicUrl", "https://music.apple.com/us/playlist/party/pl.u-123abc?ls=1");
+    expect(await (mode === "create" ? createPartyEventAction(form) : updatePartyEventAction(form))).toMatchObject({ ok: true });
+    expect(mode === "create" ? mocks.tx.partyEvent.create : mocks.tx.partyEvent.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        tiktokUrl: "https://www.tiktok.com/@scout2015/video/6718335390845095173",
+        appleMusicUrl: "https://music.apple.com/us/playlist/party/pl.u-123abc"
+      })
+    }));
+  });
+  it("clears removed links", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: ownerId } });
+    const form = editForm();
+    form.set("tiktokUrl", ""); form.set("appleMusicUrl", "");
+    expect(await updatePartyEventAction(form)).toMatchObject({ ok: true });
+    expect(mocks.tx.partyEvent.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ tiktokUrl: null, appleMusicUrl: null }) }));
+  });
+  it.each(["tiktokUrl", "appleMusicUrl"])("rejects an unrelated provider in %s before writes", async (field) => {
+    mocks.auth.mockResolvedValue({ user: { id: ownerId } });
+    const form = editForm(); form.set(field, "https://example.com/not-a-player");
+    expect(await updatePartyEventAction(form)).toMatchObject({ ok: false });
+    expect(mocks.db.$transaction).not.toHaveBeenCalled();
+  });
+});

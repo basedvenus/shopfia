@@ -3,6 +3,7 @@ import { PartyCollaborationStatus, PartyCollaboratorRole, type Prisma } from "@p
 // Called only after the create/edit action authenticates the event owner.
 export async function persistPartyCollaborators({
   coHostIds,
+  guestIds = [],
   eventId,
   invitedById,
   mainHostId,
@@ -10,13 +11,14 @@ export async function persistPartyCollaborators({
   tx
 }: {
   coHostIds: string[];
+  guestIds?: string[];
   eventId: string;
   invitedById: string;
   mainHostId: string;
   ownerId: string;
   tx: Prisma.TransactionClient;
 }) {
-  const requestedIds = Array.from(new Set([mainHostId, ...coHostIds, ownerId].filter(Boolean)));
+  const requestedIds = Array.from(new Set([mainHostId, ...coHostIds, ...guestIds, ownerId].filter(Boolean)));
   const users = await tx.user.findMany({
     where: { id: { in: requestedIds } },
     select: { id: true }
@@ -24,7 +26,8 @@ export async function persistPartyCollaborators({
   const validUserIds = new Set(users.map((user) => user.id));
   const safeMainHostId = validUserIds.has(mainHostId) ? mainHostId : ownerId;
   const safeCoHostIds = Array.from(new Set(coHostIds.filter((id) => id !== safeMainHostId && validUserIds.has(id))));
-  const activeUserIds = [safeMainHostId, ...safeCoHostIds];
+  const safeGuestIds = Array.from(new Set(guestIds.filter((id) => id !== safeMainHostId && !safeCoHostIds.includes(id) && validUserIds.has(id))));
+  const activeUserIds = [safeMainHostId, ...safeCoHostIds, ...safeGuestIds];
 
   await tx.partyCollaborator.updateMany({
     where: {
@@ -37,7 +40,8 @@ export async function persistPartyCollaborators({
 
   const collaborators = [
     { role: PartyCollaboratorRole.MAIN_HOST, userId: safeMainHostId },
-    ...safeCoHostIds.map((userId) => ({ role: PartyCollaboratorRole.CO_HOST, userId }))
+    ...safeCoHostIds.map((userId) => ({ role: PartyCollaboratorRole.CO_HOST, userId })),
+    ...safeGuestIds.map((userId) => ({ role: "GUEST" as const, userId }))
   ];
 
   await Promise.all(

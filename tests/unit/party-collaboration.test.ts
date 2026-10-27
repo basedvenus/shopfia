@@ -165,3 +165,22 @@ describe("party collaborator consent persistence", () => {
     expect(visible[0].role).toBe("MAIN_HOST");
   });
 });
+
+
+describe("party guests", () => {
+  it("saves valid guests as pending without duplicate host roles", async () => {
+    await persistPartyCollaborators({
+      eventId: "party", ownerId: "owner", invitedById: "owner", mainHostId: "owner",
+      coHostIds: ["new-cohost"], guestIds: ["new-main", "new-main", "owner", "new-cohost", "unknown"],
+      tx: tx as unknown as Prisma.TransactionClient
+    });
+    expect(rows.filter((row) => row.role === "GUEST")).toEqual([
+      expect.objectContaining({ userId: "new-main", status: "PENDING" })
+    ]);
+    await persistPartyCollaborators({
+      eventId: "party", ownerId: "owner", invitedById: "owner", mainHostId: "owner",
+      coHostIds: ["new-cohost"], guestIds: [], tx: tx as unknown as Prisma.TransactionClient
+    });
+    expect(status("new-main")).toBe("REMOVED");
+  });
+});

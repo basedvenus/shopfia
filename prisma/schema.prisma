@@ -118,6 +118,7 @@ enum InquiryStatus {
 }
 
 enum PartyCollaboratorRole {
+  GUEST
   MAIN_HOST
   CO_HOST
 }
@@ -467,6 +468,8 @@ model PartyEvent {
   imageUrls     String[]
   imageCrops    Json?
   partyfulUrl   String?
+  tiktokUrl     String?
+  appleMusicUrl String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

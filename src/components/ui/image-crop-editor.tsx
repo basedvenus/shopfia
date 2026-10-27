@@ -10,6 +10,7 @@ type ImageCropEditorProps = {
   allowAdjustments?: boolean;
   crop?: ImageCrop | null;
   imageUrl: string;
+  minZoom?: number;
   onCancel: () => void;
   onSave: (crop: ImageCrop) => void;
   previewClassName?: string;
@@ -21,25 +22,37 @@ export function ImageCropEditor({
   allowAdjustments = false,
   crop,
   imageUrl,
+  minZoom = MIN_IMAGE_ZOOM,
   onCancel,
   onSave,
   previewClassName = "aspect-[4/3]",
   previewAspectRatio
 }: ImageCropEditorProps) {
-  const [draft, setDraft] = useState<ImageCrop>(() => normalizeImageCrop(crop));
+  const [draft, setDraft] = useState<ImageCrop>(() => ({ ...normalizeImageCrop(crop), zoom: Math.max(minZoom, normalizeImageCrop(crop).zoom) }));
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
   const dragRef = useRef<{ x: number; y: number; crop: ImageCrop } | null>(null);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
 
   useEffect(() => {
-    setDraft(normalizeImageCrop(crop));
-  }, [crop, imageUrl]);
+    setDraft(({ ...normalizeImageCrop(crop), zoom: Math.max(minZoom, normalizeImageCrop(crop).zoom) }));
+    pointers.current.clear();
+    pinchRef.current = null;
+    dragRef.current = null;
+  }, [crop, imageUrl, minZoom]);
 
   useEffect(() => { setImageLoaded(false); setImageFailed(false); }, [imageUrl]);
 
   function beginDrag(event: PointerEvent<HTMLDivElement>) {
     if (!imageLoaded) return;
     event.currentTarget.setPointerCapture(event.pointerId);
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointers.current.size === 2) {
+      const [a, b] = [...pointers.current.values()];
+      pinchRef.current = { distance: Math.hypot(b.x - a.x, b.y - a.y), zoom: draft.zoom };
+    }
     dragRef.current = {
       x: event.clientX,
       y: event.clientY,
@@ -48,24 +61,45 @@ export function ImageCropEditor({
   }
 
   function updateDrag(event: PointerEvent<HTMLDivElement>) {
+    if (!pointers.current.has(event.pointerId)) return;
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointers.current.size >= 2 && pinchRef.current) {
+      const [a, b] = [...pointers.current.values()];
+      if (pinchRef.current.distance > 0) updateZoom(pinchRef.current.zoom * Math.hypot(b.x - a.x, b.y - a.y) / pinchRef.current.distance);
+      return;
+    }
     if (!dragRef.current) return;
     const deltaX = event.clientX - dragRef.current.x;
     const deltaY = event.clientY - dragRef.current.y;
+    const { width, height } = event.currentTarget.getBoundingClientRect();
+    const image = imageRef.current;
+    if (!image?.naturalWidth || !width || !height) return;
+    const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+    const zoom = dragRef.current.crop.zoom;
+    const overflowX = (image.naturalWidth * scale - width) * zoom + width * Math.max(0, zoom - 1);
+    const overflowY = (image.naturalHeight * scale - height) * zoom + height * Math.max(0, zoom - 1);
     setDraft({
       ...draft,
-      x: clamp(dragRef.current.crop.x - deltaX / 2.4, 0, 100),
-      y: clamp(dragRef.current.crop.y - deltaY / 2.4, 0, 100)
+      x: overflowX > 0 ? clamp(dragRef.current.crop.x - deltaX / overflowX * 100, 0, 100) : dragRef.current.crop.x,
+      y: overflowY > 0 ? clamp(dragRef.current.crop.y - deltaY / overflowY * 100, 0, 100) : dragRef.current.crop.y
     });
   }
 
-  function endDrag() {
+  function endDrag(event: PointerEvent<HTMLDivElement>) {
+    if (!pointers.current.delete(event.pointerId)) return;
+    pinchRef.current = null;
+    const remaining = [...pointers.current.values()][0];
+    if (remaining) {
+      dragRef.current = { ...remaining, crop: draft };
+      return;
+    }
     dragRef.current = null;
   }
 
   function updateZoom(nextZoom: number) {
     setDraft((current) => ({
       ...current,
-      zoom: clamp(nextZoom, MIN_IMAGE_ZOOM, MAX_IMAGE_ZOOM)
+      zoom: clamp(nextZoom, minZoom, MAX_IMAGE_ZOOM)
     }));
   }
 
@@ -76,7 +110,7 @@ export function ImageCropEditor({
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{aspectLabel}</p>
           <h2 className="mt-1 text-xl font-semibold tracking-tight">Edit your photo</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Drag the photo to reposition it, then adjust the preview until it feels right.
+            Drag to reposition or pinch with two fingers to zoom.
           </p>
         </div>
 
@@ -88,8 +122,10 @@ export function ImageCropEditor({
             onPointerMove={updateDrag}
             onPointerUp={endDrag}
             onPointerCancel={endDrag}
+            onLostPointerCapture={endDrag}
           >
             <img
+              ref={imageRef}
               src={imageUrl}
               alt=""
               className="absolute inset-0 h-full w-full select-none object-cover"
@@ -125,7 +161,7 @@ export function ImageCropEditor({
               <input
                 aria-label="Zoom"
                 type="range"
-                min={MIN_IMAGE_ZOOM}
+                min={minZoom}
                 max={MAX_IMAGE_ZOOM}
                 step="0.01"
                 value={draft.zoom}
@@ -156,7 +192,7 @@ export function ImageCropEditor({
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-border/70 px-5 py-4">
-          <Button type="button" variant="secondary" onClick={() => setDraft(DEFAULT_IMAGE_CROP)}>
+          <Button type="button" variant="secondary" onClick={() => setDraft({ ...DEFAULT_IMAGE_CROP, zoom: Math.max(minZoom, DEFAULT_IMAGE_CROP.zoom) })}>
             Reset
           </Button>
           <Button type="button" variant="secondary" onClick={onCancel}>

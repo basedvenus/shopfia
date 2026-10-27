@@ -7,6 +7,8 @@ import { createUnclaimedVendorAction } from "@/app/actions/vendor";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
+import { PartyMedia } from "@/components/parties/party-media";
+import { getAppleMusicPlaylist, getTikTokVideo, isTikTokShareUrl } from "@/lib/party-media";
 import { ImageCropEditor } from "@/components/ui/image-crop-editor";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +56,8 @@ export type EditablePartyEvent = {
   description: string | null;
   eventDate?: Date | string | null;
   partyfulUrl?: string | null;
+  tiktokUrl?: string | null;
+  appleMusicUrl?: string | null;
   location: string | null;
   formattedAddress?: string | null;
   city?: string | null;
@@ -64,6 +68,7 @@ export type EditablePartyEvent = {
   googlePlaceId?: string | null;
   mainHostId?: string | null;
   coHostIds?: string[];
+  guestIds?: string[];
   photos: UploadedPartyPhoto[];
 };
 
@@ -86,11 +91,15 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
   const [photos, setPhotos] = useState<UploadedPartyPhoto[]>(() =>
     (initialParty?.photos ?? []).map((photo) => ({
       ...photo,
+      crop: { ...photo.crop, zoom: Math.max(1, photo.crop.zoom) },
       vendorContributions: photo.vendorContributions ?? {}
     }))
   );
   const [vendorOptions, setVendorOptions] = useState<VendorOption[]>(vendors);
   const [mainHostId, setMainHostId] = useState(initialParty?.mainHostId ?? currentUserId);
+  const [tiktokUrl, setTikTokUrl] = useState(initialParty?.tiktokUrl ?? "");
+  const [appleMusicUrl, setAppleMusicUrl] = useState(initialParty?.appleMusicUrl ?? "");
+  const [guestIds, setGuestIds] = useState<string[]>(() => initialParty?.guestIds ?? []);
   const [coHostIds, setCoHostIds] = useState<string[]>(() => initialParty?.coHostIds ?? []);
   const [editingCropPhoto, setEditingCropPhoto] = useState<UploadedPartyPhoto | null>(null);
   const [newVendorModal, setNewVendorModal] = useState<{ initialName: string; photoId: string } | null>(null);
@@ -98,10 +107,14 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
   const [isDragOver, setIsDragOver] = useState(false);
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const uploadAsCoverRef = useRef(false);
+  const [editingCover, setEditingCover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function uploadFiles(fileList: FileList | File[]) {
-    const files = Array.from(fileList).filter((file) => file.type.startsWith("image/"));
+    const asCover = uploadAsCoverRef.current;
+    uploadAsCoverRef.current = false;
+    const files = Array.from(fileList).filter((file) => file.type.startsWith("image/")).slice(0, 16 - photos.length);
     if (!files.length) {
       setMessage("Choose photo files to upload. Videos are not supported yet.");
       return;
@@ -115,7 +128,9 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         uploaded.push(await uploadPartyPhoto(file));
       }
       setPhotos((current) => [...current, ...uploaded].slice(0, 16));
+      setEditingCover(asCover);
       setEditingCropPhoto(uploaded[0] ?? null);
+      if (asCover) setCoverPickerOpen(false);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not upload one of those photos.");
     } finally {
@@ -221,6 +236,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         }
         if (occasion) formData.append("tags", occasionTag(occasion));
         formData.set("mainHostId", mainHostId);
+        guestIds.forEach((id) => formData.append("guestIds", id));
         coHostIds.forEach((id) => formData.append("coHostIds", id));
         formData.set(
           "photos",
@@ -261,10 +277,10 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
             event.preventDefault(); event.stopPropagation(); setIsDragOver(false);
             const id = event.dataTransfer.getData("application/x-shopfia-photo");
             if (id && photos.some((photo) => photo.id === id)) setCoverPhoto(id);
-            else if (!isUploading && event.dataTransfer.files.length) void uploadFiles(event.dataTransfer.files);
+            else if (!isUploading && event.dataTransfer.files.length) { uploadAsCoverRef.current = true; void uploadFiles(event.dataTransfer.files); }
           }}
           className={`overflow-hidden rounded-3xl border-2 transition ${isDragOver ? "border-primary ring-4 ring-primary/20" : "border-border"}`}>
-          <button type="button" onClick={() => { if (photos[0]) { setCoverPickerOpen(true); } else fileInputRef.current?.click(); }}
+          <button type="button" onClick={() => { if (photos[0]) { setCoverPickerOpen(true); } else { uploadAsCoverRef.current = true; fileInputRef.current?.click(); } }}
             aria-label={photos[0] ? "Select your cover photo" : "Upload your party photos"} className="relative block aspect-[16/10] w-full overflow-hidden bg-muted">
             {photos[0] ? <CroppedImage src={photos[0].url} crop={photos[0].crop} alt="Party cover photo" className="h-full w-full object-cover" />
               : <span className="grid h-full place-content-center gap-3 text-center"><Upload className="mx-auto h-10 w-10 text-primary" /><span className="font-semibold">Drag your photos here</span><span className="text-sm text-muted-foreground">Or click to choose photos</span></span>}
@@ -275,7 +291,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {photos.map((photo, index) => (
             <div key={photo.id}
-              className={`relative aspect-square overflow-hidden rounded-2xl border-2 transition ${selectedPhoto?.id === photo.id ? "border-primary" : "border-transparent"}`}>
+              className={`relative aspect-[4/3] overflow-hidden rounded-2xl border-2 transition ${selectedPhoto?.id === photo.id ? "border-primary" : "border-transparent"}`}>
               <button type="button" onClick={() => { setSelectedPhotoId(photo.id); setStep(2); }} onDoubleClick={() => setEditingCropPhoto(photo)}
                 aria-label={`Edit photo ${index + 1} and tags`} aria-pressed={selectedPhoto?.id === photo.id} className="block h-full w-full">
                 <CroppedImage src={photo.url} alt={`Party photo ${index + 1}`} crop={photo.crop} className="h-full w-full object-cover" />
@@ -284,9 +300,9 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
               {index === 0 ? <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-semibold">Cover</span> : null}
             </div>
           ))}
-          <button type="button" disabled={isUploading || photos.length >= 16} onClick={() => fileInputRef.current?.click()}
+          <button type="button" disabled={isUploading || photos.length >= 16} onClick={() => { uploadAsCoverRef.current = false; fileInputRef.current?.click(); }}
             onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); if (!isUploading) void uploadFiles(event.dataTransfer.files); }}
-            aria-label="Add more photos" title="Add more photos" className="grid aspect-square place-content-center gap-2 rounded-2xl border-2 border-dashed border-primary/30 bg-white text-primary transition hover:bg-primary/5 disabled:opacity-50">
+            aria-label="Add more photos" title="Add more photos" className="grid aspect-[4/3] place-content-center gap-2 rounded-2xl border-2 border-dashed border-primary/30 bg-white text-primary transition hover:bg-primary/5 disabled:opacity-50">
             {isUploading ? <Loader2 className="mx-auto h-10 w-10 animate-spin" /> : <Plus className="mx-auto h-12 w-12" />}
             <span className="text-xs font-semibold">{isUploading ? "Uploading…" : "Add photos"}</span>
           </button>
@@ -362,19 +378,49 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
       </div>
       <input type="hidden" name="description" value={initialParty?.description ?? ""} />
 
+      <section className="grid min-w-0 gap-4 rounded-3xl border bg-white p-4" aria-label="Party links">
+        <div><h2 className="text-sm font-semibold">Video &amp; music</h2><p className="mt-1 text-xs text-muted-foreground">Add a video of your party and the playlist that set the mood.</p></div>
+        <label className="grid min-w-0 gap-2 text-sm font-medium">TikTok video <span className="text-xs font-normal text-muted-foreground">Optional</span>
+          <Input name="tiktokUrl" type="url" maxLength={2048} value={tiktokUrl} onChange={(event) => setTikTokUrl(event.target.value)} placeholder="https://www.tiktok.com/@you/video/…" aria-describedby="party-tiktok-help" />
+          <span id="party-tiktok-help" className="text-xs font-normal text-muted-foreground">Public videos can play right on your party page.</span>
+          {tiktokUrl.trim() && !getTikTokVideo(tiktokUrl) && !isTikTokShareUrl(tiktokUrl) ? <span role="status" className="text-xs text-destructive">Paste a TikTok video link.</span> : null}
+          {isTikTokShareUrl(tiktokUrl) ? <span className="text-xs font-normal text-muted-foreground">Your share link will be resolved when you save.</span> : null}
+        </label>
+        <label className="grid min-w-0 gap-2 text-sm font-medium">Apple Music playlist <span className="text-xs font-normal text-muted-foreground">Optional</span>
+          <Input name="appleMusicUrl" type="url" maxLength={2048} value={appleMusicUrl} onChange={(event) => setAppleMusicUrl(event.target.value)} placeholder="https://music.apple.com/us/playlist/…" aria-describedby="party-playlist-help" />
+          <span id="party-playlist-help" className="text-xs font-normal text-muted-foreground">Paste a public playlist link. Its cover and player appear automatically.</span>
+          {appleMusicUrl.trim() && !getAppleMusicPlaylist(appleMusicUrl) ? <span role="status" className="text-xs text-destructive">Paste a public Apple Music playlist link.</span> : null}
+        </label>
+        <PartyMedia tiktokUrl={tiktokUrl} appleMusicUrl={appleMusicUrl} />
+      </section>
+
       <PartyCollaboratorPicker
+        guestIds={guestIds}
         coHostIds={coHostIds}
         currentUserId={currentUserId}
         mainHostId={mainHostId}
         onAddCoHost={(userId) => {
           if (userId === mainHostId) return;
+          setGuestIds((current) => current.filter((id) => id !== userId));
           setCoHostIds((current) => (current.includes(userId) ? current : [...current, userId].slice(0, 12)));
         }}
         onMainHostChange={(userId) => {
           setMainHostId(userId);
+          setGuestIds((current) => current.filter((id) => id !== userId));
           setCoHostIds((current) => current.filter((id) => id !== userId));
         }}
         onRemoveCoHost={(userId) => setCoHostIds((current) => current.filter((id) => id !== userId))}
+        users={users}
+      />
+      <PartyCollaboratorPicker
+        guestMode
+        coHostIds={guestIds}
+        guestIds={coHostIds}
+        currentUserId={currentUserId}
+        mainHostId={mainHostId}
+        onAddCoHost={(id) => setGuestIds((current) => current.includes(id) || id === mainHostId || coHostIds.includes(id) ? current : [...current, id].slice(0, 100))}
+        onRemoveCoHost={(id) => setGuestIds((current) => current.filter((value) => value !== id))}
+        onMainHostChange={setMainHostId}
         users={users}
       />
 
@@ -423,27 +469,30 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
               <button type="button" aria-label="Close cover picker" onClick={() => setCoverPickerOpen(false)} className="rounded-full p-2"><X className="h-5 w-5" /></button>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {photos.map((photo, index) => <button key={photo.id} type="button" aria-label={`Choose photo ${index + 1} as cover`} onClick={() => { setCoverPhoto(photo.id); setCoverPickerOpen(false); }} className="relative aspect-square overflow-hidden rounded-2xl">
+              {photos.map((photo, index) => <button key={photo.id} type="button" aria-label={`Choose photo ${index + 1} as cover`} onClick={() => { setEditingCover(true); setEditingCropPhoto(photo); setCoverPickerOpen(false); }} className="relative aspect-[16/10] overflow-hidden rounded-2xl">
                 <CroppedImage src={photo.url} crop={photo.crop} alt={`Cover option ${index + 1}`} className="h-full w-full object-cover" />
                 {index === 0 ? <span className="absolute bottom-2 left-2 rounded-full bg-white px-3 py-1 text-xs">Current cover</span> : null}
               </button>)}
-              <button type="button" disabled={isUploading || photos.length >= 16} onClick={() => fileInputRef.current?.click()} className="grid aspect-square place-content-center gap-2 rounded-2xl border-2 border-dashed border-primary/30 text-primary"><Plus className="mx-auto h-12 w-12" /><span className="text-xs">{isUploading ? "Uploading…" : "Add photos"}</span></button>
+              <button type="button" disabled={isUploading || photos.length >= 16} onClick={() => { uploadAsCoverRef.current = true; fileInputRef.current?.click(); }} className="grid aspect-square place-content-center gap-2 rounded-2xl border-2 border-dashed border-primary/30 text-primary"><Plus className="mx-auto h-12 w-12" /><span className="text-xs">{isUploading ? "Uploading…" : "Add photos"}</span></button>
             </div>
           </section>
         </div>
       ) : null}
       {editingCropPhoto ? (
         <ImageCropEditor
-          aspectLabel="Edit party photo"
+          aspectLabel={editingCover ? "Edit cover photo" : "Edit party photo"}
           crop={editingCropPhoto.crop}
           imageUrl={editingCropPhoto.url}
-          onCancel={() => setEditingCropPhoto(null)}
+          onCancel={() => { setEditingCropPhoto(null); setEditingCover(false); }}
           onSave={(crop) => {
             setPhotoCrop(editingCropPhoto.id, crop);
+            if (editingCover) setCoverPhoto(editingCropPhoto.id);
+            setEditingCover(false);
             setEditingCropPhoto(null);
           }}
+          minZoom={1}
           allowAdjustments
-          previewClassName="aspect-[4/3]"
+          previewClassName={editingCover ? "aspect-[16/10]" : "aspect-[4/3]"}
         />
       ) : null}
       {newVendorModal ? (
@@ -598,6 +647,8 @@ function UnclaimedVendorModal({
 }
 
 function PartyCollaboratorPicker({
+  guestMode = false,
+  guestIds = [],
   coHostIds,
   currentUserId,
   mainHostId,
@@ -606,6 +657,8 @@ function PartyCollaboratorPicker({
   onRemoveCoHost,
   users
 }: {
+  guestMode?: boolean;
+  guestIds?: string[];
   coHostIds: string[];
   currentUserId: string;
   mainHostId: string;
@@ -618,7 +671,7 @@ function PartyCollaboratorPicker({
   const [isFocused, setIsFocused] = useState(false);
   const userMap = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
   const mainHost = userMap.get(mainHostId) ?? userMap.get(currentUserId) ?? users[0];
-  const selectedIds = new Set([mainHostId, ...coHostIds]);
+  const selectedIds = new Set([mainHostId, ...coHostIds, ...guestIds]);
   const matches = users
     .filter((user) => {
       if (selectedIds.has(user.id)) return false;
@@ -630,13 +683,13 @@ function PartyCollaboratorPicker({
   return (
     <section className="grid min-w-0 gap-3 rounded-[1.5rem] border bg-white p-4">
       <div>
-        <p className="text-sm font-semibold">Hosted by</p>
+        <p className="text-sm font-semibold">{guestMode ? "Guests" : "Hosted by"}</p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Celebrate together. Invite anyone who helped you host.
+          {guestMode ? "Celebrate with the people who joined you." : "Celebrate together. Invite anyone who helped you host."}
         </p>
       </div>
 
-      <div className="grid gap-2">
+      {!guestMode ? <div className="grid gap-2">
         <div className="grid min-w-0 gap-2">
           <div className="flex min-w-0 items-center gap-3 rounded-2xl border bg-[#fffaf8] px-3 py-2">
             {mainHost ? <UserAvatar user={mainHost} /> : null}
@@ -659,14 +712,14 @@ function PartyCollaboratorPicker({
           </select>
           </details>
         </div>
-      </div>
+      </div> : null}
 
       <div className="grid min-w-0 gap-2">
-        <label className="text-sm font-semibold" htmlFor="party-cohosts">Add co-hosts</label>
+        <label className="text-sm font-semibold" htmlFor={guestMode ? "party-guests" : "party-cohosts"}>{guestMode ? "Add guests" : "Add co-hosts"}</label>
         <div className="relative min-w-0">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
-            id="party-cohosts"
+            id={guestMode ? "party-guests" : "party-cohosts"}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onFocus={() => setIsFocused(true)}

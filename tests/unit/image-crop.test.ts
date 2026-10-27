@@ -17,10 +17,10 @@ describe("image crop utilities", () => {
     expect(normalizeImageCrop({ x: 50, y: 50, zoom: 10 }).zoom).toBe(MAX_IMAGE_ZOOM);
   });
 
-  it("keeps crop scaling centered so saved previews do not drift", () => {
-    expect(imageCropToCss({ x: 32, y: 68, zoom: 1.4 })).toEqual({
+  it("positions zoomed photos in both axes in saved previews", () => {
+    expect(imageCropToCss({ x: 32, y: 68, zoom: 2 })).toEqual({
       objectPosition: "32% 68%",
-      transform: "scale(1.4)",
+      transform: "translate(18%, -18%) scale(2)",
       filter: "brightness(1) saturate(1)"
     });
   });
