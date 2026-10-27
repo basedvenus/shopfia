@@ -56,6 +56,7 @@ beforeEach(() => {
   mocks.db.partyCollaborator.findMany.mockImplementation(async ({ where }) => {
     if (where.eventId) {
       if (where.eventId !== event.id || where.event.userId !== event.userId) return [];
+      if (typeof where.status === "string") return invitations.filter((row) => row.status === where.status && row.role === where.role).map((row) => ({ id: row.id, user: { name: row.userId, username: row.userId } }));
       return invitations.filter((row) => where.status.in.includes(row.status)).map(({ userId, role }) => ({ userId, role }));
     }
     if (where.event?.userId?.not === event.userId) return [];
@@ -98,9 +99,14 @@ describe("owner editor collaborator selection", () => {
     expect(publicText).not.toContain("pending-cohost");
   });
 
-  it("does not query private invitations when the owner opens the public event view", async () => {
-    await EventPage({ params: Promise.resolve({ slug: event.slug }) });
-    expect(mocks.db.partyCollaborator.findMany).not.toHaveBeenCalled();
+  it("shows a pending co-host status only to the event owner viewing their header", async () => {
+    const page = await EventPage({ params: Promise.resolve({ slug: event.slug }) });
+    expect(mocks.db.partyCollaborator.findMany).toHaveBeenCalledWith({
+      where: { eventId: event.id, event: { userId: "owner" }, role: "CO_HOST", status: "PENDING" },
+      select: { id: true, user: { select: { name: true, username: true } } },
+      orderBy: { createdAt: "asc" }
+    });
+    expect(elements(page).some((node) => node.props["aria-label"] === "Pending co-host invitations")).toBe(true);
   });
 });
 
