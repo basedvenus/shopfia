@@ -14,7 +14,8 @@ const authSecret = getEnvValue("AUTH_SECRET", "NEXTAUTH_SECRET");
 const emailServerHost = getEnvValue("EMAIL_SERVER_HOST");
 const emailServerPort = getEnvValue("EMAIL_SERVER_PORT");
 const emailServerUser = getEnvValue("EMAIL_SERVER_USER");
-const emailServerPassword = getEnvValue("EMAIL_SERVER_PASSWORD");
+const emailServerPassword = getEnvValue("EMAIL_SERVER_PASSWORD") ||
+  (emailServerHost === "smtp.resend.com" ? getEnvValue("RESEND_API_KEY") : undefined);
 const emailFrom = getEnvValue("EMAIL_FROM");
 
 export const authProviderConfig = {

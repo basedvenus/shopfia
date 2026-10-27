@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { signIn } from "next-auth/react";
 import { createPasswordAccountAction } from "@/app/actions/auth";
+import { requestPasswordResetAction } from "@/app/actions/password-reset";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -124,12 +125,19 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
         <button
           type="button"
           className="text-sm font-medium text-[#9b6b65] underline-offset-4 hover:underline"
+          disabled={pending}
           onClick={() => {
-            setMessage(
-              emailEnabled
-                ? "Password reset is temporarily paused while we verify email delivery. Please use Google sign-in for now or contact ShopFia support."
-                : "Password reset email is not configured yet. Please use Google sign-in for now or contact ShopFia support."
-            );
+            startTransition(async () => {
+              setMessage(null);
+              try {
+                const formData = new FormData();
+                formData.set("email", email);
+                const result = await requestPasswordResetAction(formData);
+                setMessage(result.ok ? result.message ?? null : result.error ?? "Could not request a reset link.");
+              } catch {
+                setMessage("Could not request a reset link. Please try again shortly.");
+              }
+            });
           }}
         >
           Forgot Password?
@@ -178,7 +186,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
           Continue with Google
         </Button>
       ) : null}
-      {message && <p className="text-sm text-muted-foreground">{message}</p>}
+      {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
     </div>
   );
 }
