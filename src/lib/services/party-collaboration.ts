@@ -80,7 +80,7 @@ export async function persistPartyCollaborators({
     data: invitations.map((person) => ({
       userId: person.userId, eventId, kind: "PARTY_INVITATION",
       title: `You were invited to ${eventTitle} as ${person.role === "GUEST" ? "a guest" : person.role === "MAIN_HOST" ? "the host" : "a co-host"}`,
-      href: "/my-parties#party-invitations", dedupeKey: `party-invite:${eventId}:${person.userId}`
+      href: "/notifications#party-invitations", dedupeKey: `party-invite:${eventId}:${person.userId}`
     })), skipDuplicates: true
   });
 

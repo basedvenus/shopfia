@@ -20,7 +20,7 @@ export default async function MyPartiesPage() {
     return <PublicMyPartiesPreview />;
   }
 
-  const [events, vendors, users, invitations, hostedParties] = await Promise.all([
+  const [events, vendors, users, hostedParties] = await Promise.all([
     db.partyEvent.findMany({
       where: { userId: session.user.id },
       include: {
@@ -43,15 +43,6 @@ export default async function MyPartiesPage() {
       select: { id: true, image: true, name: true, username: true },
       orderBy: [{ name: "asc" }, { username: "asc" }],
       take: 100
-    }),
-    db.partyCollaborator.findMany({
-      where: { userId: session.user.id, status: "PENDING" },
-      select: {
-        id: true,
-        role: true,
-        event: { select: { title: true, slug: true } }
-      },
-      orderBy: { createdAt: "desc" }
     }),
     db.partyCollaborator.findMany({
       where: {
@@ -81,27 +72,6 @@ export default async function MyPartiesPage() {
         </header>
         <PartyEventForm key="new-party" composer currentUserId={session.user.id} users={users} vendors={vendors} />
       </section>
-      {invitations.length > 0 ? (
-        <section id="party-invitations" className="scroll-mt-24 space-y-4 rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-soft">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight">Party invitations</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Accept to show the party on your profile and submit memories for host approval.</p>
-          </div>
-          {invitations.map((invitation) => (
-            <article key={invitation.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4">
-              <div>
-                <Link href={`/events/${invitation.event.slug}`} className="font-semibold underline-offset-4 hover:underline">
-                  {invitation.event.title}
-                </Link>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Invited as {invitation.role === "MAIN_HOST" ? "main host" : invitation.role === "GUEST" ? "guest" : "co-host"}
-                </p>
-              </div>
-              <PartyInvitationResponse collaborationId={invitation.id} />
-            </article>
-          ))}
-        </section>
-      ) : null}
       {hostedParties.length > 0 ? (
         <section className="space-y-4 rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-soft">
           <div>

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { createPasswordAccountAction } from "@/app/actions/auth";
-import { requestPasswordResetAction } from "@/app/actions/password-reset";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -15,6 +15,7 @@ type SignInPanelProps = {
 
 export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnabled }: SignInPanelProps) {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [showRecovery, setShowRecovery] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -31,6 +32,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
           onClick={() => {
             setMode("sign-in");
             setMessage(null);
+            setShowRecovery(false);
           }}
         >
           Sign in
@@ -43,6 +45,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
           onClick={() => {
             setMode("sign-up");
             setMessage(null);
+            setShowRecovery(false);
           }}
         >
           Create account
@@ -121,58 +124,6 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
               : "Sign in"}
         </Button>
       </form>
-      {mode === "sign-in" ? (
-        <button
-          type="button"
-          className="text-sm font-medium text-[#9b6b65] underline-offset-4 hover:underline"
-          disabled={pending}
-          onClick={() => {
-            startTransition(async () => {
-              setMessage(null);
-              try {
-                const formData = new FormData();
-                formData.set("email", email);
-                const result = await requestPasswordResetAction(formData);
-                setMessage(result.ok ? result.message ?? null : result.error ?? "Could not request a reset link.");
-              } catch {
-                setMessage("Could not request a reset link. Please try again shortly.");
-              }
-            });
-          }}
-        >
-          Forgot Password?
-        </button>
-      ) : null}
-      {emailEnabled ? (
-        <p className="text-xs text-muted-foreground">
-          Prefer a magic link? Email sign-in is also available.
-        </p>
-      ) : null}
-      {emailEnabled ? (
-        <Button
-          type="button"
-          variant="secondary"
-          className="w-full"
-          disabled={pending}
-          onClick={() => {
-            startTransition(async () => {
-              setMessage(null);
-              const result = await signIn("nodemailer", {
-                email,
-                callbackUrl,
-                redirect: false
-              });
-              if (result?.error) {
-                setMessage("Magic link sign-in failed. Check email provider settings.");
-              } else {
-                setMessage("Check your email for the magic link.");
-              }
-            });
-          }}
-        >
-          Send magic link
-        </Button>
-      ) : null}
       {googleEnabled ? (
         <Button
           type="button"
@@ -183,8 +134,44 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
             signIn("google", { callbackUrl });
           }}
         >
-          Continue with Google
+          Sign in with Google
         </Button>
+      ) : null}
+      {mode === "sign-in" ? (
+        <div className="space-y-3">
+          <button
+            type="button"
+            aria-expanded={showRecovery}
+            aria-controls="sign-in-recovery"
+            className="text-sm font-medium text-[#9b6b65] underline-offset-4 hover:underline"
+            onClick={() => { setShowRecovery((current) => !current); setMessage(null); }}
+          >
+            Forgot password?
+          </button>
+          {showRecovery ? (
+            <div id="sign-in-recovery" className="space-y-3 rounded-2xl border p-4">
+              {emailEnabled ? (
+                <form className="space-y-3" onSubmit={(event) => {
+                  event.preventDefault();
+                  startTransition(async () => {
+                    setMessage(null);
+                    try {
+                      const result = await signIn("nodemailer", { email, callbackUrl, redirect: false });
+                      setMessage(result?.error ? "Could not send a sign-in link. Please try again." : "Check your email for the magic link.");
+                    } catch {
+                      setMessage("Could not send a sign-in link. Please try again.");
+                    }
+                  });
+                }}>
+                  <p className="text-sm text-muted-foreground">We’ll email you a magic link to sign in without your password.</p>
+                  <Input type="email" aria-label="Recovery email" placeholder="Email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+                  <Button type="submit" variant="secondary" className="w-full" disabled={pending}>Send magic link</Button>
+                </form>
+              ) : null}
+              <Link href="/account/forgot-password" className="inline-block text-sm font-medium text-[#9b6b65] underline-offset-4 hover:underline">Reset your password</Link>
+            </div>
+          ) : null}
+        </div>
       ) : null}
       {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
     </div>

@@ -188,6 +188,14 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   const pastPartyEvents = profilePartyEvents
     .filter((event) => !event.eventDate || event.eventDate < today)
     .sort((left, right) => (right.eventDate ?? right.createdAt).getTime() - (left.eventDate ?? left.createdAt).getTime());
+  const hostedPartyIds = new Set([
+    ...profile.partyEvents.map((event) => event.id),
+    ...acceptedCollaborations
+      .filter((collaboration) => collaboration.role === "MAIN_HOST" || collaboration.role === "CO_HOST")
+      .map((collaboration) => collaboration.event.id)
+  ]);
+  const hostedParties = profilePartyEvents.filter((event) => hostedPartyIds.has(event.id));
+  const attendedParties = profilePartyEvents.filter((event) => !hostedPartyIds.has(event.id));
 
   return (
     <div className="space-y-8">
@@ -267,7 +275,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                   <span>{profile._count.followers} followers</span>
                   <span>{profile._count.following} following</span>
                   <span>{profilePartyEvents.length} parties</span>
-                  <span>{profileReviews.length} reviews</span>
+                  {profileStorefronts.length ? <span>{profileReviews.length} reviews</span> : null}
                 </div>
               </div>
             </div>
@@ -284,7 +292,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         </div>
       </section>
 
-      <section className="space-y-4">
+      {profileStorefronts.length ? <section className="space-y-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Reviews</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -328,18 +336,28 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
             </CardContent>
           </Card>
         )}
-      </section>
+      </section> : null}
 
-      <ProfilePartySection
-        emptyText="Upcoming parties will appear here when this host adds a future date."
-        events={upcomingPartyEvents}
-        title="Upcoming Parties"
-      />
-      <ProfilePartySection
-        emptyText="Past parties will appear here when this host publishes celebrations."
-        events={pastPartyEvents}
-        title="Past Parties"
-      />
+      {profileStorefronts.length ? <>
+        <ProfilePartySection emptyText="Upcoming parties will appear here when this host adds a future date." events={upcomingPartyEvents} title="Upcoming Parties" />
+        <ProfilePartySection emptyText="Past parties will appear here when this host publishes celebrations." events={pastPartyEvents} title="Past Parties" />
+      </> : (
+        <section className="space-y-6">
+          <h2 className="text-2xl font-semibold tracking-tight">Parties</h2>
+          <ProfilePartySection
+            emptyText="Parties will appear here when this member publishes a celebration or accepts a host invitation."
+            events={hostedParties}
+            title="Hosted"
+            nested
+          />
+          <ProfilePartySection
+            emptyText="Parties will appear here when this member accepts a guest invitation."
+            events={attendedParties}
+            title="Attended"
+            nested
+          />
+        </section>
+      )}
     </div>
   );
 }
@@ -362,7 +380,8 @@ function SocialProfileLink({ href, icon, label }: { href: string; icon: ReactNod
 function ProfilePartySection({
   emptyText,
   events,
-  title
+  title,
+  nested = false
 }: {
   emptyText: string;
   events: Array<{
@@ -383,14 +402,16 @@ function ProfilePartySection({
     }>;
   }>;
   title: string;
+  nested?: boolean;
 }) {
+  const Heading = nested ? "h3" : "h2";
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <Heading className={`${nested ? "text-xl" : "text-2xl"} font-semibold tracking-tight`}>{title}</Heading>
+        {!nested ? <p className="mt-1 text-sm text-muted-foreground">
           Real celebrations, invite links, tags, and vendor credits from this host.
-        </p>
+        </p> : null}
       </div>
 
       {events.length > 0 ? (

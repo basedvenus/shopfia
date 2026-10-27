@@ -7,7 +7,8 @@ const mocks = vi.hoisted(() => ({
     partyEvent: { findFirst: vi.fn(), findMany: vi.fn() },
     partyCollaborator: { findMany: vi.fn() },
     vendorProfile: { findMany: vi.fn() },
-    user: { findMany: vi.fn() },
+    user: { findMany: vi.fn(), findUnique: vi.fn() },
+    notification: { findMany: vi.fn() },
     follow: { findUnique: vi.fn() }
   }
 }));
@@ -19,6 +20,9 @@ vi.mock("@/components/parties/party-invitation-response", () => ({ PartyInvitati
 vi.mock("@/lib/profile-badges", () => ({ getOriginalMemberCutoffDate: async () => null, getProfileBadge: () => null }));
 
 import EventPage from "@/app/events/[slug]/page";
+vi.mock("@/app/actions/notifications", () => ({ markNotificationsReadAction: vi.fn(), updatePartyNotificationPreferenceAction: vi.fn() }));
+vi.mock("@/lib/auth/provider-config", () => ({ authProviderConfig: { emailEnabled: false } }));
+import NotificationsPage from "@/app/notifications/page";
 import MyPartiesPage from "@/app/my-parties/page";
 import { PartyEventForm } from "@/components/parties/party-event-form";
 import { PartyInvitationResponse } from "@/components/parties/party-invitation-response";
@@ -34,7 +38,7 @@ const event = {
   id: "party", userId: "owner", user: host, slug: "test-party", title: "Test Party", theme: null,
   tags: [], description: null, eventDate: null, partyfulUrl: null, location: null,
   formattedAddress: null, city: null, state: null, zipCode: null, locationLat: null, locationLng: null,
-  googlePlaceId: null, coverImageUrl: null, imageUrls: [], photos: [], taggedVendors: [], collaborators: []
+  googlePlaceId: null, coverImageUrl: null, imageUrls: [], photos: [], taggedVendors: [], collaborators: [], vendorRatings: []
 };
 const invitations = [
   { id: "pending-main", userId: "recipient", role: "MAIN_HOST", status: "PENDING" },
@@ -52,6 +56,8 @@ beforeEach(() => {
   mocks.db.partyEvent.findMany.mockImplementation(async ({ where }) => where.userId === event.userId ? [event] : []);
   mocks.db.vendorProfile.findMany.mockResolvedValue([]);
   mocks.db.user.findMany.mockResolvedValue([]);
+  mocks.db.user.findUnique.mockResolvedValue({ partyEmailNotifications: false });
+  mocks.db.notification.findMany.mockResolvedValue([]);
   mocks.db.follow.findUnique.mockResolvedValue(null);
   mocks.db.partyCollaborator.findMany.mockImplementation(async ({ where }) => {
     if (where.eventId) {
@@ -110,10 +116,13 @@ describe("owner editor collaborator selection", () => {
   });
 });
 
-describe("private My Parties invitation inbox", () => {
-  it("shows only the signed-in recipient's pending invitation", async () => {
+describe("private Notifications invitation inbox", () => {
+  it("shows pending invitations only on Notifications, outside the upload form", async () => {
     mocks.auth.mockResolvedValue({ user: { id: "recipient" } });
-    const page = await MyPartiesPage();
+    const composer = await MyPartiesPage();
+    expect(elements(composer).filter((node) => node.type === PartyInvitationResponse)).toHaveLength(0);
+    expect(mocks.db.partyCollaborator.findMany).not.toHaveBeenCalledWith(expect.objectContaining({ where: { userId: "recipient", status: "PENDING" } }));
+    const page = await NotificationsPage();
     expect(mocks.db.partyCollaborator.findMany).toHaveBeenCalledWith({
       where: { userId: "recipient", status: "PENDING" },
       select: { id: true, role: true, event: { select: { title: true, slug: true } } },
@@ -153,7 +162,7 @@ describe("private My Parties invitation inbox", () => {
     const page = await MyPartiesPage();
     const responses = elements(page).filter((node) => node.type === PartyInvitationResponse);
     expect(responses.some((node) => node.props.mode === "accepted")).toBe(false);
-    expect(responses.map((node) => node.props.collaborationId)).toEqual(["pending-main"]);
+    expect(responses).toHaveLength(0);
   });
 
   it("does not read any invitation or owned-event data for anonymous visitors", async () => {

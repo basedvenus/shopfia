@@ -1,3 +1,4 @@
+import { inferPartyOccasion } from "@/lib/party-occasions";
 import { CountySelector } from "@/components/parties/county-selector";
 import { getCounty, countyDistance } from "@/lib/party-location";
 import { FriendSearchForm } from "@/components/parties/friend-search-form";
@@ -330,7 +331,7 @@ export default async function PartiesPage({
             : partyQuery ? "No published parties match your search." : "No parties have been published yet. Share your celebration to start the gallery."}
         </p>
       ) : null}
-      <section className="columns-2 gap-2 sm:gap-4 md:columns-3 xl:columns-4">
+      <section className="grid grid-cols-2 items-start gap-2 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
         {visibleParties.length > 0
           ? visibleParties.map((party, index) => {
               const { crop, image } = getEventImage(party);
@@ -340,27 +341,32 @@ export default async function PartiesPage({
               const hostName = primaryHost.name ?? primaryHost.username ?? "ShopFia host";
               const hostBadge = getProfileBadge(primaryHost, originalMemberCutoff);
               const hostSummary = `Hosted by ${hostName}`;
+              const category = inferPartyOccasion(party.tags, party.title);
+              const location = party.location === "Private residence" ? null : party.city || party.location;
               const tall = index % 5 === 0 || index % 7 === 3;
 
               return (
                 <article
                   key={party.id}
-                  className="group relative mb-2 break-inside-avoid overflow-hidden rounded-[1.05rem] border border-white/75 bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft sm:mb-4 sm:rounded-[1.35rem]"
+                  className="group relative overflow-hidden rounded-[1.05rem] border border-white/75 bg-white/90 shadow-sm transition-shadow hover:shadow-soft sm:rounded-[1.35rem]"
                 >
                   <Link href={`/events/${party.slug}`} className="absolute inset-0 z-10" aria-label={`Open ${party.title}`} />
-                  <div className={`relative overflow-hidden bg-muted ${tall ? "aspect-[3/4]" : "aspect-[4/5]"}`}>
-                    <CroppedImage src={image} alt={party.title} crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                  <div className={`relative isolate overflow-hidden rounded-[1.05rem] bg-muted [clip-path:inset(0_round_1.05rem)] sm:rounded-none sm:rounded-t-[1.35rem] sm:[clip-path:inset(0_round_1.35rem_1.35rem_0_0)] ${tall ? "aspect-[3/4]" : "aspect-[4/5]"}`}>
+                    <CroppedImage src={image} alt={party.title} crop={crop} loading={index < 4 ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                     <div className="absolute right-3 top-3 z-20">
                       <FavoriteToggle targetType="party" targetId={party.id} isSaved={savedPartyIds.has(party.id)} variant="floating" />
                     </div>
                     <div className="absolute inset-x-0 bottom-0 p-2.5 text-white sm:p-5">
                       <h2 className="line-clamp-2 text-sm font-semibold tracking-tight sm:text-2xl">{party.title}</h2>
-                      {party.location !== "Private residence" && (party.location || party.city) ? (
-                        <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-white/80 sm:mt-2 sm:gap-1.5 sm:text-sm">
-                          <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="line-clamp-1">{party.city ?? party.location ?? [party.city, party.state].filter(Boolean).join(", ")}</span>
-                        </p>
+                      {location || category ? (
+                        <div className="mt-1 flex flex-wrap items-start justify-between gap-x-2 gap-y-1 text-[11px] text-white/90 sm:mt-2 sm:text-sm">
+                          {location ? <p className="flex min-w-0 flex-1 items-start gap-1 sm:gap-1.5">
+                            <MapPin className="mt-0.5 h-3 w-3 shrink-0 sm:h-4 sm:w-4" />
+                            <span className="break-words">{location}</span>
+                          </p> : null}
+                          {category ? <span className="ml-auto max-w-full rounded-full bg-black/25 px-2 py-0.5 text-right">{category}</span> : null}
+                        </div>
                       ) : null}
                     </div>
                   </div>
@@ -536,7 +542,7 @@ function getEventImage(event: {
   return event.photos[0]
     ? {
         crop: normalizePartyPhotoCrop(event.photos[0].crop),
-        image: partyPhotoUrl(event.photos[0].id, event.photos[0].updatedAt, { width: 900 })
+        image: partyPhotoUrl(event.photos[0].id, event.photos[0].updatedAt, { width: 600 })
       }
     : {
         crop: normalizeImageCrop(null),

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import { CountySelector } from "@/components/parties/county-selector";
 import { collectPartyVendorRatings } from "@/lib/party-vendor-ratings";
+import { PartifulArtwork } from "@/components/parties/partiful-artwork";
+import { getPartifulInvite } from "@/lib/partiful";
 import { PartyMedia } from "@/components/parties/party-media";
 import { getAppleMusicPlaylist, getTikTokVideo, isTikTokShareUrl, getSpotifyPlaylist } from "@/lib/party-media";
 import { ImageCropEditor } from "@/components/ui/image-crop-editor";
@@ -107,6 +109,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
   const [vendorOptions, setVendorOptions] = useState<VendorOption[]>(vendors);
   const [mainHostId, setMainHostId] = useState(initialParty?.mainHostId ?? currentUserId);
   const [tiktokUrls, setTikTokUrls] = useState<string[]>(() => initialParty?.tiktokUrls?.length ? initialParty.tiktokUrls : [initialParty?.tiktokUrl ?? ""]);
+  const [partyfulUrl, setPartyfulUrl] = useState(initialParty?.partyfulUrl ?? "");
   const [pinterestUrl, setPinterestUrl] = useState(initialParty?.pinterestUrl ?? "");
   const [spotifyUrl, setSpotifyUrl] = useState(initialParty?.spotifyUrl ?? "");
   const [appleMusicUrl, setAppleMusicUrl] = useState(initialParty?.appleMusicUrl ?? "");
@@ -337,6 +340,13 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
           <Input name="spotifyUrl" type="url" maxLength={2048} value={spotifyUrl} onChange={(event) => setSpotifyUrl(event.target.value)} placeholder="https://open.spotify.com/playlist/…" />
           {spotifyUrl.trim() && !getSpotifyPlaylist(spotifyUrl) ? <span role="status" className="text-xs text-destructive">Paste a public Spotify playlist link.</span> : null}
         </label>
+        <h2 className="text-lg font-semibold">Invitation</h2>
+        <label className="grid min-w-0 gap-2 text-sm font-medium">Partiful invitation <span className="text-xs font-normal text-muted-foreground">Optional</span>
+          <Input name="partyfulUrl" type="url" maxLength={2048} value={partyfulUrl} onChange={(event) => setPartyfulUrl(event.target.value)} placeholder="https://partiful.com/e/…" aria-describedby="party-invitation-artwork-help" />
+          <span id="party-invitation-artwork-help" className="text-xs font-normal text-muted-foreground">Show your invitation artwork. Address, guest list, RSVP details, and event description aren’t imported. Check that the artwork itself contains only details you want to share.</span>
+          {partyfulUrl.trim() && !getPartifulInvite(partyfulUrl) ? <span role="status" className="text-xs text-destructive">Paste a Partiful event link.</span> : null}
+        </label>
+        <PartifulArtwork url={partyfulUrl} />
         <h2 className="text-lg font-semibold">Mood board</h2>
         <label className="grid min-w-0 gap-2 text-sm font-medium">Pinterest mood board <span className="text-xs font-normal text-muted-foreground">Optional</span><Input name="pinterestUrl" type="url" maxLength={2048} value={pinterestUrl} onChange={(event) => setPinterestUrl(event.target.value)} placeholder="Pinterest board URL or pin.it share link" /></label>
         <PartyMedia pinterestUrl={pinterestUrl} tiktokUrls={tiktokUrls} appleMusicUrl={appleMusicUrl} spotifyUrl={spotifyUrl} />
@@ -450,7 +460,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
             <section className={isEditing ? "order-1 space-y-5 rounded-3xl border bg-white p-5" : "space-y-5 rounded-3xl border bg-white p-5"}>
               <div>
                 <h2 className="text-2xl font-bold tracking-tight">Edit photo & tags</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">Select a photo on the left to edit it or add tags.</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">Use the photo controls below to edit each photo and tag its vendors.</p>
               </div>
               <button type="button" onClick={() => setEditingCropPhoto(selectedPhoto)} aria-label="Adjust selected photo brightness and crop" className="block aspect-[4/3] w-full overflow-hidden rounded-2xl">
                 <CroppedImage src={selectedPhoto.url} crop={selectedPhoto.crop} frameFit="contain" alt="Selected photo preview" className="h-full w-full object-cover" />
@@ -462,6 +472,21 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
                   <IconButton label="Delete photo" onClick={() => removePhoto(selectedPhoto.id)}><Trash2 className="h-4 w-4" /></IconButton>
                 </div>
               </div>
+              {photos.length > 1 ? (
+                <nav aria-label="Photos to tag" className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button type="button" variant="secondary" disabled={photos.indexOf(selectedPhoto) === 0} onClick={() => setSelectedPhotoId(photos[photos.indexOf(selectedPhoto) - 1].id)}>Previous photo</Button>
+                    <Button type="button" variant="secondary" disabled={photos.indexOf(selectedPhoto) === photos.length - 1} onClick={() => setSelectedPhotoId(photos[photos.indexOf(selectedPhoto) + 1].id)}>Next photo</Button>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {photos.map((photo, index) => (
+                      <button key={photo.id} type="button" aria-label={`Tag vendors in photo ${index + 1}`} aria-pressed={selectedPhoto.id === photo.id} onClick={() => setSelectedPhotoId(photo.id)} className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border-2 ${selectedPhoto.id === photo.id ? "border-primary" : "border-transparent"}`}>
+                        <CroppedImage src={photo.url} crop={photo.crop} frameFit="contain" alt={`Photo ${index + 1}`} className="h-full w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </nav>
+              ) : null}
               <PhotoVendorTagger key={selectedPhoto.id} currentUserId={currentUserId}
                 onAddVendor={(vendorId) => togglePhotoVendor(selectedPhoto.id, vendorId, true)}
                 onContributionChange={(vendorId, contribution) => setPhotoVendorContribution(selectedPhoto.id, vendorId, contribution)}
@@ -473,7 +498,14 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
             </section>
           ) : null}
           {!isEditing && step === 1 ? (
-            <Button type="button" className="party-brand-button h-12 rounded-full text-base font-semibold" disabled={isUploading || photos.length === 0} onClick={goToVendors}>Next: tag vendors</Button>
+            <div className="space-y-3">
+              {photos.length === 0 ? (
+                <p id="party-photo-required" role="status" className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm font-medium">
+                  Upload at least one image to continue to tagging vendors.
+                </p>
+              ) : null}
+              <Button type="button" className="party-brand-button h-12 w-full rounded-full text-base font-semibold" aria-describedby={photos.length === 0 ? "party-photo-required" : undefined} disabled={isUploading || photos.length === 0} onClick={goToVendors}>Next: tag vendors</Button>
+            </div>
           ) : (
             <div className="order-3 flex flex-wrap gap-3">
               {!isEditing ? <Button type="button" variant="secondary" onClick={() => setStep(1)}>Back to details</Button> : null}
