@@ -30,6 +30,7 @@ export function readStorefrontDesign(booking: unknown, draft?: unknown): Storefr
   const result=storefrontDesignSchema.safeParse(raw);
   return result.success ? result.data : DEFAULT_STOREFRONT_DESIGN;
 }
+export function hasStorefrontDesign(booking: unknown): boolean { return storefrontDesignSchema.safeParse(record(booking)._design).success; }
 export function bookingWithDesign(booking: unknown, design: StorefrontDesign) { return { ...record(booking), _design:design }; }
 export const storefrontDesignJsonSchema = z.string().max(30000).transform((value,context) => {
   try { return storefrontDesignSchema.parse(JSON.parse(value)); }

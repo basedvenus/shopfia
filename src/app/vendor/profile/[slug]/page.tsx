@@ -1,4 +1,4 @@
-import { readStorefrontDesign } from "@/lib/storefront-design";
+import { hasStorefrontDesign, readStorefrontDesign } from "@/lib/storefront-design";
 import { sectionDesignStyle } from "@/lib/template-section-design";
 import { PublishedStorefrontHero } from "@/components/vendor/published-storefront-hero";
 import { PublishedStorefrontSurface } from "@/components/vendor/published-storefront-surface";
@@ -362,7 +362,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <p className="mt-2 text-sm">Share this profile with the owner so they can learn about ShopFia and request an ownership review.</p>
         <ShareUnclaimedVendor name={vendor.name} url={publicStorefrontUrl} />
       </section> : null}
-      {!isUnclaimed && (template || design.depth !== "flat") ? <PublishedStorefrontHero design={design} name={vendor.name} headline={vendor.storefrontAboutHeading || vendor.name} description={vendor.storefrontTagline || vendor.bio || ""} location={[vendor.city,vendor.state].filter(Boolean).join(", ")} image={hero || ""} logo={vendor.logoUrl || ""} crop={coverCrop} headingStyle={theme.headingStyle}/> : <StorefrontTemplateIntro
+      {!isUnclaimed && hasStorefrontDesign(vendor.storefrontBookingJson) ? <PublishedStorefrontHero design={design} name={vendor.name} headline={vendor.storefrontAboutHeading || vendor.name} description={vendor.storefrontTagline || vendor.bio || ""} location={[vendor.city,vendor.state].filter(Boolean).join(", ")} image={hero || ""} logo={vendor.logoUrl || ""} crop={coverCrop} headingStyle={theme.headingStyle}/> : <StorefrontTemplateIntro
         completedOrderCount={completedOrderCount}
         coverCrop={coverCrop}
         displayedFeaturedOfferings={displayedFeaturedOfferings}
