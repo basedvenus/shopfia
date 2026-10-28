@@ -34,7 +34,7 @@ export default async function MyPartiesPage() {
     }),
     db.vendorProfile.findMany({
       where: publicVendorWhere(),
-      select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true, status: true },
+      select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true, status: true, instagramUrl: true, tiktokUrl: true, website: true },
       orderBy: { name: "asc" }
     }),
     db.user.findMany({

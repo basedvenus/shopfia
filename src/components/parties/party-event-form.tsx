@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { SlidersHorizontal, Trash2, Loader2, Plus, Search, Star, Upload, X, Tag } from "lucide-react";
 import { createPartyEventAction, updatePartyEventAction, followPartyVendorAction } from "@/app/actions/auth";
+import { UnclaimedVendorSocialEditor } from "@/components/parties/unclaimed-vendor-social-editor";
 import { UnclaimedVendorModal } from "@/components/parties/unclaimed-vendor-modal";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,9 @@ export type VendorOption = {
   city: string;
   state: string | null;
   logoUrl: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  website?: string | null;
   status?: "CLAIMED" | "UNCLAIMED" | "VERIFIED";
 };
 
@@ -236,7 +240,8 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
   }
 
   const photoTagger = selectedPhoto ? (
-    <PhotoVendorTagger key={selectedPhoto.id} currentUserId={currentUserId}
+    <PhotoVendorTagger
+      onSocialsUpdated={(vendorId, socials) => setVendorOptions((current) => current.map((vendor) => vendor.id === vendorId ? { ...vendor, ...socials } : vendor))} key={selectedPhoto.id} currentUserId={currentUserId}
                 onAddVendor={(vendorId) => togglePhotoVendor(selectedPhoto.id, vendorId, true)}
                 onContributionChange={(vendorId, contribution) => setPhotoVendorContribution(selectedPhoto.id, vendorId, contribution)}
                 partyVendorRatings={partyVendorRatings}
@@ -370,7 +375,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
       </div>
 
         </div>
-        <div className="grid min-w-0 gap-5">
+        <div className="grid min-w-0 grid-cols-1 gap-5">
           <div hidden={!isEditing && step !== 1} className={isEditing ? "order-2 space-y-5" : "space-y-5"}>
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <label className="grid min-w-0 gap-2 text-sm font-semibold">
@@ -473,12 +478,12 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
 
           </div>
           {(isEditing || step === 2) && selectedPhoto ? (
-            <section className={isEditing ? "order-1 space-y-5 rounded-3xl border bg-white p-5 hidden lg:block" : "space-y-5 rounded-3xl border bg-white p-5 hidden lg:block"}>
+            <section className={isEditing ? "order-1 space-y-5 min-w-0 max-w-full rounded-3xl border bg-white p-5 hidden lg:block" : "min-w-0 max-w-full space-y-5 rounded-3xl border bg-white p-5 hidden lg:block"}>
               <div>
                 <h2 className="text-2xl font-bold tracking-tight">Edit photo & tags</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">Use the photo controls below to edit each photo and tag its vendors.</p>
               </div>
-              <button type="button" onClick={() => setPhotoActionsOpen(true)} aria-label="Open selected photo preview and actions" className="block aspect-[4/3] w-full overflow-hidden rounded-2xl">
+              <button type="button" onClick={() => setPhotoActionsOpen(true)} aria-label="Open selected photo preview and actions" className="block aspect-[4/3] w-full min-w-0 max-w-full overflow-hidden rounded-2xl">
                 <CroppedImage src={selectedPhoto.url} crop={selectedPhoto.crop} frameFit="contain" alt="Selected photo preview" className="h-full w-full object-cover" />
               </button>
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -489,12 +494,12 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
                 </div>
               </div>
               {photos.length > 1 ? (
-                <nav aria-label="Photos to tag" className="space-y-3">
+                <nav aria-label="Photos to tag" className="min-w-0 max-w-full space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <Button type="button" variant="secondary" disabled={photos.indexOf(selectedPhoto) === 0} onClick={() => setSelectedPhotoId(photos[photos.indexOf(selectedPhoto) - 1].id)}>Previous photo</Button>
                     <Button type="button" variant="secondary" disabled={photos.indexOf(selectedPhoto) === photos.length - 1} onClick={() => setSelectedPhotoId(photos[photos.indexOf(selectedPhoto) + 1].id)}>Next photo</Button>
                   </div>
-                  <div className="flex gap-2 overflow-x-auto pb-2">
+                  <div className="flex min-w-0 max-w-full gap-2 overflow-x-auto pb-2">
                     {photos.map((photo, index) => (
                       <button key={photo.id} type="button" aria-label={`Tag vendors in photo ${index + 1}`} aria-pressed={selectedPhoto.id === photo.id} onClick={() => setSelectedPhotoId(photo.id)} className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border-2 ${selectedPhoto.id === photo.id ? "border-primary" : "border-transparent"}`}>
                         <CroppedImage src={photo.url} crop={photo.crop} frameFit="contain" alt={`Photo ${index + 1}`} className="h-full w-full object-cover" />
@@ -756,6 +761,7 @@ function PhotoVendorTagger({
   onRatingChange,
   onCreateVendor,
   onRemoveVendor,
+  onSocialsUpdated,
   photo,
   vendors
 }: {
@@ -765,6 +771,7 @@ function PhotoVendorTagger({
   partyVendorRatings: Record<string, number>;
   onRatingChange: (vendorId: string, rating: number) => void;
   onCreateVendor: (initialName: string) => void;
+  onSocialsUpdated: (vendorId: string, socials: { instagramUrl: string | null; tiktokUrl: string | null; website: string | null }) => void;
   onRemoveVendor: (vendorId: string) => void;
   photo: UploadedPartyPhoto;
   vendors: VendorOption[];
@@ -892,6 +899,7 @@ function PhotoVendorTagger({
                   <X className="h-4 w-4" />
                 </button>
               </div>
+              {vendor.status === "UNCLAIMED" ? <UnclaimedVendorSocialEditor key={vendor.id} vendor={vendor} photoId={photo.id} onSaved={(socials) => onSocialsUpdated(vendor.id, socials)} /> : null}
               <VendorFollowPrompt vendor={vendor} currentUserId={currentUserId} />
               {partyVendorRatings[vendor.id] && editingRating !== vendor.id ? <div className="mt-4 flex flex-wrap items-center gap-2 text-sm"><span>Your rating: {partyVendorRatings[vendor.id]} / 5 · once per party</span><button type="button" className="text-primary underline" onClick={() => setEditingRating(vendor.id)}>Edit rating</button></div> : <fieldset className="mt-4">
                 <legend className="text-sm font-semibold">How was your experience with {vendor.name}?</legend>

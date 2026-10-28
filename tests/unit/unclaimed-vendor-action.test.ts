@@ -42,6 +42,14 @@ describe("guided unclaimed vendor creation", () => {
     expect(mocks.category).toHaveBeenCalledTimes(1);
     expect(mocks.category).toHaveBeenCalledWith(expect.objectContaining({ where: { name: "Entertainment" } }));
   });
+  it("saves both public social profiles without requiring an owner account", async () => {
+    expect(await createUnclaimedVendorAction({ ...input, instagramHandle: "https://instagram.com/sampleflorist/?igsh=123", tiktokHandle: "@sampleflorist" })).toMatchObject({ ok: true });
+    expect(mocks.create.mock.calls[0][0].data).toMatchObject({ instagramUrl: "https://www.instagram.com/sampleflorist/", tiktokUrl: "https://www.tiktok.com/@sampleflorist/", status: "UNCLAIMED" });
+  });
+  it.each([{ instagramHandle: "https://evil.test/vendor" }, { tiktokHandle: "https://tiktok.com/@sample/video/123" }])("rejects invalid social profiles before creating a business: %j", async (change) => {
+    expect(await createUnclaimedVendorAction({ ...input, ...change })).toMatchObject({ ok: false });
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
   it("honors rate limits before creating a profile", async () => {
     mocks.rate.mockResolvedValue({ ok: false }); expect(await createUnclaimedVendorAction(input)).toMatchObject({ ok: false }); expect(mocks.create).not.toHaveBeenCalled();
   });

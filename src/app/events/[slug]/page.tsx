@@ -227,7 +227,7 @@ export default async function EventPage({
     ? await Promise.all([
         db.vendorProfile.findMany({
           where: publicVendorWhere(),
-          select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true, status: true },
+          select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true, status: true, instagramUrl: true, tiktokUrl: true, website: true },
           orderBy: { name: "asc" }
         }),
         db.user.findMany({

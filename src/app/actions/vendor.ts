@@ -1,4 +1,5 @@
 "use server";
+import { getVendorSocialProfile } from "@/lib/vendor-social";
 
 import { bookingWithDesign } from "@/lib/storefront-design";
 import { normalizeVendorCategoryId, normalizeVendorCategoryName } from "@/lib/vendor-categories";
@@ -57,7 +58,8 @@ const unclaimedVendorSchema = z.object({
   bookingChannel: z.enum(VENDOR_BOOKING_CHANNELS, { errorMap: () => ({ message: "Choose how you contacted or booked this vendor." }) }),
   bookingDetails: z.string().trim().max(500).optional(),
   name: z.string().trim().min(2, "Business Name is required.").max(120, "Business Name is too long."),
-  instagramHandle: z.string().trim().max(80).optional(),
+  instagramHandle: z.string().trim().max(255).optional().refine((value) => !value || Boolean(getVendorSocialProfile(value, "instagram")), "Enter a valid Instagram profile link or handle."),
+  tiktokHandle: z.string().trim().max(255).optional().refine((value) => !value || Boolean(getVendorSocialProfile(value, "tiktok")), "Enter a valid TikTok profile link or handle."),
   website: z.string().trim().max(255).optional(),
   categories: z.array(z.enum(UNCLAIMED_VENDOR_CATEGORIES)).min(1, "Choose at least one category.").max(UNCLAIMED_VENDOR_CATEGORIES.length)
 }).superRefine((value, context) => {
@@ -74,6 +76,7 @@ export async function createUnclaimedVendorAction(input: {
   categories?: string[];
   category?: string;
   instagramHandle?: string;
+  tiktokHandle?: string;
   name: string;
   website?: string;
 }) {
@@ -99,6 +102,7 @@ export async function createUnclaimedVendorAction(input: {
         bookingChannel: "Booking method",
         name: "Business Name",
         instagramHandle: "Instagram Handle",
+        tiktokHandle: "TikTok Handle",
         website: "Website",
         categories: "Categories"
       })
@@ -121,7 +125,8 @@ export async function createUnclaimedVendorAction(input: {
   const baseSlug = slugify(parsed.data.name) || "vendor";
   const slug = await getAvailableVendorSlug(baseSlug);
   const website = normalizeOptionalUrl(parsed.data.website);
-  const instagramUrl = normalizeInstagramUrl(parsed.data.instagramHandle);
+  const instagramUrl = getVendorSocialProfile(parsed.data.instagramHandle, "instagram")?.url ?? null;
+  const tiktokUrl = getVendorSocialProfile(parsed.data.tiktokHandle, "tiktok")?.url ?? null;
 
   const vendor = await db.vendorProfile.create({
     data: {
@@ -130,6 +135,7 @@ export async function createUnclaimedVendorAction(input: {
       status: VendorProfileStatus.UNCLAIMED,
       website,
       instagramUrl,
+      tiktokUrl,
       bio: "This business was tagged by the ShopFia community and has not claimed their profile yet.",
       city: parsed.data.city,
       state: parsed.data.state || null,
@@ -147,7 +153,10 @@ export async function createUnclaimedVendorAction(input: {
       city: true,
       state: true,
       logoUrl: true,
-      status: true
+      status: true,
+      instagramUrl: true,
+      tiktokUrl: true,
+      website: true
     }
   });
 
@@ -187,13 +196,6 @@ function normalizeOptionalUrl(value?: string) {
   if (!trimmed) return null;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
-}
-
-function normalizeInstagramUrl(value?: string) {
-  const trimmed = String(value ?? "").trim().replace(/^@/, "");
-  if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://instagram.com/${trimmed}`;
 }
 
 function dollarsToCents(value: FormDataEntryValue | null) {
@@ -1213,4 +1215,61 @@ export async function updateSellerMarketplaceSettingsAction(formData: FormData) 
 
   revalidatePath("/vendor/dashboard");
   revalidatePath(`/vendor/dashboard/${vendor.slug}`);
+}
+
+const communityVendorSocialSchema = z.object({
+  vendorId: z.string().cuid(),
+  photoId: z.string().cuid(),
+  instagram: z.string().trim().max(255).refine((value) => !value || Boolean(getVendorSocialProfile(value, "instagram")), "Enter an Instagram username or profile link."),
+  tiktok: z.string().trim().max(255).refine((value) => !value || Boolean(getVendorSocialProfile(value, "tiktok")), "Enter a TikTok username or profile link."),
+  website: z.string().trim().max(2048).refine((value) => {
+    if (!value) return true;
+    try {
+      const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+      return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password && url.hostname.includes(".");
+    } catch { return false; }
+  }, "Enter a valid business website."),
+  original: z.object({ instagramUrl: z.string().nullable(), tiktokUrl: z.string().nullable(), website: z.string().nullable() })
+});
+
+export async function updateUnclaimedVendorSocialsAction(input: z.input<typeof communityVendorSocialSchema>) {
+  const { db } = await import("@/lib/db");
+  const session = await requireSession();
+  const rate = await checkServerActionRateLimit([
+    { key: "community-vendor-socials:ip:{ip}", limit: 30, intervalMs: 60_000 },
+    { key: `community-vendor-socials:user:${session.user.id}`, limit: 15, intervalMs: 60_000 }
+  ]);
+  if (!rate.ok) return { ok: false as const, error: "Please wait a minute before updating more social links." };
+  const parsed = communityVendorSocialSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0].message };
+  const { vendorId, photoId, original } = parsed.data;
+  // The photo may still be a draft while creating a party. Only its uploader
+  // can use that party's editor to contribute public business links.
+  const photo = await db.partyPhoto.findFirst({
+    where: { id: photoId, userId: session.user.id, OR: [{ eventId: null }, { event: { userId: session.user.id } }] },
+    select: { id: true }
+  });
+  if (!photo) return { ok: false as const, error: "You can only edit vendor links from your own party photos." };
+  const vendor = await db.vendorProfile.findFirst({
+    where: { id: vendorId, status: VendorProfileStatus.UNCLAIMED, userId: null },
+    select: { slug: true }
+  });
+  if (!vendor) return { ok: false as const, error: "This business has been claimed or is unavailable. Its owner now manages its social links." };
+  const socials = {
+    instagramUrl: getVendorSocialProfile(parsed.data.instagram, "instagram")?.url ?? null,
+    tiktokUrl: getVendorSocialProfile(parsed.data.tiktok, "tiktok")?.url ?? null,
+    website: normalizeOptionalUrl(parsed.data.website)
+  };
+  // Check claim status and the version the editor opened in the write itself:
+  // a concurrent claim or community edit must not be overwritten.
+  const updated = await db.vendorProfile.updateMany({
+    where: { id: vendorId, status: VendorProfileStatus.UNCLAIMED, userId: null, ...original },
+    data: socials
+  });
+  if (updated.count !== 1) return { ok: false as const, error: "This profile changed or was claimed. Refresh your party before editing its links again." };
+  revalidatePath(`/vendor/profile/${vendor.slug}`);
+  revalidatePath(`/${vendor.slug}`);
+  revalidatePath("/my-parties");
+  revalidatePath("/events", "layout");
+  return { ok: true as const, socials };
 }

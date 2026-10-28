@@ -1,5 +1,7 @@
 "use client";
 
+import { VendorSocialFeeds } from "@/components/vendor/vendor-social-feeds";
+
 import Link from "next/link";
 import { readStorefrontDesign } from "@/lib/storefront-design";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type CSSProperties, type DragEvent, type ReactNode } from "react";
@@ -1062,7 +1064,7 @@ function SectionEditor({
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold">Instagram feed</h3>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">Show a live Instagram profile entry inside Portfolio while keeping uploaded photos available.</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">Your linked Instagram and TikTok profiles appear automatically in Portfolio. Enable this to use a different Instagram profile.</p>
             </div>
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-semibold">
               <input
@@ -1070,7 +1072,7 @@ function SectionEditor({
                 checked={form.instagramFeedEnabled}
                 onChange={(event) => update("instagramFeedEnabled", event.target.checked)}
               />
-              Sync
+              Use custom profile
             </label>
           </div>
           {form.instagramFeedEnabled ? (
@@ -1614,7 +1616,7 @@ function StorefrontPreview({
           if (section === activeSection) return true;
           if (section === "featured-services") return featuredServices.length > 0;
           if (section === "all-services") return activeServices.length > 0;
-          if (section === "portfolio") return photos.length > 0 || form.instagramFeedEnabled;
+          if (section === "portfolio") return photos.length > 0 || Boolean(form.instagramUrl || form.tiktokUrl || (form.instagramFeedEnabled && form.instagramFeedUrl));
           if (section === "faq") return form.faqs.length > 0;
           if (section === "how-it-works") return Boolean(business.storefrontBookingJson || form.serviceAreaNotes);
           return true;
@@ -1702,7 +1704,7 @@ function StorefrontPreview({
                 </div>
               ) : (
                 <div className="grid gap-3">
-                  {form.instagramFeedEnabled && form.instagramFeedUrl ? <InstagramFeedCallout href={form.instagramFeedUrl} theme={theme} /> : null}
+                  <VendorSocialFeeds instagramUrl={(form.instagramFeedEnabled && form.instagramFeedUrl) || form.instagramUrl} tiktokUrl={form.tiktokUrl} />
                   {template && [1,2,18,19,57].includes(template.source.number) ? <TemplateMediaGrid template={template} photos={photos}/> : <div className="grid grid-cols-3 gap-2">{photos.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] bg-white object-contain p-1 ${theme.imageRadius}`} />)}</div>}
                 </div>
               )}
@@ -2206,7 +2208,7 @@ function InstagramFeedPreview({
             checked={form.instagramFeedEnabled}
             onChange={(event) => update("instagramFeedEnabled", event.target.checked)}
           />
-          Sync
+          Use custom profile
         </span>
       </label>
       {form.instagramFeedEnabled ? (
