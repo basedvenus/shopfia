@@ -18,10 +18,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/db", () => ({ db: mocks.db }));
 vi.mock("@/app/actions/auth", () => ({ toggleFollowAction: vi.fn() }));
+vi.mock("@/components/parties/delete-party-button", () => ({ DeletePartyButton: () => null }));
 vi.mock("@/components/parties/party-event-form", () => ({ PartyEventForm: () => null }));
 vi.mock("@/components/parties/party-invitation-response", () => ({ PartyInvitationResponse: () => null }));
 vi.mock("@/lib/profile-badges", () => ({ getOriginalMemberCutoffDate: async () => null, getProfileBadge: () => null }));
 
+import { DeletePartyButton } from "@/components/parties/delete-party-button";
 import EventPage from "@/app/events/[slug]/page";
 vi.mock("@/app/actions/notifications", () => ({ markNotificationsReadAction: vi.fn(), updatePartyNotificationPreferenceAction: vi.fn() }));
 vi.mock("@/lib/auth/provider-config", () => ({ authProviderConfig: { emailEnabled: false } }));
@@ -160,6 +162,22 @@ describe("invitation on its party page", () => {
     const page = await EventPage({ params: Promise.resolve({ slug: event.slug }) });
     expect(mocks.db.partyCollaborator.findFirst).not.toHaveBeenCalled();
     expect(elements(page).some((node) => node.type === PartyInvitationResponse)).toBe(false);
+  });
+});
+
+describe("visible owner deletion controls", () => {
+  it.each([undefined, "1"])("shows Delete party on the owner's page with edit=%s", async (edit) => {
+    const page = await EventPage({ params: Promise.resolve({ slug: event.slug }), searchParams: Promise.resolve({ edit }) });
+    expect(elements(page).find((node) => node.type === DeletePartyButton)?.props).toMatchObject({ eventId: "party", title: "Test Party" });
+  });
+  it.each([null, "recipient", "accepted", "unrelated"])("hides Delete party from %s", async (id) => {
+    mocks.auth.mockResolvedValue(id ? { user: { id } } : null);
+    const page = await EventPage({ params: Promise.resolve({ slug: event.slug }) });
+    expect(elements(page).some((node) => node.type === DeletePartyButton)).toBe(false);
+  });
+  it("shows a labeled Delete option on the owner's party tiles", async () => {
+    const page = await MyPartiesPage();
+    expect(elements(page).find((node) => node.type === DeletePartyButton)?.props).toMatchObject({ eventId: "party", compact: true });
   });
 });
 

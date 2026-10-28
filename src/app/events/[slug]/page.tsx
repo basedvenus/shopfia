@@ -1,3 +1,4 @@
+import { DeletePartyButton } from "@/components/parties/delete-party-button";
 import { PartyPhotoGallery } from "@/components/parties/party-photo-gallery";
 import { PartyContributions } from "@/components/parties/party-contributions";
 import { PartyInvitationResponse } from "@/components/parties/party-invitation-response";
@@ -248,7 +249,7 @@ export default async function EventPage({
     return <section className="space-y-7 rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft sm:p-8">
       <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
         <div><p className="text-sm text-muted-foreground">Editing party</p><h1 className="mt-2 text-3xl font-bold tracking-tight">Edit {formParty.title}</h1><p className="mt-2 text-sm text-muted-foreground">Update your story, select photos, and credit your vendors.</p></div>
-        <Link href={`/events/${formParty.slug}`} className="inline-flex h-11 items-center rounded-full border px-5 text-sm font-medium">View public party</Link>
+        <div className="flex flex-wrap items-center gap-3"><Link href={`/events/${formParty.slug}`} className="inline-flex h-11 items-center rounded-full border px-5 text-sm font-medium">View public party</Link><DeletePartyButton eventId={formParty.id} title={formParty.title} /></div>
       </header>
       <PartyEventForm composer currentUserId={currentUserId ?? ""} initialParty={formParty} users={editUsers} vendors={editVendors} />
     </section>;
@@ -317,6 +318,7 @@ export default async function EventPage({
             {showHeaderActions ? (
               <div className="flex flex-wrap items-center gap-3">
                 {showManagementLinks && event ? <Button asChild size="sm" variant="secondary" className="bg-white text-foreground shadow-sm"><Link href={`/events/${event.slug}?edit=1`}>Edit party</Link></Button> : null}
+                {showManagementLinks && event ? <DeletePartyButton eventId={event.id} title={title} /> : null}
                 {session?.user?.id && host && session.user.id !== host.id ? <form action={toggleFollow}><input type="hidden" name="followingId" value={host.id} /><Button type="submit" size="sm" variant="secondary">{isFollowingHost ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}{isFollowingHost ? "Following" : "Follow"}</Button></form> : null}
                 {canContribute ? <Button asChild size="sm" variant="secondary"><a href="#party-contributions">Add photos, videos or playlists</a></Button> : null}
               </div>

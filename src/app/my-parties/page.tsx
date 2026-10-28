@@ -1,3 +1,4 @@
+import { DeletePartyButton } from "@/components/parties/delete-party-button";
 import Link from "next/link";
 import { Camera, MapPin, Pencil, Sparkles } from "lucide-react";
 import { PartyEventForm } from "@/components/parties/party-event-form";
@@ -113,6 +114,7 @@ export default async function MyPartiesPage() {
                       className="absolute inset-0 z-10"
                       aria-label={`Open ${event.title}`}
                     />
+                    <div className="absolute left-3 top-3 z-30"><DeletePartyButton compact eventId={event.id} title={event.title} /></div>
                     <Link
                       href={`/events/${event.slug}?edit=1`}
                       aria-label={`Edit ${event.title}`}
