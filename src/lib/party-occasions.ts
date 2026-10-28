@@ -1,4 +1,4 @@
-export const PARTY_OCCASIONS = ["Baby Shower", "Gender Reveal", "Kids’ Birthday", "Birthday Celebration", "Just Because", "Celebration of Life", "Holiday Event", "Wedding", "Graduation", "Corporate Event"];
+export const PARTY_OCCASIONS = ["Baby Shower", "Gender Reveal", "Kids’ Birthday", "Birthday Celebration", "Just Because", "Celebration of Life", "Holiday Event", "Wedding", "Graduation", "Corporate Event", "Sports Party"];
 
 export function inferPartyOccasion(tags: string[], title: string) {
   const existing = PARTY_OCCASIONS.find((name) => tags.some((tag) => occasionTag(tag) === occasionTag(name)));
@@ -44,7 +44,7 @@ export function classificationTags({ category, month, age, audience, graduation,
   }
   if (["Baby Shower", "Gender Reveal", "Kids’ Birthday", "Graduation", "Birthday Celebration"].includes(category) && audience && audience !== "Not specified") tags.push(`audience${occasionTag(audience)}`);
   if (category === "Graduation" && graduation) tags.push(`graduation${occasionTag(graduation)}`);
-  if (holiday) tags.push(`holiday${occasionTag(holiday)}`);
+  if (category === "Holiday Event" && holiday) tags.push(`holiday${occasionTag(holiday)}`);
   return tags.filter(Boolean);
 }
 export function validatePartyClassificationForm(form: FormData) {
@@ -57,7 +57,7 @@ export function validatePartyClassificationForm(form: FormData) {
   if (audience && !(PARTY_AUDIENCES as readonly string[]).includes(audience)) return "Choose an audience from the list.";
   if (category === "Graduation" && !(GRADUATION_LEVELS as readonly string[]).includes(String(form.get("graduationLevel") ?? ""))) return "Choose a graduation level.";
   const holiday = String(form.get("partyHoliday") ?? "");
-  if ((category === "Holiday Event" || holiday) && !(PARTY_HOLIDAYS as readonly string[]).includes(holiday)) return "Choose a holiday from the suggestions.";
+  if (category === "Holiday Event" && !(PARTY_HOLIDAYS as readonly string[]).includes(holiday)) return "Choose a holiday from the suggestions.";
   return null;
 }
 export function partyDiscoveryLabels(tags: string[], title: string, eventDate?: Date | string | null) {

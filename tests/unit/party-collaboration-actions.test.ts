@@ -178,7 +178,7 @@ describe("party owner rights and persistence wiring", () => {
     for (const [key, value] of Object.entries({ classificationVersion: "1", occasion: "Birthday Celebration", eventMonth: "10", eventYear: "2026", birthdayAge: "27", partyAudience: "Girl", partyHoliday: "Halloween", theme: "Monsters and Martinis" })) form.set(key, value);
     form.append("tags", "randomhashtag");
     expect(await updatePartyEventAction(form)).toMatchObject({ ok: true });
-    expect(mocks.tx.partyEvent.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ theme: "Monsters and Martinis", eventDate: new Date("2026-10-01T00:00:00.000Z"), tags: ["birthdaycelebration", "fall", "age27", "adult", "audiencegirl", "holidayhalloween"] }) }));
+    expect(mocks.tx.partyEvent.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ theme: "Monsters and Martinis", eventDate: new Date("2026-10-01T00:00:00.000Z"), tags: ["birthdaycelebration", "fall", "age27", "adult", "audiencegirl"] }) }));
   });
 
   it("renames a legacy party without requiring ratings for its existing vendor tags", async () => {

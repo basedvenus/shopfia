@@ -4,8 +4,8 @@ const details = { category: "Birthday Celebration", month: "10", age: "27", audi
 describe("controlled party classification", () => {
   it("generates an exact adult birthday age without a milestone selector", () => {
     const tags = classificationTags(details);
-    expect(tags).toEqual(["birthdaycelebration", "fall", "age27", "adult", "audiencegirl", "holidayhalloween"]);
-    expect(partyDiscoveryLabels(tags, "Monsters and Martinis")).toEqual(["Adult Birthday", "27th Birthday", "Halloween", "Fall", "Girl"]);
+    expect(tags).toEqual(["birthdaycelebration", "fall", "age27", "adult", "audiencegirl"]);
+    expect(partyDiscoveryLabels(tags, "Monsters and Martinis")).toEqual(["Adult Birthday", "27th Birthday", "Fall", "Girl"]);
   });
   it.each([[1,"1st"],[2,"2nd"],[3,"3rd"],[11,"11th"],[12,"12th"],[13,"13th"],[21,"21st"],[27,"27th"]])("formats age %s", (age, expected) => expect(ordinalAge(Number(age))).toBe(expected));
   it("derives first birthday and winter without turning the creative theme into a discovery tag", () => {
@@ -23,6 +23,10 @@ describe("controlled party classification", () => {
     expect(validatePartyClassificationForm(form)).toContain("age");
     form.set("birthdayAge", "27"); expect(validatePartyClassificationForm(form)).toBeNull();
     form.set("partyAudience", "random hashtag"); expect(validatePartyClassificationForm(form)).toContain("audience");
+  });
+  it("generates a holiday label only for Holiday Event", () => {
+    expect(classificationTags({ ...details, category: "Kids’ Birthday" })).not.toContain("holidayhalloween");
+    expect(classificationTags({ ...details, category: "Holiday Event" })).toContain("holidayhalloween");
   });
   it("preserves compatibility with older party clients", () => expect(validatePartyClassificationForm(new FormData())).toBeNull());
 });

@@ -1,4 +1,4 @@
-import { inferPartyOccasion, partyDiscoveryLabels, partySearchTags } from "@/lib/party-occasions";
+import { partyDiscoveryLabels, partySearchTags } from "@/lib/party-occasions";
 import { CountySelector } from "@/components/parties/county-selector";
 import { getCounty, countyDistance } from "@/lib/party-location";
 import { FriendSearchForm } from "@/components/parties/friend-search-form";
@@ -342,8 +342,7 @@ export default async function PartiesPage({
               const hostName = primaryHost.name ?? primaryHost.username ?? "ShopFia host";
               const hostBadge = getProfileBadge(primaryHost, originalMemberCutoff);
               const hostSummary = `Hosted by ${hostName}`;
-              const category = inferPartyOccasion(party.tags, party.title);
-              const location = party.location === "Private residence" ? null : party.city || party.location;
+              const location = party.location === "Private residence" ? "Private residence" : party.city || party.location;
               const tall = index % 5 === 0 || index % 7 === 3;
 
               return (
@@ -359,9 +358,9 @@ export default async function PartiesPage({
                       <FavoriteToggle targetType="party" targetId={party.id} isSaved={savedPartyIds.has(party.id)} variant="floating" />
                     </div>
                     <div className="absolute inset-x-0 bottom-0 p-2.5 text-white sm:p-5">
-                      <div className="mb-2 flex flex-wrap gap-1.5">{partyDiscoveryLabels(party.tags, party.title, party.eventDate).slice(0, 4).map((label) => <span key={label} className="rounded-full bg-black/45 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm sm:text-base">{label}</span>)}</div>
+
                       <h2 className="line-clamp-1 text-xs font-medium text-white/85 sm:text-sm">{party.title}</h2>
-                      {location || category ? (
+                      {location ? (
                         <div className="mt-1 flex flex-wrap items-start justify-between gap-x-2 gap-y-1 text-[11px] text-white/90 sm:mt-2 sm:text-sm">
                           {location ? <p className="flex min-w-0 flex-1 items-start gap-1 sm:gap-1.5">
                             <MapPin className="mt-0.5 h-3 w-3 shrink-0 sm:h-4 sm:w-4" />
@@ -372,7 +371,7 @@ export default async function PartiesPage({
                       ) : null}
                     </div>
                   </div>
-                  <div className="hidden space-y-2.5 p-3.5 sm:block">
+                  <div className="space-y-2.5 p-2.5 sm:p-3.5">
                     <div className="flex min-w-0 items-center gap-2">
                       <div className="flex min-w-0 flex-1 items-center gap-2">
                         {hostImage ? (
@@ -403,6 +402,7 @@ export default async function PartiesPage({
                         </span>
                       </span>
                     </div>
+                    <div aria-label="Party discovery tags" className="flex flex-wrap gap-1.5">{partyDiscoveryLabels(party.tags, party.title, party.eventDate).map((label) => <span key={label} className="rounded-full bg-[#fff2ee] px-2.5 py-1 text-[11px] font-medium text-[#695850] sm:text-xs">{label}</span>)}</div>
                     {vendors.length > 0 ? (
                       <p className="line-clamp-1 text-sm text-muted-foreground">
                         Tagged: {vendors.slice(0, 3).map((vendor, vendorIndex) => (
@@ -412,11 +412,7 @@ export default async function PartiesPage({
                           </span>
                         ))}
                       </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Vendor tags will appear as hosts add them to party photos.
-                      </p>
-                    )}
+                    ) : null}
                   </div>
                 </article>
               );

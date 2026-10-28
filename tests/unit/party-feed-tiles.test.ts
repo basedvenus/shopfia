@@ -22,7 +22,9 @@ describe("party feed tile metadata", () => {
     expect(html).toContain("Autumn Wonderland");
     expect(html).toContain("Kids’ Birthday");
     expect(html).not.toContain("Private city");
-    expect(html).not.toContain("Private residence");
+    expect(html).toContain("Private residence");
+    expect(html.indexOf("0 tagged vendors")).toBeLessThan(html.indexOf('aria-label="Party discovery tags"'));
+    expect(html).not.toContain("Vendor tags will appear as hosts add them");
   });
   it("shows public locations alongside the category", async () => {
     mocks.parties.mockResolvedValue([{ ...party, location: "Garden venue", city: "Fairfield" }]);
