@@ -1,7 +1,7 @@
 [
   {
     "id": "reference-01",
-    "name": "Paper Portfolio",
+    "name": "The Invitation",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461677/",
       "title": "20+ Best Actor Website Templates (2026)",
@@ -58,7 +58,7 @@
   },
   {
     "id": "reference-02",
-    "name": "Cloudline",
+    "name": "Cloud Nine",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461676/",
       "title": "Where contrast becomes identity",
@@ -66,7 +66,7 @@
       "notes": "Sky-blue outer canvas; inset cream page; condensed red type"
     },
     "description": "Sky-blue outer canvas; inset cream page; condensed red type",
-    "fonts": "Instrument Serif \u00b7 Bebas Neue \u00b7 Inter",
+    "fonts": "Instrument Serif · Bebas Neue · Inter",
     "fontStyle": "BOLD",
     "headingFamily": "var(--font-shopfia-instrument-serif), serif",
     "bodyFamily": "var(--font-shopfia-inter), sans-serif",
@@ -131,7 +131,7 @@
   },
   {
     "id": "reference-03",
-    "name": "Blue Sessions",
+    "name": "The Live Set",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461673/",
       "title": "Soul Waves Vinyl Record Store - Website Design (BLUE)",
@@ -188,7 +188,7 @@
   },
   {
     "id": "reference-04",
-    "name": "Scarlet Stage",
+    "name": "The Impersonator",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461667/",
       "title": "Website for South Korean dj Peggy Gou - Elena Zakharian",
@@ -247,7 +247,7 @@
   },
   {
     "id": "reference-05",
-    "name": "Afterlight",
+    "name": "After the Toast",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461666/",
       "title": "Modern Squarespace Website Design for a Music Marketing Agency",
@@ -304,10 +304,10 @@
   },
   {
     "id": "reference-06",
-    "name": "Analog Paper",
+    "name": "The Guestbook",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461665/",
-      "title": "\u0414\u0438\u0437\u0430\u0439\u043d \u0441\u0430\u0439\u0442\u0430 \u0434\u043b\u044f \u043c\u0430\u0433\u0430\u0437\u0438\u043d\u0430 \u0432\u0438\u043d\u0438\u043b\u043e\u0432\u044b\u0445 \u043f\u043b\u0430\u0441\u0442\u0438\u043d\u043e\u043a",
+      "title": "Дизайн сайта для магазина виниловых пластинок",
       "number": 6,
       "notes": "Taupe exterior; cream inset; brick-red split masthead; circular media framing"
     },
@@ -361,10 +361,10 @@
   },
   {
     "id": "reference-07",
-    "name": "Neon Signal",
+    "name": "Neon Dance Floor",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461664/",
-      "title": "LAUREN MIA\u2122. Music Branding. - h3l AG",
+      "title": "LAUREN MIA™. Music Branding. - h3l AG",
       "number": 7,
       "notes": "Dark poster grid; orange and violet accents; asymmetric framed panels"
     },
@@ -418,7 +418,7 @@
   },
   {
     "id": "reference-08",
-    "name": "Night Current",
+    "name": "Midnight DJ",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461661/",
       "title": "an image of a web page that is dark and has many different images on it",
@@ -475,7 +475,7 @@
   },
   {
     "id": "reference-09",
-    "name": "Blueprint",
+    "name": "Backstage Pass",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461658/",
       "title": "dj PressKit Nana Mom | design by dumalsova",
@@ -532,7 +532,7 @@
   },
   {
     "id": "reference-10",
-    "name": "Meadow Journal",
+    "name": "Garden Gathering",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461650/",
       "title": "Ecommerce look minimal",
@@ -589,7 +589,7 @@
   },
   {
     "id": "reference-11",
-    "name": "Concrete Studio",
+    "name": "The Headliner",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461649/",
       "title": "an image of a woman sitting in a chair with the words vol one studios on it",
@@ -646,7 +646,7 @@
   },
   {
     "id": "reference-12",
-    "name": "Paper Atelier",
+    "name": "Place Cards",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461647/",
       "title": "Website Design for Natalia Miranda",
@@ -654,7 +654,7 @@
       "notes": "Brown outer frame; powder-blue and cream panels; stripes; paper-like cards"
     },
     "description": "Brown outer frame; powder-blue and cream panels; stripes; paper-like cards",
-    "fonts": "DM Serif Display \u00b7 Instrument Serif \u00b7 Manrope",
+    "fonts": "DM Serif Display · Instrument Serif · Manrope",
     "fontStyle": "EDITORIAL",
     "headingFamily": "var(--font-preview-dmserif), serif",
     "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
@@ -731,10 +731,10 @@
   },
   {
     "id": "reference-13",
-    "name": "Quiet Olive",
+    "name": "Olive & Vows",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461646/",
-      "title": "Skincare Website Design \u2014 Cosmetic UI Landing Page & Ecommerce Beauty Layout",
+      "title": "Skincare Website Design — Cosmetic UI Landing Page & Ecommerce Beauty Layout",
       "number": 13,
       "notes": "Very large delicate serif type; sage neutrals; asymmetric image and copy columns"
     },
@@ -788,7 +788,7 @@
   },
   {
     "id": "reference-14",
-    "name": "Petal Patisserie",
+    "name": "Petal Confetti",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461608/",
       "title": "Shopify Bakery Website Template | Macaron Shop Theme | No Code Fully Customizable",
@@ -846,7 +846,7 @@
   },
   {
     "id": "reference-15",
-    "name": "Berry Block",
+    "name": "Chocolate Confetti",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461607/",
       "title": "sweet tempting delightful cozy gelato dessert shop website template branding design",
@@ -903,7 +903,7 @@
   },
   {
     "id": "reference-16",
-    "name": "Butter & Type",
+    "name": "Buttercream Wishes",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461594/",
       "title": "Bake Your Way to Success Online with a Stunning Bakery Website Design",
@@ -1021,12 +1021,12 @@
     "name": "Frosted Script",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461590/",
-      "title": "The Cake Shop \u2014\u00a0Semi-Custom Celebration Cakes by ECBG Studio in Chicago",
+      "title": "The Cake Shop — Semi-Custom Celebration Cakes by ECBG Studio in Chicago",
       "number": 18,
       "notes": "Cake-shop reference: ivory canvas, magenta accents, black script with tall pink display lettering, softly rounded photo grid"
     },
     "description": "Cake-shop reference: ivory canvas, magenta accents, black script with tall pink display lettering, softly rounded photo grid",
-    "fonts": "Great Vibes \u00b7 Bebas Neue \u00b7 Manrope",
+    "fonts": "Great Vibes · Bebas Neue · Manrope",
     "fontStyle": "EDITORIAL",
     "headingFamily": "var(--font-preview-greatvibes), cursive",
     "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
@@ -1083,7 +1083,7 @@
   },
   {
     "id": "reference-19",
-    "name": "Ribbonstripe",
+    "name": "Ribbon Stripe",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461588/",
       "title": "Custom Cake Bakery Website Design Playful Charming Pastel Soft branding design",
@@ -1143,10 +1143,10 @@
   },
   {
     "id": "reference-20",
-    "name": "Frame & Motion",
+    "name": "Photo Booth Flash",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461583/",
-      "title": "\u041b\u0435\u043d\u0434\u0438\u043d\u0433-\u043f\u043e\u0440\u0442\u0444\u043e\u043b\u0438\u043e \u0434\u043b\u044f \u043c\u043e\u0443\u0448\u043d \u0434\u0438\u0437\u0430\u0439\u043d\u0435\u0440\u0430 \u0438 \u0432\u0438\u0434\u0435\u043e\u0440\u0435\u0434\u0430\u043a\u0442\u043e\u0440\u0430 Motion Designer Portfolio Website",
+      "title": "Лендинг-портфолио для моушн дизайнера и видеоредактора Motion Designer Portfolio Website",
       "number": 20,
       "notes": "Extra-condensed black poster type; red seals; newspaper-like rules and sharp media"
     },
@@ -1200,10 +1200,10 @@
   },
   {
     "id": "reference-21",
-    "name": "Monochrome Muse",
+    "name": "Black Tie",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461579/",
-      "title": "\u041e\u0431\u0441\u0443\u0434\u0438\u0442\u044c \u0434\u0438\u0437\u0430\u0439\u043d \u0441\u0430\u0439\u0442\u0430 \u0432 @levkina_olesya",
+      "title": "Обсудить дизайн сайта в @levkina_olesya",
       "number": 21,
       "notes": "Monochrome high contrast; huge delicate overlapping display type; spare editorial grid"
     },
@@ -1257,10 +1257,10 @@
   },
   {
     "id": "reference-22",
-    "name": "Evergreen Grid",
+    "name": "Under the Canopy",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461574/",
-      "title": "Comprehensive Figma UI Kit for Modern Marketing Agency Websites \ud83d\ude80",
+      "title": "Comprehensive Figma UI Kit for Modern Marketing Agency Websites 🚀",
       "number": 22,
       "notes": "Deep green canvas; geometric multi-line headings; fine dividers and side-by-side media"
     },
@@ -1314,10 +1314,10 @@
   },
   {
     "id": "reference-23",
-    "name": "Form & Focus",
+    "name": "The Event Planner",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461570/",
-      "title": "\u0418\u043d\u0442\u0435\u0440\u043d\u0435\u0442-\u043c\u0430\u0433\u0430\u0437\u0438\u043d \u0434\u043b\u044f \u0431\u0440\u0435\u043d\u0434\u0430 \u043e\u0447\u043a\u043e\u0432 | \u0412\u0435\u0431-\u0434\u0438\u0437\u0430\u0439\u043d",
+      "title": "Интернет-магазин для бренда очков | Веб-дизайн",
       "number": 23,
       "notes": "Heavy black type over pale gray; sharp image grid; dark footer contrast"
     },
@@ -1371,7 +1371,7 @@
   },
   {
     "id": "reference-24",
-    "name": "Bold Current",
+    "name": "Grand Entrance",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461568/",
       "title": "Creative Agency | Bold Branding & UX/UI Design",
@@ -1430,7 +1430,7 @@
   },
   {
     "id": "reference-25",
-    "name": "Street Edit",
+    "name": "The Street Performer",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461567/",
       "title": "Your magzine style store. Designed well and not just looks good it converts better. If you are thinking of a profitable store you just meet the right fit.  #viralreels #viral #newyork #ecommercebusiness",
@@ -1487,7 +1487,7 @@
   },
   {
     "id": "reference-26",
-    "name": "Night Gallery",
+    "name": "The Magician",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461564/",
       "title": "lucir | clothing store",
@@ -1547,7 +1547,7 @@
   },
   {
     "id": "reference-27",
-    "name": "Forest Ledger",
+    "name": "Candlelit Table",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461562/",
       "title": "Masculine Luxe Branding & Squarespace Website for a Holistic Coach | January Made",
@@ -1606,10 +1606,10 @@
   },
   {
     "id": "reference-28",
-    "name": "Clean Cut",
+    "name": "The Portrait Booth",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461559/",
-      "title": "GAZU \u2014 Minimal Fashion Store Website UI",
+      "title": "GAZU — Minimal Fashion Store Website UI",
       "number": 28,
       "notes": "Oversized clean black type; sharp monochrome image blocks; open whitespace"
     },
@@ -1663,10 +1663,10 @@
   },
   {
     "id": "reference-29",
-    "name": "Lilac Modules",
+    "name": "Balloon Lounge",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461556/",
-      "title": "\u0421\u0430\u0439\u0442 \u0434\u043b\u044f \u0446\u0432\u0435\u0442\u043e\u0447\u043d\u043e\u0439 \u0441\u0442\u0443\u0434\u0438\u0438/\u0434\u043e\u0444\u0430\u043c\u0438\u043d\u043e\u0432\u044b\u0439 \u0441\u0430\u0439\u0442/ flower studio website",
+      "title": "Сайт для цветочной студии/дофаминовый сайт/ flower studio website",
       "number": 29,
       "notes": "Pale lavender modular grid; black pill actions; color-blocked service cards"
     },
@@ -1778,10 +1778,10 @@
   },
   {
     "id": "reference-31",
-    "name": "Soft Grid",
+    "name": "The Playdate",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461554/",
-      "title": "Bloomery \u2013 \u042d\u043b\u0435\u0433\u0430\u043d\u0442\u043d\u044b\u0439 \u0438 \u043c\u0438\u043d\u0438\u043c\u0430\u043b\u0438\u0441\u0442\u0438\u0447\u043d\u044b\u0439 \u0432\u0435\u0431-\u0434\u0438\u0437\u0430\u0439\u043d \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442-\u043c\u0430\u0433\u0430\u0437\u0438\u043d\u0430 \u0446\u0432\u0435\u0442\u043e\u0432 | UI/UX",
+      "title": "Bloomery – Элегантный и минималистичный веб-дизайн интернет-магазина цветов | UI/UX",
       "number": 31,
       "notes": "Lavender-and-ivory modular boxes; playful bold sans; fine outlines and staggered service panels"
     },
@@ -1835,7 +1835,7 @@
   },
   {
     "id": "reference-32",
-    "name": "Word Garden",
+    "name": "The Storyteller",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461550/",
       "title": "an advertisement with flowers on the front and back of it, in different font styles",
@@ -1894,7 +1894,7 @@
   },
   {
     "id": "reference-33",
-    "name": "Blush Bloom",
+    "name": "Blush Balloons",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461548/",
       "title": "Modern Floral Shop Website Design | Elegant Flower Shop Homepage UI",
@@ -1952,10 +1952,10 @@
   },
   {
     "id": "reference-34",
-    "name": "Clay & Serif",
+    "name": "The Keepsake",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461546/",
-      "title": "PETAL / POETRY \u2014 A Floral Studio Website Concept",
+      "title": "PETAL / POETRY — A Floral Studio Website Concept",
       "number": 34,
       "notes": "Warm dusty beige; oversized fine serif; intimate tall media and paired editorial blocks"
     },
@@ -2068,7 +2068,7 @@
   },
   {
     "id": "reference-36",
-    "name": "Wild Letter",
+    "name": "Wildflower Vows",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461543/",
       "title": "homepage design in squarespace",
@@ -2126,10 +2126,10 @@
   },
   {
     "id": "reference-37",
-    "name": "Petal Window",
+    "name": "The Flower Cart",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461542/",
-      "title": "\u0414\u0438\u0437\u0430\u0439\u043d \u0433\u043b\u0430\u0432\u043d\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u044b \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442-\u043c\u0430\u0433\u0430\u0437\u0438\u043d\u0430 \u0446\u0432\u0435\u0442\u043e\u0432 | Iris Blooms",
+      "title": "Дизайн главной страницы интернет-магазина цветов | Iris Blooms",
       "number": 37,
       "notes": "Wide soft-pink feature; fine oversized serif masthead; aligned square service thumbnails"
     },
@@ -2184,7 +2184,7 @@
   },
   {
     "id": "reference-38",
-    "name": "Gathered Color",
+    "name": "Gather Around",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461541/",
       "title": "an image of a website page with flowers on the front and back pages, all in different colors",
@@ -2244,15 +2244,15 @@
   },
   {
     "id": "reference-39",
-    "name": "Cherry Paper",
+    "name": "Cherry Picnic",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461538/",
-      "title": "Cherry-kissed details, feminine textures, and a website that makes you want to join the club \ud83c\udf52\ud83c\udf78   \u2022 \u2022 \u2022 Brand Design | Website Design | Feminine Branding | Chic Branding | Creative Studio | Web Designer | Brand Identity | Luxury Branding | Small Business Branding | Custom Website | Women Owned Business | Brand Studio",
+      "title": "Cherry-kissed details, feminine textures, and a website that makes you want to join the club 🍒🍸   • • • Brand Design | Website Design | Feminine Branding | Chic Branding | Creative Studio | Web Designer | Brand Identity | Luxury Branding | Small Business Branding | Custom Website | Women Owned Business | Brand Studio",
       "number": 39,
       "notes": "Red stripes and cherry accents; scrapbook-like compartment boxes; script display details"
     },
     "description": "Red stripes and cherry accents; scrapbook-like compartment boxes; script display details",
-    "fonts": "Instrument Serif \u00b7 Great Vibes \u00b7 Manrope",
+    "fonts": "Instrument Serif · Great Vibes · Manrope",
     "fontStyle": "EDITORIAL",
     "headingFamily": "var(--font-shopfia-instrument-serif), serif",
     "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
@@ -2310,7 +2310,7 @@
   },
   {
     "id": "reference-40",
-    "name": "Golden Evening",
+    "name": "Golden Hour Toast",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461536/",
       "title": "SquareSpace Website | Swoon Society",
@@ -2368,7 +2368,7 @@
   },
   {
     "id": "reference-41",
-    "name": "Pastel Occasion",
+    "name": "Something Blue",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461534/",
       "title": "Best Showit Website Templates for Event Planners and Balloon Artists",
@@ -2429,7 +2429,7 @@
     "name": "Soft Celebration",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461526/",
-      "title": "Balloons bring all the joy and celebration! I love crafting logos from the ground up and bringing it all to life through a website design! \ud83e\udd0d",
+      "title": "Balloons bring all the joy and celebration! I love crafting logos from the ground up and bringing it all to life through a website design! 🤍",
       "number": 42,
       "notes": "Sage and pale-pink split panels; rounded sections; gentle serif and roomy service boxes"
     },
@@ -2484,7 +2484,7 @@
   },
   {
     "id": "reference-43",
-    "name": "Bubble Type",
+    "name": "Bubble Party",
     "source": {
       "url": "https://www.pinterest.com/pin/Afb3hVO1Xg_gkNRnHooiBxTZMW-znxBXSDlTK_8hu-OA8BxgjhWktfh4O2QNQVW1Nk5d4uVgB1VxUCDGiPRXpgc/",
       "title": "Balloon Museum: From A to Z",
@@ -2599,10 +2599,10 @@
   },
   {
     "id": "reference-45",
-    "name": "Tall Tales",
+    "name": "The Stilt Walker",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461509/",
-      "title": "This \u201cAcademic Chic\u201d Website Template Is Turning Coaches Into High-Ticket Brands",
+      "title": "This “Academic Chic” Website Template Is Turning Coaches Into High-Ticket Brands",
       "number": 45,
       "notes": "Tall narrow fashion serif; brown-and-cream collage; numbered service sections and framed imagery"
     },
@@ -2656,7 +2656,7 @@
   },
   {
     "id": "reference-46",
-    "name": "Muted Atelier",
+    "name": "Champagne Linen",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461507/",
       "title": "Customized Website Design for Squarespace",
@@ -2713,7 +2713,7 @@
   },
   {
     "id": "reference-47",
-    "name": "Script Society",
+    "name": "The Calligrapher",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461505/",
       "title": "Website Design Layout for Cherry Edit | Brand Strategist",
@@ -2770,7 +2770,7 @@
   },
   {
     "id": "reference-48",
-    "name": "Apricot Room",
+    "name": "Apricot Aperitif",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461502/",
       "title": "Home Decor Furniture E-Commerce Website Interface Chic Warm Playful Soft branding design",
@@ -2828,7 +2828,7 @@
   },
   {
     "id": "reference-49",
-    "name": "Green Collage",
+    "name": "Garden Party",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461499/",
       "title": "an image of the same website page with different colors and sizes, including two people in sneakers",
@@ -2885,7 +2885,7 @@
   },
   {
     "id": "reference-50",
-    "name": "Rouge Script",
+    "name": "Red Carpet Arrival",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461498/",
       "title": "the website design is designed to look like an elegant fashion store",
@@ -2944,7 +2944,7 @@
   },
   {
     "id": "reference-51",
-    "name": "Classic Ledger",
+    "name": "The Toastmaster",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461497/",
       "title": "Empower Your Brand with a Bold Red, Clean Squarespace Website",
@@ -3001,7 +3001,7 @@
   },
   {
     "id": "reference-52",
-    "name": "Rosewood Blocks",
+    "name": "Velvet VIP",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461496/",
       "title": "What to Look for in a Squarespace Template Before You Buy",
@@ -3058,7 +3058,7 @@
   },
   {
     "id": "reference-53",
-    "name": "Sunny Market",
+    "name": "The Treat Cart",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461493/",
       "title": "Custom Shopify Website Design | Full Homepage for Candle Brand",
@@ -3117,7 +3117,7 @@
   },
   {
     "id": "reference-54",
-    "name": "Color Stories",
+    "name": "Confetti Mix",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461491/",
       "title": "newsletter design x fake brand",
@@ -3174,7 +3174,7 @@
   },
   {
     "id": "reference-55",
-    "name": "Soft Scale",
+    "name": "Sprinkle Glaze",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461489/",
       "title": "the website is designed to look like it's being used for cosmetics and hair products",
@@ -3232,7 +3232,7 @@
   },
   {
     "id": "reference-56",
-    "name": "Rose Journal",
+    "name": "The Memory Book",
     "source": {
       "url": "https://www.pinterest.com/pin/655414552068461488/",
       "title": "Modern Skincare E-commerce Website Design | Clean Beauty Brand UI",
@@ -3289,7 +3289,7 @@
   },
   {
     "id": "reference-57",
-    "name": "Scarlet Quartet",
+    "name": "The String Quartet",
     "source": {
       "number": 57,
       "url": "https://www.pinterest.com/pin/655414552068462730/",
@@ -3346,7 +3346,7 @@
   },
   {
     "id": "reference-58",
-    "name": "Botanical Social",
+    "name": "The Flower Bar",
     "source": {
       "number": 58,
       "url": "https://www.pinterest.com/pin/655414552068462742/",
@@ -3402,7 +3402,7 @@
   },
   {
     "id": "reference-59",
-    "name": "Afterhours Signal",
+    "name": "The Afterparty",
     "source": {
       "number": 59,
       "url": "https://www.pinterest.com/pin/655414552068462741/",
@@ -3458,7 +3458,7 @@
   },
   {
     "id": "reference-60",
-    "name": "Mono Lens",
+    "name": "The Party Photographer",
     "source": {
       "number": 60,
       "url": "https://www.pinterest.com/pin/655414552068462736/",
@@ -3514,7 +3514,7 @@
   },
   {
     "id": "reference-61",
-    "name": "Midnight Press",
+    "name": "Moonlit Marquee",
     "source": {
       "number": 61,
       "url": "https://www.pinterest.com/pin/655414552068462733/",
@@ -3570,7 +3570,7 @@
   },
   {
     "id": "reference-62",
-    "name": "Evergreen Purpose",
+    "name": "The Outdoor Reception",
     "source": {
       "number": 62,
       "url": "https://www.pinterest.com/pin/655414552068462731/",

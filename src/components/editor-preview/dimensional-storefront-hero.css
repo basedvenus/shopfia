@@ -50,8 +50,6 @@
 .depth-intro-layer .sculpture-turn { display:none; }
 @media(prefers-reduced-motion:reduce) { .depth-replay { display:none; } }
 
-@keyframes storefront-intro-resolve { 0%,82% { opacity:1; } 100% {opacity:0;} }
-@media(prefers-reduced-motion:no-preference) { .depth-intro-layer.intro-ready { animation:storefront-intro-resolve 1.65s ease forwards; } }
 /* Reference-led compositions, also used by the five gallery specimens. */
 .template-surface .depth-hero[data-reference=reference-01] { display:flex!important; flex-direction:column; border-radius:0; }
 .template-surface .depth-hero[data-reference=reference-01] .depth-copy { width:100%; order:0; text-align:right; padding:35px!important; }

@@ -17,7 +17,13 @@ const template = z.object({
 }).transform(patch => ({ ...STOREFRONT_TEMPLATES.find(t => t.id === patch.id)!, ...patch, illustration: patch.illustration ?? undefined, headingFamily:patch.headingFamily, bodyFamily:patch.bodyFamily } as StorefrontTemplate));
 export const storefrontDesignSchema = z.object({
   version: z.literal(1), template: template.nullable(), depth: z.enum(["flat","floating","layered"]),
-  mount: z.enum(["round","square","artwork"]), edge:color, background:color
+  mount: z.enum(["round","square","artwork"]), edge:color, background:color,
+  headingFamily:family.optional(), subheadingFamily:family.optional(),
+  socialVisibility:z.object({instagram:z.boolean(),tiktok:z.boolean()}).optional(),
+  aboutPhotos:z.array(z.string().max(2048).refine(v=>v==="" || /^https?:\/\//.test(v) || v.startsWith("/"))).max(12).optional(),
+  aboutPhotoLayout:z.enum(["grid","row","layered","offset","cascade","six","banner","scallop"]).optional(),
+  effectImage:z.string().max(2048).refine(v=>v==="" || /^https?:\/\//.test(v) || v.startsWith("/")).optional(),
+  effectPresentation:z.enum(["emblem","product"]).optional(),effectWord:z.string().max(24).optional()
 });
 export type StorefrontDesign = z.infer<typeof storefrontDesignSchema>;
 export const DEFAULT_STOREFRONT_DESIGN: StorefrontDesign = { version:1, template:null, depth:"flat", mount:"round", edge:"#877a78", background:"#e6dfd4" };

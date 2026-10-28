@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { readStorefrontDesign } from "@/lib/storefront-design";
+import { uploadStorefrontImage } from "./upload-storefront-image";
 import { readSocialVisibility } from "@/lib/editor-preview/storefront-social-visibility";
 import { InlineStorefrontText } from "./inline-storefront-text";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type CSSProperties, type DragEvent, type ReactNode } from "react";
@@ -204,18 +206,20 @@ export function StorefrontCustomizer({
   previewOnly?: boolean;
   initialTemplateLibraryOpen?: boolean;
 }) {
-  const templateScrollRef = useRef(0);
+  const modernEditor = true;
+  const initialDesign = useMemo(()=>readStorefrontDesign(business.storefrontBookingJson,business.storefrontDraftJson),[business.storefrontBookingJson,business.storefrontDraftJson]);
+  const [templateScroll,setTemplateScroll]=useState(0);
   const templatePreviewRef = useRef<HTMLDivElement>(null);
   const [templateFontRevision, setTemplateFontRevision] = useState(0);
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(initialTemplateLibraryOpen);
-  const [selectedTemplate, setSelectedTemplate] = useState<StorefrontTemplate | null>(null);
-  const [heroCustomFont, setHeroCustomFont] = useState<string | null>(null);
-  const [heroMount, setHeroMount] = useState<LogoMount>("round");
-  const [heroEdge, setHeroEdge] = useState("#877a78");
-  const [heroBackground, setHeroBackground] = useState("#e6dfd4");
-  const [effectImage,setEffectImage]=useState("");
-  const [effectPresentation,setEffectPresentation]=useState<"emblem"|"product">("emblem");
-  const [effectWord,setEffectWord]=useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<StorefrontTemplate | null>(initialDesign.template);
+  const [heroCustomFont, setHeroCustomFont] = useState<string | null>(initialDesign.headingFamily ?? null);
+  const [heroMount, setHeroMount] = useState<LogoMount>(initialDesign.mount);
+  const [heroEdge, setHeroEdge] = useState(initialDesign.edge);
+  const [heroBackground, setHeroBackground] = useState(initialDesign.background);
+  const [effectImage,setEffectImage]=useState(initialDesign.effectImage ?? "");
+  const [effectPresentation,setEffectPresentation]=useState<"emblem"|"product">(initialDesign.effectPresentation ?? "emblem");
+  const [effectWord,setEffectWord]=useState(initialDesign.effectWord ?? "");
   const [studioOpen,setStudioOpen]=useState(false);
   const [studioInvitation,setStudioInvitation]=useState(false);
   const studioInvited=useRef(false);
@@ -227,13 +231,13 @@ export function StorefrontCustomizer({
   useEffect(()=>()=>{if(editTimer.current)clearTimeout(editTimer.current);},[]);
   function replayEffect(){setEffectReplay(v=>v+1);requestAnimationFrame(()=>templatePreviewRef.current?.querySelector('.depth-hero')?.scrollIntoView({block:'center',behavior:'auto'}));}
 
-  const [heroDepth, setHeroDepth] = useState<HeroDepth>("flat");
+  const [heroDepth, setHeroDepth] = useState<HeroDepth>(initialDesign.depth);
   const [designBrief, setDesignBrief] = useState("");
   const [localLogoPreview, setLocalLogoPreview] = useState("");
   useEffect(() => () => { if (localLogoPreview) URL.revokeObjectURL(localLogoPreview); }, [localLogoPreview]);
   const [guidedStep, setGuidedStep] = useState(1);
   const [styleStage, setStyleStage] = useState<"colors" | "fonts">("colors");
-  const [advanced, setAdvanced] = useState(previewOnly);
+  const [advanced, setAdvanced] = useState(true);
   const [guidedError, setGuidedError] = useState("");
   const guidedPanelRef = useRef<HTMLElement>(null);
   const guidedHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -294,6 +298,7 @@ export function StorefrontCustomizer({
   const faqJson = useMemo(() => JSON.stringify(form.faqs), [form.faqs]);
   const policiesJson = useMemo(() => JSON.stringify(form.policies), [form.policies]);
   const bookingJson = useMemo(() => JSON.stringify(form.booking), [form.booking]);
+  const designJson = useMemo(()=>JSON.stringify({version:1,template:selectedTemplate,depth:heroDepth,mount:heroMount,edge:heroEdge,background:heroBackground,headingFamily:heroCustomFont || undefined,subheadingFamily:form.subheadingFamily || undefined,aboutPhotos:form.aboutPhotos,aboutPhotoLayout:form.aboutPhotoLayout,effectImage,effectPresentation,effectWord,socialVisibility:{instagram:form.showInstagram,tiktok:form.showTikTok}}),[selectedTemplate,heroDepth,heroMount,heroEdge,heroBackground,heroCustomFont,form.subheadingFamily,form.aboutPhotos,form.aboutPhotoLayout,effectImage,effectPresentation,effectWord,form.showInstagram,form.showTikTok]);
   const autosavePayload = useMemo(
     () => ({
       aboutHeading: form.aboutHeading,
@@ -301,6 +306,7 @@ export function StorefrontCustomizer({
       availabilityNotes: form.availabilityNotes,
       bio: form.bio,
       bookingJson,
+      designJson,
       businessId: business.id,
       buttonStyle: "PILL",
       city: form.city,
@@ -333,7 +339,7 @@ export function StorefrontCustomizer({
       tiktokUrl: form.tiktokUrl,
       website: form.website
     }),
-    [bookingJson, business.id, faqJson, form, policiesJson, servicesJson]
+    [bookingJson, designJson, business.id, faqJson, form, policiesJson, servicesJson]
   );
   const completionItems = useMemo(() => [
     { done: Boolean(form.logoUrl), label: "Logo added" },
@@ -495,8 +501,8 @@ export function StorefrontCustomizer({
   }
 
   return (
-    <form action={previewOnly ? undefined : updateStorefrontCustomizationAction} onSubmit={previewOnly ? (event) => event.preventDefault() : undefined} data-testid="storefront-editor-shell" className={`${previewOnly ? "editor-review " : ""}relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
-      {previewOnly ? <style>{`
+    <form action={previewOnly ? undefined : updateStorefrontCustomizationAction} onSubmit={previewOnly ? (event) => event.preventDefault() : undefined} data-testid="storefront-editor-shell" className={`${modernEditor ? "editor-review " : ""}relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
+      {modernEditor ? <style>{`
         .editor-review [data-testid="preview-section-${activeSection}"] { outline: 2px solid #81916b; outline-offset: -2px; }
         .editor-review { background: #f8f8f5; border-radius: 20px; }
         .editor-review .editor-workspace { grid-template-columns: minmax(0,1fr) 320px; }
@@ -505,13 +511,13 @@ export function StorefrontCustomizer({
         .editor-review .editor-inspector details > summary { cursor: pointer; font-size: 13px; font-weight: 600; }
         @media(max-width:1023px) { .editor-review .editor-workspace { display:flex; flex-direction:column; } .editor-review .editor-inspector { max-height:none; } .editor-review .editor-canvas { padding:12px; } }
       `}</style> : null}
-      {previewOnly && templateLibraryOpen ? <StorefrontTemplateLibrary vendorName={form.name} initialScroll={templateScrollRef.current} onScroll={(position)=>{templateScrollRef.current=position;}} selected={selectedTemplate?.id ?? null} image={form.logoUrl || form.coverPhoto} photos={form.photoUrls.filter(Boolean)} onClose={()=>setTemplateLibraryOpen(false)} onApply={(template)=>{
+      {modernEditor && templateLibraryOpen ? <StorefrontTemplateLibrary vendorName={form.name} initialScroll={templateScroll} onScroll={setTemplateScroll} selected={selectedTemplate?.id ?? null} image={form.logoUrl || form.coverPhoto} photos={form.photoUrls.filter(Boolean)} onClose={()=>setTemplateLibraryOpen(false)} onApply={(template)=>{
         setSelectedTemplate(template);setHeroCustomFont(null);setTemplateFontRevision(value=>value+1);
         setForm(current=>({...current,fontStyle:template.fontStyle,imageShape:template.imageShape}));
         setTemplateLibraryOpen(false);markDirty(false);
         requestAnimationFrame(()=>templatePreviewRef.current?.scrollIntoView({block:"start",behavior:"auto"}));
       }} /> : null}
-      {previewOnly && studioOpen && <Storefront3DStudio initialImage={effectImage} initialPresentation={effectPresentation} initialWord={effectWord} invitation={studioInvitation} name={form.name} logo={form.logoUrl || form.coverPhoto} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount,image,presentation,word)=>{setEffectImage(image);setEffectPresentation(presentation);setEffectWord(word);studioInvited.current=true;setHeroDepth(depth);setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`3D Effect applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
+      {modernEditor && studioOpen && <Storefront3DStudio uploadEndpoint={previewOnly ? undefined : mediaUploadEndpoint} initialImage={effectImage} initialPresentation={effectPresentation} initialWord={effectWord} invitation={studioInvitation} name={form.name} logo={form.logoUrl || form.coverPhoto} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount,image,presentation,word)=>{setEffectImage(image);setEffectPresentation(presentation);setEffectWord(word);studioInvited.current=true;setHeroDepth(depth);setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`3D Effect applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
       <input type="hidden" name="businessId" value={business.id} />
       <input type="hidden" name="businessSlug" value={business.slug} />
       <input type="hidden" name="name" value={form.name} />
@@ -541,6 +547,7 @@ export function StorefrontCustomizer({
       <input type="hidden" name="sectionLabelsJson" value={JSON.stringify(form.sectionLabels)} />
       <input type="hidden" name="faqJson" value={faqJson} />
       <input type="hidden" name="policiesJson" value={policiesJson} />
+      <input type="hidden" name="designJson" value={designJson} />
       <input type="hidden" name="bookingJson" value={bookingJson} />
       <input type="hidden" name="servicesJson" value={servicesJson} />
       {form.sectionOrder.map((section) => <input key={`order-${section}`} type="hidden" name="sectionOrder" value={section} />)}
@@ -606,7 +613,7 @@ export function StorefrontCustomizer({
         </div>
       ) : null}
 
-      {!previewOnly && <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee5e1] bg-[#fffaf8] px-5 py-3">
+      {!modernEditor && <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee5e1] bg-[#fffaf8] px-5 py-3">
         <nav aria-label="Storefront setup" className="flex flex-wrap gap-2">
           {["Your business", "Choose your look", "Photos & preview"].map((label, index) => (
             <button key={label} type="button" aria-current={!advanced && guidedStep === index + 1 ? "step" : undefined}
@@ -678,7 +685,7 @@ export function StorefrontCustomizer({
         className="editor-workspace grid min-h-[calc(100vh-190px)] min-w-0 lg:grid-cols-[260px_minmax(0,1fr)_var(--editor-panel-width)]"
         style={{ "--editor-panel-width": panelCollapsed ? "64px" : "430px" } as CSSProperties}
       >
-        {!previewOnly && <aside className="sticky top-0 z-20 min-w-0 border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:static lg:z-auto lg:border-b-0 lg:border-r">
+        {!modernEditor && <aside className="sticky top-0 z-20 min-w-0 border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:static lg:z-auto lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Sections</h2>
             <CopyStorefrontLinkButton url={publicUrl} label="Copy link" className="h-8 bg-white px-3 text-xs" />
@@ -752,7 +759,7 @@ export function StorefrontCustomizer({
           <div className="mb-3 flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>{previewOnly ? "Preview only · changes reset on refresh" : "Select a section to edit"}</span>
           </div>
-          {previewOnly && effectNotice && <div role="status" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-3 text-sm"><div><strong>{effectNotice}</strong><p className="mt-1 text-xs text-muted-foreground">{previewOnly ? "Preview only · your live storefront has not changed." : "Publish to update your live storefront."}</p></div>{heroDepth!=='flat' && <button type="button" onClick={replayEffect} className="rounded-full border px-4 py-2 text-xs">Show on page</button>}</div>}
+          {modernEditor && effectNotice && <div role="status" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-3 text-sm"><div><strong>{effectNotice}</strong><p className="mt-1 text-xs text-muted-foreground">{previewOnly ? "Preview only · your live storefront has not changed." : "Publish to update your live storefront."}</p></div>{heroDepth!=='flat' && <button type="button" onClick={replayEffect} className="rounded-full border px-4 py-2 text-xs">Show on page</button>}</div>}
           <div ref={templatePreviewRef} data-testid="storefront-preview-frame" style={{ scrollMarginTop: 90, containerType: "inline-size", containerName: "storefront-preview" }} className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
             <StorefrontPreview
               effectImage={effectImage} effectPresentation={effectPresentation} effectWord={effectWord}
@@ -805,19 +812,19 @@ export function StorefrontCustomizer({
                   </button>
                 ))}
               </div>
-{activeTool === "content" && <>          {previewOnly ? <div className="mb-4 rounded-2xl border border-[#e0ddd5] bg-white p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.15em] text-muted-foreground">Storefront design</p><p className="mt-1 text-sm font-semibold">{selectedTemplate?.name ?? "Your saved design"}</p></div><div className="flex gap-2">{selectedTemplate ? <button type="button" className="px-2 text-xs text-muted-foreground underline" onClick={()=>{const initial=createInitialState(business,true);setSelectedTemplate(null);setHeroCustomFont(null);setTemplateFontRevision(value=>value+1);setForm(current=>({...current,fontStyle:initial.fontStyle,imageShape:initial.imageShape}));markDirty();}}>Use saved design</button> : null}<Button type="button" variant="secondary" onClick={()=>setTemplateLibraryOpen(true)}>Browse templates</Button></div></div>
+{activeTool === "content" && <>          {modernEditor ? <div className="mb-4 rounded-2xl border border-[#e0ddd5] bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.15em] text-muted-foreground">Storefront design</p><p className="mt-1 text-sm font-semibold">{selectedTemplate?.name ?? "Your saved design"}</p></div><div className="flex gap-2">{selectedTemplate ? <button type="button" className="px-2 text-xs text-muted-foreground underline" onClick={()=>{const initial=createInitialState(business,true);setSelectedTemplate(initialDesign.template);setHeroCustomFont(initialDesign.headingFamily ?? null);setTemplateFontRevision(value=>value+1);setForm(current=>({...current,fontStyle:initial.fontStyle,imageShape:initial.imageShape}));markDirty();}}>Use saved design</button> : null}<Button type="button" variant="secondary" onClick={()=>setTemplateLibraryOpen(true)}>Browse templates</Button></div></div>
             {selectedTemplate ? <details className="mt-3 border-t pt-3"><summary className="cursor-pointer text-xs font-medium">Customize colors</summary><div className="mt-3 flex flex-wrap gap-4">{(["background","surface","ink","accent","accentInk","secondary"] as const).map(key=><label key={key} className="grid gap-1 text-[10px] capitalize">{key === "accentInk" ? "Button text" : key}<input aria-label={`Template ${key} color`} type="color" value={selectedTemplate.colors[key]} onChange={(event)=>{setSelectedTemplate({...selectedTemplate,colors:{...selectedTemplate.colors,[key]:event.target.value}});markDirty();}} className="h-8 w-12 rounded border" /></label>)}</div></details> : null}
           </div> : null}
-              {previewOnly && activeTool === "content" ? <details className="mb-4 rounded-xl border border-[#e0ddd5] bg-white p-3"><summary className="cursor-pointer text-xs font-semibold">3D Effects · optional</summary><fieldset className="mt-3">
+              {modernEditor && activeTool === "content" ? <details className="mb-4 rounded-xl border border-[#e0ddd5] bg-white p-3"><summary className="cursor-pointer text-xs font-semibold">3D Effects · optional</summary><fieldset className="mt-3">
                 <legend className="mb-2 text-sm font-semibold">3D Effects</legend><button type="button" onClick={()=>{studioInvited.current=true;if(editTimer.current)clearTimeout(editTimer.current);setStudioInvitation(false);setStudioOpen(true);}} className="mb-3 rounded-full border px-4 py-2 text-xs">Open 3D Studio</button>
                 <p className="mb-3 text-xs text-muted-foreground">Suggested for {form.name || "your storefront"}: an interactive element using your logo. Booking stays available.</p>
                 <div className="grid grid-cols-3 gap-2">{HERO_DEPTH_PRESETS.map((preset) => <button key={preset.value} type="button" aria-pressed={heroDepth === preset.value} onClick={() => { setHeroDepth(preset.value); markDirty(); }} className={`rounded-xl border px-2 py-3 text-left transition ${heroDepth === preset.value ? "border-[#627b40] bg-[#f0f3e8] ring-1 ring-[#627b40]" : "border-[#e5e5dc] bg-white"}`}><span className="block text-xs font-semibold">{preset.label}</span><span className="mt-1 block text-[10px] leading-4 text-muted-foreground">{preset.detail}</span></button>)}</div>
               </fieldset></details> : null}
 
 </>}
-              {previewOnly && selectedTemplate ? <SectionBackgroundControls template={selectedTemplate} section={activeSection} label={sectionLabel(activeSection)} onChange={(template)=>{setSelectedTemplate(template);markDirty();}} /> : null}
-              {previewOnly ? <div hidden={activeTool !== "content"}><HeroTypographyControls subheadingFamily={form.subheadingFamily} onSubheading={value=>update("subheadingFamily",value)} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
+              {modernEditor && selectedTemplate ? <SectionBackgroundControls template={selectedTemplate} section={activeSection} label={sectionLabel(activeSection)} onChange={(template)=>{setSelectedTemplate(template);markDirty();}} /> : null}
+              {modernEditor ? <div hidden={activeTool !== "content"}><HeroTypographyControls allowUpload={previewOnly} subheadingFamily={form.subheadingFamily} onSubheading={value=>update("subheadingFamily",value)} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
               {activeTool === "design" ? (
                 <DesignControls form={form} update={update} />
               ) : (
@@ -854,6 +861,7 @@ export function StorefrontCustomizer({
 
 function createInitialState(business: CustomizerBusiness, previewOnly = false): FormState {
   const draft = readDraft(business.storefrontDraftJson);
+  const design=readStorefrontDesign(business.storefrontBookingJson,business.storefrontDraftJson);
   const socialVisibility=readSocialVisibility(business.storefrontBookingJson,business.storefrontDraftJson);
   const orderedServices = orderServices(
     business.offerings.map((offering) => ({
@@ -873,10 +881,10 @@ function createInitialState(business: CustomizerBusiness, previewOnly = false): 
   return {
     showInstagram:socialVisibility.instagram,
     showTikTok:socialVisibility.tiktok,
-    subheadingFamily: draft?.subheadingFamily ?? "",
+    subheadingFamily: design.subheadingFamily ?? draft?.subheadingFamily ?? "",
     aboutHeading: draft?.aboutHeading ?? business.storefrontAboutHeading ?? `About ${business.name}`,
-    aboutPhotos: draft?.aboutPhotos ?? [],
-    aboutPhotoLayout: draft?.aboutPhotoLayout ?? "grid",
+    aboutPhotos: design.aboutPhotos ?? draft?.aboutPhotos ?? [],
+    aboutPhotoLayout: design.aboutPhotoLayout ?? draft?.aboutPhotoLayout ?? "grid",
     aboutImage: draft?.aboutImage ?? business.storefrontAboutImage ?? "",
     availabilityNotes: draft?.availabilityNotes ?? business.availabilityNotes ?? "",
     bio: draft?.bio ?? business.bio ?? "",
@@ -1026,7 +1034,7 @@ function SectionEditor({
         </details>
         <details className="rounded-xl border p-3" open><summary>Gallery</summary><div className="mt-4">
         <PhotoLayoutPicker layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)}/>
-        <AboutPhotoGrid compact images={[form.aboutImage,...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0)update("aboutImage",value);else{const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}}/>
+        <AboutPhotoGrid uploadEndpoint={mediaUploadEndpoint.includes("preview-only") ? undefined : mediaUploadEndpoint} compact images={[form.aboutImage,...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0)update("aboutImage",value);else{const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}}/>
         </div></details>
         <details className="rounded-xl border p-3"><summary>Social media</summary><div className="mt-4 space-y-4">
         <label className="flex justify-between text-sm">Show Instagram<input type="checkbox" checked={form.showInstagram} onChange={event=>update("showInstagram",event.target.checked)}/></label>
@@ -1665,7 +1673,7 @@ function StorefrontPreview({
               onClick={() => setActiveSection(section)}
             >
               <p className="mb-5"><InlineStorefrontText label="About description" value={form.bio} placeholder="Describe your business here" onChange={value=>update("bio",value)}/></p>
-              <AboutPhotoGrid images={[form.aboutImage, ...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0) update("aboutImage",value);else {const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}} />
+              <AboutPhotoGrid uploadEndpoint={mediaUploadEndpoint.includes("preview-only") ? undefined : mediaUploadEndpoint} images={[form.aboutImage, ...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0) update("aboutImage",value);else {const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}} />
             </PreviewSection>
           );
           if (section === "how-it-works") return (
@@ -2392,26 +2400,27 @@ function photoTileStyle(layout:FormState["aboutPhotoLayout"],index:number):CSSPr
 function photoGridStyle(layout:FormState["aboutPhotoLayout"]):CSSProperties {
  return {display:"grid",gridTemplateColumns:`repeat(${layout==="grid"||layout==="offset"?2:layout==="cascade"?5:3},minmax(0,1fr))`,gap:layout==="cascade"?0:12,alignItems:layout==="cascade"?"center":"stretch",padding:layout==="cascade"?"36px 12px":layout==="layered"?"20px 12px":"0"};
 }
-function AboutPhotoGrid({compact=false,images,layout,onLayout,onImage}:{compact?:boolean;images:string[];layout:FormState["aboutPhotoLayout"];onLayout:(value:FormState["aboutPhotoLayout"])=>void;onImage:(index:number,value:string)=>void}) {
+export function AboutPhotoGrid({readOnly=false,uploadEndpoint,compact=false,images,layout,onLayout,onImage}:{readOnly?:boolean;uploadEndpoint?:string;compact?:boolean;images:string[];layout:FormState["aboutPhotoLayout"];onLayout:(value:FormState["aboutPhotoLayout"])=>void;onImage:(index:number,value:string)=>void}) {
  const [error,setError]=useState("");
  const [dragging,setDragging]=useState<number|null>(null);
  const requests=useRef<Record<number,number>>({});
- function loadImage(file:File|undefined,index:number){
-  if(!file)return;
+ async function loadImage(file:File|undefined,index:number){
+  if(readOnly || !file)return;
   if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>8*1024*1024){setError("Choose a PNG, JPG, or WebP under 8 MB.");return;}
   const request=(requests.current[index]??0)+1;requests.current[index]=request;
+  if(uploadEndpoint){try{const url=await uploadStorefrontImage(file,uploadEndpoint);if(requests.current[index]===request){onImage(index,url);setError("");}}catch{setError("Upload failed. Please try again.");}return;}
   const reader=new FileReader();reader.onload=()=>{if(requests.current[index]!==request)return;onImage(index,String(reader.result));setError("");};reader.onerror=()=>setError("Could not read this image. Please try again.");reader.readAsDataURL(file);
  }
  const selected=PHOTO_LAYOUTS.find(item=>item.id===layout)??PHOTO_LAYOUTS[0];
  return <div onClick={event=>event.stopPropagation()}>
   <div style={photoGridStyle(compact ? "grid" : layout)}>
-   {Array.from({length:selected.count},(_,index)=><div key={index} className="relative min-w-0" style={{...photoTileStyle(compact ? "grid" : layout,index),width:"100%",alignSelf:"start"}}>
+   {Array.from({length:readOnly ? Math.min(images.length,selected.count) : selected.count},(_,index)=><div key={index} className="relative min-w-0" style={{...photoTileStyle(compact ? "grid" : layout,index),width:"100%",alignSelf:"start"}}>
     <label onDragOver={event=>{event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect="copy";setDragging(index);}} onDragLeave={()=>setDragging(null)} onDrop={event=>{event.preventDefault();event.stopPropagation();setDragging(null);loadImage(event.dataTransfer.files[0],index);}} className={`relative block h-full w-full cursor-pointer overflow-hidden border border-current/15 bg-stone-100 focus-within:ring-2 focus-within:ring-current ${dragging===index?"ring-2 ring-current":""}`} style={{backgroundColor:"color-mix(in srgb, currentColor 5%, transparent)",borderRadius:layout==="scallop"?"0 0 22px 22px":0}}>
     {images[index] ? <img src={images[index]} alt={`About photo ${index+1}`} className="h-full w-full object-cover"/> : <span className="grid h-full place-content-center justify-items-center gap-2 text-center opacity-65"><Upload className="h-5 w-5"/><span className="text-[10px] sm:text-xs">Upload image</span><span className="hidden text-[10px] sm:block">or drag & drop</span></span>}
-    <input type="file" aria-label={`Upload About photo ${index+1}`} accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={event=>{loadImage(event.target.files?.[0],index);event.target.value="";}}/>
+    <input disabled={readOnly} type="file" aria-label={`Upload About photo ${index+1}`} accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={event=>{loadImage(event.target.files?.[0],index);event.target.value="";}}/>
     </label>
     {layout==="scallop" && <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-4" style={{background:"radial-gradient(circle at 50% 0,currentColor 68%,transparent 71%) 0 0 / 20% 100% repeat-x"}}/>}
-    {images[index] && <button type="button" className="absolute bottom-2 right-2 rounded-full bg-white px-2 py-1 text-[10px] text-stone-800 shadow" aria-label={`Remove photo ${index+1}`} onClick={()=>{requests.current[index]=(requests.current[index]??0)+1;onImage(index,"");}}>Remove</button>}
+    {!readOnly && images[index] && <button type="button" className="absolute bottom-2 right-2 rounded-full bg-white px-2 py-1 text-[10px] text-stone-800 shadow" aria-label={`Remove photo ${index+1}`} onClick={()=>{requests.current[index]=(requests.current[index]??0)+1;onImage(index,"");}}>Remove</button>}
    </div>)}
   </div>
   {compact && <p className="mt-4 text-xs opacity-60">PNG, JPG or WebP · up to 8 MB. Switching layouts keeps your images.</p>}

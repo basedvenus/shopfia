@@ -1,3 +1,4 @@
+import { PublishedAboutGallery } from "@/components/vendor/published-about-gallery";
 import { VendorSocialFeeds } from "@/components/vendor/vendor-social-feeds";
 import { hasStorefrontDesign, readStorefrontDesign } from "@/lib/storefront-design";
 import { sectionDesignStyle } from "@/lib/template-section-design";
@@ -181,6 +182,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
     palette: palette.value,
     textTone: vendor.storefrontTextTone
   });
+  if(design.headingFamily) theme.headingStyle={...theme.headingStyle,fontFamily:design.headingFamily};
   if(template) {
     theme.bodyStyle={fontFamily:template.bodyFamily ?? theme.bodyStyle.fontFamily,backgroundColor:template.colors.background,color:template.colors.ink};
     theme.headingStyle={fontFamily:template.headingFamily ?? theme.headingStyle.fontFamily,fontWeight:template.headingWeight};
@@ -426,14 +428,10 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <section id="about" data-testid="preview-section-about" data-custom-background={Boolean(template?.sectionDesigns?.["about"]) } className={`grid scroll-mt-28 gap-5 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-8 ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, ...sectionStyle("about"), order: sectionPriority("about") }}>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={theme.accentTextStyle}>About</p>
-            <h2 className="mt-3 text-4xl font-normal tracking-normal" style={theme.headingStyle}>
+            <h2 className="mt-3 text-4xl font-normal tracking-normal" style={{...theme.headingStyle,...(design.subheadingFamily ? {fontFamily:design.subheadingFamily}: {})}}>
               {aboutHeading}
             </h2>
-            {vendor.storefrontAboutImage ? (
-              <div className={`relative mt-5 aspect-[4/3] overflow-hidden bg-white ${theme.imageRadius}`}>
-                <Image src={vendor.storefrontAboutImage} alt={`${vendor.name} founder or team photo`} fill sizes="(min-width: 768px) 32vw, 100vw" className="object-contain p-2" />
-              </div>
-            ) : null}
+            {vendor.storefrontAboutImage || design.aboutPhotos?.some(Boolean) ? <PublishedAboutGallery images={[vendor.storefrontAboutImage || "",...(design.aboutPhotos ?? [])]} layout={design.aboutPhotoLayout} name={vendor.name}/> : null}
           </div>
           <div className="grid gap-4">
             <p className={`text-base leading-8 ${theme.copyClass}`}>
@@ -669,7 +667,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       ) : null}
 
       {!isUnclaimed ? partyCredits : null}
-      <section style={{ order: 998.5 }}><VendorSocialFeeds instagramUrl={instagramFeedUrl} tiktokUrl={vendor.tiktokUrl} /></section>
+      <section style={{ order: 998.5 }}><VendorSocialFeeds instagramUrl={design.socialVisibility?.instagram === false ? null : instagramFeedUrl} tiktokUrl={design.socialVisibility?.tiktok === false ? null : vendor.tiktokUrl} /></section>
 
       <footer className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm ${theme.mutedClass} ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: 999 }}>
         <span>{vendor.name} storefront, powered by ShopFia.</span>

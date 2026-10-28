@@ -1,0 +1,1 @@
+export async function uploadStorefrontImage(file:File,endpoint:string):Promise<string>{const data=new FormData();data.set("file",file);const response=await fetch(endpoint,{method:"POST",credentials:"same-origin",body:data});const result=await response.json();if(!response.ok || !result.url)throw new Error("Upload failed");return result.url;}

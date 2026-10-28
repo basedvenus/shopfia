@@ -34,20 +34,8 @@ export function DimensionalStorefrontHero({ effectImage="", presentation="emblem
   const [effectsOpen, setEffectsOpen] = useState(false);
   const headlineContent = (template?.id === "reference-02" ? <span className="reference-inline-title"><span>{(headline || name).split(" ").slice(0,1).join(" ")}</span>{" "}<TemplateIllustration kind={template.illustration || "ribbon"} className="reference-title-art"/><span>{(headline || name).split(" ").slice(1).join(" ")}</span></span> : <TemplateHeading text={headline || name || "Your storefront"} treatment={template?.headingTreatment} accentFamily={template?.accentHeadingFamily}/>);
   return (
-    <div ref={rootRef} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setEffectsOpen(true); }} className={`depth-hero ${mobile ? "depth-mobile" : ""}`} data-preview-playing={playing} data-depth={depth} data-reference={template?.id} style={{"--scene-color":sceneColor,...sectionDesignStyle(template?.sectionDesigns?.hero),...(template?.sectionDesigns?.hero ? {"--template-heroInk":template.sectionDesigns.hero.ink} : {})} as CSSProperties}>
+    <div ref={rootRef} className={`depth-hero ${mobile ? "depth-mobile" : ""}`} data-preview-playing={playing} data-depth={depth} data-reference={template?.id} style={{"--scene-color":sceneColor,...sectionDesignStyle(template?.sectionDesigns?.hero),...(template?.sectionDesigns?.hero ? {"--template-heroInk":template.sectionDesigns.hero.ink} : {})} as CSSProperties}>
 
-      <div className="depth-effects" onBlur={(event)=>{if(!event.currentTarget.contains(event.relatedTarget))setEffectsOpen(false);}}>
-        <button ref={effectsButton} type="button" aria-expanded={effectsOpen} aria-haspopup="menu" onClick={(event) => {event.stopPropagation(); setEffectsOpen(!effectsOpen);}}>3D Effects</button>
-        {effectsOpen ? <div role="menu" aria-label="3D Effects" onKeyDown={(event) => {
-          if(event.key === "Escape") {event.stopPropagation();setEffectsOpen(false);effectsButton.current?.focus();}
-          if(["ArrowDown","ArrowUp","Home","End"].includes(event.key)) {
-            event.preventDefault();const items=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button"));const current=items.indexOf(document.activeElement as HTMLButtonElement);
-            const next=event.key === "Home" ? 0 : event.key === "End" ? items.length-1 : (current+(event.key === "ArrowDown" ? 1 : -1)+items.length)%items.length;items[next]?.focus();
-          }
-        }}>
-          {HERO_DEPTH_PRESETS.map((preset,index) => <button key={preset.value} autoFocus={index === 0} type="button" role="menuitemradio" aria-checked={depth === preset.value} onClick={(event) => {event.stopPropagation();onDepthChange(preset.value);setEffectsOpen(false);effectsButton.current?.focus();}}>{preset.label}<span>{preset.detail}</span></button>)}
-        </div> : null}
-      </div>
       <div className="depth-copy">
         {template?.illustration && template.id !== "reference-02" && <TemplateIllustration kind={template.illustration} className="mb-3 h-20 w-20"/>}
         {location ? <p className="depth-location">{location}</p> : null}

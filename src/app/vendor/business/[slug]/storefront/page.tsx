@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { StorefrontCustomizer } from "@/components/vendor/storefront-customizer";
+import { StorefrontCustomizer } from "@/components/editor-preview/storefront-customizer";
 import { sanitizeStorefrontSections, storefrontUrl } from "@/lib/businesses";
 import { db } from "@/lib/db";
 
