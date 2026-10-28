@@ -577,10 +577,12 @@ export async function updatePartyEventAction(formData: FormData) {
     select: {
       id: true,
       slug: true,
+      taggedVendors: { select: { id: true } },
       photos: {
         orderBy: { sortOrder: "asc" },
         select: {
-          id: true
+          id: true,
+          taggedVendors: { select: { id: true } }
         }
       }
     }
@@ -596,7 +598,11 @@ export async function updatePartyEventAction(formData: FormData) {
     eventId: existingEvent.id
   });
   const keptPhotoIds = prepared.orderedPhotos.map((photo) => photo.id);
-  if (prepared.orderedPhotos.some((photo) => photo.vendorIds.some((id) => prepared.validVendorIds.has(id) && !photo.vendorRatings[id]))) {
+  const existingVendorIds = new Set([
+    ...(existingEvent.taggedVendors ?? []).map((vendor) => vendor.id),
+    ...existingEvent.photos.flatMap((photo) => (photo.taggedVendors ?? []).map((vendor) => vendor.id))
+  ]);
+  if (prepared.orderedPhotos.some((photo) => photo.vendorIds.some((id) => prepared.validVendorIds.has(id) && !existingVendorIds.has(id) && !photo.vendorRatings[id]))) {
     return { ok: false, error: "Rate each tagged vendor before saving your party." };
   }
 

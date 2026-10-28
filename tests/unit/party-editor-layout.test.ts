@@ -9,10 +9,23 @@ vi.mock("@/app/actions/vendor", () => ({ createUnclaimedVendorAction: vi.fn() })
 vi.mock("@/components/location/place-autocomplete-input", () => ({ PlaceAutocompleteInput: () => null }));
 import { PartyPhotoActions } from "@/components/parties/party-photo-actions";
 import { ImageCropEditor } from "@/components/ui/image-crop-editor";
+import { updatePartyEventAction } from "@/app/actions/auth";
 import { PartyEventForm } from "@/components/parties/party-event-form";
 const photo = { id: "photo", url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='800'%3E%3Crect width='800' height='800' fill='%23000000'/%3E%3Crect y='100' width='800' height='600' fill='%23e3a7a7'/%3E%3Ctext x='230' y='300' font-size='60' fill='%23ffffff'%3EParty photo%3C/text%3E%3C/svg%3E", crop: { x: 50, y: 50, zoom: 1 }, vendorIds: [], vendorContributions: {} };
 const party = { id: "party", slug: "test-party", title: "Test party", theme: null, tags: [], description: null, location: "Private residence", countyFips: "06095", photos: [photo], appleMusicUrl: "https://music.apple.com/us/playlist/todays-hits/pl.f4d106fed2bd41149aaacabb233eb5eb", tiktokUrls: ["https://www.tiktok.com/@scout2015/video/6718335390845095173", "https://www.tiktok.com/@scout2015/video/6718335390845095174"] };
 describe("party editor organization", () => {
+  it("saves a title edit with existing unrated legacy vendor tags without opening the rating panel", async () => {
+    vi.mocked(updatePartyEventAction).mockResolvedValueOnce({ ok: false, error: "Test save captured" });
+    let view!: ReactTestRenderer;
+    act(() => { view = create(createElement(PartyEventForm, { currentUserId: "owner", initialParty: { ...party, photos: [{ ...photo, vendorIds: ["existing-vendor"] }] }, composer: true, users: [], vendors: [] })); });
+    const data = new FormData(); data.set("title", "Updated Baby Shower");
+    await act(async () => view.root.findByType("form").props.action(data));
+    expect(updatePartyEventAction).toHaveBeenCalledWith(data);
+    expect(data.get("title")).toBe("Updated Baby Shower");
+    expect(view.root.findAllByType(PartyPhotoActions)).toHaveLength(0);
+    act(() => view.unmount());
+  });
+
   it("moves between photos within the tagging panel without submitting", () => {
     let view!: ReactTestRenderer;
     act(() => { view = create(createElement(PartyEventForm, { currentUserId: "owner", initialParty: { ...party, photos: [photo, { ...photo, id: "second" }] }, composer: true, users: [], vendors: [] })); });

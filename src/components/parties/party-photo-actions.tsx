@@ -40,6 +40,7 @@ export function PartyPhotoActions({ photo, index, count, isEditing, onClose, onR
           <Button type="button" variant="secondary" className="h-12 border border-destructive/20 text-destructive" onClick={onDelete}><Trash2 className="h-4 w-4" />Delete photo</Button>
         </div>
         {children}
+        <Button type="button" className="h-12 w-full shrink-0" onClick={onClose}>Done editing photo & tags</Button>
         <p className="text-xs text-muted-foreground">{isEditing ? "Photo removals take effect when you save your party." : "Deleting removes the photo from your party draft."}</p>
       </Dialog.Content>
     </Dialog.Portal>

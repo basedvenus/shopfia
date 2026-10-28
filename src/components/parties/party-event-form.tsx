@@ -257,7 +257,8 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
       onSubmit={(event) => { if (!isEditing && step === 1) { event.preventDefault(); goToVendors(); } }}
       action={(formData) => {
         setMessage(null);
-        const missingRatingPhoto = photos.find((photo) => photo.vendorIds.some((id) => !partyVendorRatings[id]));
+        const existingVendorIds = new Set(initialParty?.photos.flatMap((photo) => photo.vendorIds) ?? []);
+        const missingRatingPhoto = photos.find((photo) => photo.vendorIds.some((id) => !existingVendorIds.has(id) && !partyVendorRatings[id]));
         if (missingRatingPhoto) {
           setSelectedPhotoId(missingRatingPhoto.id);
           setStep(2);

@@ -172,6 +172,20 @@ describe("party owner rights and persistence wiring", () => {
     expect(mocks.tx.partyVendorRating.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { eventId_userId_vendorId: { eventId, userId: ownerId, vendorId } }, create: { eventId, userId: ownerId, vendorId, rating: 5 } }));
     for (const [write] of mocks.tx.partyPhotoVendorRating.upsert.mock.calls) expect(write.create.rating).toBeNull();
   });
+  it("renames a legacy party without requiring ratings for its existing vendor tags", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: ownerId } });
+    const vendorId = "c0000000000000000000000005";
+    mocks.db.partyEvent.findFirst.mockResolvedValue({ id: eventId, slug: "test-party", taggedVendors: [{ id: vendorId }], photos: [{ id: photoId, taggedVendors: [{ id: vendorId }] }] });
+    mocks.db.partyPhoto.findMany.mockResolvedValue([{ id: photoId, updatedAt: new Date("2026-01-01") }]);
+    mocks.db.vendorProfile.findMany.mockResolvedValue([{ id: vendorId }]);
+    const form = editForm();
+    form.set("title", "Renamed Baby Shower");
+    form.set("photos", JSON.stringify([{ id: photoId, vendorIds: [vendorId], vendorRatings: {} }]));
+    expect(await updatePartyEventAction(form)).toMatchObject({ ok: true });
+    expect(mocks.tx.partyEvent.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ title: "Renamed Baby Shower", taggedVendors: { set: [{ id: vendorId }] } }) }));
+    expect(mocks.tx.partyVendorRating.upsert).not.toHaveBeenCalled();
+  });
+
   it("reuses only the signed-in user's saved party rating when another photo is tagged", async () => {
     mocks.auth.mockResolvedValue({ user: { id: ownerId } });
     const vendorId = "c0000000000000000000000005";
