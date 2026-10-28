@@ -167,7 +167,6 @@ export function StorefrontBrandSculpture({ image, name, interactive, mount, edge
   return <div className="brand-sculpture">
     {/* The real saved asset is also the no-WebGL / failed-texture fallback. */}
     <div className={`sculpture-fallback mount-${mount}`} style={{opacity:ready?0:1}}>{image ? <img src={image} alt="" /> : <span>{name || "Your brand"}</span>}</div>
-    {interactive && ready ? <button type="button" className="sculpture-turn" onClick={(event)=>{event.stopPropagation();turnRef.current?.();}}>Turn logo ↻</button> : null}
     <canvas ref={canvasRef} role="img" aria-label={`${name || "Storefront"} sculptural brand emblem`} style={{opacity:ready?1:0}} />
   </div>;
 }
