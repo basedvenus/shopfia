@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { readStorefrontDesign } from "@/lib/storefront-design";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
@@ -24,6 +25,16 @@ import { CroppedImage } from "@/components/ui/cropped-image";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { StorefrontDesignChat } from "@/components/vendor/storefront-design-chat";
+import { SectionBackgroundControls } from "@/components/vendor/section-background-controls";
+import { sectionDesignStyle } from "@/lib/template-section-design";
+import { TemplateMediaGrid } from "./template-media-grid";
+import { StorefrontTemplateLibrary, templateVariables } from "@/components/vendor/storefront-template-library";
+import type { StorefrontTemplate } from "@/lib/storefront-template-library";
+import { Storefront3DStudio } from "./storefront-3d-studio";
+import { HeroTypographyControls } from "@/components/vendor/hero-typography-controls";
+import type { LogoMount } from "@/components/vendor/storefront-brand-sculpture";
+import { DimensionalStorefrontHero, HERO_DEPTH_PRESETS, type HeroDepth } from "@/components/vendor/dimensional-storefront-hero";
 import { CopyStorefrontLinkButton } from "@/components/vendor/copy-storefront-link-button";
 import {
   APPROVED_STOREFRONT_SECTIONS,
@@ -43,7 +54,7 @@ import {
 } from "@/lib/businesses";
 import { DEFAULT_IMAGE_CROP, normalizeImageCrop, type ImageCrop } from "@/lib/image-crop";
 import { formatCurrency } from "@/lib/utils";
-import { STOREFRONT_LOOKS, recommendStorefrontLook } from "@/lib/storefront-looks";
+import { recommendStorefrontLook } from "@/lib/storefront-looks";
 
 type EditorService = {
   active: boolean;
@@ -174,16 +185,48 @@ export function StorefrontCustomizer({
   draftSaved,
   errorMessage,
   publicUrl,
-  saved
+  saved,
+  previewOnly = false,
+  initialTemplateLibraryOpen = false
 }: {
   business: CustomizerBusiness;
   draftSaved?: boolean;
   errorMessage?: string;
   publicUrl: string;
   saved?: boolean;
+  previewOnly?: boolean;
+  initialTemplateLibraryOpen?: boolean;
 }) {
+  const modernEditor = true;
+  const initialDesign = useMemo(() => readStorefrontDesign(business.storefrontBookingJson, business.storefrontDraftJson), [business.storefrontBookingJson, business.storefrontDraftJson]);
+  const [templateScroll, setTemplateScroll] = useState(0);
+  const templatePreviewRef = useRef<HTMLDivElement>(null);
+  const [templateFontRevision, setTemplateFontRevision] = useState(0);
+  const [templateLibraryOpen, setTemplateLibraryOpen] = useState(initialTemplateLibraryOpen);
+  const [selectedTemplate, setSelectedTemplate] = useState<StorefrontTemplate | null>(initialDesign.template);
+  const [heroCustomFont, setHeroCustomFont] = useState<string | null>(null);
+  const [heroMount, setHeroMount] = useState<LogoMount>(initialDesign.mount);
+  const [heroEdge, setHeroEdge] = useState(initialDesign.edge);
+  const [heroBackground, setHeroBackground] = useState(initialDesign.background);
+  const [studioBrief,setStudioBrief]=useState("");
+  const [studioOpen,setStudioOpen]=useState(false);
+  const [studioInvitation,setStudioInvitation]=useState(false);
+  const studioInvited=useRef(false);
+  const editCount=useRef(0);
+  const editTimer=useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(()=>{if((studioOpen || templateLibraryOpen) && editTimer.current)clearTimeout(editTimer.current);},[studioOpen,templateLibraryOpen]);
+  const [effectReplay,setEffectReplay]=useState(0);
+  const [effectNotice,setEffectNotice]=useState("");
+  useEffect(()=>()=>{if(editTimer.current)clearTimeout(editTimer.current);},[]);
+  function replayEffect(){setEffectReplay(v=>v+1);requestAnimationFrame(()=>templatePreviewRef.current?.querySelector('.depth-hero')?.scrollIntoView({block:'center',behavior:'auto'}));}
+
+  const [heroDepth, setHeroDepth] = useState<HeroDepth>(initialDesign.depth);
+  const [designBrief, setDesignBrief] = useState("");
+  const [localLogoPreview, setLocalLogoPreview] = useState("");
+  useEffect(() => () => { if (localLogoPreview) URL.revokeObjectURL(localLogoPreview); }, [localLogoPreview]);
   const [guidedStep, setGuidedStep] = useState(1);
-  const [advanced, setAdvanced] = useState(false);
+  const [styleStage, setStyleStage] = useState<"colors" | "fonts">("colors");
+  const [advanced, setAdvanced] = useState(true);
   const [guidedError, setGuidedError] = useState("");
   const guidedPanelRef = useRef<HTMLElement>(null);
   const guidedHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -200,11 +243,11 @@ export function StorefrontCustomizer({
   const [draggedPhotoIndex, setDraggedPhotoIndex] = useState<number | null>(null);
   const [collapsedFaqIds, setCollapsedFaqIds] = useState<string[]>([]);
   const [form, setForm] = useState<FormState>(() => createInitialState(business));
-  const recommendedLook = recommendStorefrontLook(`${form.name} ${form.bio} ${business.categories.map((item) => item.category.name).join(" ")}`);
+  const recommendedLook = recommendStorefrontLook(`${form.name} ${designBrief || form.bio} ${business.categories.map((item) => item.category.name).join(" ")}`);
   useEffect(() => {
     if (!advanced) guidedHeadingRef.current?.focus({ preventScroll: true });
     guidedPanelRef.current?.scrollTo({ top: 0 });
-  }, [guidedStep, advanced]);
+  }, [guidedStep, advanced, styleStage]);
 
   const visibleSections = useMemo(
     () => form.sectionOrder.filter((section) => !form.hiddenSections.includes(section)),
@@ -244,6 +287,7 @@ export function StorefrontCustomizer({
   const faqJson = useMemo(() => JSON.stringify(form.faqs), [form.faqs]);
   const policiesJson = useMemo(() => JSON.stringify(form.policies), [form.policies]);
   const bookingJson = useMemo(() => JSON.stringify(form.booking), [form.booking]);
+  const designJson = useMemo(() => JSON.stringify({ version: 1, template: selectedTemplate, depth: heroDepth, mount: heroMount, edge: heroEdge, background: heroBackground }), [selectedTemplate, heroDepth, heroMount, heroEdge, heroBackground]);
   const autosavePayload = useMemo(
     () => ({
       aboutHeading: form.aboutHeading,
@@ -251,6 +295,7 @@ export function StorefrontCustomizer({
       availabilityNotes: form.availabilityNotes,
       bio: form.bio,
       bookingJson,
+      designJson,
       businessId: business.id,
       buttonStyle: "PILL",
       city: form.city,
@@ -283,7 +328,7 @@ export function StorefrontCustomizer({
       tiktokUrl: form.tiktokUrl,
       website: form.website
     }),
-    [bookingJson, business.id, faqJson, form, policiesJson, servicesJson]
+    [bookingJson, designJson, business.id, faqJson, form, policiesJson, servicesJson]
   );
   const completionItems = useMemo(() => [
     { done: Boolean(form.logoUrl), label: "Logo added" },
@@ -315,6 +360,7 @@ export function StorefrontCustomizer({
   }, []);
 
   useEffect(() => {
+    if (previewOnly) return;
     const payloadKey = JSON.stringify(autosavePayload);
     if (lastAutosaveKeyRef.current === null) {
       lastAutosaveKeyRef.current = payloadKey;
@@ -328,7 +374,7 @@ export function StorefrontCustomizer({
     }, 1200);
 
     return () => window.clearTimeout(timer);
-  }, [autosavePayload, dirty, saveDraftSnapshot]);
+  }, [autosavePayload, dirty, saveDraftSnapshot, previewOnly]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -352,7 +398,11 @@ export function StorefrontCustomizer({
     }
   }
 
-  function markDirty() {
+  function markDirty(countEdit=true) {
+    if(modernEditor && countEdit && !studioInvited.current && !studioOpen && !templateLibraryOpen){
+      if(editTimer.current)clearTimeout(editTimer.current);
+      editTimer.current=setTimeout(()=>{editCount.current++;if(editCount.current>=3){studioInvited.current=true;setStudioInvitation(true);setStudioOpen(true);}},1400);
+    }
     setDirty(true);
     setStatus("Unpublished changes");
   }
@@ -444,7 +494,23 @@ export function StorefrontCustomizer({
   }
 
   return (
-    <form action={updateStorefrontCustomizationAction} data-testid="storefront-editor-shell" className="relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]">
+    <form action={previewOnly ? undefined : updateStorefrontCustomizationAction} onSubmit={previewOnly ? (event) => event.preventDefault() : undefined} data-testid="storefront-editor-shell" className={`${modernEditor ? "editor-review " : ""}relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
+      {modernEditor ? <style>{`
+        .editor-review [data-testid="preview-section-${activeSection}"] { outline: 2px solid #81916b; outline-offset: -2px; }
+        .editor-review { background: #f8f8f5; border-radius: 20px; }
+        .editor-review .editor-workspace { grid-template-columns: minmax(0,1fr) 320px; }
+        .editor-review .editor-inspector { max-height: calc(100vh - 190px); overflow-y: auto; }
+        .editor-review .editor-canvas { background: #eeefea; padding: 28px; }
+        .editor-review .editor-inspector details > summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+        @media(max-width:1023px) { .editor-review .editor-workspace { display:flex; flex-direction:column; } .editor-review .editor-inspector { max-height:none; } .editor-review .editor-canvas { padding:12px; } }
+      `}</style> : null}
+      {modernEditor && templateLibraryOpen ? <StorefrontTemplateLibrary vendorName={form.name} initialScroll={templateScroll} onScroll={setTemplateScroll} selected={selectedTemplate?.id ?? null} image={form.logoUrl || form.coverPhoto} photos={form.photoUrls.filter(Boolean)} onClose={()=>setTemplateLibraryOpen(false)} onApply={(template)=>{
+        setSelectedTemplate(template);setHeroCustomFont(null);setTemplateFontRevision(value=>value+1);
+        setForm(current=>({...current,fontStyle:template.fontStyle,imageShape:template.imageShape}));
+        setTemplateLibraryOpen(false);markDirty(false);
+        requestAnimationFrame(()=>templatePreviewRef.current?.scrollIntoView({block:"start",behavior:"auto"}));
+      }} /> : null}
+      {modernEditor && studioOpen && <Storefront3DStudio initialBrief={studioBrief} onBriefChange={setStudioBrief} invitation={studioInvitation} name={form.name} logo={form.logoUrl || form.coverPhoto} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount)=>{studioInvited.current=true;setHeroDepth(depth);setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`${depth==='floating'?'Intro':'Exit'} 3D applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
       <input type="hidden" name="businessId" value={business.id} />
       <input type="hidden" name="businessSlug" value={business.slug} />
       <input type="hidden" name="name" value={form.name} />
@@ -474,6 +540,7 @@ export function StorefrontCustomizer({
       <input type="hidden" name="sectionLabelsJson" value={JSON.stringify(form.sectionLabels)} />
       <input type="hidden" name="faqJson" value={faqJson} />
       <input type="hidden" name="policiesJson" value={policiesJson} />
+      <input type="hidden" name="designJson" value={designJson} />
       <input type="hidden" name="bookingJson" value={bookingJson} />
       <input type="hidden" name="servicesJson" value={servicesJson} />
       {form.sectionOrder.map((section) => <input key={`order-${section}`} type="hidden" name="sectionOrder" value={section} />)}
@@ -495,7 +562,7 @@ export function StorefrontCustomizer({
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded-full bg-[#fbf7f5] px-3 py-1.5 text-xs font-semibold text-muted-foreground">
             <Check className="h-3.5 w-3.5" />
-            {isAutosaving ? "Autosaving draft" : status}
+            {previewOnly ? (dirty ? "Unsaved preview changes" : "Preview · saved content loaded") : isAutosaving ? "Autosaving draft" : status}
           </span>
           <div className="flex rounded-full border border-[#eadbd7] bg-[#fbf7f5] p-1">
             {[
@@ -508,6 +575,7 @@ export function StorefrontCustomizer({
                   key={mode.value}
                   type="button"
                   onClick={() => setPreviewMode(mode.value)}
+                  aria-pressed={previewMode === mode.value}
                   className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${previewMode === mode.value ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"}`}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -522,11 +590,11 @@ export function StorefrontCustomizer({
               View live
             </Link>
           </Button>
-          <Button type="button" name="intent" value="draft" variant="secondary" onClick={() => saveDraftSnapshot(autosavePayload)} disabled={isAutosaving}>
+          <Button type="button" name="intent" value="draft" variant="secondary" onClick={() => saveDraftSnapshot(autosavePayload)} disabled={isAutosaving || previewOnly}>
             <Save className="h-4 w-4" />
             Save draft
           </Button>
-          <Button type="submit" name="intent" value="publish" className={!advanced && guidedStep < 3 ? "hidden" : ""} onClick={() => setStatus("Publishing")}>
+          <Button type="submit" name="intent" value="publish" disabled={previewOnly || isAutosaving} className={!advanced && guidedStep < 3 ? "hidden" : ""} onClick={() => setStatus("Publishing")}>
             <Send className="h-4 w-4" />
             Publish
           </Button>
@@ -538,7 +606,7 @@ export function StorefrontCustomizer({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee5e1] bg-[#fffaf8] px-5 py-3">
+      {!modernEditor && <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee5e1] bg-[#fffaf8] px-5 py-3">
         <nav aria-label="Storefront setup" className="flex flex-wrap gap-2">
           {["Your business", "Choose your look", "Photos & preview"].map((label, index) => (
             <button key={label} type="button" aria-current={!advanced && guidedStep === index + 1 ? "step" : undefined}
@@ -552,44 +620,36 @@ export function StorefrontCustomizer({
           {advanced ? "Back to simple setup" : "More customization"}
         </button>
       </div>
+      }
       {!advanced ? (
         <div className="grid min-w-0 lg:grid-cols-[minmax(340px,0.85fr)_minmax(0,1.15fr)]">
           <section ref={guidedPanelRef} className="min-w-0 space-y-6 p-5 sm:p-8 lg:max-h-[calc(100vh-245px)] lg:overflow-y-auto" aria-label="Guided storefront setup">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Step {guidedStep} of 3</p>
-              <h2 ref={guidedHeadingRef} tabIndex={-1} className="mt-3 text-3xl font-semibold tracking-tight outline-none">{guidedStep === 1 ? "Let’s meet your business." : guidedStep === 2 ? "A look that feels like you." : "Let your work shine."}</h2>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">{guidedStep === 1 ? "A few details are all we need to help you get started." : guidedStep === 2 ? "Fonts, colors, and layout—already paired for you. You can always customize them later." : "Add your real photos, check the preview, and publish when you’re ready."}</p>
+              <h2 ref={guidedHeadingRef} tabIndex={-1} className="mt-3 text-3xl font-semibold tracking-tight outline-none">{guidedStep === 1 ? "Let’s design your storefront." : guidedStep === 2 ? "A look that feels like you." : "Let your work shine."}</h2>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{guidedStep === 1 ? "Talk through your brand, then see it come together." : guidedStep === 2 ? "One choice at a time: colors first, then a font pairing." : "Add your real photos, check the preview, and publish when you’re ready."}</p>
             </div>
-            {guidedStep === 1 ? (
+            <div hidden={guidedStep !== 1}>
+              <StorefrontDesignChat name={form.name} onName={(name) => update("name", name)} onBrief={setDesignBrief} onContinue={() => setGuidedStep(2)} previewOnly={previewOnly} onLocalLogo={(url) => { setLocalLogoPreview(url); update("logoUrl", url); }} logoEditor={<ImageUploadField name="setup-logo" label="Add your logo (optional)" value={form.logoUrl} valueCrop={form.logoCrop} onChangePreview={(value) => update("logoUrl", value)} onCropChange={(crop) => update("logoCrop", crop)} uploadEndpoint={mediaUploadEndpoint} helperText="See your own logo alongside coordinated fonts and colors." />} />
+            </div>
+            {guidedStep === 1 ? null : guidedStep === 2 ? (
               <div className="space-y-5">
-                <Field label="What’s your business’s name?"><Input aria-label="Business name" value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Your business name" /></Field>
-                <Field label="Tell us about your business"><Textarea aria-label="Tell us about your business" className="min-h-[130px]" value={form.bio} onChange={(event) => update("bio", event.target.value)} placeholder="What do you create? What makes your business special?" /></Field>
-                <p className="text-xs leading-5 text-muted-foreground">Your answer becomes your About text and helps us suggest a look. Keep it short if you like.</p>
-                <ImageUploadField name="setup-logo" label="Your logo (optional)" value={form.logoUrl} valueCrop={form.logoCrop} onChangePreview={(value) => update("logoUrl", value)} onCropChange={(crop) => update("logoCrop", crop)} uploadEndpoint={mediaUploadEndpoint} helperText="Your logo keeps its own lettering. Choose a coordinated font in the next step." />
-              </div>
-            ) : guidedStep === 2 ? (
-              <div className="space-y-5">
+                <div className="flex gap-2 text-xs text-muted-foreground"><span className={styleStage === "colors" ? "font-semibold text-[#5f4558]" : ""}>1 · Colors</span><span aria-hidden="true">→</span><span className={styleStage === "fonts" ? "font-semibold text-[#5f4558]" : ""}>2 · Fonts</span></div>
+                <h3 className="text-xl font-semibold">{styleStage === "colors" ? "Choose your color palette" : "Choose your font pairing"}</h3>
+                <p className="text-sm leading-6 text-muted-foreground">{styleStage === "colors" ? "A few colors that work beautifully together. See each palette in your preview." : "A heading and body font, paired for you. Choose the one that feels like your brand."} You can always change this later.</p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {[...STOREFRONT_LOOKS].sort((a, b) => Number(b.id === recommendedLook.id) - Number(a.id === recommendedLook.id)).map((look) => {
-                    const palette = getPreviewPalette(look.palette);
-                    const selected = form.palette === look.palette && form.fontStyle === look.fontStyle && form.layout === look.layout && form.imageShape === look.imageShape;
-                    const recommended = look.id === recommendedLook.id;
-                    return <button key={look.id} type="button" aria-pressed={selected} onClick={() => {
-                      setForm((current) => ({ ...current, palette: look.palette, fontStyle: look.fontStyle, layout: look.layout, imageShape: look.imageShape, textTone: "AUTO" })); markDirty();
-                    }} className={`overflow-hidden rounded-2xl border text-left transition hover:-translate-y-0.5 ${selected ? "border-[#b66d77] ring-2 ring-[#f5d5da]" : "border-[#eae2de]"}`}>
-                      <div className="relative p-4" style={{ backgroundColor: palette.swatches[2], color: palette.swatches[3] }}>
-                        {form.logoUrl ? <CroppedImage src={form.logoUrl} alt="Your logo" crop={form.logoCrop} className="mb-3 h-9 w-9 rounded-full object-cover" /> : <div className="mb-3 h-2 w-10 rounded-full" style={{ backgroundColor: palette.accent }} />}
-                        <div className="min-h-16 break-words text-2xl leading-tight" style={{ fontFamily: getStorefrontFontFamilies(look.fontStyle).heading }}>{form.name || "Your business"}</div>
-                        <div className="mt-4 grid grid-cols-3 gap-1.5">{[0, 1, 2].map((index) => <div key={index} className="aspect-square overflow-hidden rounded-lg" style={{ backgroundColor: palette.swatches[0] }}>{form.photoUrls[index] || (index === 0 && form.coverPhoto) ? <img alt="" src={form.photoUrls[index] || form.coverPhoto} className="h-full w-full object-cover" /> : null}</div>)}</div>
-                        <span className="mt-3 inline-block rounded-full px-3 py-1.5 text-[10px] font-semibold" style={{ backgroundColor: palette.accent, color: look.palette === "ESPRESSO" ? "#ffffff" : palette.swatches[3] }}>Request a quote</span>
-                      </div>
-                      <div className="flex h-5">{palette.swatches.map((color) => <span key={color} className="flex-1" style={{ backgroundColor: color }} />)}</div>
-                      <div className="p-3"><div className="flex items-center justify-between gap-2 text-sm font-semibold">{look.name}{selected ? <Check className="h-4 w-4" /> : recommended ? <span className="text-[10px] font-normal text-muted-foreground">Suggested</span> : null}</div><p className="mt-1 text-xs leading-5 text-muted-foreground">{look.note}</p></div>
+                  {styleStage === "colors" ? STOREFRONT_PALETTES.map((palette) => <button key={palette.value} type="button" aria-label={`Choose ${palette.label} palette`} aria-pressed={form.palette === palette.value} onClick={() => update("palette", palette.value)} className={`rounded-2xl bg-white p-4 text-left transition hover:shadow-md ${form.palette === palette.value ? "ring-2 ring-[#bda2b3]" : "shadow-sm"}`}>
+                    <span className="flex h-14 overflow-hidden rounded-xl">{palette.swatches.map((color) => <span key={color} className="flex-1" style={{ backgroundColor: color }} />)}</span>
+                    <span className="mt-3 flex items-center justify-between text-sm font-medium">{palette.label}{form.palette === palette.value ? <Check className="h-4 w-4" /> : palette.value === recommendedLook.palette ? <span className="text-[10px] text-muted-foreground">Suggested</span> : null}</span>
+                  </button>) : STOREFRONT_FONT_STYLES.map((font) => {
+                    const families = getStorefrontFontFamilies(font.value);
+                    return <button key={font.value} type="button" aria-label={`Choose ${font.label} font pairing`} aria-pressed={form.fontStyle === font.value} onClick={() => update("fontStyle", font.value)} className={`rounded-2xl bg-white p-5 text-left transition hover:shadow-md ${form.fontStyle === font.value ? "ring-2 ring-[#bda2b3]" : "shadow-sm"}`}>
+                      <span className="block min-h-20 break-words text-[30px] leading-tight" style={{ fontFamily: families.heading }}>{form.name || "Your business"}</span>
+                      <span className="mt-2 block text-sm leading-6" style={{ fontFamily: families.body }}>Beautiful details. Unforgettable celebrations.</span>
+                      <span className="mt-5 flex items-center justify-between text-xs font-medium text-muted-foreground">{font.label}{form.fontStyle === font.value ? <Check className="h-4 w-4" /> : font.value === recommendedLook.fontStyle ? <span className="text-[10px]">Suggested</span> : null}</span>
                     </button>;
                   })}
                 </div>
-                <p className="text-xs leading-5 text-muted-foreground">Your current design stays in place until you select a look. No photos, services, or reviews are replaced.</p>
-                <details className="rounded-2xl border border-[#eae2de] p-4"><summary className="cursor-pointer text-sm font-medium">Fine-tune colors, fonts, and shapes</summary><div className="mt-5"><DesignControls form={form} update={update} /></div></details>
               </div>
             ) : (
               <div className="space-y-5">
@@ -601,9 +661,9 @@ export function StorefrontCustomizer({
               </div>
             )}
             {guidedError ? <p role="alert" className="text-sm text-red-700">{guidedError}</p> : null}
-            <div className="flex items-center justify-between gap-3 border-t border-[#eee5e1] pt-5">
-              <button type="button" disabled={guidedStep === 1} className="text-sm text-muted-foreground disabled:invisible" onClick={() => setGuidedStep(guidedStep - 1)}>Back</button>
-              {guidedStep < 3 ? <Button type="button" onClick={() => { if (!form.name.trim()) { setGuidedStep(1); setGuidedError("Add your business name to continue."); return; } setGuidedError(""); setGuidedStep(guidedStep + 1); }}>{guidedStep === 1 ? "Choose your look" : "Add your photos"}</Button> : <Button type="submit" name="intent" value="publish" onClick={() => setStatus("Publishing")}>Publish storefront</Button>}
+            <div className={`flex items-center justify-between gap-3 pt-5 ${guidedStep === 1 ? "hidden" : ""}`}>
+              <button type="button" disabled={guidedStep === 1} className="text-sm text-muted-foreground disabled:invisible" onClick={() => { if (guidedStep === 2 && styleStage === "fonts") setStyleStage("colors"); else setGuidedStep(guidedStep - 1); }}>Back</button>
+              {guidedStep < 3 ? <Button type="button" onClick={() => { if (!form.name.trim()) { setGuidedStep(1); setGuidedError("Add your business name to continue."); return; } setGuidedError(""); if (guidedStep === 2 && styleStage === "colors") setStyleStage("fonts"); else setGuidedStep(guidedStep + 1); }}>{guidedStep === 1 ? "Choose your look" : styleStage === "colors" ? "Next: fonts" : "Add your photos"}</Button> : <Button type="submit" name="intent" value="publish" disabled={previewOnly} onClick={() => setStatus("Publishing")}>Publish storefront</Button>}
             </div>
           </section>
           <div className="min-w-0 bg-[#f4f0ed] p-3 sm:p-6 lg:max-h-[calc(100vh-245px)] lg:overflow-y-auto">
@@ -615,10 +675,10 @@ export function StorefrontCustomizer({
         </div>
       ) : (
       <div
-        className="grid min-h-[calc(100vh-190px)] min-w-0 lg:grid-cols-[260px_minmax(0,1fr)_var(--editor-panel-width)]"
+        className="editor-workspace grid min-h-[calc(100vh-190px)] min-w-0 lg:grid-cols-[260px_minmax(0,1fr)_var(--editor-panel-width)]"
         style={{ "--editor-panel-width": panelCollapsed ? "64px" : "430px" } as CSSProperties}
       >
-        <aside className="sticky top-0 z-20 min-w-0 border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:static lg:z-auto lg:border-b-0 lg:border-r">
+        {!modernEditor && <aside className="sticky top-0 z-20 min-w-0 border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:static lg:z-auto lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Sections</h2>
             <CopyStorefrontLinkButton url={publicUrl} label="Copy link" className="h-8 bg-white px-3 text-xs" />
@@ -686,15 +746,30 @@ export function StorefrontCustomizer({
               );
             })}
           </div>
-        </aside>
+        </aside>}
 
-        <main className="min-w-0 bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
+        <main className="editor-canvas min-w-0 bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
+          {modernEditor ? <div className="mb-4 rounded-2xl border border-[#e0ddd5] bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.15em] text-muted-foreground">Storefront design</p><p className="mt-1 text-sm font-semibold">{selectedTemplate?.name ?? "Your saved design"}</p></div><div className="flex gap-2">{selectedTemplate ? <button type="button" className="px-2 text-xs text-muted-foreground underline" onClick={()=>{const initial=createInitialState(business);setSelectedTemplate(initialDesign.template);setHeroCustomFont(null);setTemplateFontRevision(value=>value+1);setForm(current=>({...current,fontStyle:initial.fontStyle,imageShape:initial.imageShape}));markDirty();}}>Use saved design</button> : null}<Button type="button" variant="secondary" onClick={()=>setTemplateLibraryOpen(true)}>Browse templates</Button></div></div>
+            {selectedTemplate ? <details className="mt-3 border-t pt-3"><summary className="cursor-pointer text-xs font-medium">Customize colors</summary><div className="mt-3 flex flex-wrap gap-4">{(["background","surface","ink","accent","accentInk","secondary"] as const).map(key=><label key={key} className="grid gap-1 text-[10px] capitalize">{key === "accentInk" ? "Button text" : key}<input aria-label={`Template ${key} color`} type="color" value={selectedTemplate.colors[key]} onChange={(event)=>{setSelectedTemplate({...selectedTemplate,colors:{...selectedTemplate.colors,[key]:event.target.value}});markDirty();}} className="h-8 w-12 rounded border" /></label>)}</div></details> : null}
+          </div> : null}
           <div className="mb-3 flex items-center justify-between gap-3 text-sm text-muted-foreground">
-            <span>Click a section in the preview to edit it.</span>
+            <span>{previewOnly ? "Preview only · changes reset on refresh" : "Select a section to edit"}</span>
           </div>
-          <div data-testid="storefront-preview-frame" className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
+              {modernEditor && activeSection === "hero" ? <details className="mb-4 rounded-xl border border-[#e0ddd5] bg-white p-3"><summary className="cursor-pointer text-xs font-semibold">3D Effects · optional</summary><fieldset className="mt-3">
+                <legend className="mb-2 text-sm font-semibold">3D Effects</legend><button type="button" onClick={()=>{studioInvited.current=true;if(editTimer.current)clearTimeout(editTimer.current);setStudioInvitation(false);setStudioOpen(true);}} className="mb-3 rounded-full border px-4 py-2 text-xs">Open 3D Studio</button>
+                <p className="mb-3 text-xs text-muted-foreground">Suggested for {form.name || "your storefront"}: a short intro using your logo. Booking stays available.</p>
+                <div className="grid grid-cols-3 gap-2">{HERO_DEPTH_PRESETS.map((preset) => <button key={preset.value} type="button" aria-pressed={heroDepth === preset.value} onClick={() => { setHeroDepth(preset.value); markDirty(); }} className={`rounded-xl border px-2 py-3 text-left transition ${heroDepth === preset.value ? "border-[#627b40] bg-[#f0f3e8] ring-1 ring-[#627b40]" : "border-[#e5e5dc] bg-white"}`}><span className="block text-xs font-semibold">{preset.label}</span><span className="mt-1 block text-[10px] leading-4 text-muted-foreground">{preset.detail}</span></button>)}</div>
+              </fieldset></details> : null}
+
+          {modernEditor && effectNotice && <div role="status" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-3 text-sm"><div><strong>{effectNotice}</strong><p className="mt-1 text-xs text-muted-foreground">{previewOnly ? "Preview only · your live storefront has not changed." : "Publish to update your live storefront."}</p></div>{heroDepth!=='flat' && <button type="button" onClick={replayEffect} className="rounded-full border px-4 py-2 text-xs">Replay on page</button>}</div>}
+          <div ref={templatePreviewRef} data-testid="storefront-preview-frame" style={{ scrollMarginTop: 90, containerType: "inline-size", containerName: "storefront-preview" }} className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
             <StorefrontPreview
-              activeSection={activeSection}
+              template={selectedTemplate}
+              heroCustomFont={heroCustomFont} heroMount={heroMount} heroEdge={heroEdge} heroBackground={heroBackground}
+              onHeroDepthChange={(value) => { setHeroDepth(value); markDirty(); }}
+              effectReplay={effectReplay} heroDepth={heroDepth}
+              activeSection=""
               business={business}
               draggedPhotoIndex={draggedPhotoIndex}
               form={form}
@@ -714,7 +789,7 @@ export function StorefrontCustomizer({
           </div>
         </main>
 
-        <aside className="min-w-0 border-t border-[#eadbd8] bg-white lg:border-l lg:border-t-0">
+        <aside className="editor-inspector min-w-0 border-t border-[#eadbd8] bg-white lg:border-l lg:border-t-0">
           {panelCollapsed ? (
             <button
               type="button"
@@ -725,6 +800,12 @@ export function StorefrontCustomizer({
             </button>
           ) : (
             <div className="p-4">
+              {modernEditor ? <div className="mb-5">
+                <label htmlFor="review-section" className="mb-2 block text-xs font-semibold text-muted-foreground">Storefront section</label>
+                <select id="review-section" value={activeSection} onChange={(event) => selectSection(event.target.value)} className="h-11 w-full rounded-xl border border-[#dddcd4] bg-[#f7f8f3] px-3 text-sm font-semibold">
+                  {form.sectionOrder.map((section) => <option key={section} value={section}>{sectionLabel(section)}{form.hiddenSections.includes(section) ? " · hidden" : ""}</option>)}
+                </select>
+              </div> : null}
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Editing</p>
@@ -740,24 +821,36 @@ export function StorefrontCustomizer({
                     key={tool}
                     type="button"
                     onClick={() => selectTool(tool)}
+                    aria-pressed={activeTool === tool}
                     className={`rounded-full px-2 py-2 text-xs font-semibold transition ${activeTool === tool ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"}`}
                   >
                     {toolLabels[tool]}
                   </button>
                 ))}
               </div>
+              {modernEditor && selectedTemplate ? <SectionBackgroundControls template={selectedTemplate} section={activeSection} label={sectionLabel(activeSection)} onChange={(template)=>{setSelectedTemplate(template);markDirty();}} /> : null}
+              {modernEditor ? <div hidden={activeSection !== "hero"}><HeroTypographyControls allowUpload={previewOnly} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
+              {modernEditor && activeSection === "hero" ? <details className="mb-4 rounded-xl border p-3" open>
+                <summary>Logo appearance</summary>
+                <div className="mt-4 space-y-4">
+                  <label className="block text-xs font-medium">Shape<select aria-label="Logo shape" className="mt-2 h-10 w-full rounded-lg border bg-white px-3 text-sm" value={heroMount} onChange={(event) => {setHeroMount(event.target.value as LogoMount);markDirty();}}><option value="round">Round mount</option><option value="square">Soft square mount</option><option value="artwork">Original artwork · no mount</option></select></label>
+                  <div className="flex items-center justify-between"><label htmlFor="hero-edge" className="text-xs">Edge color</label><input id="hero-edge" type="color" value={heroEdge} onChange={(event)=>{setHeroEdge(event.target.value);markDirty();}} disabled={heroMount === "artwork"} className="h-8 w-12 rounded border" /></div>
+                  <div className="flex items-center justify-between"><label htmlFor="hero-background" className="text-xs">Backdrop</label><input id="hero-background" type="color" value={heroBackground} onChange={(event)=>{setHeroBackground(event.target.value);markDirty();}} className="h-8 w-12 rounded border" /></div>
+                  <p className="text-[11px] leading-5 text-muted-foreground">Original artwork keeps PNG transparency. Use a mount to add a solid edge.</p>
+                </div>
+              </details> : null}
               {activeTool === "design" ? (
                 <DesignControls form={form} update={update} />
               ) : (
                 <PanelStack>
-                  <SectionVisibilityControls
+                  {modernEditor ? <details className="rounded-xl border p-3"><summary>Section settings</summary><SectionVisibilityControls hidden={form.hiddenSections.includes(panelSection)} label={sectionLabel(panelSection)} required={requiredSections.has(panelSection)} section={panelSection} toggleSection={toggleSection} updateSectionLabel={updateSectionLabel} /></details> : <SectionVisibilityControls
                     hidden={form.hiddenSections.includes(panelSection)}
                     label={sectionLabel(panelSection)}
                     required={requiredSections.has(panelSection)}
                     section={panelSection}
                     toggleSection={toggleSection}
                     updateSectionLabel={updateSectionLabel}
-                  />
+                  />}
                   <SectionEditor
                     activeSection={panelSection}
                     business={business}
@@ -810,11 +903,11 @@ function createInitialState(business: CustomizerBusiness): FormState {
     aboutImage: draft?.aboutImage ?? business.storefrontAboutImage ?? "",
     availabilityNotes: draft?.availabilityNotes ?? business.availabilityNotes ?? "",
     bio: draft?.bio ?? business.bio ?? "",
-    booking: draft?.booking ?? readBooking(business.storefrontBookingJson),
+    booking: draft?.booking ?? (!business.storefrontBookingJson ? { deposit: "", leadTime: "", process: "" } : readBooking(business.storefrontBookingJson)),
     city: draft?.city ?? business.city,
     coverPhoto: draft?.coverPhoto ?? business.coverPhoto ?? business.photos[0] ?? "",
     coverPhotoCrop: normalizeImageCrop(draft?.coverPhotoCrop ?? business.coverPhotoCrop ?? DEFAULT_IMAGE_CROP),
-    faqs: draft?.faqs ?? readFaqs(business.storefrontFaqJson),
+    faqs: draft?.faqs ?? (!business.storefrontFaqJson ? [] : readFaqs(business.storefrontFaqJson)),
     fontStyle: draft?.fontStyle ?? business.storefrontFontStyle,
     hiddenSections: sanitizeHiddenStorefrontSections(draft?.hiddenSections ?? business.storefrontHiddenSections),
     imageShape: draft?.imageShape ?? business.storefrontImageShape,
@@ -827,7 +920,7 @@ function createInitialState(business: CustomizerBusiness): FormState {
     name: draft?.name ?? business.name,
     palette: normalizeStorefrontPalette(draft?.palette ?? business.storefrontPalette),
     photoUrls: draft?.photoUrls ?? [...business.photos, "", "", "", "", "", ""].slice(0, 10),
-    policies: draft?.policies ?? readPolicies(business.storefrontPoliciesJson),
+    policies: draft?.policies ?? (!business.storefrontPoliciesJson ? [] : readPolicies(business.storefrontPoliciesJson)),
     sectionLabels: draft?.sectionLabels ?? sanitizeStorefrontSectionLabels(business.storefrontSectionLabels),
     sectionOrder: draft?.sectionOrder ?? sanitizeStorefrontSections(business.storefrontSectionOrder),
     serviceAreaNotes: draft?.serviceAreaNotes ?? business.serviceAreaNotes ?? "",
@@ -886,13 +979,17 @@ function SectionEditor({
   if (activeSection === "hero") {
     return (
       <PanelStack>
-        <Field label="Headline"><Input value={form.aboutHeading} onChange={(event) => update("aboutHeading", event.target.value)} /></Field>
-        <Field label="Tagline"><Input value={form.tagline} onChange={(event) => update("tagline", event.target.value)} /></Field>
-        <Field label="Business name"><Input value={form.name} onChange={(event) => update("name", event.target.value)} /></Field>
+        <Field label="Headline"><Input placeholder="Type headline here" value={form.aboutHeading} onChange={(event) => update("aboutHeading", event.target.value)} /></Field>
+        <Field label="Tagline"><Input placeholder="Type tagline here" value={form.tagline} onChange={(event) => update("tagline", event.target.value)} /></Field>
+        <details className="rounded-xl border p-3"><summary>Business details</summary><div className="mt-4 space-y-4">
+        <Field label="Storefront name"><Input placeholder="Type storefront name here" value={form.name} onChange={(event) => update("name", event.target.value)} /></Field>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="City"><Input value={form.city} onChange={(event) => update("city", event.target.value)} /></Field>
-          <Field label="State"><Input value={form.state} onChange={(event) => update("state", event.target.value)} /></Field>
+          <Field label="Business location"><Input placeholder="Type location here" value={form.city} onChange={(event) => update("city", event.target.value)} /></Field>
+          <Field label="State"><Input placeholder="Type state here" value={form.state} onChange={(event) => update("state", event.target.value)} /></Field>
         </div>
+        <Field label="Business description"><Textarea placeholder="Describe your business here" value={form.bio} onChange={(event) => update("bio", event.target.value)} /></Field>
+        </div></details>
+        <details className="rounded-xl border p-3"><summary>Logo</summary>
         <ImageUploadField
           name="editorLogo"
           label="Logo"
@@ -903,6 +1000,8 @@ function SectionEditor({
           rounded="full"
           uploadEndpoint={logoUploadEndpoint}
         />
+        </details>
+        <details open className="rounded-xl border p-3"><summary>Cover image</summary>
         <ImageUploadField
           name="editorCover"
           label="Cover image"
@@ -912,6 +1011,7 @@ function SectionEditor({
           onCropChange={(crop) => update("coverPhotoCrop", crop)}
           uploadEndpoint={coverUploadEndpoint}
         />
+        </details>
       </PanelStack>
     );
   }
@@ -1044,7 +1144,7 @@ function SectionEditor({
   if (activeSection === "how-it-works" || activeSection === "final-quote") {
     return (
       <PanelStack>
-        <Field label="Counties/cities covered"><Textarea placeholder="Example: Napa County, Sonoma County, Solano County" value={form.serviceAreaNotes} onChange={(event) => update("serviceAreaNotes", event.target.value)} /></Field>
+        <Field label="Counties/cities covered"><Textarea placeholder="Type service area here" value={form.serviceAreaNotes} onChange={(event) => update("serviceAreaNotes", event.target.value)} /></Field>
         <Field label="Lead time"><Input value={form.booking.leadTime} onChange={(event) => update("booking", { ...form.booking, leadTime: event.target.value })} /></Field>
         <Field label="Deposit or payment note"><Input value={form.booking.deposit} onChange={(event) => update("booking", { ...form.booking, deposit: event.target.value })} /></Field>
         <Field label="Booking process"><Textarea value={form.booking.process} onChange={(event) => update("booking", { ...form.booking, process: event.target.value })} /></Field>
@@ -1366,6 +1466,12 @@ function DesignControls({
 }
 
 function StorefrontPreview({
+  effectReplay=0,
+  template,
+  heroCustomFont,
+  heroMount = "round", heroEdge = "#877a78", heroBackground = "#e6dfd4",
+  onHeroDepthChange,
+  heroDepth,
   activeSection,
   business,
   draggedPhotoIndex,
@@ -1383,6 +1489,12 @@ function StorefrontPreview({
   updateService,
   visibleSections
 }: {
+  effectReplay?:number;
+  template?: StorefrontTemplate | null;
+  heroCustomFont?: string | null;
+  heroMount?: LogoMount; heroEdge?: string; heroBackground?: string;
+  onHeroDepthChange?: (value: HeroDepth) => void;
+  heroDepth?: HeroDepth;
   activeSection: string;
   business: CustomizerBusiness;
   draggedPhotoIndex: number | null;
@@ -1402,8 +1514,7 @@ function StorefrontPreview({
 }) {
   const logoUploadEndpoint = `${mediaUploadEndpoint}?target=logo`;
   const coverUploadEndpoint = `${mediaUploadEndpoint}?target=cover`;
-  const palette = getPreviewPalette(form.palette);
-  const theme = getPreviewTheme(form);
+  const theme = getPreviewTheme(form, template);
   const activeServices = form.services.filter((service) => service.active);
   const featuredServices = activeServices.filter((service) => service.featured).slice(0, 3);
   const isMobile = previewMode === "mobile";
@@ -1412,9 +1523,9 @@ function StorefrontPreview({
   };
   const photos = form.photoUrls.filter(Boolean);
   return (
-    <div className={`overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={theme.bodyStyle}>
+    <div data-template={template?.id} data-page-background={Boolean(template?.backgroundDesign)} data-heading-case={template?.headingFamily?.includes("greatvibes") ? "script" : undefined} data-composition={template?.composition} data-mask={template?.imageMask} data-sections={template?.sections} data-services={template?.services} data-button={template?.button ?? "pill"} data-frame={template?.frame ?? "none"} className={`${template ? "template-surface " : ""}overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={{...theme.bodyStyle,...(template ? templateVariables(template) : {}),...sectionDesignStyle(template?.backgroundDesign)}}>
       <section data-testid="preview-section-hero" onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
-        <div className={`border-b px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] ${theme.headerClass}`} style={theme.platformBarStyle}>ShopFia Storefront</div>
+        <div className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground" style={theme.platformBarStyle}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           <div className="shrink-0">
             {form.logoUrl ? (
@@ -1422,7 +1533,7 @@ function StorefrontPreview({
                 src={form.logoUrl}
                 alt=""
                 crop={form.logoCrop}
-                className={`h-20 w-20 bg-white object-contain object-center p-1 ${theme.logoRadius}`}
+                className={`${heroDepth !== undefined ? "template-brand-logo " : ""}h-20 w-20 bg-white object-contain object-center p-1 ${theme.logoRadius}`}
               />
             ) : <div className={`grid h-20 w-20 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
             {activeSection === "hero" ? (
@@ -1458,14 +1569,14 @@ function StorefrontPreview({
                   ariaLabel="City"
                   className={`text-sm ${theme.mutedClass}`}
                   onChange={(value) => update("city", value)}
-                  placeholder="City"
+                  placeholder="Type location here"
                   value={form.city}
                 />
                 <InlineTextInput
                   ariaLabel="State"
                   className={`text-sm ${theme.mutedClass}`}
                   onChange={(value) => update("state", value)}
-                  placeholder="State"
+                  placeholder="Type state here"
                   value={form.state}
                 />
               </div>
@@ -1475,7 +1586,7 @@ function StorefrontPreview({
             <span className="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>Follow</span>
           </div>
         </div>
-        <div className={`flex gap-1 overflow-x-auto border-t px-3 py-2 text-sm ${theme.navClass}`}>
+        <div className={`template-storefront-nav flex gap-1 overflow-x-auto px-3 py-2 text-sm ${theme.navClass}`}>
           {[
             ["Home", "Home"],
             [sectionLabel("all-services"), "Services"],
@@ -1485,7 +1596,7 @@ function StorefrontPreview({
             [sectionLabel("faq"), "FAQ"]
           ].map(([item, defaultLabel]) => <span key={defaultLabel} className="rounded-full px-3 py-1" style={defaultLabel === "Home" ? theme.activeNavItemStyle : undefined}>{item}</span>)}
         </div>
-        <PreviewHeroTemplate
+        {heroDepth ? <DimensionalStorefrontHero previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth={heroDepth} mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: `"${heroCustomFont}", sans-serif` } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /> : <PreviewHeroTemplate
           active={activeSection === "hero"}
           activeServices={activeServices}
           business={business}
@@ -1495,10 +1606,19 @@ function StorefrontPreview({
           photos={photos}
           theme={theme}
           update={update}
-        />
+        />}
       </section>
-      <div className={`bg-gradient-to-br ${palette.className} p-5`}>
-        {visibleSections.filter((section) => section !== "hero").map((section) => {
+      <div className="px-5 pb-8 sm:px-8">
+        {visibleSections.filter((section) => {
+          if (section === "hero") return false;
+          if (section === activeSection) return true;
+          if (section === "featured-services") return featuredServices.length > 0;
+          if (section === "all-services") return activeServices.length > 0;
+          if (section === "portfolio") return photos.length > 0 || form.instagramFeedEnabled;
+          if (section === "faq") return form.faqs.length > 0;
+          if (section === "how-it-works") return Boolean(business.storefrontBookingJson || form.serviceAreaNotes);
+          return true;
+        }).map((section) => {
           if (section === "featured-services") return (
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-featured-services" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               <ServiceGrid
@@ -1583,7 +1703,7 @@ function StorefrontPreview({
               ) : (
                 <div className="grid gap-3">
                   {form.instagramFeedEnabled && form.instagramFeedUrl ? <InstagramFeedCallout href={form.instagramFeedUrl} theme={theme} /> : null}
-                  <div className="grid grid-cols-3 gap-2">{photos.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] bg-white object-contain p-1 ${theme.imageRadius}`} />)}</div>
+                  {template && [1,2,18,19,57].includes(template.source.number) ? <TemplateMediaGrid template={template} photos={photos}/> : <div className="grid grid-cols-3 gap-2">{photos.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] bg-white object-contain p-1 ${theme.imageRadius}`} />)}</div>}
                 </div>
               )}
             </PreviewSection>
@@ -1601,7 +1721,7 @@ function StorefrontPreview({
                 <div className="grid gap-3 md:grid-cols-2">
                   <div>
                     <InlineTextInput ariaLabel="About heading" className="text-2xl font-semibold" onChange={(value) => update("aboutHeading", value)} placeholder={sectionLabel(section)} style={theme.headingStyle} value={form.aboutHeading} />
-                    <InlineTextarea ariaLabel="About Us text" className={`mt-3 text-sm leading-6 ${theme.copyClass}`} onChange={(value) => update("bio", value)} placeholder="Tell customers about your business" value={form.bio} />
+                    <InlineTextarea ariaLabel="About Us text" className={`mt-3 text-sm leading-6 ${theme.copyClass}`} onChange={(value) => update("bio", value)} placeholder="Describe your business here" value={form.bio} />
                   </div>
                   <div>
                     {form.aboutImage ? <img src={form.aboutImage} alt="" className={`aspect-[4/3] w-full bg-white object-contain p-2 ${theme.imageRadius}`} /> : null}
@@ -1620,7 +1740,7 @@ function StorefrontPreview({
               {activeSection === section ? (
                 <div className="grid gap-3">
                   <InlineTextarea ariaLabel="Booking process" onChange={(value) => update("booking", { ...form.booking, process: value })} placeholder="Describe how booking works" value={form.booking.process} />
-                  <InlineTextarea ariaLabel="Service area" onChange={(value) => update("serviceAreaNotes", value)} placeholder="Napa County, Sonoma County, Solano County" value={form.serviceAreaNotes} />
+                  <InlineTextarea ariaLabel="Service area" onChange={(value) => update("serviceAreaNotes", value)} placeholder="Type service area here" value={form.serviceAreaNotes} />
                   <PreviewRadiusMap city={[form.city, form.state].filter(Boolean).join(", ") || "Service area"} coverageAreas={coverageAreaLabels(form.serviceAreaNotes, [form.city, form.state].filter(Boolean).join(", "))} radiusMiles={business.serviceRadiusMiles} theme={theme} />
                 </div>
               ) : (
@@ -1764,7 +1884,7 @@ function PreviewHeroTemplate({
     <>
       <InlineTextarea
         ariaLabel="Hero headline"
-        className={`min-h-0 resize-none font-semibold leading-[0.98] tracking-normal ${layout === "BRAND_SPOTLIGHT" ? "text-white" : ""} ${isMobile ? "text-3xl" : "text-5xl"}`}
+        className={`min-h-0 resize-none font-semibold leading-[0.98] tracking-normal  ${isMobile ? "text-3xl" : "text-5xl"}`}
         onChange={(value) => update("aboutHeading", value)}
         placeholder={form.name}
         style={theme.headingStyle}
@@ -1772,7 +1892,7 @@ function PreviewHeroTemplate({
       />
       <InlineTextarea
         ariaLabel="Hero supporting text"
-        className={`mt-3 text-sm leading-6 ${layout === "BRAND_SPOTLIGHT" ? "text-white/85" : theme.copyClass}`}
+        className={`mt-3 text-sm leading-6 ${theme.copyClass}`}
         onChange={(value) => update("tagline", value)}
         placeholder={form.bio || "Add supporting text"}
         value={form.tagline}
@@ -1798,9 +1918,8 @@ function PreviewHeroTemplate({
       <section className={`m-4 overflow-hidden ${theme.cardClass} ${theme.sectionRadius}`} style={theme.previewCardStyle}>
         <div className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="flex min-w-0 items-center gap-3">
-            <PreviewHeroLogo form={form} theme={theme} />
             <span className="min-w-0">
-              <span className="block text-xl font-semibold" style={theme.headingStyle}>{form.name}</span>
+              <span className="block text-xl font-semibold" style={theme.headingStyle}>{form.tagline || form.name}</span>
               <span className={`block text-xs ${theme.mutedClass}`}>{business.reviewCount ? `${business.averageRating.toFixed(1)} · ${business.reviewCount} reviews` : "No reviews yet"} · {location}</span>
             </span>
           </div>
@@ -1826,13 +1945,13 @@ function PreviewHeroTemplate({
 
   if (layout === "BRAND_SPOTLIGHT") {
     return (
-      <section className={`m-4 grid min-h-[420px] place-items-center overflow-hidden p-6 ${theme.heroRadius}`} style={theme.accentBlockStyle}>
-        <div className="grid w-full max-w-3xl place-items-center gap-5 text-center text-white">
+      <section className={`m-4 grid min-h-[420px] place-items-center overflow-hidden p-6 ${theme.heroRadius}`} style={theme.previewCardStyle}>
+        <div className="grid w-full max-w-3xl place-items-center gap-5 text-center">
           <PreviewHeroLogo form={form} theme={theme} size={isMobile ? "h-24 w-24" : "h-32 w-32"} />
           {active ? EditableText : (
             <>
               <h2 className={`${isMobile ? "text-3xl" : "text-5xl"} font-semibold leading-tight`} style={theme.headingStyle}>{headline}</h2>
-              <p className="max-w-xl text-sm leading-6 text-white/85">{copy}</p>
+              <p className={`max-w-xl text-sm leading-6 ${theme.copyClass}`}>{copy}</p>
             </>
           )}
           <div className="grid w-full max-w-xl gap-3 rounded-[1rem] bg-white/92 p-4 text-left text-[#2f2626] shadow-sm sm:grid-cols-3">
@@ -1879,12 +1998,11 @@ function PreviewHeroTemplate({
   }
 
   return (
-    <section className={`m-4 grid overflow-hidden ${theme.cardClass} ${theme.sectionRadius} ${isMobile ? "" : "md:grid-cols-[1fr_0.88fr]"}`} style={theme.previewCardStyle}>
-      <div className={`relative min-h-[260px] ${isMobile ? "aspect-[4/3]" : ""}`} style={theme.softSurfaceStyle}>
+    <section className={`m-4 grid gap-4 overflow-hidden ${theme.cardClass} ${isMobile ? "" : "md:grid-cols-[1fr_0.88fr]"}`} style={theme.previewCardStyle}>
+      <div className={`relative min-h-[260px] overflow-hidden ${theme.imageRadius} ${isMobile ? "aspect-[4/3]" : ""}`} style={theme.softSurfaceStyle}>
         {form.coverPhoto ? <CroppedImage src={form.coverPhoto} alt="" crop={form.coverPhotoCrop} className="absolute inset-0 h-full w-full object-cover" /> : null}
       </div>
-      <div className="grid content-center justify-items-center gap-4 p-6 text-center">
-        <PreviewHeroLogo form={form} theme={theme} size="h-20 w-20" />
+      <div className="grid content-center justify-items-start gap-4 p-6 text-left">
         {active ? EditableText : (
           <>
             <h2 className={`${isMobile ? "text-3xl" : "text-5xl"} font-semibold leading-tight`} style={theme.headingStyle}>{headline}</h2>
@@ -2007,9 +2125,9 @@ function ServiceGrid({
     );
   }
   return (
-    <div className="grid gap-3 md:grid-cols-3">
+    <div className="template-service-grid grid gap-3 md:grid-cols-3">
       {services.map((service) => (
-        <div key={service.id} className={`overflow-hidden shadow-sm ${theme.cardClass} ${theme.imageRadius} ${service.active ? "" : "opacity-60"}`}>
+        <div key={service.id} className={`template-service-card overflow-hidden shadow-sm ${theme.cardClass} ${theme.imageRadius} ${service.active ? "" : "opacity-60"}`}>
           {service.photos[0] ? <img src={service.photos[0]} alt="" className="aspect-[4/3] w-full object-cover" /> : <div className="grid aspect-[4/3] place-items-center bg-[#f8ece9]"><ImagePlus className="h-6 w-6 text-primary" /></div>}
           <div className="p-3">
             <div className="line-clamp-1 font-semibold" style={theme.headingStyle}>{service.title}</div>
@@ -2137,9 +2255,10 @@ function instagramHandleFromUrl(href: string) {
 }
 
 function PreviewSection({ active, children, onClick, testId, theme, title }: { active: boolean; children: ReactNode; onClick: () => void; testId?: string; theme: PreviewTheme; title: string }) {
+  const design=theme.sectionDesigns?.[testId?.replace("preview-section-", "") ?? ""];
   return (
-    <section data-testid={testId} onClick={onClick} className={previewButtonClass(active, `mb-5 block w-full cursor-text p-5 text-left transition ${theme.cardClass} ${theme.sectionRadius}`)} style={active ? theme.activeSectionStyle : theme.previewCardStyle}>
-      {title ? <h3 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{title}</h3> : null}
+    <section data-custom-background={Boolean(design)} data-testid={testId} onClick={onClick} className={previewButtonClass(active, `mb-5 block w-full cursor-text rounded-[1.5rem] p-6 text-left transition ${theme.cardClass}`)} style={{...(active ? theme.activeSectionStyle : theme.previewCardStyle),...sectionDesignStyle(design)}}>
+      {title ? <h3 className="text-2xl font-semibold tracking-tight" style={{...theme.headingStyle,...(design ? {color:design.ink} : {}),...(theme.subheadingFamily ? {fontFamily:theme.subheadingFamily,fontStyle:theme.subheadingStyle} : {})}}>{title}</h3> : null}
       <div className={`${title ? "mt-3" : ""} text-sm leading-6 ${theme.copyClass}`}>{children}</div>
     </section>
   );
@@ -2178,46 +2297,50 @@ function previewButtonClass(active: boolean, base: string) {
 
 type PreviewTheme = ReturnType<typeof getPreviewTheme>;
 
-function getPreviewTheme(form: FormState) {
+function getPreviewTheme(form: FormState, template?: StorefrontTemplate | null) {
   const normalizedPalette = normalizeStorefrontPalette(form.palette);
-  const isDark = form.textTone === "LIGHT" || (form.textTone === "AUTO" && normalizedPalette === "BLACK_AND_WHITE");
+  const isDark = !template && (form.textTone === "LIGHT" || (form.textTone === "AUTO" && normalizedPalette === "BLACK_AND_WHITE"));
   const palette = getPreviewPalette(normalizedPalette);
-  const accent = palette.accent;
-  const ctaBackground = "gradient" in palette ? palette.gradient : accent;
-  const ctaText = "ctaText" in palette ? palette.ctaText : "#ffffff";
+  const accent = template?.colors.accent ?? (normalizedPalette === "MATCHA_SOFT" ? "#526747" : normalizedPalette === "BLUSH" ? "#92505d" : normalizedPalette === "LAVENDER" ? "#725481" : palette.accent);
+  const ctaBackground = template ? template.colors.accent : "gradient" in palette ? palette.gradient : accent;
+  const ctaText = template?.colors.accentInk ?? ("ctaText" in palette ? palette.ctaText : "#ffffff");
   const imageRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.75rem]" : "rounded-[0.9rem]";
   const sectionRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.5rem]" : "rounded-[1rem]";
   const logoRadius = form.imageShape === "SQUARE" ? "rounded-[0.35rem]" : form.imageShape === "SOFT" ? "rounded-[1rem]" : "rounded-full";
-  const fontFamilies = getStorefrontFontFamilies(form.fontStyle);
+  const baseFonts = getStorefrontFontFamilies(form.fontStyle);
+  const fontFamilies = template && form.fontStyle === template.fontStyle ? {heading:template.headingFamily ?? baseFonts.heading,body:template.bodyFamily ?? baseFonts.body} : baseFonts;
 
   return {
+    sectionDesigns:template?.sectionDesigns,
+    subheadingFamily:template?.subheadingFamily,
+    subheadingStyle:template?.subheadingStyle,
     accent,
     accentBlockStyle: { background: "gradient" in palette ? palette.gradient : `linear-gradient(135deg, ${palette.swatches.join(", ")})` } as CSSProperties,
     accentTextStyle: { color: accent } as CSSProperties,
-    activeNavItemStyle: { backgroundColor: `${accent}24`, color: isDark ? "#ffffff" : "#2f2626" } as CSSProperties,
+    activeNavItemStyle: { backgroundColor: `${accent}24`, color: template?.colors.ink ?? (isDark ? "#ffffff" : "#2f2626") } as CSSProperties,
     activeSectionStyle: { borderColor: `${accent}88`, boxShadow: `0 0 0 2px ${accent}` } as CSSProperties,
     badgeStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
-    bodyStyle: { fontFamily: fontFamilies.body } as CSSProperties,
-    cardClass: isDark ? "border border-white/15 bg-[#201b1e]/88 text-white" : "border border-white/80 bg-white/88 text-[#2f2626]",
-    copyClass: isDark ? "text-white/86" : "text-[#5f5550]",
+    bodyStyle: { fontFamily: fontFamilies.body, ...(template ? {color:template.colors.ink,backgroundColor:template.colors.background} : {}) } as CSSProperties,
+    cardClass: template ? "text-[color:var(--template-ink)]" : isDark ? "text-white" : "text-[#2f2626]",
+    copyClass: template ? "text-[color:var(--template-muted)]" : isDark ? "text-white/86" : "text-[#5f5550]",
     headerClass: isDark ? "border-white/15 bg-[#171315] text-white/70" : "border-[#eadbd7] bg-[#fffaf8] text-[#7a625b]",
     headingStyle: { fontFamily: fontFamilies.heading } as CSSProperties,
     heroCtaStyle: { background: ctaBackground, color: ctaText } as CSSProperties,
     heroRadius: imageRadius,
     imageRadius,
     logoRadius,
-    mutedClass: isDark ? "text-white/62" : "text-muted-foreground",
-    navClass: isDark ? "border-white/15 bg-[#201b1e] text-white/72" : "border-[#eadbd7] bg-white text-muted-foreground",
-    navStyle: { borderColor: `${accent}33` } as CSSProperties,
+    mutedClass: template ? "text-[color:var(--template-muted)]" : isDark ? "text-white/62" : "text-muted-foreground",
+    navClass: template ? "text-[color:var(--template-muted)]" : isDark ? "border-white/15 bg-[#201b1e] text-white/72" : "border-[#eadbd7] bg-white text-muted-foreground",
+    navStyle: { borderWidth: 0 } as CSSProperties,
     palette,
-    platformBarStyle: { backgroundColor: `${accent}14`, borderColor: `${accent}33` } as CSSProperties,
-    profileClass: isDark ? "bg-[#201b1e] text-white" : "bg-white text-[#2f2626]",
-    previewCardStyle: { borderColor: `${accent}44` } as CSSProperties,
+    platformBarStyle: { backgroundColor: "transparent", borderWidth: 0 } as CSSProperties,
+    profileClass: template ? "text-[color:var(--template-ink)]" : isDark ? "bg-[#201b1e] text-white" : "bg-white text-[#2f2626]",
+    previewCardStyle: { borderWidth: 0, boxShadow: "0 6px 24px rgba(74,45,62,0.05)", color: template?.colors.ink, backgroundColor: template?.colors.surface ?? (isDark ? "#242124" : "#ffffff") } as CSSProperties,
     secondaryButtonStyle: { backgroundColor: `${accent}14`, borderColor: `${accent}66`, color: isDark ? "#ffffff" : "#4b403c" } as CSSProperties,
     sectionRadius,
     selectedControlStyle: { borderColor: accent, backgroundColor: `${accent}14` } as CSSProperties,
-    shellClass: isDark ? "bg-[#151113] text-white" : "bg-white text-[#2f2626]",
-    softSurfaceStyle: { backgroundColor: `${accent}18`, color: accent } as CSSProperties
+    shellClass: isDark ? "bg-[#151113] text-white" : "bg-[#fbf0f3] text-[#2f2626]",
+    softSurfaceStyle: { backgroundColor: template?.colors.secondary ?? (isDark ? "#242124" : "#f6f4f1"), color: accent } as CSSProperties
   };
 }
 

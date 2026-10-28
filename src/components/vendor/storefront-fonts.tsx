@@ -1,0 +1,24 @@
+import { Six_Caps, Bebas_Neue, DM_Serif_Display, Abril_Fatface, Great_Vibes, Playfair_Display, Rubik_Bubbles, Unbounded, Space_Mono, Shrikhand, Anton, Pacifico, Dela_Gothic_One, Alfa_Slab_One, Righteous, Caveat, Limelight, Archivo_Black, Italiana, Lobster, Bungee } from "next/font/google";
+import type { ReactNode } from "react";
+const shrikhand = Shrikhand({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-shrikhand" });
+const anton = Anton({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-anton" });
+const pacifico = Pacifico({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-pacifico" });
+const dela = Dela_Gothic_One({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-dela" });
+const alfa = Alfa_Slab_One({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-alfa" });
+const righteous = Righteous({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-righteous" });
+const caveat = Caveat({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-caveat" });
+const limelight = Limelight({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-limelight" });
+const archivo = Archivo_Black({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-archivo" });
+const italiana = Italiana({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-italiana" });
+const lobster = Lobster({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-lobster" });
+const bungee = Bungee({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-bungee" });
+const bebas = Bebas_Neue({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-bebas" });
+const dmserif = DM_Serif_Display({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-dmserif" });
+const abril = Abril_Fatface({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-abril" });
+const greatvibes = Great_Vibes({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-greatvibes" });
+const playfair = Playfair_Display({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-playfair" });
+const bubbles = Rubik_Bubbles({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-bubbles" });
+const unbounded = Unbounded({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-unbounded" });
+const mono = Space_Mono({ subsets: ["latin"], weight: "400", display: "swap", preload: false, variable: "--font-preview-mono" });
+const sixcaps = Six_Caps({ subsets:["latin"], weight:"400", display:"swap", preload:false, variable:"--font-preview-sixcaps" });
+export default function PreviewFonts({ children }: { children: ReactNode }) { return <div className={[sixcaps.variable, bebas.variable, dmserif.variable, abril.variable, greatvibes.variable, playfair.variable, bubbles.variable, unbounded.variable, mono.variable, shrikhand.variable, anton.variable, pacifico.variable, dela.variable, alfa.variable, righteous.variable, caveat.variable, limelight.variable, archivo.variable, italiana.variable, lobster.variable, bungee.variable].join(" ")}>{children}</div>; }

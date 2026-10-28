@@ -1,3 +1,8 @@
+import { readStorefrontDesign } from "@/lib/storefront-design";
+import { sectionDesignStyle } from "@/lib/template-section-design";
+import { PublishedStorefrontHero } from "@/components/vendor/published-storefront-hero";
+import { PublishedStorefrontSurface } from "@/components/vendor/published-storefront-surface";
+import { TemplateMediaGrid } from "@/components/vendor/template-media-grid";
 import { ShareUnclaimedVendor } from "@/components/vendor/share-unclaimed-vendor";
 import Image from "next/image";
 import Link from "next/link";
@@ -168,12 +173,23 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   const faqItems = readStorefrontFaqs(vendor.storefrontFaqJson);
   const bookingInfo = readStorefrontBooking(vendor.storefrontBookingJson);
   const policies = readStorefrontPolicies(vendor.storefrontPoliciesJson);
+  const design = readStorefrontDesign(vendor.storefrontBookingJson);
+  const template = design.template;
+  const sectionStyle = (key:string) => sectionDesignStyle(template?.sectionDesigns?.[key]);
   const theme = getStorefrontTheme({
     fontStyle: vendor.storefrontFontStyle,
     imageShape: vendor.storefrontImageShape,
     palette: palette.value,
     textTone: vendor.storefrontTextTone
   });
+  if(template) {
+    theme.bodyStyle={fontFamily:template.bodyFamily ?? theme.bodyStyle.fontFamily,backgroundColor:template.colors.background,color:template.colors.ink};
+    theme.headingStyle={fontFamily:template.headingFamily ?? theme.headingStyle.fontFamily,fontWeight:template.headingWeight};
+    theme.cardStyle={...theme.cardStyle,backgroundColor:template.colors.surface,color:template.colors.ink};
+    theme.ctaStyle=theme.heroCtaStyle={background:template.colors.accent,color:template.colors.accentInk,borderColor:template.colors.accent};
+    theme.accentTextStyle={color:template.colors.accent};
+    theme.copyClass=""; theme.shellClass=""; theme.cardClass="";
+  }
   const isFollowingVendor =
     currentUserId && vendor.user && currentUserId !== vendor.user.id
       ? Boolean(
@@ -221,7 +237,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className={`flex flex-col gap-8 rounded-[1.25rem] bg-gradient-to-br ${palette.className} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
+    <PublishedStorefrontSurface template={template} className={`flex flex-col gap-8 rounded-[1.25rem] ${template ? "" : `bg-gradient-to-br ${palette.className}`} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
       {isOwnerViewing ? (
         <div className="sticky top-0 z-30 flex flex-col gap-2 rounded-[1rem] border border-[#eadbd7] bg-white/95 px-3 py-2 shadow-[0_12px_34px_rgba(47,38,38,0.10)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
@@ -346,7 +362,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <p className="mt-2 text-sm">Share this profile with the owner so they can learn about ShopFia and request an ownership review.</p>
         <ShareUnclaimedVendor name={vendor.name} url={publicStorefrontUrl} />
       </section> : null}
-      <StorefrontTemplateIntro
+      {!isUnclaimed && (template || design.depth !== "flat") ? <PublishedStorefrontHero design={design} name={vendor.name} headline={vendor.storefrontAboutHeading || vendor.name} description={vendor.storefrontTagline || vendor.bio || ""} location={[vendor.city,vendor.state].filter(Boolean).join(", ")} image={hero || ""} logo={vendor.logoUrl || ""} crop={coverCrop} headingStyle={theme.headingStyle}/> : <StorefrontTemplateIntro
         completedOrderCount={completedOrderCount}
         coverCrop={coverCrop}
         displayedFeaturedOfferings={displayedFeaturedOfferings}
@@ -364,10 +380,10 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         verifiedAverageRating={verifiedAverageRating}
         verifiedCredentials={verifiedCredentials}
         verifiedReviewCount={verifiedReviewCount}
-      />
+      />}
 
       {showSection("about") ? (
-        <section id="about" className={`grid scroll-mt-28 gap-5 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-8 ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: sectionPriority("about") }}>
+        <section id="about" data-testid="preview-section-about" data-custom-background={Boolean(template?.sectionDesigns?.["about"]) } className={`grid scroll-mt-28 gap-5 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-8 ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, ...sectionStyle("about"), order: sectionPriority("about") }}>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={theme.accentTextStyle}>About</p>
             <h2 className="mt-3 text-4xl font-normal tracking-normal" style={theme.headingStyle}>
@@ -393,7 +409,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       ) : null}
 
       {showSection("featured-services") ? (
-      <section id="featured-services" className="scroll-mt-28 space-y-4" style={{ order: sectionPriority("featured-services") }}>
+      <section id="featured-services" data-testid="preview-section-featured-services" data-custom-background={Boolean(template?.sectionDesigns?.["featured-services"]) } className="scroll-mt-28 space-y-4" style={{ ...sectionStyle("featured-services"), order: sectionPriority("featured-services") }}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">{sectionLabel("featured-services")}</h2>
@@ -423,7 +439,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       ) : null}
 
       {showSection("portfolio") ? (
-      <section id="portfolio" className="scroll-mt-28 space-y-5" style={{ order: sectionPriority("portfolio") }}>
+      <section id="portfolio" data-testid="preview-section-portfolio" data-custom-background={Boolean(template?.sectionDesigns?.["portfolio"]) } className="scroll-mt-28 space-y-5" style={{ ...sectionStyle("portfolio"), order: sectionPriority("portfolio") }}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">{sectionLabel("portfolio")}</h2>
@@ -434,7 +450,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <Badge variant="outline" style={theme.outlineBadgeStyle}>{portfolioPhotos.length} photo{portfolioPhotos.length === 1 ? "" : "s"}</Badge>
         </div>
 
-        {portfolioPhotos.length > 0 ? (
+        {portfolioPhotos.length > 0 ? (template ? <TemplateMediaGrid template={template} photos={portfolioPhotos}/> :
           <StorefrontPortfolioGallery
             businessName={vendor.name}
             cardClass={`${theme.cardClass} ${theme.sectionRadius}`}
@@ -473,7 +489,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       ) : null}
 
       {showSection("all-services") ? (
-      <section id="services" className="scroll-mt-28 space-y-4" style={{ order: sectionPriority("all-services") }}>
+      <section id="services" data-testid="preview-section-all-services" data-custom-background={Boolean(template?.sectionDesigns?.["all-services"]) } className="scroll-mt-28 space-y-4" style={{ ...sectionStyle("all-services"), order: sectionPriority("all-services") }}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">{sectionLabel("all-services")}</h2>
@@ -498,7 +514,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       ) : null}
 
       {showSection("how-it-works") ? (
-        <section id="how-it-works" className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: sectionPriority("how-it-works") }}>
+        <section id="how-it-works" data-testid="preview-section-how-it-works" data-custom-background={Boolean(template?.sectionDesigns?.["how-it-works"]) } className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, ...sectionStyle("how-it-works"), order: sectionPriority("how-it-works") }}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={theme.accentTextStyle}>Booking</p>
@@ -533,7 +549,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
       <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]" style={{ order: Math.min(sectionPriority("final-quote"), sectionPriority("reviews")) }}>
         {showSection("final-quote") ? (
-        <div id="inquiry" className="scroll-mt-28" style={{ order: sectionPriority("final-quote") }}>
+        <div id="inquiry" className="scroll-mt-28" style={{ ...sectionStyle("final-quote"), order: sectionPriority("final-quote") }}>
           {!isUnclaimed ? (
             <ListingInquiryPanel
               defaultName={session?.user?.name}
@@ -545,7 +561,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         ) : <div />}
 
         {showSection("reviews") ? (
-        <div id="reviews" className="space-y-4 scroll-mt-28" style={{ order: sectionPriority("reviews") }}>
+        <div id="reviews" className="space-y-4 scroll-mt-28" style={{ ...sectionStyle("reviews"), order: sectionPriority("reviews") }}>
             <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold tracking-tight">{sectionLabel("reviews")}</h2>
             <div className="text-sm text-muted-foreground">
@@ -613,7 +629,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       </section>
 
       {showSection("faq") ? (
-      <section id="faq" className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: sectionPriority("faq") }}>
+      <section id="faq" data-testid="preview-section-faq" data-custom-background={Boolean(template?.sectionDesigns?.["faq"]) } className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, ...sectionStyle("faq"), order: sectionPriority("faq") }}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{sectionLabel("faq")}</h2>
@@ -675,7 +691,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <span>{vendor.name} storefront, powered by ShopFia.</span>
         <span>Verified vendors, quote requests, messaging, payments, and booking support.</span>
       </footer>
-    </div>
+    </PublishedStorefrontSurface>
   );
 }
 

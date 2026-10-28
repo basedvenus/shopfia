@@ -35,6 +35,9 @@ vi.mock("@/lib/services/marketplace-fees", () => ({
 
 import { autosaveStorefrontDraftAction, updateStorefrontCustomizationAction } from "@/app/actions/vendor";
 
+import { DEFAULT_STOREFRONT_DESIGN, readStorefrontDesign } from "@/lib/storefront-design";
+import { STOREFRONT_TEMPLATES } from "@/lib/storefront-template-library";
+
 const businessId = "clv0000000000000000000000";
 const serviceOneId = "clv0000000000000000000001";
 const serviceTwoId = "clv0000000000000000000002";
@@ -123,6 +126,28 @@ function formDataFromPayload(payload: ReturnType<typeof basePayload>) {
 }
 
 describe("storefront customization actions", () => {
+  it("saves draft design then publishes it with existing booking text", async () => {
+    const design={...DEFAULT_STOREFRONT_DESIGN,template:STOREFRONT_TEMPLATES[0],depth:"floating" as const};
+    const payload={...basePayload(),designJson:JSON.stringify(design)};
+    expect((await autosaveStorefrontDraftAction(payload)).ok).toBe(true);
+    const draft=mocks.db.vendorProfile.update.mock.calls[0][0].data;
+    expect(draft.storefrontBookingJson).toBeUndefined();
+    expect(draft.storefrontDraftJson.design.depth).toBe("floating");
+    const form=formDataFromPayload({...payload,intent:"publish"});
+    form.set("designJson",payload.designJson);
+    await expect(updateStorefrontCustomizationAction(form)).rejects.toThrow("published=1");
+    const published=mocks.db.vendorProfile.update.mock.calls[1][0].data;
+    expect(readStorefrontDesign(published.storefrontBookingJson).depth).toBe("floating");
+    expect(published.storefrontBookingJson.deposit).toBe(JSON.parse(payload.bookingJson).deposit);
+    expect(published.logoUrl).toBe(payload.logoUrl);
+    expect(published.photos).toEqual(payload.photoUrls);
+  });
+  it("does not save a design for a business the user cannot manage", async () => {
+    mocks.db.vendorProfile.findFirst.mockResolvedValue(null);
+    const result=await autosaveStorefrontDraftAction({...basePayload(),designJson:JSON.stringify(DEFAULT_STOREFRONT_DESIGN)});
+    expect(result.ok).toBe(false);
+    expect(mocks.db.vendorProfile.update).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.db.vendorProfile.findFirst.mockResolvedValue({

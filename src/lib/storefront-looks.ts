@@ -8,5 +8,6 @@ export const STOREFRONT_LOOKS = [
 ] as const;
 
 export function recommendStorefrontLook(business: string) {
+  if (/\b(clean|minimal|elevated|sophisticated)\b/i.test(business)) return STOREFRONT_LOOKS[3];
   return STOREFRONT_LOOKS.find((look) => look.keywords.test(business)) ?? STOREFRONT_LOOKS[3];
 }

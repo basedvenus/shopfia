@@ -1,3 +1,4 @@
+import { storefrontDesignJsonSchema } from "@/lib/storefront-design";
 import { z } from "zod";
 
 const imageValueSchema = z
@@ -127,6 +128,7 @@ export const storefrontCustomizationSchema = z.object({
   sectionLabelsJson: z.string().max(10000).optional().or(z.literal("")),
   faqJson: z.string().max(25000).optional().or(z.literal("")),
   policiesJson: z.string().max(25000).optional().or(z.literal("")),
+  designJson: storefrontDesignJsonSchema.optional(),
   bookingJson: z.string().max(25000).optional().or(z.literal("")),
   featuredOfferingIds: z.array(z.string().max(80)).max(24).default([]),
   offeringOrder: z.array(z.string().max(80)).max(80).default([]),

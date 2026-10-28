@@ -1,5 +1,6 @@
 "use server";
 
+import { bookingWithDesign } from "@/lib/storefront-design";
 import { normalizeVendorCategoryId, normalizeVendorCategoryName } from "@/lib/vendor-categories";
 import { US_STATE_CODES } from "@/lib/us-states";
 import { UNCLAIMED_VENDOR_CATEGORIES, VENDOR_BOOKING_CHANNELS } from "@/lib/unclaimed-vendor";
@@ -373,6 +374,7 @@ function storefrontCustomizationPayloadFromFormData(formData: FormData) {
     sectionLabelsJson: formData.get("sectionLabelsJson") || undefined,
     faqJson: formData.get("faqJson") || undefined,
     policiesJson: formData.get("policiesJson") || undefined,
+    designJson: formData.get("designJson") || undefined,
     bookingJson: formData.get("bookingJson") || undefined,
     featuredOfferingIds: formDataToArray(formData, "featuredOfferingIds"),
     offeringOrder: formDataToArray(formData, "offeringOrder"),
@@ -396,6 +398,7 @@ function prepareStorefrontCustomizationPayload(parsed: StorefrontCustomizationIn
     availabilityNotes: parsed.availabilityNotes || "",
     bio: parsed.bio || "",
     booking: parseEditorJson(parsed.bookingJson) ?? {},
+    ...(parsed.designJson ? { design: parsed.designJson } : {}),
     buttonStyle: parsed.buttonStyle,
     city: parsed.city,
     coverPhoto: parsed.coverPhoto || "",
@@ -612,7 +615,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
       storefrontDraftJson: Prisma.JsonNull,
       storefrontFaqJson: parseEditorJson(parsed.faqJson) ?? Prisma.JsonNull,
       storefrontPoliciesJson: parseEditorJson(parsed.policiesJson) ?? Prisma.JsonNull,
-      storefrontBookingJson: parseEditorJson(parsed.bookingJson) ?? Prisma.JsonNull,
+      storefrontBookingJson: parsed.designJson ? JSON.parse(JSON.stringify(bookingWithDesign(parseEditorJson(parsed.bookingJson), parsed.designJson))) : parseEditorJson(parsed.bookingJson) ?? Prisma.JsonNull,
       storefrontSectionLabels: Object.keys(sanitizedSectionLabels).length ? sanitizedSectionLabels : Prisma.JsonNull,
       storefrontFeaturedOfferingIds: featuredOfferingIds,
       storefrontHiddenOfferingIds: hiddenOfferingIds,
