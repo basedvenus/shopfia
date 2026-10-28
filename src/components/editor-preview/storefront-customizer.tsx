@@ -218,7 +218,7 @@ export function StorefrontCustomizer({
   const [heroEdge, setHeroEdge] = useState(initialDesign.edge);
   const [heroBackground, setHeroBackground] = useState(initialDesign.background);
   const [effectImage,setEffectImage]=useState(initialDesign.effectImage ?? "");
-  const [effectPresentation,setEffectPresentation]=useState<"emblem"|"product">(initialDesign.effectPresentation ?? "emblem");
+  const [effectPresentation,setEffectPresentation]=useState<"emblem"|"product"|"spin">(initialDesign.effectPresentation ?? "emblem");
   const [effectWord,setEffectWord]=useState(initialDesign.effectWord ?? "");
   const [studioOpen,setStudioOpen]=useState(false);
   const [studioInvitation,setStudioInvitation]=useState(false);
@@ -1454,7 +1454,7 @@ function StorefrontPreview({
   effectReplay?:number;
   template?: StorefrontTemplate | null;
   heroCustomFont?: string | null;
-  effectImage?:string; effectPresentation?:"emblem"|"product"; effectWord?:string;
+  effectImage?:string; effectPresentation?:"emblem"|"product"|"spin"; effectWord?:string;
   heroMount?: LogoMount; heroEdge?: string; heroBackground?: string;
   onHeroDepthChange?: (value: HeroDepth) => void;
   heroDepth?: HeroDepth;

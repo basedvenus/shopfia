@@ -23,7 +23,7 @@ export const storefrontDesignSchema = z.object({
   aboutPhotos:z.array(z.string().max(2048).refine(v=>v==="" || /^https?:\/\//.test(v) || v.startsWith("/"))).max(12).optional(),
   aboutPhotoLayout:z.enum(["grid","row","layered","offset","cascade","six","banner","scallop"]).optional(),
   effectImage:z.string().max(2048).refine(v=>v==="" || /^https?:\/\//.test(v) || v.startsWith("/")).optional(),
-  effectPresentation:z.enum(["emblem","product"]).optional(),effectWord:z.string().max(24).optional()
+  effectPresentation:z.enum(["emblem","product","spin"]).optional(),effectWord:z.string().max(24).optional()
 });
 export type StorefrontDesign = z.infer<typeof storefrontDesignSchema>;
 export const DEFAULT_STOREFRONT_DESIGN: StorefrontDesign = { version:1, template:null, depth:"flat", mount:"round", edge:"#877a78", background:"#e6dfd4" };

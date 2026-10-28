@@ -1,4 +1,5 @@
 "use client";
+import { ProductSpin } from "./product-spin";
 import { ProductSpotlight } from "./product-spotlight";
 import { InlineStorefrontText } from "./inline-storefront-text";
 import { TemplateIllustration } from "./template-illustration";
@@ -21,7 +22,7 @@ export const HERO_DEPTH_PRESETS: { value: HeroDepth; label: string; detail: stri
 
 export function DimensionalStorefrontHero({ effectImage="", presentation="emblem", backgroundWord="", template, name, headline, description, onHeadlineChange, onDescriptionChange, descriptionLabel="Tagline", location, image, crop, logo, depth, mobile, headingStyle, onBook, onDepthChange, mount, edgeColor, sceneColor }: {
   previewReplay?:number;
-  effectImage?:string; presentation?:"emblem"|"product"; backgroundWord?:string;
+  effectImage?:string; presentation?:"emblem"|"product"|"spin"; backgroundWord?:string;
   template?: StorefrontTemplate;
   onHeadlineChange?: (value:string)=>void; onDescriptionChange?: (value:string)=>void; descriptionLabel?:string;
   name: string; headline: string; description: string; location: string;
@@ -46,7 +47,7 @@ export function DimensionalStorefrontHero({ effectImage="", presentation="emblem
       <div className="depth-scene" data-playing={playing}>
         <div className="depth-regular-cover">{image ? <CroppedImage src={image} frameFit={image === logo ? "contain" : "cover"} crop={crop} alt={`${name || "Storefront"} cover`} loading="eager" className="h-full w-full object-cover" /> : <span className="depth-empty">Add a cover image</span>}</div>
         {playing ? <div className="depth-permanent-layer">
-          {presentation === "product" ? <ProductSpotlight image={effectImage} word={backgroundWord} name={name} headingStyle={headingStyle}/> : <><div className="depth-stage-light" aria-hidden="true"/><div className="depth-floor-shadow" aria-hidden="true"/><StorefrontBrandSculpture touchPreview={mobile} mount={mount} edgeColor={edgeColor} image={effectImage || logo || image} name={name} interactive /></>}
+          {presentation === "spin" ? <ProductSpin image={effectImage} name={name}/> : presentation === "product" ? <ProductSpotlight image={effectImage} word={backgroundWord} name={name} headingStyle={headingStyle}/> : <><div className="depth-stage-light" aria-hidden="true"/><div className="depth-floor-shadow" aria-hidden="true"/><StorefrontBrandSculpture touchPreview={mobile} mount={mount} edgeColor={edgeColor} image={effectImage || logo || image} name={name} interactive /></>}
         </div> : null}
 
       </div>
