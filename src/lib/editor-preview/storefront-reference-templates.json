@@ -1,0 +1,3627 @@
+[
+  {
+    "id": "reference-01",
+    "name": "The Invitation",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461677/",
+      "title": "20+ Best Actor Website Templates (2026)",
+      "number": 1,
+      "notes": "Right-aligned oversized masthead; warm paper; asymmetric portfolio tiles"
+    },
+    "description": "Right-aligned oversized masthead; warm paper; asymmetric portfolio tiles",
+    "fonts": "Manrope + Inter",
+    "fontStyle": "MODERN",
+    "headingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "Your next\nchapter.",
+    "imageShape": "SQUARE",
+    "composition": "masthead",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#eee5d9",
+      "surface": "#f5eee3",
+      "ink": "#171715",
+      "muted": "#55534f",
+      "accent": "#171715",
+      "accentInk": "#fffdf7",
+      "secondary": "#b99daa"
+    },
+    "subheadingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f5eee3",
+        "ink": "#171715",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#eee5d9",
+        "ink": "#171715",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f5eee3",
+        "ink": "#171715",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#eee5d9",
+        "ink": "#171715",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-02",
+    "name": "Cloud Nine",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461676/",
+      "title": "Where contrast becomes identity",
+      "number": 2,
+      "notes": "Sky-blue outer canvas; inset cream page; condensed red type"
+    },
+    "description": "Sky-blue outer canvas; inset cream page; condensed red type",
+    "fonts": "Instrument Serif · Bebas Neue · Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-shopfia-instrument-serif), serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "A little EXTRA always.",
+    "imageShape": "SQUARE",
+    "composition": "postcard",
+    "imageMask": "square",
+    "sections": "cards",
+    "services": "cards",
+    "button": "pill",
+    "frame": "outlined",
+    "colors": {
+      "background": "#9ec7e3",
+      "surface": "#f8f0df",
+      "ink": "#c8443d",
+      "muted": "#aa645a",
+      "accent": "#c8443d",
+      "accentInk": "#fffdf7",
+      "secondary": "#e0d1b6"
+    },
+    "subheadingFamily": "var(--font-preview-bebas), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f8f0df",
+        "ink": "#c8443d",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#9ec7e3",
+        "ink": "#8c2e26",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f8f0df",
+        "ink": "#8c2e26",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#9ec7e3",
+        "ink": "#8c2e26",
+        "pattern": "solid"
+      }
+    },
+    "heroInk": "#c8443d",
+    "backgroundDesign": {
+      "background": "#a9d2e8",
+      "ink": "#c8443d",
+      "pattern": "clouds",
+      "overlayColor": "#ffffff",
+      "overlayOpacity": 0
+    },
+    "illustration": "ribbon",
+    "headingTreatment": "sandwich",
+    "accentHeadingFamily": "var(--font-preview-bebas), sans-serif",
+    "specimenParts": [
+      "A little",
+      "EXTRA",
+      "always."
+    ]
+  },
+  {
+    "id": "reference-03",
+    "name": "The Live Set",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461673/",
+      "title": "Soul Waves Vinyl Record Store - Website Design (BLUE)",
+      "number": 3,
+      "notes": "Tall blue masthead; cream canvas; blue lower bands and record-grid rhythm"
+    },
+    "description": "Tall blue masthead; cream canvas; blue lower bands and record-grid rhythm",
+    "fonts": "Six Caps + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-preview-sixcaps), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 116,
+    "sample": "YOUR MOMENT",
+    "imageShape": "SQUARE",
+    "composition": "billboard",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "editorial",
+    "button": "block",
+    "frame": "none",
+    "colors": {
+      "background": "#e7e5cf",
+      "surface": "#f2f0dc",
+      "ink": "#263657",
+      "muted": "#5f6a7c",
+      "accent": "#4d5a8c",
+      "accentInk": "#fffdf7",
+      "secondary": "#4d5a8c"
+    },
+    "subheadingFamily": "var(--font-preview-anton), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f2f0dc",
+        "ink": "#263657",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e7e5cf",
+        "ink": "#263657",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f2f0dc",
+        "ink": "#263657",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e7e5cf",
+        "ink": "#263657",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-04",
+    "name": "The Impersonator",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461667/",
+      "title": "Website for South Korean dj Peggy Gou - Elena Zakharian",
+      "number": 4,
+      "notes": "Red feature panel; wide white display lettering; date-like service rows"
+    },
+    "description": "Red feature panel; wide white display lettering; date-like service rows",
+    "fonts": "Archivo Black + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-preview-archivo), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "overlay",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "rows",
+    "button": "outline",
+    "frame": "grid",
+    "colors": {
+      "background": "#f0ece1",
+      "surface": "#f8f5eb",
+      "ink": "#27241f",
+      "muted": "#625f58",
+      "accent": "#ef4028",
+      "accentInk": "#fffdf7",
+      "secondary": "#e6d8cb"
+    },
+    "heroBackground": "#f0442b",
+    "heroInk": "#fff7ed",
+    "subheadingFamily": "var(--font-shopfia-space), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f0442b",
+        "ink": "#fff7ed",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f0ece1",
+        "ink": "#27241f",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f8f5eb",
+        "ink": "#27241f",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#f0ece1",
+        "ink": "#27241f",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-05",
+    "name": "After the Toast",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461666/",
+      "title": "Modern Squarespace Website Design for a Music Marketing Agency",
+      "number": 5,
+      "notes": "Black centered hero; thin inset frame; light modular information panels"
+    },
+    "description": "Black centered hero; thin inset frame; light modular information panels",
+    "fonts": "Manrope + Inter",
+    "fontStyle": "MODERN",
+    "headingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "centered",
+    "imageMask": "square",
+    "sections": "cards",
+    "services": "editorial",
+    "button": "pill",
+    "frame": "outlined",
+    "colors": {
+      "background": "#18191a",
+      "surface": "#292a2a",
+      "ink": "#f5f3e9",
+      "muted": "#bcbbb4",
+      "accent": "#d9deaa",
+      "accentInk": "#231e1e",
+      "secondary": "#3d3f3c"
+    },
+    "subheadingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#292a2a",
+        "ink": "#f5f3e9",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#18191a",
+        "ink": "#f5f3e9",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#292a2a",
+        "ink": "#f5f3e9",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#18191a",
+        "ink": "#f5f3e9",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-06",
+    "name": "The Guestbook",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461665/",
+      "title": "Дизайн сайта для магазина виниловых пластинок",
+      "number": 6,
+      "notes": "Taupe exterior; cream inset; brick-red split masthead; circular media framing"
+    },
+    "description": "Taupe exterior; cream inset; brick-red split masthead; circular media framing",
+    "fonts": "Space Grotesk + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-shopfia-space), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "postcard",
+    "imageMask": "circle",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "pill",
+    "frame": "none",
+    "colors": {
+      "background": "#817b6c",
+      "surface": "#f0e9d5",
+      "ink": "#663d31",
+      "muted": "#8d6d5f",
+      "accent": "#86483b",
+      "accentInk": "#fffdf7",
+      "secondary": "#d7ceb5"
+    },
+    "subheadingFamily": "var(--font-shopfia-space), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f0e9d5",
+        "ink": "#663d31",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#817b6c",
+        "ink": "#663d31",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f0e9d5",
+        "ink": "#663d31",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#817b6c",
+        "ink": "#663d31",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-07",
+    "name": "Neon Dance Floor",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461664/",
+      "title": "LAUREN MIA™. Music Branding. - h3l AG",
+      "number": 7,
+      "notes": "Dark poster grid; orange and violet accents; asymmetric framed panels"
+    },
+    "description": "Dark poster grid; orange and violet accents; asymmetric framed panels",
+    "fonts": "Unbounded + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-preview-unbounded), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "MAKE A\nMOMENT",
+    "imageShape": "SQUARE",
+    "composition": "collage",
+    "imageMask": "square",
+    "sections": "cards",
+    "services": "cards",
+    "button": "block",
+    "frame": "offset",
+    "colors": {
+      "background": "#111015",
+      "surface": "#201b26",
+      "ink": "#f5eee9",
+      "muted": "#b9b3b2",
+      "accent": "#e96e32",
+      "accentInk": "#fffdf7",
+      "secondary": "#653976"
+    },
+    "subheadingFamily": "var(--font-preview-unbounded), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#201b26",
+        "ink": "#f5eee9",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#111015",
+        "ink": "#f5eee9",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#201b26",
+        "ink": "#f5eee9",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#111015",
+        "ink": "#f5eee9",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-08",
+    "name": "Midnight DJ",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461661/",
+      "title": "an image of a web page that is dark and has many different images on it",
+      "number": 8,
+      "notes": "Black-violet image-led hero; dark stacked bands; outlined gallery tiles"
+    },
+    "description": "Black-violet image-led hero; dark stacked bands; outlined gallery tiles",
+    "fonts": "Space Grotesk + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-shopfia-space), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "poster",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "grid",
+    "colors": {
+      "background": "#100b18",
+      "surface": "#21172f",
+      "ink": "#eee8f5",
+      "muted": "#b5adbe",
+      "accent": "#9261d0",
+      "accentInk": "#fffdf7",
+      "secondary": "#2b1d40"
+    },
+    "subheadingFamily": "var(--font-shopfia-space), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#21172f",
+        "ink": "#eee8f5",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#100b18",
+        "ink": "#eee8f5",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#21172f",
+        "ink": "#eee8f5",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#100b18",
+        "ink": "#eee8f5",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-09",
+    "name": "Backstage Pass",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461658/",
+      "title": "dj PressKit Nana Mom | design by dumalsova",
+      "number": 9,
+      "notes": "Technical blue-black press-kit layout; fine grid rules; spaced typography"
+    },
+    "description": "Technical blue-black press-kit layout; fine grid rules; spaced typography",
+    "fonts": "Unbounded + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-preview-unbounded), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "MAKE A\nMOMENT",
+    "imageShape": "SQUARE",
+    "composition": "masthead",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "grid",
+    "colors": {
+      "background": "#0c101a",
+      "surface": "#161c2a",
+      "ink": "#e6e7ef",
+      "muted": "#acaeb8",
+      "accent": "#99a9ff",
+      "accentInk": "#231e1e",
+      "secondary": "#23334e"
+    },
+    "subheadingFamily": "var(--font-preview-unbounded), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#161c2a",
+        "ink": "#e6e7ef",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#0c101a",
+        "ink": "#e6e7ef",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#161c2a",
+        "ink": "#e6e7ef",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#0c101a",
+        "ink": "#e6e7ef",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-10",
+    "name": "Garden Gathering",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461650/",
+      "title": "Ecommerce look minimal",
+      "number": 10,
+      "notes": "Ivory story page; olive rules; wide media followed by alternating editorial blocks"
+    },
+    "description": "Ivory story page; olive rules; wide media followed by alternating editorial blocks",
+    "fonts": "DM Serif Display + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-dmserif), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "stacked",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#f5f3e6",
+      "surface": "#fbf9ed",
+      "ink": "#3e4434",
+      "muted": "#737768",
+      "accent": "#727d4c",
+      "accentInk": "#fffdf7",
+      "secondary": "#e3e5d1"
+    },
+    "subheadingFamily": "var(--font-preview-dmserif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#fbf9ed",
+        "ink": "#3e4434",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f5f3e6",
+        "ink": "#3e4434",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#fbf9ed",
+        "ink": "#3e4434",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#f5f3e6",
+        "ink": "#3e4434",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-11",
+    "name": "The Headliner",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461649/",
+      "title": "an image of a woman sitting in a chair with the words vol one studios on it",
+      "number": 11,
+      "notes": "Oversized condensed masthead; black-and-paper panels; large service lettering"
+    },
+    "description": "Oversized condensed masthead; black-and-paper panels; large service lettering",
+    "fonts": "Anton + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-preview-anton), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "MAKE A\nMOMENT",
+    "imageShape": "SQUARE",
+    "composition": "billboard",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "rows",
+    "button": "block",
+    "frame": "grid",
+    "colors": {
+      "background": "#d6d4cb",
+      "surface": "#ece9e0",
+      "ink": "#20211e",
+      "muted": "#595954",
+      "accent": "#292b26",
+      "accentInk": "#fffdf7",
+      "secondary": "#babdb5"
+    },
+    "subheadingFamily": "var(--font-preview-anton), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#ece9e0",
+        "ink": "#20211e",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#d6d4cb",
+        "ink": "#20211e",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#ece9e0",
+        "ink": "#20211e",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#d6d4cb",
+        "ink": "#20211e",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-12",
+    "name": "Place Cards",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461647/",
+      "title": "Website Design for Natalia Miranda",
+      "number": 12,
+      "notes": "Brown outer frame; powder-blue and cream panels; stripes; paper-like cards"
+    },
+    "description": "Brown outer frame; powder-blue and cream panels; stripes; paper-like cards",
+    "fonts": "DM Serif Display · Instrument Serif · Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-dmserif), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Made with\nintention.",
+    "imageShape": "SQUARE",
+    "composition": "postcard",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "cards",
+    "button": "pill",
+    "frame": "stripe",
+    "colors": {
+      "background": "#70533f",
+      "surface": "#f6efe0",
+      "ink": "#4c3b2e",
+      "muted": "#7c6d60",
+      "accent": "#584331",
+      "accentInk": "#fffdf7",
+      "secondary": "#b7cbda"
+    },
+    "subheadingFamily": "var(--font-shopfia-instrument-serif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f6efdf",
+        "ink": "#49392d",
+        "pattern": "solid"
+      },
+      "all-services": {
+        "background": "#f5efdf",
+        "ink": "#49392d",
+        "pattern": "solid"
+      },
+      "featured-services": {
+        "background": "#b4c9dc",
+        "ink": "#45382e",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e4dfd2",
+        "ink": "#49392d",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#634733",
+        "ink": "#fff3dc",
+        "pattern": "solid"
+      },
+      "how-it-works": {
+        "background": "#f7eedc",
+        "ink": "#49392d",
+        "pattern": "solid"
+      },
+      "reviews": {
+        "background": "#f7efdc",
+        "ink": "#49392d",
+        "pattern": "solid"
+      },
+      "faq": {
+        "background": "#adc5da",
+        "ink": "#49392d",
+        "pattern": "stripes",
+        "patternColor": "#f7efdc"
+      },
+      "final-quote": {
+        "background": "#adc5da",
+        "ink": "#49392d",
+        "pattern": "stripes",
+        "patternColor": "#f7efdc"
+      }
+    },
+    "subheadingStyle": "italic"
+  },
+  {
+    "id": "reference-13",
+    "name": "Olive & Vows",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461646/",
+      "title": "Skincare Website Design — Cosmetic UI Landing Page & Ecommerce Beauty Layout",
+      "number": 13,
+      "notes": "Very large delicate serif type; sage neutrals; asymmetric image and copy columns"
+    },
+    "description": "Very large delicate serif type; sage neutrals; asymmetric image and copy columns",
+    "fonts": "Italiana + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-italiana), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "masthead",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#e7e6dd",
+      "surface": "#f6f4e9",
+      "ink": "#3d4339",
+      "muted": "#71756a",
+      "accent": "#737d67",
+      "accentInk": "#fffdf7",
+      "secondary": "#babfb0"
+    },
+    "subheadingFamily": "var(--font-preview-italiana), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f6f4e9",
+        "ink": "#3d4339",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e7e6dd",
+        "ink": "#3d4339",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f6f4e9",
+        "ink": "#3d4339",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e7e6dd",
+        "ink": "#3d4339",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-14",
+    "name": "Petal Confetti",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461608/",
+      "title": "Shopify Bakery Website Template | Macaron Shop Theme | No Code Fully Customizable",
+      "number": 14,
+      "notes": "Pink display panels; script accents; rounded category tiles; cream-and-lilac bands"
+    },
+    "description": "Pink display panels; script accents; rounded category tiles; cream-and-lilac bands",
+    "fonts": "Pacifico + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-pacifico), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Beautifully\nyours.",
+    "imageShape": "SOFT",
+    "composition": "split",
+    "imageMask": "soft",
+    "sections": "bands",
+    "services": "cards",
+    "button": "pill",
+    "frame": "double",
+    "colors": {
+      "background": "#f4cee0",
+      "surface": "#fbedf4",
+      "ink": "#743a5e",
+      "muted": "#9a6c88",
+      "accent": "#b24c7b",
+      "accentInk": "#fffdf7",
+      "secondary": "#d7c4e8"
+    },
+    "subheadingFamily": "var(--font-preview-greatvibes), cursive",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#fbedf4",
+        "ink": "#743a5e",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f4cee0",
+        "ink": "#743a5e",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#fbedf4",
+        "ink": "#743a5e",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#f4cee0",
+        "ink": "#743a5e",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "cake"
+  },
+  {
+    "id": "reference-15",
+    "name": "Chocolate Confetti",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461607/",
+      "title": "sweet tempting delightful cozy gelato dessert shop website template branding design",
+      "number": 15,
+      "notes": "Chocolate and pink contrast; playful chunky lettering; dashed product-card outlines"
+    },
+    "description": "Chocolate and pink contrast; playful chunky lettering; dashed product-card outlines",
+    "fonts": "Righteous + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-righteous), sans-serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "collage",
+    "imageMask": "soft",
+    "sections": "cards",
+    "services": "cards",
+    "button": "offset",
+    "frame": "ticket",
+    "colors": {
+      "background": "#ecc0cd",
+      "surface": "#f8e9e6",
+      "ink": "#57352d",
+      "muted": "#846761",
+      "accent": "#743b36",
+      "accentInk": "#fffdf7",
+      "secondary": "#9e6678"
+    },
+    "subheadingFamily": "var(--font-preview-righteous), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f8e9e6",
+        "ink": "#57352d",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#ecc0cd",
+        "ink": "#57352d",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f8e9e6",
+        "ink": "#57352d",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#ecc0cd",
+        "ink": "#57352d",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-16",
+    "name": "Buttercream Wishes",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461594/",
+      "title": "Bake Your Way to Success Online with a Stunning Bakery Website Design",
+      "number": 16,
+      "notes": "Cream-and-mustard serif hierarchy; pink arch frames; framed service modules"
+    },
+    "description": "Cream-and-mustard serif hierarchy; pink arch frames; framed service modules",
+    "fonts": "Abril Fatface + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-abril), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "split",
+    "imageMask": "arch",
+    "sections": "bands",
+    "services": "cards",
+    "button": "pill",
+    "frame": "double",
+    "colors": {
+      "background": "#f8f2d9",
+      "surface": "#fdfbec",
+      "ink": "#6b6138",
+      "muted": "#948c6a",
+      "accent": "#918243",
+      "accentInk": "#fffdf7",
+      "secondary": "#e8bdca"
+    },
+    "subheadingFamily": "var(--font-preview-dmserif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#fdfbec",
+        "ink": "#6b6138",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f8f2d9",
+        "ink": "#6b6138",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#fdfbec",
+        "ink": "#6b6138",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#f8f2d9",
+        "ink": "#6b6138",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "cake"
+  },
+  {
+    "id": "reference-17",
+    "name": "Pastel Parade",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461593/",
+      "title": "Colourful & Vibrant Website Design for Cake Artist",
+      "number": 17,
+      "notes": "Lilac and peach editorial bands; delicate tall serif; arch and wave edges"
+    },
+    "description": "Lilac and peach editorial bands; delicate tall serif; arch and wave edges",
+    "fonts": "Cormorant Garamond + Manrope",
+    "fontStyle": "ROMANTIC",
+    "headingFamily": "var(--font-shopfia-serif), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "poster",
+    "imageMask": "arch",
+    "sections": "bands",
+    "services": "editorial",
+    "button": "pill",
+    "frame": "wave",
+    "colors": {
+      "background": "#c4b8db",
+      "surface": "#efc3b4",
+      "ink": "#6d4d62",
+      "muted": "#916e79",
+      "accent": "#8f596f",
+      "accentInk": "#fffdf7",
+      "secondary": "#c3a258"
+    },
+    "subheadingFamily": "var(--font-shopfia-serif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#efc3b4",
+        "ink": "#6d4d62",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#c4b8db",
+        "ink": "#6d4d62",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#efc3b4",
+        "ink": "#6d4d62",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#c4b8db",
+        "ink": "#6d4d62",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-18",
+    "name": "Frosted Script",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461590/",
+      "title": "The Cake Shop — Semi-Custom Celebration Cakes by ECBG Studio in Chicago",
+      "number": 18,
+      "notes": "Cake-shop reference: ivory canvas, magenta accents, black script with tall pink display lettering, softly rounded photo grid"
+    },
+    "description": "Cake-shop reference: ivory canvas, magenta accents, black script with tall pink display lettering, softly rounded photo grid",
+    "fonts": "Great Vibes · Bebas Neue · Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-greatvibes), cursive",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "Your MOMENT studio",
+    "imageShape": "SOFT",
+    "composition": "centered",
+    "imageMask": "soft",
+    "sections": "cards",
+    "services": "cards",
+    "button": "pill",
+    "frame": "outlined",
+    "colors": {
+      "background": "#f9f5ec",
+      "surface": "#fffcf6",
+      "ink": "#211c1b",
+      "muted": "#746866",
+      "accent": "#a72c7f",
+      "accentInk": "#ffffff",
+      "secondary": "#df92b8"
+    },
+    "subheadingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f9f5ec",
+        "ink": "#211c1b",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f9f5ec",
+        "ink": "#211c1b",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f3e9e3",
+        "ink": "#211c1b",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#f9f5ec",
+        "ink": "#211c1b",
+        "pattern": "solid"
+      }
+    },
+    "specimenParts": [
+      "Your",
+      "MOMENT",
+      "studio"
+    ],
+    "headingTreatment": "mixed-script",
+    "accentHeadingFamily": "var(--font-preview-bebas), sans-serif",
+    "illustration": "cake"
+  },
+  {
+    "id": "reference-19",
+    "name": "Ribbon Stripe",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461588/",
+      "title": "Custom Cake Bakery Website Design Playful Charming Pastel Soft branding design",
+      "number": 19,
+      "notes": "Powder-blue stripes; cream panels; burgundy double borders; contrasting script headings"
+    },
+    "description": "Powder-blue stripes; cream panels; burgundy double borders; contrasting script headings",
+    "fonts": "Great Vibes + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-greatvibes), cursive",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Beautifully\nyours.",
+    "imageShape": "SOFT",
+    "composition": "postcard",
+    "imageMask": "soft",
+    "sections": "cards",
+    "services": "cards",
+    "button": "pill",
+    "frame": "stripe",
+    "colors": {
+      "background": "#aec6d5",
+      "surface": "#fbf1db",
+      "ink": "#623841",
+      "muted": "#8d6c6c",
+      "accent": "#713744",
+      "accentInk": "#fffdf7",
+      "secondary": "#f8eed7"
+    },
+    "subheadingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#aec6d5",
+        "ink": "#623841",
+        "pattern": "stripes",
+        "patternColor": "#f8eed7"
+      },
+      "portfolio": {
+        "background": "#aec6d5",
+        "ink": "#623841",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#fbf1db",
+        "ink": "#623841",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#aec6d5",
+        "ink": "#623841",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "ribbon",
+    "subheadingStyle": "normal"
+  },
+  {
+    "id": "reference-20",
+    "name": "Photo Booth Flash",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461583/",
+      "title": "Лендинг-портфолио для моушн дизайнера и видеоредактора Motion Designer Portfolio Website",
+      "number": 20,
+      "notes": "Extra-condensed black poster type; red seals; newspaper-like rules and sharp media"
+    },
+    "description": "Extra-condensed black poster type; red seals; newspaper-like rules and sharp media",
+    "fonts": "Bebas Neue + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-preview-bebas), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "MAKE A\nMOMENT",
+    "imageShape": "SQUARE",
+    "composition": "billboard",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "block",
+    "frame": "grid",
+    "colors": {
+      "background": "#e8e6dc",
+      "surface": "#f4f1e6",
+      "ink": "#1d1d19",
+      "muted": "#595852",
+      "accent": "#b23b31",
+      "accentInk": "#fffdf7",
+      "secondary": "#bfbdb3"
+    },
+    "subheadingFamily": "var(--font-preview-bebas), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f4f1e6",
+        "ink": "#1d1d19",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e8e6dc",
+        "ink": "#1d1d19",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f4f1e6",
+        "ink": "#1d1d19",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e8e6dc",
+        "ink": "#1d1d19",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-21",
+    "name": "Black Tie",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461579/",
+      "title": "Обсудить дизайн сайта в @levkina_olesya",
+      "number": 21,
+      "notes": "Monochrome high contrast; huge delicate overlapping display type; spare editorial grid"
+    },
+    "description": "Monochrome high contrast; huge delicate overlapping display type; spare editorial grid",
+    "fonts": "Italiana + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-italiana), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "billboard",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#eeeee9",
+      "surface": "#fafaf5",
+      "ink": "#151515",
+      "muted": "#555554",
+      "accent": "#262626",
+      "accentInk": "#fffdf7",
+      "secondary": "#c9c9c4"
+    },
+    "subheadingFamily": "var(--font-preview-italiana), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#fafaf5",
+        "ink": "#151515",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#eeeee9",
+        "ink": "#151515",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#fafaf5",
+        "ink": "#151515",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#eeeee9",
+        "ink": "#151515",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-22",
+    "name": "Under the Canopy",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461574/",
+      "title": "Comprehensive Figma UI Kit for Modern Marketing Agency Websites 🚀",
+      "number": 22,
+      "notes": "Deep green canvas; geometric multi-line headings; fine dividers and side-by-side media"
+    },
+    "description": "Deep green canvas; geometric multi-line headings; fine dividers and side-by-side media",
+    "fonts": "Space Grotesk + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-shopfia-space), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "split",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "cards",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#142b2a",
+      "surface": "#1c3533",
+      "ink": "#e9efe6",
+      "muted": "#b0bbb4",
+      "accent": "#b7cc85",
+      "accentInk": "#231e1e",
+      "secondary": "#36534a"
+    },
+    "subheadingFamily": "var(--font-shopfia-space), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#1c3533",
+        "ink": "#e9efe6",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#142b2a",
+        "ink": "#e9efe6",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#1c3533",
+        "ink": "#e9efe6",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#142b2a",
+        "ink": "#e9efe6",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-23",
+    "name": "The Event Planner",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461570/",
+      "title": "Интернет-магазин для бренда очков | Веб-дизайн",
+      "number": 23,
+      "notes": "Heavy black type over pale gray; sharp image grid; dark footer contrast"
+    },
+    "description": "Heavy black type over pale gray; sharp image grid; dark footer contrast",
+    "fonts": "Manrope + Inter",
+    "fontStyle": "MODERN",
+    "headingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 90,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "billboard",
+    "imageMask": "square",
+    "sections": "cards",
+    "services": "editorial",
+    "button": "block",
+    "frame": "none",
+    "colors": {
+      "background": "#d9dad3",
+      "surface": "#ecece5",
+      "ink": "#121817",
+      "muted": "#4f5351",
+      "accent": "#202b29",
+      "accentInk": "#fffdf7",
+      "secondary": "#aab6b0"
+    },
+    "subheadingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#ecece5",
+        "ink": "#121817",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#d9dad3",
+        "ink": "#121817",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#ecece5",
+        "ink": "#121817",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#d9dad3",
+        "ink": "#121817",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-24",
+    "name": "Grand Entrance",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461568/",
+      "title": "Creative Agency | Bold Branding & UX/UI Design",
+      "number": 24,
+      "notes": "Oversized CREATE-style lettering; deep burgundy feature band; blush modular sections"
+    },
+    "description": "Oversized CREATE-style lettering; deep burgundy feature band; blush modular sections",
+    "fonts": "Space Grotesk + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-shopfia-space), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 90,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "billboard",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "cards",
+    "button": "block",
+    "frame": "offset",
+    "colors": {
+      "background": "#f4e5e3",
+      "surface": "#f9eeee",
+      "ink": "#521520",
+      "muted": "#81525a",
+      "accent": "#671421",
+      "accentInk": "#fffdf7",
+      "secondary": "#681720"
+    },
+    "heroBackground": "#681720",
+    "heroInk": "#fff5ed",
+    "subheadingFamily": "var(--font-shopfia-space), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#681720",
+        "ink": "#fff5ed",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f4e5e3",
+        "ink": "#521520",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f9eeee",
+        "ink": "#521520",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#f4e5e3",
+        "ink": "#521520",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-25",
+    "name": "The Street Performer",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461567/",
+      "title": "Your magzine style store. Designed well and not just looks good it converts better. If you are thinking of a profitable store you just meet the right fit.  #viralreels #viral #newyork #ecommercebusiness",
+      "number": 25,
+      "notes": "Condensed full-width headline; grayscale editorial tiles; thin grid and generous gutters"
+    },
+    "description": "Condensed full-width headline; grayscale editorial tiles; thin grid and generous gutters",
+    "fonts": "Bebas Neue + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-preview-bebas), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "MAKE A\nMOMENT",
+    "imageShape": "SQUARE",
+    "composition": "overlay",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "grid",
+    "colors": {
+      "background": "#e7e5de",
+      "surface": "#f4f2eb",
+      "ink": "#252420",
+      "muted": "#5f5e59",
+      "accent": "#252420",
+      "accentInk": "#fffdf7",
+      "secondary": "#c5c2b8"
+    },
+    "subheadingFamily": "var(--font-preview-bebas), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f4f2eb",
+        "ink": "#252420",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e7e5de",
+        "ink": "#252420",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f4f2eb",
+        "ink": "#252420",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e7e5de",
+        "ink": "#252420",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-26",
+    "name": "The Magician",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461564/",
+      "title": "lucir | clothing store",
+      "number": 26,
+      "notes": "Dark feature masthead; extreme type scale; cream gallery and pale-blue feature blocks"
+    },
+    "description": "Dark feature masthead; extreme type scale; cream gallery and pale-blue feature blocks",
+    "fonts": "Manrope + Inter",
+    "fontStyle": "MODERN",
+    "headingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 90,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "overlay",
+    "imageMask": "square",
+    "sections": "cards",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#ede9dd",
+      "surface": "#f9f5e9",
+      "ink": "#171b1c",
+      "muted": "#565855",
+      "accent": "#202728",
+      "accentInk": "#fffdf7",
+      "secondary": "#c4cbd3"
+    },
+    "heroBackground": "#090e12",
+    "heroInk": "#f7f2e3",
+    "headingCase": "lowercase",
+    "subheadingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#090e12",
+        "ink": "#f7f2e3",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#ede9dd",
+        "ink": "#171b1c",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f9f5e9",
+        "ink": "#171b1c",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#ede9dd",
+        "ink": "#171b1c",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-27",
+    "name": "Candlelit Table",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461562/",
+      "title": "Masculine Luxe Branding & Squarespace Website for a Holistic Coach | January Made",
+      "number": 27,
+      "notes": "Dark botanical hero treatment; warm ivory editorial panels; restrained luxury serif"
+    },
+    "description": "Dark botanical hero treatment; warm ivory editorial panels; restrained luxury serif",
+    "fonts": "Playfair Display + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-playfair), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "poster",
+    "imageMask": "portrait",
+    "sections": "bands",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "double",
+    "colors": {
+      "background": "#e6e1d4",
+      "surface": "#f4efe3",
+      "ink": "#30382d",
+      "muted": "#676b60",
+      "accent": "#3e4d38",
+      "accentInk": "#fffdf7",
+      "secondary": "#243529"
+    },
+    "heroBackground": "#1b271e",
+    "heroInk": "#f5f0e3",
+    "subheadingFamily": "var(--font-preview-playfair), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#1b271e",
+        "ink": "#f5f0e3",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e6e1d4",
+        "ink": "#30382d",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f4efe3",
+        "ink": "#30382d",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e6e1d4",
+        "ink": "#30382d",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-28",
+    "name": "The Portrait Booth",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461559/",
+      "title": "GAZU — Minimal Fashion Store Website UI",
+      "number": 28,
+      "notes": "Oversized clean black type; sharp monochrome image blocks; open whitespace"
+    },
+    "description": "Oversized clean black type; sharp monochrome image blocks; open whitespace",
+    "fonts": "Manrope + Inter",
+    "fontStyle": "MODERN",
+    "headingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 90,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "billboard",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "block",
+    "frame": "none",
+    "colors": {
+      "background": "#e7e7e1",
+      "surface": "#f2f2ec",
+      "ink": "#171918",
+      "muted": "#545653",
+      "accent": "#191c19",
+      "accentInk": "#fffdf7",
+      "secondary": "#cacdc6"
+    },
+    "subheadingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f2f2ec",
+        "ink": "#171918",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e7e7e1",
+        "ink": "#171918",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f2f2ec",
+        "ink": "#171918",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e7e7e1",
+        "ink": "#171918",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-29",
+    "name": "Balloon Lounge",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461556/",
+      "title": "Сайт для цветочной студии/дофаминовый сайт/ flower studio website",
+      "number": 29,
+      "notes": "Pale lavender modular grid; black pill actions; color-blocked service cards"
+    },
+    "description": "Pale lavender modular grid; black pill actions; color-blocked service cards",
+    "fonts": "Manrope + Inter",
+    "fontStyle": "MODERN",
+    "headingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "collage",
+    "imageMask": "square",
+    "sections": "cards",
+    "services": "cards",
+    "button": "pill",
+    "frame": "grid",
+    "colors": {
+      "background": "#e8e6ef",
+      "surface": "#f7f7ee",
+      "ink": "#23242a",
+      "muted": "#5e5f61",
+      "accent": "#2d302c",
+      "accentInk": "#fffdf7",
+      "secondary": "#d7d9e6"
+    },
+    "subheadingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f7f7ee",
+        "ink": "#23242a",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e8e6ef",
+        "ink": "#23242a",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f7f7ee",
+        "ink": "#23242a",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e8e6ef",
+        "ink": "#23242a",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-30",
+    "name": "Rose & Stem",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461555/",
+      "title": "BLOOM SOCIALS BRAND BOARD",
+      "number": 30,
+      "notes": "Observed brand-board palette: forest, dusty rose, olive; fine script and arch motifs"
+    },
+    "description": "Observed brand-board palette: forest, dusty rose, olive; fine script and arch motifs",
+    "fonts": "Great Vibes + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-greatvibes), cursive",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Beautifully\nyours.",
+    "imageShape": "SOFT",
+    "composition": "centered",
+    "imageMask": "arch",
+    "sections": "bands",
+    "services": "cards",
+    "button": "outline",
+    "frame": "double",
+    "colors": {
+      "background": "#d2a0b5",
+      "surface": "#ebd8dd",
+      "ink": "#29371e",
+      "muted": "#5f6453",
+      "accent": "#315029",
+      "accentInk": "#fffdf7",
+      "secondary": "#a0ac78"
+    },
+    "subheadingFamily": "var(--font-preview-greatvibes), cursive",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#ebd8dd",
+        "ink": "#29371e",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#d2a0b5",
+        "ink": "#29371e",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#ebd8dd",
+        "ink": "#29371e",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#d2a0b5",
+        "ink": "#29371e",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "bouquet"
+  },
+  {
+    "id": "reference-31",
+    "name": "The Playdate",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461554/",
+      "title": "Bloomery – Элегантный и минималистичный веб-дизайн интернет-магазина цветов | UI/UX",
+      "number": 31,
+      "notes": "Lavender-and-ivory modular boxes; playful bold sans; fine outlines and staggered service panels"
+    },
+    "description": "Lavender-and-ivory modular boxes; playful bold sans; fine outlines and staggered service panels",
+    "fonts": "Bricolage Grotesque + Manrope",
+    "fontStyle": "PLAYFUL",
+    "headingFamily": "var(--font-shopfia-bricolage), sans-serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "collage",
+    "imageMask": "square",
+    "sections": "cards",
+    "services": "cards",
+    "button": "outline",
+    "frame": "grid",
+    "colors": {
+      "background": "#c4c2de",
+      "surface": "#f8f8ed",
+      "ink": "#27272d",
+      "muted": "#626263",
+      "accent": "#32323d",
+      "accentInk": "#fffdf7",
+      "secondary": "#e6e4f0"
+    },
+    "subheadingFamily": "var(--font-shopfia-bricolage), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f8f8ed",
+        "ink": "#27272d",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#c4c2de",
+        "ink": "#27272d",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f8f8ed",
+        "ink": "#27272d",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#c4c2de",
+        "ink": "#27272d",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-32",
+    "name": "The Storyteller",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461550/",
+      "title": "an advertisement with flowers on the front and back of it, in different font styles",
+      "number": 32,
+      "notes": "Expressive large italic serif sections; clean white canvas; black pill booking actions"
+    },
+    "description": "Expressive large italic serif sections; clean white canvas; black pill booking actions",
+    "fonts": "DM Serif Display + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-dmserif), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "billboard",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "pill",
+    "frame": "none",
+    "colors": {
+      "background": "#f4f5ee",
+      "surface": "#fcfdf7",
+      "ink": "#242820",
+      "muted": "#60645c",
+      "accent": "#22261f",
+      "accentInk": "#fffdf7",
+      "secondary": "#dce6d5"
+    },
+    "headingFontStyle": "italic",
+    "subheadingFamily": "var(--font-preview-dmserif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#fcfdf7",
+        "ink": "#242820",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f4f5ee",
+        "ink": "#242820",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#fcfdf7",
+        "ink": "#242820",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#f4f5ee",
+        "ink": "#242820",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "botanical"
+  },
+  {
+    "id": "reference-33",
+    "name": "Blush Balloons",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461548/",
+      "title": "Modern Floral Shop Website Design | Elegant Flower Shop Homepage UI",
+      "number": 33,
+      "notes": "Soft pink circular motifs; elegant serif; fine icon-like round service frames"
+    },
+    "description": "Soft pink circular motifs; elegant serif; fine icon-like round service frames",
+    "fonts": "Playfair Display + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-playfair), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "split",
+    "imageMask": "circle",
+    "sections": "cards",
+    "services": "cards",
+    "button": "pill",
+    "frame": "outlined",
+    "colors": {
+      "background": "#f8eeeb",
+      "surface": "#fffaf5",
+      "ink": "#754b54",
+      "muted": "#9c7c81",
+      "accent": "#a36270",
+      "accentInk": "#fffdf7",
+      "secondary": "#e9ccd3"
+    },
+    "subheadingFamily": "var(--font-preview-playfair), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#fffaf5",
+        "ink": "#754b54",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f8eeeb",
+        "ink": "#754b54",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#fffaf5",
+        "ink": "#754b54",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#f8eeeb",
+        "ink": "#754b54",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "bouquet"
+  },
+  {
+    "id": "reference-34",
+    "name": "The Keepsake",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461546/",
+      "title": "PETAL / POETRY — A Floral Studio Website Concept",
+      "number": 34,
+      "notes": "Warm dusty beige; oversized fine serif; intimate tall media and paired editorial blocks"
+    },
+    "description": "Warm dusty beige; oversized fine serif; intimate tall media and paired editorial blocks",
+    "fonts": "Instrument Serif + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-shopfia-instrument-serif), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "poster",
+    "imageMask": "portrait",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "pill",
+    "frame": "none",
+    "colors": {
+      "background": "#cbb4a8",
+      "surface": "#e8d9cb",
+      "ink": "#49362d",
+      "muted": "#766459",
+      "accent": "#5e4236",
+      "accentInk": "#fffdf7",
+      "secondary": "#bfa18e"
+    },
+    "subheadingFamily": "var(--font-shopfia-instrument-serif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#e8d9cb",
+        "ink": "#49362d",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#cbb4a8",
+        "ink": "#49362d",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#e8d9cb",
+        "ink": "#49362d",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#cbb4a8",
+        "ink": "#49362d",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "botanical"
+  },
+  {
+    "id": "reference-35",
+    "name": "Coral Bouquet",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461545/",
+      "title": "Colourful and floral website design",
+      "number": 35,
+      "notes": "Coral exterior; cream page; mustard bands and flower-like scalloped section edges"
+    },
+    "description": "Coral exterior; cream page; mustard bands and flower-like scalloped section edges",
+    "fonts": "Shrikhand + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-shrikhand), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "stacked",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "cards",
+    "button": "outline",
+    "frame": "wave",
+    "colors": {
+      "background": "#edc0b8",
+      "surface": "#fcf2e1",
+      "ink": "#6e4b44",
+      "muted": "#967a70",
+      "accent": "#a5635a",
+      "accentInk": "#fffdf7",
+      "secondary": "#b2a04d"
+    },
+    "subheadingFamily": "var(--font-preview-dmserif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#fcf2e1",
+        "ink": "#6e4b44",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#edc0b8",
+        "ink": "#6e4b44",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#fcf2e1",
+        "ink": "#6e4b44",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#edc0b8",
+        "ink": "#6e4b44",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "bouquet"
+  },
+  {
+    "id": "reference-36",
+    "name": "Wildflower Vows",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461543/",
+      "title": "homepage design in squarespace",
+      "number": 36,
+      "notes": "Lilac service band; curved arch frames; fluid script headings; muted botanical neutrals"
+    },
+    "description": "Lilac service band; curved arch frames; fluid script headings; muted botanical neutrals",
+    "fonts": "Great Vibes + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-greatvibes), cursive",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Beautifully\nyours.",
+    "imageShape": "SOFT",
+    "composition": "split",
+    "imageMask": "arch",
+    "sections": "bands",
+    "services": "cards",
+    "button": "outline",
+    "frame": "outlined",
+    "colors": {
+      "background": "#c5bad5",
+      "surface": "#eeeadd",
+      "ink": "#3b4037",
+      "muted": "#6d7065",
+      "accent": "#4c5943",
+      "accentInk": "#fffdf7",
+      "secondary": "#dbc7d0"
+    },
+    "subheadingFamily": "var(--font-preview-greatvibes), cursive",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#eeeadd",
+        "ink": "#3b4037",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#c5bad5",
+        "ink": "#3b4037",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#eeeadd",
+        "ink": "#3b4037",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#c5bad5",
+        "ink": "#3b4037",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "botanical"
+  },
+  {
+    "id": "reference-37",
+    "name": "The Flower Cart",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461542/",
+      "title": "Дизайн главной страницы интернет-магазина цветов | Iris Blooms",
+      "number": 37,
+      "notes": "Wide soft-pink feature; fine oversized serif masthead; aligned square service thumbnails"
+    },
+    "description": "Wide soft-pink feature; fine oversized serif masthead; aligned square service thumbnails",
+    "fonts": "Italiana + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-italiana), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "stacked",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "cards",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#f6f1ed",
+      "surface": "#fffaf8",
+      "ink": "#966376",
+      "muted": "#b38d9a",
+      "accent": "#a97082",
+      "accentInk": "#fffdf7",
+      "secondary": "#e2c4d1"
+    },
+    "subheadingFamily": "var(--font-preview-italiana), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#fffaf8",
+        "ink": "#966376",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f6f1ed",
+        "ink": "#966376",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#fffaf8",
+        "ink": "#966376",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#f6f1ed",
+        "ink": "#966376",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "botanical"
+  },
+  {
+    "id": "reference-38",
+    "name": "Gather Around",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461541/",
+      "title": "an image of a website page with flowers on the front and back pages, all in different colors",
+      "number": 38,
+      "notes": "Dusty pink and olive storefront; full-width feature; thin borders and alternating editorial bands"
+    },
+    "description": "Dusty pink and olive storefront; full-width feature; thin borders and alternating editorial bands",
+    "fonts": "Playfair Display + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-playfair), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "stacked",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "cards",
+    "button": "block",
+    "frame": "double",
+    "colors": {
+      "background": "#e3c5cc",
+      "surface": "#eee1d6",
+      "ink": "#514b3d",
+      "muted": "#7d7568",
+      "accent": "#6e7252",
+      "accentInk": "#fffdf7",
+      "secondary": "#9da781"
+    },
+    "heroBackground": "#6f7062",
+    "heroInk": "#f8eddc",
+    "subheadingFamily": "var(--font-preview-playfair), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#6f7062",
+        "ink": "#f8eddc",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e3c5cc",
+        "ink": "#514b3d",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#eee1d6",
+        "ink": "#514b3d",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e3c5cc",
+        "ink": "#514b3d",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "bouquet"
+  },
+  {
+    "id": "reference-39",
+    "name": "Cherry Picnic",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461538/",
+      "title": "Cherry-kissed details, feminine textures, and a website that makes you want to join the club 🍒🍸   • • • Brand Design | Website Design | Feminine Branding | Chic Branding | Creative Studio | Web Designer | Brand Identity | Luxury Branding | Small Business Branding | Custom Website | Women Owned Business | Brand Studio",
+      "number": 39,
+      "notes": "Red stripes and cherry accents; scrapbook-like compartment boxes; script display details"
+    },
+    "description": "Red stripes and cherry accents; scrapbook-like compartment boxes; script display details",
+    "fonts": "Instrument Serif · Great Vibes · Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-shopfia-instrument-serif), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Made for beautiful moments.",
+    "imageShape": "SQUARE",
+    "composition": "collage",
+    "imageMask": "square",
+    "sections": "cards",
+    "services": "cards",
+    "button": "offset",
+    "frame": "stripe",
+    "colors": {
+      "background": "#f3e7d8",
+      "surface": "#fff4e3",
+      "ink": "#87383c",
+      "muted": "#a96d6b",
+      "accent": "#b7353d",
+      "accentInk": "#fffdf7",
+      "secondary": "#dfb4b4"
+    },
+    "subheadingFamily": "var(--font-shopfia-instrument-serif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f3e7d8",
+        "ink": "#87383c",
+        "pattern": "stripes",
+        "patternColor": "#dfb4b4"
+      },
+      "portfolio": {
+        "background": "#f3e7d8",
+        "ink": "#87383c",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#fff4e3",
+        "ink": "#87383c",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#f3e7d8",
+        "ink": "#87383c",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "ribbon",
+    "headingTreatment": "mixed-script",
+    "accentHeadingFamily": "var(--font-preview-greatvibes), cursive",
+    "specimenParts": [
+      "Made for",
+      "beautiful",
+      "moments."
+    ]
+  },
+  {
+    "id": "reference-40",
+    "name": "Golden Hour Toast",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461536/",
+      "title": "SquareSpace Website | Swoon Society",
+      "number": 40,
+      "notes": "Aubergine and buttercream bands; oversized scalloped photo frames; elegant serif"
+    },
+    "description": "Aubergine and buttercream bands; oversized scalloped photo frames; elegant serif",
+    "fonts": "Playfair Display + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-playfair), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "poster",
+    "imageMask": "arch",
+    "sections": "bands",
+    "services": "editorial",
+    "button": "pill",
+    "frame": "scallop",
+    "colors": {
+      "background": "#e8dfc3",
+      "surface": "#f7edcf",
+      "ink": "#44263d",
+      "muted": "#765e66",
+      "accent": "#542340",
+      "accentInk": "#fffdf7",
+      "secondary": "#4a2543"
+    },
+    "subheadingFamily": "var(--font-preview-playfair), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f7edcf",
+        "ink": "#44263d",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e8dfc3",
+        "ink": "#44263d",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f7edcf",
+        "ink": "#44263d",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e8dfc3",
+        "ink": "#44263d",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "balloons"
+  },
+  {
+    "id": "reference-41",
+    "name": "Something Blue",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461534/",
+      "title": "Best Showit Website Templates for Event Planners and Balloon Artists",
+      "number": 41,
+      "notes": "Powder blue surround; blush/cream page; wave separators and alternating image-copy blocks"
+    },
+    "description": "Powder blue surround; blush/cream page; wave separators and alternating image-copy blocks",
+    "fonts": "Manrope + Inter",
+    "fontStyle": "MODERN",
+    "headingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "stacked",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "editorial",
+    "button": "pill",
+    "frame": "wave",
+    "colors": {
+      "background": "#a8c8d1",
+      "surface": "#f9efd9",
+      "ink": "#546862",
+      "muted": "#828e83",
+      "accent": "#7e685f",
+      "accentInk": "#fffdf7",
+      "secondary": "#e8bdc8"
+    },
+    "subheadingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f9efd9",
+        "ink": "#546862",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#a8c8d1",
+        "ink": "#546862",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f9efd9",
+        "ink": "#546862",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#a8c8d1",
+        "ink": "#546862",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "balloons"
+  },
+  {
+    "id": "reference-42",
+    "name": "Soft Celebration",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461526/",
+      "title": "Balloons bring all the joy and celebration! I love crafting logos from the ground up and bringing it all to life through a website design! 🤍",
+      "number": 42,
+      "notes": "Sage and pale-pink split panels; rounded sections; gentle serif and roomy service boxes"
+    },
+    "description": "Sage and pale-pink split panels; rounded sections; gentle serif and roomy service boxes",
+    "fonts": "Playfair Display + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-playfair), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "split",
+    "imageMask": "arch",
+    "sections": "bands",
+    "services": "cards",
+    "button": "pill",
+    "frame": "wave",
+    "colors": {
+      "background": "#c5cdbf",
+      "surface": "#fcf9f0",
+      "ink": "#65745f",
+      "muted": "#8f9988",
+      "accent": "#a9687b",
+      "accentInk": "#fffdf7",
+      "secondary": "#e8c5d1"
+    },
+    "subheadingFamily": "var(--font-preview-playfair), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#fcf9f0",
+        "ink": "#65745f",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#c5cdbf",
+        "ink": "#65745f",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#fcf9f0",
+        "ink": "#65745f",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#c5cdbf",
+        "ink": "#65745f",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "balloons"
+  },
+  {
+    "id": "reference-43",
+    "name": "Bubble Party",
+    "source": {
+      "url": "https://www.pinterest.com/pin/Afb3hVO1Xg_gkNRnHooiBxTZMW-znxBXSDlTK_8hu-OA8BxgjhWktfh4O2QNQVW1Nk5d4uVgB1VxUCDGiPRXpgc/",
+      "title": "Balloon Museum: From A to Z",
+      "number": 43,
+      "notes": "Reference is a book/poster: inflated pink display lettering, stark white field, compact black text"
+    },
+    "description": "Reference is a book/poster: inflated pink display lettering, stark white field, compact black text",
+    "fonts": "Rubik Bubbles + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-bubbles), sans-serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "billboard",
+    "imageMask": "soft",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "pill",
+    "frame": "none",
+    "colors": {
+      "background": "#faf9f5",
+      "surface": "#ffffff",
+      "ink": "#191818",
+      "muted": "#595959",
+      "accent": "#d92f83",
+      "accentInk": "#fffdf7",
+      "secondary": "#f2d1e3"
+    },
+    "subheadingFamily": "var(--font-preview-bubbles), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#ffffff",
+        "ink": "#191818",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#faf9f5",
+        "ink": "#191818",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#ffffff",
+        "ink": "#191818",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#faf9f5",
+        "ink": "#191818",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-44",
+    "name": "Party Pop",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461520/",
+      "title": "Balloon Artist Website Template",
+      "number": 44,
+      "notes": "Blue, lilac and pink compartmentalized panels; wavy edges; rounded image masks and bubbly type"
+    },
+    "description": "Blue, lilac and pink compartmentalized panels; wavy edges; rounded image masks and bubbly type",
+    "fonts": "Dela Gothic One + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-dela), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "collage",
+    "imageMask": "circle",
+    "sections": "bands",
+    "services": "cards",
+    "button": "pill",
+    "frame": "wave",
+    "colors": {
+      "background": "#9dc6d6",
+      "surface": "#e7a4c1",
+      "ink": "#4d2e65",
+      "muted": "#784f7f",
+      "accent": "#795398",
+      "accentInk": "#fffdf7",
+      "secondary": "#b59bd5"
+    },
+    "subheadingFamily": "var(--font-preview-righteous), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#e7a4c1",
+        "ink": "#4d2e65",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#9dc6d6",
+        "ink": "#4d2e65",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#e7a4c1",
+        "ink": "#4d2e65",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#9dc6d6",
+        "ink": "#4d2e65",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "balloons"
+  },
+  {
+    "id": "reference-45",
+    "name": "The Stilt Walker",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461509/",
+      "title": "This “Academic Chic” Website Template Is Turning Coaches Into High-Ticket Brands",
+      "number": 45,
+      "notes": "Tall narrow fashion serif; brown-and-cream collage; numbered service sections and framed imagery"
+    },
+    "description": "Tall narrow fashion serif; brown-and-cream collage; numbered service sections and framed imagery",
+    "fonts": "Italiana + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-italiana), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "poster",
+    "imageMask": "portrait",
+    "sections": "bands",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#e6e0d2",
+      "surface": "#f1ece2",
+      "ink": "#4c4035",
+      "muted": "#7a7065",
+      "accent": "#6c5545",
+      "accentInk": "#fffdf7",
+      "secondary": "#7d7060"
+    },
+    "subheadingFamily": "var(--font-preview-italiana), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f1ece2",
+        "ink": "#4c4035",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e6e0d2",
+        "ink": "#4c4035",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f1ece2",
+        "ink": "#4c4035",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e6e0d2",
+        "ink": "#4c4035",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-46",
+    "name": "Champagne Linen",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461507/",
+      "title": "Customized Website Design for Squarespace",
+      "number": 46,
+      "notes": "Taupe and pale lilac blocks; refined serif; broad editorial media and thin outlined actions"
+    },
+    "description": "Taupe and pale lilac blocks; refined serif; broad editorial media and thin outlined actions",
+    "fonts": "Instrument Serif + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-shopfia-instrument-serif), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "poster",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#c7bcb1",
+      "surface": "#f6eee4",
+      "ink": "#544c45",
+      "muted": "#817972",
+      "accent": "#65574e",
+      "accentInk": "#fffdf7",
+      "secondary": "#cac0d4"
+    },
+    "subheadingFamily": "var(--font-shopfia-instrument-serif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f6eee4",
+        "ink": "#544c45",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#c7bcb1",
+        "ink": "#544c45",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f6eee4",
+        "ink": "#544c45",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#c7bcb1",
+        "ink": "#544c45",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-47",
+    "name": "The Calligrapher",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461505/",
+      "title": "Website Design Layout for Cherry Edit | Brand Strategist",
+      "number": 47,
+      "notes": "Delicate script masthead; charcoal, ivory and muted-pink alternating compartments"
+    },
+    "description": "Delicate script masthead; charcoal, ivory and muted-pink alternating compartments",
+    "fonts": "Great Vibes + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-greatvibes), cursive",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "Beautifully\nyours.",
+    "imageShape": "SQUARE",
+    "composition": "masthead",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "cards",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#242520",
+      "surface": "#eeebe3",
+      "ink": "#292b27",
+      "muted": "#60615c",
+      "accent": "#33372e",
+      "accentInk": "#fffdf7",
+      "secondary": "#d6b5bf"
+    },
+    "subheadingFamily": "var(--font-preview-greatvibes), cursive",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#eeebe3",
+        "ink": "#292b27",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#242520",
+        "ink": "#292b27",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#eeebe3",
+        "ink": "#292b27",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#242520",
+        "ink": "#292b27",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-48",
+    "name": "Apricot Aperitif",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461502/",
+      "title": "Home Decor Furniture E-Commerce Website Interface Chic Warm Playful Soft branding design",
+      "number": 48,
+      "notes": "Salmon and peach canvas; arch/corner-cut images; orange pill calls to action and framed cards"
+    },
+    "description": "Salmon and peach canvas; arch/corner-cut images; orange pill calls to action and framed cards",
+    "fonts": "Abril Fatface + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-abril), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "split",
+    "imageMask": "arch",
+    "sections": "cards",
+    "services": "cards",
+    "button": "pill",
+    "frame": "outlined",
+    "colors": {
+      "background": "#e9b5b0",
+      "surface": "#f7e1c6",
+      "ink": "#8b382c",
+      "muted": "#a96757",
+      "accent": "#c54a2c",
+      "accentInk": "#fffdf7",
+      "secondary": "#f0c9b7"
+    },
+    "subheadingFamily": "var(--font-preview-dmserif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f7e1c6",
+        "ink": "#8b382c",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e9b5b0",
+        "ink": "#8b382c",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f7e1c6",
+        "ink": "#8b382c",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e9b5b0",
+        "ink": "#8b382c",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "citrus"
+  },
+  {
+    "id": "reference-49",
+    "name": "Garden Party",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461499/",
+      "title": "an image of the same website page with different colors and sizes, including two people in sneakers",
+      "number": 49,
+      "notes": "Large forest serif; pale-sage and lavender panels; cutout-style staggered framing and collage rhythm"
+    },
+    "description": "Large forest serif; pale-sage and lavender panels; cutout-style staggered framing and collage rhythm",
+    "fonts": "DM Serif Display + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-dmserif), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "collage",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "offset",
+    "colors": {
+      "background": "#dce3cd",
+      "surface": "#e9ebdb",
+      "ink": "#20492f",
+      "muted": "#58765f",
+      "accent": "#245337",
+      "accentInk": "#fffdf7",
+      "secondary": "#c39bc6"
+    },
+    "subheadingFamily": "var(--font-preview-dmserif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#e9ebdb",
+        "ink": "#20492f",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#dce3cd",
+        "ink": "#20492f",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#e9ebdb",
+        "ink": "#20492f",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#dce3cd",
+        "ink": "#20492f",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-50",
+    "name": "Red Carpet Arrival",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461498/",
+      "title": "the website design is designed to look like an elegant fashion store",
+      "number": 50,
+      "notes": "Fluid oversized cream script on red; layered editorial frames and large contrasting callouts"
+    },
+    "description": "Fluid oversized cream script on red; layered editorial frames and large contrasting callouts",
+    "fonts": "Great Vibes + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-greatvibes), cursive",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "Beautifully\nyours.",
+    "imageShape": "SOFT",
+    "composition": "overlay",
+    "imageMask": "portrait",
+    "sections": "bands",
+    "services": "editorial",
+    "button": "pill",
+    "frame": "offset",
+    "colors": {
+      "background": "#efe8de",
+      "surface": "#f8f1e7",
+      "ink": "#85362f",
+      "muted": "#a56a63",
+      "accent": "#b3352f",
+      "accentInk": "#fffdf7",
+      "secondary": "#b94338"
+    },
+    "heroBackground": "#b43a32",
+    "heroInk": "#fff1e5",
+    "subheadingFamily": "var(--font-preview-greatvibes), cursive",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#b43a32",
+        "ink": "#fff1e5",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#efe8de",
+        "ink": "#85362f",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f8f1e7",
+        "ink": "#85362f",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#efe8de",
+        "ink": "#85362f",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-51",
+    "name": "The Toastmaster",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461497/",
+      "title": "Empower Your Brand with a Bold Red, Clean Squarespace Website",
+      "number": 51,
+      "notes": "Tall narrow serif; ivory and burgundy identity; large ruled headings and dark green values block"
+    },
+    "description": "Tall narrow serif; ivory and burgundy identity; large ruled headings and dark green values block",
+    "fonts": "Bodoni Moda + Manrope",
+    "fontStyle": "FASHION",
+    "headingFamily": "var(--font-shopfia-bodoni), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "masthead",
+    "imageMask": "portrait",
+    "sections": "bands",
+    "services": "cards",
+    "button": "pill",
+    "frame": "grid",
+    "colors": {
+      "background": "#e8e4d1",
+      "surface": "#f3efde",
+      "ink": "#4f342d",
+      "muted": "#7d685f",
+      "accent": "#662c2c",
+      "accentInk": "#fffdf7",
+      "secondary": "#3f4e3a"
+    },
+    "subheadingFamily": "var(--font-shopfia-bodoni), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f3efde",
+        "ink": "#4f342d",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e8e4d1",
+        "ink": "#4f342d",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f3efde",
+        "ink": "#4f342d",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e8e4d1",
+        "ink": "#4f342d",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-52",
+    "name": "Velvet VIP",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461496/",
+      "title": "What to Look for in a Squarespace Template Before You Buy",
+      "number": 52,
+      "notes": "Bold broad lettering; wine, pink and cream modules; cutout photo framing and compact dark buttons"
+    },
+    "description": "Bold broad lettering; wine, pink and cream modules; cutout photo framing and compact dark buttons",
+    "fonts": "Archivo Black + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-preview-archivo), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "MAKE A\nMOMENT",
+    "imageShape": "SQUARE",
+    "composition": "collage",
+    "imageMask": "square",
+    "sections": "cards",
+    "services": "cards",
+    "button": "pill",
+    "frame": "checker",
+    "colors": {
+      "background": "#e6c2ca",
+      "surface": "#f4e7d8",
+      "ink": "#572e38",
+      "muted": "#836265",
+      "accent": "#632d3e",
+      "accentInk": "#fffdf7",
+      "secondary": "#a77a82"
+    },
+    "subheadingFamily": "var(--font-preview-archivo), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f4e7d8",
+        "ink": "#572e38",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e6c2ca",
+        "ink": "#572e38",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f4e7d8",
+        "ink": "#572e38",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e6c2ca",
+        "ink": "#572e38",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-53",
+    "name": "The Treat Cart",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461493/",
+      "title": "Custom Shopify Website Design | Full Homepage for Candle Brand",
+      "number": 53,
+      "notes": "Pink stripes; cream and olive modular sections; arch-framed media and patterned divider rhythm"
+    },
+    "description": "Pink stripes; cream and olive modular sections; arch-framed media and patterned divider rhythm",
+    "fonts": "DM Serif Display + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-dmserif), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "postcard",
+    "imageMask": "arch",
+    "sections": "bands",
+    "services": "cards",
+    "button": "outline",
+    "frame": "stripe",
+    "colors": {
+      "background": "#eadcc5",
+      "surface": "#f7e8d1",
+      "ink": "#6d5441",
+      "muted": "#947d69",
+      "accent": "#8a6548",
+      "accentInk": "#fffdf7",
+      "secondary": "#a6aa70"
+    },
+    "subheadingFamily": "var(--font-preview-dmserif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#eadcc5",
+        "ink": "#6d5441",
+        "pattern": "stripes",
+        "patternColor": "#a6aa70"
+      },
+      "portfolio": {
+        "background": "#eadcc5",
+        "ink": "#6d5441",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f7e8d1",
+        "ink": "#6d5441",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#eadcc5",
+        "ink": "#6d5441",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "citrus"
+  },
+  {
+    "id": "reference-54",
+    "name": "Confetti Mix",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461491/",
+      "title": "newsletter design x fake brand",
+      "number": 54,
+      "notes": "Reference is a multi-brand newsletter: distinct pink, butter, olive and blue panels with mixed media masks"
+    },
+    "description": "Reference is a multi-brand newsletter: distinct pink, butter, olive and blue panels with mixed media masks",
+    "fonts": "Cormorant Garamond + Manrope",
+    "fontStyle": "ROMANTIC",
+    "headingFamily": "var(--font-shopfia-serif), serif",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SOFT",
+    "composition": "collage",
+    "imageMask": "soft",
+    "sections": "bands",
+    "services": "cards",
+    "button": "pill",
+    "frame": "none",
+    "colors": {
+      "background": "#e7bbcb",
+      "surface": "#f5e3c9",
+      "ink": "#4c5539",
+      "muted": "#7b7d61",
+      "accent": "#68774d",
+      "accentInk": "#fffdf7",
+      "secondary": "#aac9df"
+    },
+    "subheadingFamily": "var(--font-shopfia-serif), serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#f5e3c9",
+        "ink": "#4c5539",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e7bbcb",
+        "ink": "#4c5539",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#f5e3c9",
+        "ink": "#4c5539",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#e7bbcb",
+        "ink": "#4c5539",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-55",
+    "name": "Sprinkle Glaze",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461489/",
+      "title": "the website is designed to look like it's being used for cosmetics and hair products",
+      "number": 55,
+      "notes": "Oversized low-contrast taupe lettering; pale pink/white modular frames and compact rounded controls"
+    },
+    "description": "Oversized low-contrast taupe lettering; pale pink/white modular frames and compact rounded controls",
+    "fonts": "Manrope + Inter",
+    "fontStyle": "MODERN",
+    "headingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 90,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "billboard",
+    "imageMask": "square",
+    "sections": "cards",
+    "services": "cards",
+    "button": "pill",
+    "frame": "none",
+    "colors": {
+      "background": "#f0efeb",
+      "surface": "#faf9f5",
+      "ink": "#82676b",
+      "muted": "#a49092",
+      "accent": "#a68b91",
+      "accentInk": "#fffdf7",
+      "secondary": "#dbc8cb"
+    },
+    "headingCase": "lowercase",
+    "subheadingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#faf9f5",
+        "ink": "#82676b",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f0efeb",
+        "ink": "#82676b",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#faf9f5",
+        "ink": "#82676b",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#f0efeb",
+        "ink": "#82676b",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-56",
+    "name": "The Memory Book",
+    "source": {
+      "url": "https://www.pinterest.com/pin/655414552068461488/",
+      "title": "Modern Skincare E-commerce Website Design | Clean Beauty Brand UI",
+      "number": 56,
+      "notes": "Dusty rose full-width feature; spare cream grids; small restrained type with fine script accents"
+    },
+    "description": "Dusty rose full-width feature; spare cream grids; small restrained type with fine script accents",
+    "fonts": "Manrope + Inter",
+    "fontStyle": "MODERN",
+    "headingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 600,
+    "headingSize": 68,
+    "sample": "Your next\ngreat moment.",
+    "imageShape": "SQUARE",
+    "composition": "stacked",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#d0aeb3",
+      "surface": "#faf4ed",
+      "ink": "#70474c",
+      "muted": "#977779",
+      "accent": "#85585e",
+      "accentInk": "#fffdf7",
+      "secondary": "#e5d6d1"
+    },
+    "subheadingFamily": "var(--font-shopfia-manrope), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#faf4ed",
+        "ink": "#70474c",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#d0aeb3",
+        "ink": "#70474c",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#faf4ed",
+        "ink": "#70474c",
+        "pattern": "solid"
+      },
+      "final-quote": {
+        "background": "#d0aeb3",
+        "ink": "#70474c",
+        "pattern": "solid"
+      }
+    }
+  },
+  {
+    "id": "reference-57",
+    "name": "The String Quartet",
+    "source": {
+      "number": 57,
+      "url": "https://www.pinterest.com/pin/655414552068462730/",
+      "title": "Creative Agency | Bold Branding & UX/UI Design",
+      "notes": "Burgundy photo-led header; oversized wide display type; ivory panel with four adjacent portraits"
+    },
+    "description": "Burgundy photo-led header; oversized wide display type; ivory panel with four adjacent portraits",
+    "fonts": "Archivo Black + Manrope",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-preview-archivo), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "MAKE IT\nMEMORABLE",
+    "imageShape": "SQUARE",
+    "composition": "billboard",
+    "imageMask": "square",
+    "sections": "cards",
+    "services": "cards",
+    "button": "pill",
+    "frame": "none",
+    "colors": {
+      "background": "#350d16",
+      "surface": "#f2ece8",
+      "ink": "#f7efea",
+      "muted": "#c2a9a4",
+      "accent": "#771728",
+      "accentInk": "#ffffff",
+      "secondary": "#c2a9a4"
+    },
+    "subheadingFamily": "var(--font-shopfia-manrope),sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#350d16",
+        "ink": "#f7efea",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f2ece8",
+        "ink": "#350d16",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#350d16",
+        "ink": "#f7efea",
+        "pattern": "solid"
+      }
+    },
+    "illustration": null,
+    "headingTreatment": "plain",
+    "heroBackground": "#350d16",
+    "heroInk": "#f7efea",
+    "photoLayout": "quartet"
+  },
+  {
+    "id": "reference-58",
+    "name": "The Flower Bar",
+    "source": {
+      "number": 58,
+      "url": "https://www.pinterest.com/pin/655414552068462742/",
+      "title": "BLOOM SOCIALS BRAND BOARD",
+      "notes": "Forest green and dusty rose brand board; delicate script and floral accents; framed collage"
+    },
+    "description": "Forest green and dusty rose brand board; delicate script and floral accents; framed collage",
+    "fonts": "Great Vibes + Manrope",
+    "fontStyle": "EDITORIAL",
+    "headingFamily": "var(--font-preview-greatvibes),cursive",
+    "bodyFamily": "var(--font-shopfia-manrope), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "Beautifully\nconnected.",
+    "imageShape": "SOFT",
+    "composition": "collage",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "cards",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#283f1c",
+      "surface": "#e8e6d9",
+      "ink": "#f4e8df",
+      "muted": "#c7d0b3",
+      "accent": "#ad6480",
+      "accentInk": "#ffffff",
+      "secondary": "#c7d0b3"
+    },
+    "subheadingFamily": "var(--font-preview-greatvibes), cursive",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#283f1c",
+        "ink": "#f4e8df",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#e8e6d9",
+        "ink": "#f4e8df",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#283f1c",
+        "ink": "#f4e8df",
+        "pattern": "solid"
+      }
+    },
+    "illustration": "bouquet",
+    "headingTreatment": "plain",
+    "heroBackground": "#283f1c",
+    "heroInk": "#f4e8df"
+  },
+  {
+    "id": "reference-59",
+    "name": "The Afterparty",
+    "source": {
+      "number": 59,
+      "url": "https://www.pinterest.com/pin/655414552068462741/",
+      "title": "LAUREN MIA. Music Branding",
+      "notes": "Black field, vermilion panels and violet highlights; compact modular typography"
+    },
+    "description": "Black field, vermilion panels and violet highlights; compact modular typography",
+    "fonts": "Unbounded + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-preview-unbounded), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "MAKE IT\nMEMORABLE",
+    "imageShape": "SQUARE",
+    "composition": "poster",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#08090b",
+      "surface": "#161418",
+      "ink": "#f5ede9",
+      "muted": "#7838aa",
+      "accent": "#ef4823",
+      "accentInk": "#ffffff",
+      "secondary": "#7838aa"
+    },
+    "subheadingFamily": "var(--font-preview-unbounded), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#08090b",
+        "ink": "#f5ede9",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#161418",
+        "ink": "#f5ede9",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#08090b",
+        "ink": "#f5ede9",
+        "pattern": "solid"
+      }
+    },
+    "illustration": null,
+    "headingTreatment": "plain",
+    "heroBackground": "#08090b",
+    "heroInk": "#f5ede9"
+  },
+  {
+    "id": "reference-60",
+    "name": "The Party Photographer",
+    "source": {
+      "number": 60,
+      "url": "https://www.pinterest.com/pin/655414552068462736/",
+      "title": "Eyewear web design",
+      "notes": "Ivory and charcoal split header; oversized black typography; asymmetrical rectangular image grid"
+    },
+    "description": "Ivory and charcoal split header; oversized black typography; asymmetrical rectangular image grid",
+    "fonts": "Anton + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-preview-anton), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "MAKE IT\nMEMORABLE",
+    "imageShape": "SQUARE",
+    "composition": "split",
+    "imageMask": "square",
+    "sections": "ruled",
+    "services": "rows",
+    "button": "block",
+    "frame": "none",
+    "colors": {
+      "background": "#eeeeea",
+      "surface": "#f5f5ef",
+      "ink": "#111313",
+      "muted": "#a4acaa",
+      "accent": "#252b2b",
+      "accentInk": "#ffffff",
+      "secondary": "#a4acaa"
+    },
+    "subheadingFamily": "var(--font-preview-anton), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#eeeeea",
+        "ink": "#111313",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#f5f5ef",
+        "ink": "#111313",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#eeeeea",
+        "ink": "#111313",
+        "pattern": "solid"
+      }
+    },
+    "illustration": null,
+    "headingTreatment": "plain",
+    "heroBackground": "#eeeeea",
+    "heroInk": "#111313"
+  },
+  {
+    "id": "reference-61",
+    "name": "Moonlit Marquee",
+    "source": {
+      "number": 61,
+      "url": "https://www.pinterest.com/pin/655414552068462733/",
+      "title": "DJ press kit reference",
+      "notes": "Inky blue photographic bands; fine white rules; wide tracked type and compact media panels"
+    },
+    "description": "Inky blue photographic bands; fine white rules; wide tracked type and compact media panels",
+    "fonts": "Space Grotesk + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-shopfia-space), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 68,
+    "sample": "MAKE IT\nMEMORABLE",
+    "imageShape": "SQUARE",
+    "composition": "overlay",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "editorial",
+    "button": "outline",
+    "frame": "none",
+    "colors": {
+      "background": "#090d1b",
+      "surface": "#101b34",
+      "ink": "#e6e8ee",
+      "muted": "#2a3569",
+      "accent": "#3439a8",
+      "accentInk": "#ffffff",
+      "secondary": "#2a3569"
+    },
+    "subheadingFamily": "var(--font-shopfia-space), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#090d1b",
+        "ink": "#e6e8ee",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#101b34",
+        "ink": "#e6e8ee",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#090d1b",
+        "ink": "#e6e8ee",
+        "pattern": "solid"
+      }
+    },
+    "illustration": null,
+    "headingTreatment": "plain",
+    "heroBackground": "#090d1b",
+    "heroInk": "#e6e8ee"
+  },
+  {
+    "id": "reference-62",
+    "name": "The Outdoor Reception",
+    "source": {
+      "number": 62,
+      "url": "https://www.pinterest.com/pin/655414552068462731/",
+      "title": "Marketing agency UI reference",
+      "notes": "Deep green canvas; pale wide typography; adjacent large rectangular images and spacious rules"
+    },
+    "description": "Deep green canvas; pale wide typography; adjacent large rectangular images and spacious rules",
+    "fonts": "Space Grotesk + Inter",
+    "fontStyle": "BOLD",
+    "headingFamily": "var(--font-shopfia-space), sans-serif",
+    "bodyFamily": "var(--font-shopfia-inter), sans-serif",
+    "headingWeight": 400,
+    "headingSize": 90,
+    "sample": "MAKE IT\nMEMORABLE",
+    "imageShape": "SQUARE",
+    "composition": "split",
+    "imageMask": "square",
+    "sections": "bands",
+    "services": "cards",
+    "button": "block",
+    "frame": "none",
+    "colors": {
+      "background": "#182d2e",
+      "surface": "#203637",
+      "ink": "#e5e9df",
+      "muted": "#7c9682",
+      "accent": "#dce5cb",
+      "accentInk": "#182d2e",
+      "secondary": "#7c9682"
+    },
+    "heroBackground": "#182d2e",
+    "heroInk": "#e5e9df",
+    "subheadingFamily": "var(--font-shopfia-space), sans-serif",
+    "sectionDesigns": {
+      "hero": {
+        "background": "#182d2e",
+        "ink": "#e5e9df",
+        "pattern": "solid"
+      },
+      "portfolio": {
+        "background": "#203637",
+        "ink": "#e5e9df",
+        "pattern": "solid"
+      },
+      "about": {
+        "background": "#182d2e",
+        "ink": "#e5e9df",
+        "pattern": "solid"
+      }
+    },
+    "illustration": null,
+    "headingTreatment": "plain"
+  }
+]

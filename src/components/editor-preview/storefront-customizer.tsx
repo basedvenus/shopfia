@@ -1,0 +1,2434 @@
+"use client";
+
+import Link from "next/link";
+import { readSocialVisibility } from "@/lib/editor-preview/storefront-social-visibility";
+import { InlineStorefrontText } from "./inline-storefront-text";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type CSSProperties, type DragEvent, type ReactNode } from "react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Check,
+  Upload,
+  GripVertical,
+  Eye,
+  ImagePlus,
+  Monitor,
+  Palette,
+  Plus,
+  Save,
+  Send,
+  Smartphone,
+  Trash2,
+  Wand2
+} from "lucide-react";
+import { autosaveStorefrontDraftAction, updateStorefrontCustomizationAction } from "@/app/actions/vendor";
+import { Button } from "@/components/ui/button";
+import { CroppedImage } from "@/components/ui/cropped-image";
+import { ImageUploadField } from "@/components/ui/image-upload-field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { StorefrontDesignChat } from "@/components/editor-preview/storefront-design-chat";
+import { SectionBackgroundControls } from "@/components/editor-preview/section-background-controls";
+import { sectionDesignStyle } from "@/lib/editor-preview/template-section-design";
+import { TemplateMediaGrid } from "./template-media-grid";
+import { StorefrontTemplateLibrary, templateVariables } from "@/components/editor-preview/storefront-template-library";
+import type { StorefrontTemplate } from "@/lib/editor-preview/storefront-template-library";
+import { Storefront3DStudio } from "./storefront-3d-studio";
+import { HeroTypographyControls } from "@/components/editor-preview/hero-typography-controls";
+import type { LogoMount } from "@/components/editor-preview/storefront-brand-sculpture";
+import { DimensionalStorefrontHero, HERO_DEPTH_PRESETS, type HeroDepth } from "@/components/editor-preview/dimensional-storefront-hero";
+import { CopyStorefrontLinkButton } from "@/components/editor-preview/copy-storefront-link-button";
+import {
+  APPROVED_STOREFRONT_SECTIONS,
+  REQUIRED_STOREFRONT_SECTIONS,
+  STOREFRONT_FONT_STYLES,
+  STOREFRONT_IMAGE_SHAPES,
+  STOREFRONT_LAYOUTS,
+  STOREFRONT_PALETTES,
+  STOREFRONT_SECTION_LABELS,
+  coverageAreaLabels,
+  getStorefrontFontFamilies,
+  normalizeStorefrontLayout,
+  normalizeStorefrontPalette,
+  sanitizeHiddenStorefrontSections,
+  sanitizeStorefrontSectionLabels,
+  sanitizeStorefrontSections
+} from "@/lib/businesses";
+import { DEFAULT_IMAGE_CROP, normalizeImageCrop, type ImageCrop } from "@/lib/image-crop";
+import { formatCurrency } from "@/lib/utils";
+import { recommendStorefrontLook } from "@/lib/storefront-looks";
+
+type EditorService = {
+  active: boolean;
+  basePriceCents: number | null;
+  categoryId: string | null;
+  description: string;
+  featured: boolean;
+  id: string;
+  isNew?: boolean;
+  messageForPricing: boolean;
+  photos: string[];
+  title: string;
+  turnaroundDays: number | null;
+};
+
+type FaqItem = { id: string; answer: string; question: string };
+type PolicyItem = { id: string; body: string; title: string };
+type BookingInfo = { deposit: string; leadTime: string; process: string };
+type EditorTool = "content" | "services" | "gallery" | "design";
+
+type CustomizerBusiness = {
+  averageRating: number;
+  reviewCount: number;
+  availabilityNotes: string | null;
+  bio: string | null;
+  categories: Array<{ categoryId: string; category: { name: string } }>;
+  city: string;
+  coverPhoto: string | null;
+  coverPhotoCrop: unknown;
+  id: string;
+  instagramUrl: string | null;
+  logoCrop: unknown;
+  logoUrl: string | null;
+  name: string;
+  offerings: Array<{
+    active: boolean;
+    basePriceCents: number | null;
+    categoryId: string;
+    description: string;
+    id: string;
+    messageForPricing: boolean;
+    photos: string[];
+    title: string;
+    turnaroundDays: number | null;
+  }>;
+  photos: string[];
+  serviceAreaNotes: string | null;
+  serviceRadiusMiles: number;
+  slug: string;
+  startingPriceCents: number | null;
+  state: string | null;
+  storefrontAboutHeading: string | null;
+  storefrontAboutImage: string | null;
+  storefrontBookingJson: unknown;
+  storefrontButtonStyle: string;
+  storefrontDraftJson: unknown;
+  storefrontFaqJson: unknown;
+  storefrontFeaturedOfferingIds: string[];
+  storefrontFontStyle: string;
+  storefrontHiddenSections: string[];
+  storefrontHiddenOfferingIds: string[];
+  storefrontImageShape: string;
+  storefrontInstagramFeedEnabled: boolean;
+  storefrontInstagramFeedUrl: string | null;
+  storefrontLayout: string;
+  storefrontOfferingOrder: string[];
+  storefrontPalette: string;
+  storefrontPoliciesJson: unknown;
+  storefrontSectionLabels: unknown;
+  storefrontSectionOrder: string[];
+  storefrontTagline: string | null;
+  storefrontTextTone: string;
+  tiktokUrl: string | null;
+  website: string | null;
+};
+
+type FormState = {
+  showInstagram:boolean;
+  showTikTok:boolean;
+  subheadingFamily: string;
+  aboutHeading: string;
+  aboutImage: string;
+  aboutPhotos: string[];
+  aboutPhotoLayout: "grid" | "row" | "layered" | "offset" | "cascade" | "six" | "banner" | "scallop";
+  availabilityNotes: string;
+  bio: string;
+  booking: BookingInfo;
+  coverPhoto: string;
+  coverPhotoCrop: ImageCrop;
+  city: string;
+  faqs: FaqItem[];
+  fontStyle: string;
+  hiddenSections: string[];
+  imageShape: string;
+  instagramUrl: string;
+  instagramFeedEnabled: boolean;
+  instagramFeedUrl: string;
+  layout: string;
+  logoCrop: ImageCrop;
+  logoUrl: string;
+  name: string;
+  palette: string;
+  photoUrls: string[];
+  policies: PolicyItem[];
+  sectionLabels: Partial<Record<(typeof APPROVED_STOREFRONT_SECTIONS)[number], string>>;
+  sectionOrder: string[];
+  serviceAreaNotes: string;
+  services: EditorService[];
+  state: string;
+  tagline: string;
+  textTone: string;
+  tiktokUrl: string;
+  website: string;
+};
+
+const editableSections = APPROVED_STOREFRONT_SECTIONS;
+const requiredSections = new Set<string>(REQUIRED_STOREFRONT_SECTIONS);
+const toolLabels: Record<EditorTool, string> = {
+  content: "Design",
+  services: "Services",
+  gallery: "Gallery",
+  design: "Design"
+};
+
+function toolForSection(section: string): EditorTool {
+  if (section === "featured-services" || section === "all-services") return "services";
+  if (section === "portfolio") return "gallery";
+  return "content";
+}
+
+export function StorefrontCustomizer({
+  business,
+  draftSaved,
+  errorMessage,
+  publicUrl,
+  saved,
+  previewOnly = false,
+  initialTemplateLibraryOpen = false
+}: {
+  business: CustomizerBusiness;
+  draftSaved?: boolean;
+  errorMessage?: string;
+  publicUrl: string;
+  saved?: boolean;
+  previewOnly?: boolean;
+  initialTemplateLibraryOpen?: boolean;
+}) {
+  const templateScrollRef = useRef(0);
+  const templatePreviewRef = useRef<HTMLDivElement>(null);
+  const [templateFontRevision, setTemplateFontRevision] = useState(0);
+  const [templateLibraryOpen, setTemplateLibraryOpen] = useState(initialTemplateLibraryOpen);
+  const [selectedTemplate, setSelectedTemplate] = useState<StorefrontTemplate | null>(null);
+  const [heroCustomFont, setHeroCustomFont] = useState<string | null>(null);
+  const [heroMount, setHeroMount] = useState<LogoMount>("round");
+  const [heroEdge, setHeroEdge] = useState("#877a78");
+  const [heroBackground, setHeroBackground] = useState("#e6dfd4");
+  const [effectImage,setEffectImage]=useState("");
+  const [effectPresentation,setEffectPresentation]=useState<"emblem"|"product">("emblem");
+  const [effectWord,setEffectWord]=useState("");
+  const [studioOpen,setStudioOpen]=useState(false);
+  const [studioInvitation,setStudioInvitation]=useState(false);
+  const studioInvited=useRef(false);
+  const editCount=useRef(0);
+  const editTimer=useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(()=>{if((studioOpen || templateLibraryOpen) && editTimer.current)clearTimeout(editTimer.current);},[studioOpen,templateLibraryOpen]);
+  const [effectReplay,setEffectReplay]=useState(0);
+  const [effectNotice,setEffectNotice]=useState("");
+  useEffect(()=>()=>{if(editTimer.current)clearTimeout(editTimer.current);},[]);
+  function replayEffect(){setEffectReplay(v=>v+1);requestAnimationFrame(()=>templatePreviewRef.current?.querySelector('.depth-hero')?.scrollIntoView({block:'center',behavior:'auto'}));}
+
+  const [heroDepth, setHeroDepth] = useState<HeroDepth>("flat");
+  const [designBrief, setDesignBrief] = useState("");
+  const [localLogoPreview, setLocalLogoPreview] = useState("");
+  useEffect(() => () => { if (localLogoPreview) URL.revokeObjectURL(localLogoPreview); }, [localLogoPreview]);
+  const [guidedStep, setGuidedStep] = useState(1);
+  const [styleStage, setStyleStage] = useState<"colors" | "fonts">("colors");
+  const [advanced, setAdvanced] = useState(previewOnly);
+  const [guidedError, setGuidedError] = useState("");
+  const guidedPanelRef = useRef<HTMLElement>(null);
+  const guidedHeadingRef = useRef<HTMLHeadingElement>(null);
+  const [activeSection, setActiveSection] = useState<string>("hero");
+  const [activeTool, setActiveTool] = useState<EditorTool>("content");
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
+  const [dirty, setDirty] = useState(false);
+  const [status, setStatus] = useState(errorMessage ? "Needs attention" : draftSaved ? "Draft saved" : saved ? "Published" : "Live");
+  const [autosaveMessage, setAutosaveMessage] = useState("");
+  const [isAutosaving, startAutosaveTransition] = useTransition();
+  const lastAutosaveKeyRef = useRef<string | null>(null);
+  const [draggedSection, setDraggedSection] = useState<string | null>(null);
+  const [draggedPhotoIndex, setDraggedPhotoIndex] = useState<number | null>(null);
+  const [collapsedFaqIds, setCollapsedFaqIds] = useState<string[]>([]);
+  const [form, setForm] = useState<FormState>(() => createInitialState(business, previewOnly));
+  const recommendedLook = recommendStorefrontLook(`${form.name} ${designBrief || form.bio} ${business.categories.map((item) => item.category.name).join(" ")}`);
+  useEffect(() => {
+    if (!advanced) guidedHeadingRef.current?.focus({ preventScroll: true });
+    guidedPanelRef.current?.scrollTo({ top: 0 });
+  }, [guidedStep, advanced, styleStage]);
+
+  const visibleSections = useMemo(
+    () => form.sectionOrder.filter((section) => section === "reviews" || !form.hiddenSections.includes(section)),
+    [form.hiddenSections, form.sectionOrder]
+  );
+  const sectionLabel = useCallback(
+    (section: string) =>
+      form.sectionLabels[section as keyof typeof STOREFRONT_SECTION_LABELS] ??
+      STOREFRONT_SECTION_LABELS[section as keyof typeof STOREFRONT_SECTION_LABELS] ??
+      "Section",
+    [form.sectionLabels]
+  );
+  const panelSection = activeTool === "services" ? "all-services" : activeTool === "gallery" ? "portfolio" : activeSection;
+  const panelTitle = activeTool === "design"
+    ? "Design"
+    : STOREFRONT_SECTION_LABELS[panelSection as keyof typeof STOREFRONT_SECTION_LABELS] ?? "Section";
+  const mediaUploadEndpoint = `/api/vendor/business/${business.id}/media`;
+  const servicesJson = useMemo(
+    () =>
+      JSON.stringify(
+        form.services.map((service) => ({
+          active: service.active,
+          basePriceCents: service.basePriceCents,
+          categoryId: service.categoryId,
+          clientId: service.id,
+          description: service.description,
+          featured: service.featured,
+          id: service.isNew ? undefined : service.id,
+          messageForPricing: service.messageForPricing,
+          photos: [],
+          title: service.title,
+          turnaroundDays: service.turnaroundDays
+        }))
+      ),
+    [form.services]
+  );
+  const faqJson = useMemo(() => JSON.stringify(form.faqs), [form.faqs]);
+  const policiesJson = useMemo(() => JSON.stringify(form.policies), [form.policies]);
+  const bookingJson = useMemo(() => JSON.stringify(form.booking), [form.booking]);
+  const autosavePayload = useMemo(
+    () => ({
+      aboutHeading: form.aboutHeading,
+      aboutImage: form.aboutImage,
+      availabilityNotes: form.availabilityNotes,
+      bio: form.bio,
+      bookingJson,
+      businessId: business.id,
+      buttonStyle: "PILL",
+      city: form.city,
+      coverPhoto: form.coverPhoto,
+      coverPhotoCrop: form.coverPhotoCrop,
+      faqJson,
+      featuredOfferingIds: form.services.filter((service) => service.featured && service.active).map((service) => service.id),
+      fontStyle: form.fontStyle,
+      hiddenSections: form.hiddenSections,
+      imageShape: form.imageShape,
+      sectionLabelsJson: JSON.stringify(form.sectionLabels),
+      instagramFeedEnabled: form.instagramFeedEnabled,
+      instagramFeedUrl: form.instagramFeedUrl,
+      instagramUrl: form.instagramUrl,
+      intent: "draft",
+      layout: form.layout,
+      logoCrop: form.logoCrop,
+      logoUrl: form.logoUrl,
+      name: form.name,
+      offeringOrder: form.services.map((service) => service.id),
+      palette: form.palette,
+      photoUrls: form.photoUrls.filter(Boolean),
+      policiesJson,
+      sectionOrder: form.sectionOrder,
+      serviceAreaNotes: form.serviceAreaNotes,
+      servicesJson,
+      state: form.state,
+      tagline: form.tagline,
+      textTone: form.textTone,
+      tiktokUrl: form.tiktokUrl,
+      website: form.website
+    }),
+    [bookingJson, business.id, faqJson, form, policiesJson, servicesJson]
+  );
+  const completionItems = useMemo(() => [
+    { done: Boolean(form.logoUrl), label: "Logo added" },
+    { done: Boolean(form.coverPhoto), label: "Cover image added" },
+    { done: Boolean(form.aboutHeading && form.tagline), label: "Headline and tagline set" },
+    { done: Boolean(form.bio), label: "About text written" },
+    { done: form.services.some((service) => service.active), label: "Visible service selected" },
+    { done: form.services.some((service) => service.active && service.featured), label: "Featured service chosen" },
+    { done: form.photoUrls.filter(Boolean).length >= 3, label: "Portfolio has 3+ images" },
+    { done: Boolean(form.serviceAreaNotes || form.booking.leadTime), label: "Booking/service area details added" },
+    { done: form.faqs.some((faq) => faq.question && faq.answer), label: "FAQ started" }
+  ], [form]);
+  const completionCount = completionItems.filter((item) => item.done).length;
+
+  const saveDraftSnapshot = useCallback((payload: typeof autosavePayload, payloadKey = JSON.stringify(payload)) => {
+    setStatus("Saving draft");
+    setAutosaveMessage("Saving draft...");
+    startAutosaveTransition(async () => {
+      const result = await autosaveStorefrontDraftAction(payload);
+      if (result.ok) {
+        lastAutosaveKeyRef.current = payloadKey;
+        setStatus("Draft autosaved");
+        setAutosaveMessage("Draft saved. Publish when it looks right.");
+      } else {
+        setStatus("Draft needs attention");
+        setAutosaveMessage(result.error ?? "Draft could not be saved. Try again in a moment.");
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (previewOnly) return;
+    const payloadKey = JSON.stringify(autosavePayload);
+    if (lastAutosaveKeyRef.current === null) {
+      lastAutosaveKeyRef.current = payloadKey;
+      return;
+    }
+    if (!dirty || lastAutosaveKeyRef.current === payloadKey) return;
+
+    setAutosaveMessage("Waiting to autosave...");
+    const timer = window.setTimeout(() => {
+      saveDraftSnapshot(autosavePayload, payloadKey);
+    }, 1200);
+
+    return () => window.clearTimeout(timer);
+  }, [autosavePayload, dirty, saveDraftSnapshot, previewOnly]);
+
+  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+    markDirty();
+  }
+
+  function selectSection(section: string) {
+    setAdvanced(true);
+    setActiveSection(section);
+    setActiveTool(toolForSection(section));
+    setPanelCollapsed(false);
+  }
+
+  function selectTool(tool: EditorTool) {
+    setActiveTool(tool);
+    setPanelCollapsed(false);
+    if (tool === "services") setActiveSection("all-services");
+    if (tool === "gallery") setActiveSection("portfolio");
+    if (tool === "content" && (activeSection === "all-services" || activeSection === "featured-services" || activeSection === "portfolio")) {
+      setActiveSection("hero");
+    }
+  }
+
+  function markDirty(countEdit=true) {
+    setDirty(true);
+    setStatus("Unpublished changes");
+  }
+
+  function moveSection(section: string, targetSection: string) {
+    if (section === targetSection) return;
+    const without = form.sectionOrder.filter((item) => item !== section);
+    const targetIndex = without.indexOf(targetSection);
+    update("sectionOrder", [...without.slice(0, targetIndex), section, ...without.slice(targetIndex)]);
+  }
+
+  function onSectionDrop(event: DragEvent<HTMLButtonElement>, targetSection: string) {
+    event.preventDefault();
+    if (draggedSection) moveSection(draggedSection, targetSection);
+    setDraggedSection(null);
+  }
+
+  function toggleSection(section: string) {
+    if (requiredSections.has(section)) return;
+    update(
+      "hiddenSections",
+      form.hiddenSections.includes(section)
+        ? form.hiddenSections.filter((item) => item !== section)
+        : [...form.hiddenSections, section]
+    );
+  }
+
+  function updateSectionLabel(section: string, label: string) {
+    const fallback = STOREFRONT_SECTION_LABELS[section as keyof typeof STOREFRONT_SECTION_LABELS] ?? "Section";
+    const trimmed = label.trim();
+    const next = { ...form.sectionLabels };
+    if (!trimmed || trimmed === fallback) {
+      delete next[section as keyof typeof STOREFRONT_SECTION_LABELS];
+    } else {
+      next[section as keyof typeof STOREFRONT_SECTION_LABELS] = trimmed.slice(0, 40);
+    }
+    update("sectionLabels", next);
+  }
+
+  function updateService(id: string, patch: Partial<EditorService>) {
+    update(
+      "services",
+      form.services.map((service) => (service.id === id ? { ...service, ...patch } : service))
+    );
+  }
+
+  function moveService(id: string, direction: -1 | 1) {
+    const index = form.services.findIndex((service) => service.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= form.services.length) return;
+    const next = [...form.services];
+    [next[index], next[target]] = [next[target], next[index]];
+    update("services", next);
+  }
+
+  function movePhoto(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    const photos = form.photoUrls.filter(Boolean);
+    const [photo] = photos.splice(fromIndex, 1);
+    if (!photo) return;
+    photos.splice(toIndex, 0, photo);
+    update("photoUrls", photos);
+  }
+
+  function removePhoto(index: number) {
+    update("photoUrls", form.photoUrls.filter(Boolean).filter((_, photoIndex) => photoIndex !== index));
+  }
+
+  function moveFaq(id: string, direction: -1 | 1) {
+    const index = form.faqs.findIndex((faq) => faq.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= form.faqs.length) return;
+    const next = [...form.faqs];
+    [next[index], next[target]] = [next[target], next[index]];
+    update("faqs", next);
+  }
+
+  function removeFaq(id: string) {
+    update("faqs", form.faqs.filter((faq) => faq.id !== id));
+    setCollapsedFaqIds((ids) => ids.filter((faqId) => faqId !== id));
+  }
+
+  function toggleFaqCollapsed(id: string) {
+    setCollapsedFaqIds((ids) => ids.includes(id) ? ids.filter((faqId) => faqId !== id) : [...ids, id]);
+  }
+
+  function setServiceVisible(id: string, visible: boolean) {
+    update("services", form.services.map((service) => (service.id === id ? { ...service, active: visible, featured: visible ? service.featured : false } : service)));
+  }
+
+  return (
+    <form action={previewOnly ? undefined : updateStorefrontCustomizationAction} onSubmit={previewOnly ? (event) => event.preventDefault() : undefined} data-testid="storefront-editor-shell" className={`${previewOnly ? "editor-review " : ""}relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
+      {previewOnly ? <style>{`
+        .editor-review [data-testid="preview-section-${activeSection}"] { outline: 2px solid #81916b; outline-offset: -2px; }
+        .editor-review { background: #f8f8f5; border-radius: 20px; }
+        .editor-review .editor-workspace { grid-template-columns: minmax(0,1fr) 320px; }
+        .editor-review .editor-inspector { max-height: calc(100vh - 190px); overflow-y: auto; }
+        .editor-review .editor-canvas { background: #eeefea; padding: 28px; }
+        .editor-review .editor-inspector details > summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+        @media(max-width:1023px) { .editor-review .editor-workspace { display:flex; flex-direction:column; } .editor-review .editor-inspector { max-height:none; } .editor-review .editor-canvas { padding:12px; } }
+      `}</style> : null}
+      {previewOnly && templateLibraryOpen ? <StorefrontTemplateLibrary vendorName={form.name} initialScroll={templateScrollRef.current} onScroll={(position)=>{templateScrollRef.current=position;}} selected={selectedTemplate?.id ?? null} image={form.logoUrl || form.coverPhoto} photos={form.photoUrls.filter(Boolean)} onClose={()=>setTemplateLibraryOpen(false)} onApply={(template)=>{
+        setSelectedTemplate(template);setHeroCustomFont(null);setTemplateFontRevision(value=>value+1);
+        setForm(current=>({...current,fontStyle:template.fontStyle,imageShape:template.imageShape}));
+        setTemplateLibraryOpen(false);markDirty(false);
+        requestAnimationFrame(()=>templatePreviewRef.current?.scrollIntoView({block:"start",behavior:"auto"}));
+      }} /> : null}
+      {previewOnly && studioOpen && <Storefront3DStudio initialImage={effectImage} initialPresentation={effectPresentation} initialWord={effectWord} invitation={studioInvitation} name={form.name} logo={form.logoUrl || form.coverPhoto} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount,image,presentation,word)=>{setEffectImage(image);setEffectPresentation(presentation);setEffectWord(word);studioInvited.current=true;setHeroDepth(depth);setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`3D Effect applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
+      <input type="hidden" name="businessId" value={business.id} />
+      <input type="hidden" name="businessSlug" value={business.slug} />
+      <input type="hidden" name="name" value={form.name} />
+      <input type="hidden" name="city" value={form.city} />
+      <input type="hidden" name="state" value={form.state} />
+      <input type="hidden" name="tagline" value={form.tagline} />
+      <input type="hidden" name="bio" value={form.bio} />
+      <input type="hidden" name="aboutHeading" value={form.aboutHeading} />
+      <input type="hidden" name="aboutImage" value={form.aboutImage} />
+      <input type="hidden" name="logoUrl" value={form.logoUrl} />
+      <input type="hidden" name="logoCrop" value={JSON.stringify(form.logoCrop)} />
+      <input type="hidden" name="coverPhoto" value={form.coverPhoto} />
+      <input type="hidden" name="coverPhotoCrop" value={JSON.stringify(form.coverPhotoCrop)} />
+      <input type="hidden" name="serviceAreaNotes" value={form.serviceAreaNotes} />
+      <input type="hidden" name="availabilityNotes" value={form.availabilityNotes} />
+      <input type="hidden" name="website" value={form.website} />
+      <input type="hidden" name="instagramUrl" value={form.instagramUrl} />
+      <input type="hidden" name="tiktokUrl" value={form.tiktokUrl} />
+      <input type="hidden" name="layout" value={form.layout} />
+      <input type="hidden" name="fontStyle" value={form.fontStyle} />
+      <input type="hidden" name="palette" value={form.palette} />
+      <input type="hidden" name="buttonStyle" value="PILL" />
+      <input type="hidden" name="imageShape" value={form.imageShape} />
+      <input type="hidden" name="textTone" value={form.textTone} />
+      <input type="hidden" name="instagramFeedEnabled" value={String(form.instagramFeedEnabled)} />
+      <input type="hidden" name="instagramFeedUrl" value={form.instagramFeedUrl} />
+      <input type="hidden" name="sectionLabelsJson" value={JSON.stringify(form.sectionLabels)} />
+      <input type="hidden" name="faqJson" value={faqJson} />
+      <input type="hidden" name="policiesJson" value={policiesJson} />
+      <input type="hidden" name="bookingJson" value={bookingJson} />
+      <input type="hidden" name="servicesJson" value={servicesJson} />
+      {form.sectionOrder.map((section) => <input key={`order-${section}`} type="hidden" name="sectionOrder" value={section} />)}
+      {form.hiddenSections.map((section) => <input key={`hidden-${section}`} type="hidden" name="hiddenSections" value={section} />)}
+      {form.photoUrls.filter(Boolean).map((photo, index) => <input key={`${photo}-${index}`} type="hidden" name="photoUrls" value={photo} />)}
+      {form.services.map((service) => <input key={`offering-order-${service.id}`} type="hidden" name="offeringOrder" value={service.id} />)}
+      {form.services.filter((service) => service.featured && service.active).map((service) => <input key={`featured-${service.id}`} type="hidden" name="featuredOfferingIds" value={service.id} />)}
+
+      <div className="flex flex-col gap-3 border-b border-[#eadbd8] p-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link href={`/vendor/business/${business.slug}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border hover:bg-muted" aria-label="Back to business dashboard">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Customize Storefront</p>
+            <h1 className="truncate text-xl font-semibold">{form.name}</h1>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#fbf7f5] px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+            <Check className="h-3.5 w-3.5" />
+            {previewOnly ? (dirty ? "Unsaved preview changes" : "Preview · saved content loaded") : isAutosaving ? "Autosaving draft" : status}
+          </span>
+          <div className="flex rounded-full border border-[#eadbd7] bg-[#fbf7f5] p-1">
+            {[
+              { icon: Monitor, label: "Desktop", value: "desktop" as const },
+              { icon: Smartphone, label: "Mobile", value: "mobile" as const }
+            ].map((mode) => {
+              const Icon = mode.icon;
+              return (
+                <button
+                  key={mode.value}
+                  type="button"
+                  onClick={() => setPreviewMode(mode.value)}
+                  aria-pressed={previewMode === mode.value}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${previewMode === mode.value ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"}`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {mode.label}
+                </button>
+              );
+            })}
+          </div>
+          <Button asChild variant="secondary">
+            <Link href={publicUrl.replace(/^https?:\/\/[^/]+/, "")} target="_blank">
+              <Eye className="h-4 w-4" />
+              View live
+            </Link>
+          </Button>
+          <Button type="button" name="intent" value="draft" variant="secondary" onClick={() => saveDraftSnapshot(autosavePayload)} disabled={isAutosaving || previewOnly}>
+            <Save className="h-4 w-4" />
+            Save draft
+          </Button>
+          <Button type="submit" name="intent" value="publish" disabled={previewOnly} className={!advanced && guidedStep < 3 ? "hidden" : ""} onClick={() => setStatus("Publishing")}>
+            <Send className="h-4 w-4" />
+            Publish
+          </Button>
+        </div>
+      </div>
+      {errorMessage ? (
+        <div className="border-b border-[#f1c8c4] bg-[#fff4f2] px-4 py-3 text-sm font-medium text-[#8a332b]">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      {!previewOnly && <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee5e1] bg-[#fffaf8] px-5 py-3">
+        <nav aria-label="Storefront setup" className="flex flex-wrap gap-2">
+          {["Your business", "Choose your look", "Photos & preview"].map((label, index) => (
+            <button key={label} type="button" aria-current={!advanced && guidedStep === index + 1 ? "step" : undefined}
+              onClick={() => { setAdvanced(false); setGuidedStep(index + 1); setGuidedError(""); }}
+              className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${!advanced && guidedStep === index + 1 ? "bg-[#f9dedb] text-[#493634]" : "text-muted-foreground hover:bg-white"}`}>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-xs font-semibold">{index + 1}</span>{label}
+            </button>
+          ))}
+        </nav>
+        <button type="button" className="text-sm text-muted-foreground underline underline-offset-4" onClick={() => setAdvanced(!advanced)}>
+          {advanced ? "Back to simple setup" : "More customization"}
+        </button>
+      </div>
+      }
+      {!advanced ? (
+        <div className="grid min-w-0 lg:grid-cols-[minmax(340px,0.85fr)_minmax(0,1.15fr)]">
+          <section ref={guidedPanelRef} className="min-w-0 space-y-6 p-5 sm:p-8 lg:max-h-[calc(100vh-245px)] lg:overflow-y-auto" aria-label="Guided storefront setup">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Step {guidedStep} of 3</p>
+              <h2 ref={guidedHeadingRef} tabIndex={-1} className="mt-3 text-3xl font-semibold tracking-tight outline-none">{guidedStep === 1 ? "Let’s design your storefront." : guidedStep === 2 ? "A look that feels like you." : "Let your work shine."}</h2>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{guidedStep === 1 ? "Talk through your brand, then see it come together." : guidedStep === 2 ? "One choice at a time: colors first, then a font pairing." : "Add your real photos, check the preview, and publish when you’re ready."}</p>
+            </div>
+            <div hidden={guidedStep !== 1}>
+              <StorefrontDesignChat name={form.name} onName={(name) => update("name", name)} onBrief={setDesignBrief} onContinue={() => setGuidedStep(2)} previewOnly={previewOnly} onLocalLogo={(url) => { setLocalLogoPreview(url); update("logoUrl", url); }} logoEditor={<ImageUploadField name="setup-logo" label="Add your logo (optional)" value={form.logoUrl} valueCrop={form.logoCrop} onChangePreview={(value) => update("logoUrl", value)} onCropChange={(crop) => update("logoCrop", crop)} uploadEndpoint={mediaUploadEndpoint} helperText="See your own logo alongside coordinated fonts and colors." />} />
+            </div>
+            {guidedStep === 1 ? null : guidedStep === 2 ? (
+              <div className="space-y-5">
+                <div className="flex gap-2 text-xs text-muted-foreground"><span className={styleStage === "colors" ? "font-semibold text-[#5f4558]" : ""}>1 · Colors</span><span aria-hidden="true">→</span><span className={styleStage === "fonts" ? "font-semibold text-[#5f4558]" : ""}>2 · Fonts</span></div>
+                <h3 className="text-xl font-semibold">{styleStage === "colors" ? "Choose your color palette" : "Choose your font pairing"}</h3>
+                <p className="text-sm leading-6 text-muted-foreground">{styleStage === "colors" ? "A few colors that work beautifully together. See each palette in your preview." : "A heading and body font, paired for you. Choose the one that feels like your brand."} You can always change this later.</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {styleStage === "colors" ? STOREFRONT_PALETTES.map((palette) => <button key={palette.value} type="button" aria-label={`Choose ${palette.label} palette`} aria-pressed={form.palette === palette.value} onClick={() => update("palette", palette.value)} className={`rounded-2xl bg-white p-4 text-left transition hover:shadow-md ${form.palette === palette.value ? "ring-2 ring-[#bda2b3]" : "shadow-sm"}`}>
+                    <span className="flex h-14 overflow-hidden rounded-xl">{palette.swatches.map((color) => <span key={color} className="flex-1" style={{ backgroundColor: color }} />)}</span>
+                    <span className="mt-3 flex items-center justify-between text-sm font-medium">{palette.label}{form.palette === palette.value ? <Check className="h-4 w-4" /> : palette.value === recommendedLook.palette ? <span className="text-[10px] text-muted-foreground">Suggested</span> : null}</span>
+                  </button>) : STOREFRONT_FONT_STYLES.map((font) => {
+                    const families = getStorefrontFontFamilies(font.value);
+                    return <button key={font.value} type="button" aria-label={`Choose ${font.label} font pairing`} aria-pressed={form.fontStyle === font.value} onClick={() => update("fontStyle", font.value)} className={`rounded-2xl bg-white p-5 text-left transition hover:shadow-md ${form.fontStyle === font.value ? "ring-2 ring-[#bda2b3]" : "shadow-sm"}`}>
+                      <span className="block min-h-20 break-words text-[30px] leading-tight" style={{ fontFamily: families.heading }}>{form.name || "Your business"}</span>
+                      <span className="mt-2 block text-sm leading-6" style={{ fontFamily: families.body }}>Beautiful details. Unforgettable celebrations.</span>
+                      <span className="mt-5 flex items-center justify-between text-xs font-medium text-muted-foreground">{font.label}{form.fontStyle === font.value ? <Check className="h-4 w-4" /> : font.value === recommendedLook.fontStyle ? <span className="text-[10px]">Suggested</span> : null}</span>
+                    </button>;
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <ImageUploadField name="setup-cover" label="Cover photo" value={form.coverPhoto} valueCrop={form.coverPhotoCrop} onChangePreview={(value) => update("coverPhoto", value)} onCropChange={(crop) => update("coverPhotoCrop", crop)} uploadEndpoint={mediaUploadEndpoint} />
+                <ImageUploadField name="setup-portfolio" label="Add photos of your work" uploadMode="preserve" uploadEndpoint={mediaUploadEndpoint} onChangePreview={(value) => { if (value) update("photoUrls", [...form.photoUrls.filter(Boolean), value]); }} />
+                <div className="grid grid-cols-3 gap-2">{form.photoUrls.filter(Boolean).map((photo, index) => <div key={`${photo}-${index}`} className="relative aspect-square overflow-hidden rounded-xl"><img src={photo} alt={`Portfolio photo ${index + 1}`} className="h-full w-full object-cover" /><button type="button" aria-label={`Remove portfolio photo ${index + 1}`} onClick={() => removePhoto(index)} className="absolute right-1 top-1 rounded-full bg-white p-1.5 text-muted-foreground"><Trash2 className="h-3.5 w-3.5" /></button></div>)}</div>
+                <details className="rounded-2xl border border-[#eae2de] p-4"><summary className="cursor-pointer text-sm font-medium">Your services · {form.services.filter((service) => service.active).length} listed</summary><div className="mt-4"><button type="button" className="text-sm underline underline-offset-4" onClick={() => { setAdvanced(true); selectTool("services"); }}>Add or edit your services</button></div></details>
+                <p className="text-xs leading-5 text-muted-foreground">Your reviews and tagged parties stay connected to your storefront. Only your real content appears.</p>
+              </div>
+            )}
+            {guidedError ? <p role="alert" className="text-sm text-red-700">{guidedError}</p> : null}
+            <div className={`flex items-center justify-between gap-3 pt-5 ${guidedStep === 1 ? "hidden" : ""}`}>
+              <button type="button" disabled={guidedStep === 1} className="text-sm text-muted-foreground disabled:invisible" onClick={() => { if (guidedStep === 2 && styleStage === "fonts") setStyleStage("colors"); else setGuidedStep(guidedStep - 1); }}>Back</button>
+              {guidedStep < 3 ? <Button type="button" onClick={() => { if (!form.name.trim()) { setGuidedStep(1); setGuidedError("Add your business name to continue."); return; } setGuidedError(""); if (guidedStep === 2 && styleStage === "colors") setStyleStage("fonts"); else setGuidedStep(guidedStep + 1); }}>{guidedStep === 1 ? "Choose your look" : styleStage === "colors" ? "Next: fonts" : "Add your photos"}</Button> : <Button type="submit" name="intent" value="publish" disabled={previewOnly} onClick={() => setStatus("Publishing")}>Publish storefront</Button>}
+            </div>
+          </section>
+          <div className="min-w-0 bg-[#f4f0ed] p-3 sm:p-6 lg:max-h-[calc(100vh-245px)] lg:overflow-y-auto">
+            <p className="mb-4 text-center text-xs text-muted-foreground">Your storefront preview · {previewMode === "mobile" ? "Mobile" : "Desktop"}</p>
+            <div data-testid="guided-storefront-preview" className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
+              <StorefrontPreview activeSection="" business={business} draggedPhotoIndex={null} form={form} mediaUploadEndpoint={mediaUploadEndpoint} movePhoto={movePhoto} moveService={moveService} previewMode={previewMode} removePhoto={removePhoto} sectionLabel={sectionLabel} setActiveSection={selectSection} setDraggedPhotoIndex={setDraggedPhotoIndex} setServiceVisible={setServiceVisible} update={update} updateService={updateService} visibleSections={visibleSections} />
+            </div>
+          </div>
+        </div>
+      ) : (
+      <div
+        className="editor-workspace grid min-h-[calc(100vh-190px)] min-w-0 lg:grid-cols-[260px_minmax(0,1fr)_var(--editor-panel-width)]"
+        style={{ "--editor-panel-width": panelCollapsed ? "64px" : "430px" } as CSSProperties}
+      >
+        {!previewOnly && <aside className="sticky top-0 z-20 min-w-0 border-b border-[#eadbd8] bg-[#fbf7f5] p-3 lg:static lg:z-auto lg:border-b-0 lg:border-r">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Sections</h2>
+            <CopyStorefrontLinkButton url={publicUrl} label="Copy link" className="h-8 bg-white px-3 text-xs" />
+          </div>
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-[1rem] border border-white/80 bg-white p-3 text-xs shadow-sm lg:hidden">
+            <span className="font-semibold text-[#4b403c]">Checklist</span>
+            <span className="rounded-full bg-[#fbf7f5] px-2 py-1 font-semibold text-[#4b403c]">{completionCount}/{completionItems.length}</span>
+            {autosaveMessage ? <span className="min-w-0 flex-1 truncate text-right text-muted-foreground">{autosaveMessage}</span> : null}
+          </div>
+          <div className="mb-3 hidden rounded-[1rem] border border-white/80 bg-white p-3 shadow-sm lg:block">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Storefront checklist</span>
+              <span className="rounded-full bg-[#fbf7f5] px-2 py-1 text-xs font-semibold text-[#4b403c]">{completionCount}/{completionItems.length}</span>
+            </div>
+            <div className="grid gap-1.5">
+              {completionItems.map((item) => (
+                <div key={item.label} className={`flex items-center gap-2 text-xs ${item.done ? "text-[#2f6d4f]" : "text-muted-foreground"}`}>
+                  <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border ${item.done ? "border-[#9bd0ae] bg-[#e9f8ed]" : "border-[#eadbd7] bg-[#fbf7f5]"}`}>
+                    {item.done ? <Check className="h-3 w-3" /> : null}
+                  </span>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+            {autosaveMessage ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{autosaveMessage}</p> : null}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:overflow-visible lg:pb-0">
+            {form.sectionOrder.map((section) => {
+              const hidden = form.hiddenSections.includes(section);
+              const active = activeSection === section;
+              return (
+                <button
+                  key={section}
+                  type="button"
+                  data-testid={`storefront-section-${section}`}
+                  draggable
+                  onClick={() => selectSection(section)}
+                  onDragStart={() => setDraggedSection(section)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => onSectionDrop(event, section)}
+                  className={`grid min-w-[210px] shrink-0 grid-cols-[auto_1fr_auto] items-center gap-2 rounded-[0.9rem] border p-3 text-left text-sm transition lg:min-w-0 lg:shrink ${
+                    active ? "border-primary bg-white text-foreground shadow-sm" : "border-transparent bg-white/70 text-muted-foreground hover:bg-white"
+                  } ${hidden ? "opacity-55" : ""}`}
+                >
+                  <GripVertical className="h-4 w-4" />
+                  <span className="font-semibold">{sectionLabel(section)}</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${requiredSections.has(section) ? "border-[#eadbd7] bg-white text-muted-foreground" : hidden ? "border-[#eadbd7] bg-white text-muted-foreground" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleSection(section);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        toggleSection(section);
+                      }
+                    }}
+                  >
+                    {requiredSections.has(section) ? "Required" : hidden ? "Show on page" : "Hide from page"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>}
+
+        <main className="editor-canvas min-w-0 bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
+          <div className="mb-3 flex items-center justify-between gap-3 text-sm text-muted-foreground">
+            <span>{previewOnly ? "Preview only · changes reset on refresh" : "Select a section to edit"}</span>
+          </div>
+          {previewOnly && effectNotice && <div role="status" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-3 text-sm"><div><strong>{effectNotice}</strong><p className="mt-1 text-xs text-muted-foreground">{previewOnly ? "Preview only · your live storefront has not changed." : "Publish to update your live storefront."}</p></div>{heroDepth!=='flat' && <button type="button" onClick={replayEffect} className="rounded-full border px-4 py-2 text-xs">Show on page</button>}</div>}
+          <div ref={templatePreviewRef} data-testid="storefront-preview-frame" style={{ scrollMarginTop: 90, containerType: "inline-size", containerName: "storefront-preview" }} className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
+            <StorefrontPreview
+              effectImage={effectImage} effectPresentation={effectPresentation} effectWord={effectWord}
+              template={selectedTemplate}
+              heroCustomFont={heroCustomFont} heroMount={heroMount} heroEdge={heroEdge} heroBackground={heroBackground}
+              onHeroDepthChange={(value) => { setHeroDepth(value); markDirty(); }}
+              effectReplay={effectReplay} heroDepth={heroDepth}
+              activeSection=""
+              business={business}
+              draggedPhotoIndex={draggedPhotoIndex}
+              form={form}
+              mediaUploadEndpoint={mediaUploadEndpoint}
+              movePhoto={movePhoto}
+              moveService={moveService}
+              previewMode={previewMode}
+              removePhoto={removePhoto}
+              sectionLabel={sectionLabel}
+              setActiveSection={selectSection}
+              setDraggedPhotoIndex={setDraggedPhotoIndex}
+              setServiceVisible={setServiceVisible}
+              update={update}
+              updateService={updateService}
+              visibleSections={visibleSections}
+            />
+          </div>
+        </main>
+
+        <aside className="editor-inspector min-w-0 border-t border-[#eadbd8] bg-white lg:border-l lg:border-t-0">
+          {panelCollapsed ? (
+            <button
+              type="button"
+              onClick={() => setPanelCollapsed(false)}
+              className="grid h-full min-h-24 w-full place-items-center text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground hover:bg-[#fbf7f5]"
+            >
+              Edit
+            </button>
+          ) : (
+            <div className="p-4">
+              <nav aria-label="Jump to storefront section" className="mb-5 flex flex-wrap gap-2">{[["hero","Profile"],["all-services","Packages"],["about","About & photos"],["reviews","Parties & reviews"],["final-quote","Booking & socials"]].map(([id,label])=><button key={id} type="button" aria-current={activeSection===id?"location":undefined} className="rounded-full border px-3 py-2 text-xs aria-[current=location]:bg-stone-100" onClick={()=>{selectSection(id);requestAnimationFrame(()=>document.querySelector(`[data-testid="preview-section-${id}"]`)?.scrollIntoView({behavior:"smooth",block:"start"}));}}>{label}</button>)}</nav>
+              <div className="mb-4 grid grid-cols-3 gap-1 rounded-full border border-[#eadbd7] bg-[#fbf7f5] p-1">
+                {(Object.keys(toolLabels) as EditorTool[]).filter(tool=>tool!=="design").map((tool) => (
+                  <button
+                    key={tool}
+                    type="button"
+                    onClick={() => selectTool(tool)}
+                    aria-pressed={activeTool === tool}
+                    className={`rounded-full px-2 py-2 text-xs font-semibold transition ${activeTool === tool ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    {toolLabels[tool]}
+                  </button>
+                ))}
+              </div>
+{activeTool === "content" && <>          {previewOnly ? <div className="mb-4 rounded-2xl border border-[#e0ddd5] bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.15em] text-muted-foreground">Storefront design</p><p className="mt-1 text-sm font-semibold">{selectedTemplate?.name ?? "Your saved design"}</p></div><div className="flex gap-2">{selectedTemplate ? <button type="button" className="px-2 text-xs text-muted-foreground underline" onClick={()=>{const initial=createInitialState(business,true);setSelectedTemplate(null);setHeroCustomFont(null);setTemplateFontRevision(value=>value+1);setForm(current=>({...current,fontStyle:initial.fontStyle,imageShape:initial.imageShape}));markDirty();}}>Use saved design</button> : null}<Button type="button" variant="secondary" onClick={()=>setTemplateLibraryOpen(true)}>Browse templates</Button></div></div>
+            {selectedTemplate ? <details className="mt-3 border-t pt-3"><summary className="cursor-pointer text-xs font-medium">Customize colors</summary><div className="mt-3 flex flex-wrap gap-4">{(["background","surface","ink","accent","accentInk","secondary"] as const).map(key=><label key={key} className="grid gap-1 text-[10px] capitalize">{key === "accentInk" ? "Button text" : key}<input aria-label={`Template ${key} color`} type="color" value={selectedTemplate.colors[key]} onChange={(event)=>{setSelectedTemplate({...selectedTemplate,colors:{...selectedTemplate.colors,[key]:event.target.value}});markDirty();}} className="h-8 w-12 rounded border" /></label>)}</div></details> : null}
+          </div> : null}
+              {previewOnly && activeTool === "content" ? <details className="mb-4 rounded-xl border border-[#e0ddd5] bg-white p-3"><summary className="cursor-pointer text-xs font-semibold">3D Effects · optional</summary><fieldset className="mt-3">
+                <legend className="mb-2 text-sm font-semibold">3D Effects</legend><button type="button" onClick={()=>{studioInvited.current=true;if(editTimer.current)clearTimeout(editTimer.current);setStudioInvitation(false);setStudioOpen(true);}} className="mb-3 rounded-full border px-4 py-2 text-xs">Open 3D Studio</button>
+                <p className="mb-3 text-xs text-muted-foreground">Suggested for {form.name || "your storefront"}: an interactive element using your logo. Booking stays available.</p>
+                <div className="grid grid-cols-3 gap-2">{HERO_DEPTH_PRESETS.map((preset) => <button key={preset.value} type="button" aria-pressed={heroDepth === preset.value} onClick={() => { setHeroDepth(preset.value); markDirty(); }} className={`rounded-xl border px-2 py-3 text-left transition ${heroDepth === preset.value ? "border-[#627b40] bg-[#f0f3e8] ring-1 ring-[#627b40]" : "border-[#e5e5dc] bg-white"}`}><span className="block text-xs font-semibold">{preset.label}</span><span className="mt-1 block text-[10px] leading-4 text-muted-foreground">{preset.detail}</span></button>)}</div>
+              </fieldset></details> : null}
+
+</>}
+              {previewOnly && selectedTemplate ? <SectionBackgroundControls template={selectedTemplate} section={activeSection} label={sectionLabel(activeSection)} onChange={(template)=>{setSelectedTemplate(template);markDirty();}} /> : null}
+              {previewOnly ? <div hidden={activeTool !== "content"}><HeroTypographyControls subheadingFamily={form.subheadingFamily} onSubheading={value=>update("subheadingFamily",value)} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
+              {activeTool === "design" ? (
+                <DesignControls form={form} update={update} />
+              ) : (
+                <PanelStack>
+                  <SectionEditor
+                    activeSection={panelSection}
+                    business={business}
+                    collapsedFaqIds={collapsedFaqIds}
+                    form={form}
+                    mediaUploadEndpoint={mediaUploadEndpoint}
+                    moveFaq={moveFaq}
+                    movePhoto={movePhoto}
+                    markDirty={markDirty}
+                    removeFaq={removeFaq}
+                    removePhoto={removePhoto}
+                    toggleFaqCollapsed={toggleFaqCollapsed}
+                    update={update}
+                    updateService={updateService}
+                    moveService={moveService}
+                    setDraggedPhotoIndex={setDraggedPhotoIndex}
+                    draggedPhotoIndex={draggedPhotoIndex}
+                    setServiceVisible={setServiceVisible}
+                  />
+                </PanelStack>
+              )}
+            </div>
+          )}
+        </aside>
+      </div>
+      )}
+    </form>
+  );
+}
+
+function createInitialState(business: CustomizerBusiness, previewOnly = false): FormState {
+  const draft = readDraft(business.storefrontDraftJson);
+  const socialVisibility=readSocialVisibility(business.storefrontBookingJson,business.storefrontDraftJson);
+  const orderedServices = orderServices(
+    business.offerings.map((offering) => ({
+      active: offering.active,
+      basePriceCents: offering.basePriceCents,
+      categoryId: offering.categoryId,
+      description: offering.description,
+      featured: business.storefrontFeaturedOfferingIds.includes(offering.id),
+      id: offering.id,
+      messageForPricing: offering.messageForPricing,
+      photos: offering.photos,
+      title: offering.title,
+      turnaroundDays: offering.turnaroundDays
+    })),
+    business.storefrontOfferingOrder
+  );
+  return {
+    showInstagram:socialVisibility.instagram,
+    showTikTok:socialVisibility.tiktok,
+    subheadingFamily: draft?.subheadingFamily ?? "",
+    aboutHeading: draft?.aboutHeading ?? business.storefrontAboutHeading ?? `About ${business.name}`,
+    aboutPhotos: draft?.aboutPhotos ?? [],
+    aboutPhotoLayout: draft?.aboutPhotoLayout ?? "grid",
+    aboutImage: draft?.aboutImage ?? business.storefrontAboutImage ?? "",
+    availabilityNotes: draft?.availabilityNotes ?? business.availabilityNotes ?? "",
+    bio: draft?.bio ?? business.bio ?? "",
+    booking: draft?.booking ?? (previewOnly && !business.storefrontBookingJson ? { deposit: "", leadTime: "", process: "" } : readBooking(business.storefrontBookingJson)),
+    city: draft?.city ?? business.city,
+    coverPhoto: draft?.coverPhoto ?? business.coverPhoto ?? business.photos[0] ?? "",
+    coverPhotoCrop: normalizeImageCrop(draft?.coverPhotoCrop ?? business.coverPhotoCrop ?? DEFAULT_IMAGE_CROP),
+    faqs: draft?.faqs ?? (previewOnly && !business.storefrontFaqJson ? [] : readFaqs(business.storefrontFaqJson)),
+    fontStyle: draft?.fontStyle ?? business.storefrontFontStyle,
+    hiddenSections: sanitizeHiddenStorefrontSections(draft?.hiddenSections ?? business.storefrontHiddenSections).filter(section=>section!=="all-services"),
+    imageShape: draft?.imageShape ?? business.storefrontImageShape,
+    instagramFeedEnabled: Boolean(draft?.instagramFeedEnabled ?? business.storefrontInstagramFeedEnabled),
+    instagramFeedUrl: draft?.instagramFeedUrl ?? business.storefrontInstagramFeedUrl ?? business.instagramUrl ?? "",
+    instagramUrl: draft?.instagramUrl ?? business.instagramUrl ?? "",
+    layout: normalizeStorefrontLayout(draft?.layout ?? business.storefrontLayout),
+    logoCrop: normalizeImageCrop(draft?.logoCrop ?? business.logoCrop ?? DEFAULT_IMAGE_CROP),
+    logoUrl: draft?.logoUrl ?? business.logoUrl ?? "",
+    name: draft?.name ?? business.name,
+    palette: normalizeStorefrontPalette(draft?.palette ?? business.storefrontPalette),
+    photoUrls: draft?.photoUrls ?? [...business.photos, "", "", "", "", "", ""].slice(0, 10),
+    policies: draft?.policies ?? (previewOnly && !business.storefrontPoliciesJson ? [] : readPolicies(business.storefrontPoliciesJson)),
+    sectionLabels: draft?.sectionLabels ?? sanitizeStorefrontSectionLabels(business.storefrontSectionLabels),
+    sectionOrder: draft?.sectionOrder ?? sanitizeStorefrontSections(business.storefrontSectionOrder),
+    serviceAreaNotes: draft?.serviceAreaNotes ?? business.serviceAreaNotes ?? "",
+    services: applyDraftServiceDisplay(
+      draft?.services?.length ? mergeDraftServices(draft.services, orderedServices) : orderedServices,
+      draft?.hiddenOfferingIds ?? business.storefrontHiddenOfferingIds
+    ),
+    state: draft?.state ?? business.state ?? "",
+    tagline: draft?.tagline ?? business.storefrontTagline ?? "",
+    textTone: draft?.textTone ?? business.storefrontTextTone ?? "AUTO",
+    tiktokUrl: draft?.tiktokUrl ?? business.tiktokUrl ?? "",
+    website: draft?.website ?? business.website ?? ""
+  };
+}
+
+function SectionEditor({
+  activeSection,
+  business,
+  collapsedFaqIds,
+  draggedPhotoIndex,
+  form,
+  mediaUploadEndpoint,
+  markDirty,
+  moveFaq,
+  movePhoto,
+  removeFaq,
+  removePhoto,
+  setDraggedPhotoIndex,
+  toggleFaqCollapsed,
+  update,
+  updateService,
+  moveService,
+  setServiceVisible
+}: {
+  activeSection: string;
+  business: CustomizerBusiness;
+  collapsedFaqIds: string[];
+  draggedPhotoIndex: number | null;
+  form: FormState;
+  mediaUploadEndpoint: string;
+  markDirty: () => void;
+  moveFaq: (id: string, direction: -1 | 1) => void;
+  movePhoto: (fromIndex: number, toIndex: number) => void;
+  removeFaq: (id: string) => void;
+  removePhoto: (index: number) => void;
+  setDraggedPhotoIndex: (index: number | null) => void;
+  toggleFaqCollapsed: (id: string) => void;
+  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+  updateService: (id: string, patch: Partial<EditorService>) => void;
+  moveService: (id: string, direction: -1 | 1) => void;
+  setServiceVisible: (id: string, visible: boolean) => void;
+}) {
+  const logoUploadEndpoint = `${mediaUploadEndpoint}?target=logo`;
+  const coverUploadEndpoint = `${mediaUploadEndpoint}?target=cover`;
+
+  if (activeSection === "hero") {
+    return (
+      <PanelStack>
+        <details className="rounded-xl border p-3"><summary>Logo</summary><div className="mt-4">
+        <ImageUploadField
+          name="editorLogo"
+          label="Logo"
+          value={form.logoUrl}
+          valueCrop={form.logoCrop}
+          onChangePreview={(value) => update("logoUrl", value)}
+          onCropChange={(crop) => update("logoCrop", crop)}
+          rounded="full"
+          uploadEndpoint={logoUploadEndpoint}
+        />
+        </div></details>
+      </PanelStack>
+    );
+  }
+  if (activeSection === "featured-services" || activeSection === "all-services") {
+    return (
+      <PanelStack>
+        <div className="rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">Real services and packages</h3>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Add or edit actual services here. Packages, menu items, photos, pricing, and categories live on each service.
+              </p>
+            </div>
+            <Button asChild type="button" size="sm">
+              <Link href={`/vendor/business/${business.slug}/services/new`}>
+                <Plus className="h-4 w-4" />
+                Add service
+              </Link>
+            </Button>
+          </div>
+        </div>
+        {form.services.length > 0 ? (
+          form.services.map((service, index) => (
+            <ServiceEditor
+              key={service.id}
+              index={index}
+              service={service}
+              updateService={updateService}
+              moveService={moveService}
+              setServiceVisible={setServiceVisible}
+            />
+          ))
+        ) : (
+          <div className="rounded-[1rem] border border-dashed border-[#eadbd7] bg-white/70 p-4 text-sm leading-6 text-muted-foreground">
+            No services yet. Add the first real service so it can appear on this storefront and in search.
+          </div>
+        )}
+      </PanelStack>
+    );
+  }
+  if (activeSection === "portfolio") {
+    const photos = form.photoUrls.filter(Boolean);
+    return (
+      <PanelStack>
+        <details open className="rounded-xl border p-3"><summary>Cover image</summary>
+        <ImageUploadField
+          name="editorCover"
+          label="Cover image"
+          value={form.coverPhoto}
+          valueCrop={form.coverPhotoCrop}
+          onChangePreview={(value) => update("coverPhoto", value)}
+          onCropChange={(crop) => update("coverPhotoCrop", crop)}
+          uploadEndpoint={coverUploadEndpoint}
+        />
+        </details>
+        <details className="rounded-xl border p-3" open><summary>Gallery</summary><div className="mt-4">
+        <PhotoLayoutPicker layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)}/>
+        <AboutPhotoGrid compact images={[form.aboutImage,...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0)update("aboutImage",value);else{const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}}/>
+        </div></details>
+        <details className="rounded-xl border p-3"><summary>Social media</summary><div className="mt-4 space-y-4">
+        <label className="flex justify-between text-sm">Show Instagram<input type="checkbox" checked={form.showInstagram} onChange={event=>update("showInstagram",event.target.checked)}/></label>
+        {form.showInstagram && <Field label="Instagram feed"><Input type="url" placeholder="Paste Instagram profile link" value={form.instagramFeedEnabled ? form.instagramFeedUrl : form.instagramUrl} onChange={event=>{update("instagramUrl",event.target.value);update("instagramFeedUrl",event.target.value);}}/></Field>}
+        <label className="flex justify-between text-sm">Show TikTok<input type="checkbox" checked={form.showTikTok} onChange={event=>update("showTikTok",event.target.checked)}/></label>
+        {form.showTikTok && <Field label="TikTok feed"><Input type="url" placeholder="Paste TikTok profile link" value={form.tiktokUrl} onChange={event=>update("tiktokUrl",event.target.value)}/></Field>}
+        <p className="text-xs text-muted-foreground">Profile links appear at the bottom of your page. Live feed embedding is not connected in this preview.</p>
+        </div></details>
+        <details className="rounded-xl border p-3"><summary>More gallery images</summary>
+        <ImageUploadField
+          name="portfolio-new"
+          label="Add portfolio image"
+          uploadMode="preserve"
+          uploadEndpoint={mediaUploadEndpoint}
+          onChangePreview={(value) => update("photoUrls", [...photos, value])}
+        />
+        <div className="grid gap-3">
+          {photos.map((photo, index) => (
+            <div
+              key={`${photo}-${index}`}
+              draggable
+              onDragStart={() => setDraggedPhotoIndex(index)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (draggedPhotoIndex != null) movePhoto(draggedPhotoIndex, index);
+                setDraggedPhotoIndex(null);
+              }}
+              className="grid gap-3 rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3 sm:grid-cols-[96px_1fr]"
+            >
+              <img src={photo} alt="" className="aspect-[4/3] w-full rounded-[0.8rem] bg-white object-contain p-1" />
+              <div className="grid gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold"><GripVertical className="h-4 w-4 text-muted-foreground" />Image {index + 1}</span>
+                  <button type="button" className="rounded-full border p-1.5 text-muted-foreground hover:text-foreground" onClick={() => removePhoto(index)} aria-label="Remove image">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <ImageUploadField
+                  name={`portfolio-replace-${index}`}
+                  label="Replace image"
+                  value={photo}
+                  uploadMode="preserve"
+                  uploadEndpoint={mediaUploadEndpoint}
+                  onChangePreview={(value) => {
+                    const next = [...photos];
+                    next[index] = value;
+                    update("photoUrls", next);
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        </details>
+      </PanelStack>
+    );
+  }
+  if (activeSection === "about") {
+    return (
+      <PanelStack>
+        <Field label="About heading"><Input value={form.aboutHeading} onChange={(event) => update("aboutHeading", event.target.value)} /></Field>
+        <Field label="About Us text"><Textarea className="min-h-[150px]" value={form.bio} onChange={(event) => update("bio", event.target.value)} /></Field>
+        <ImageUploadField name="founderPhoto" label="Founder or team photo" value={form.aboutImage} onChangePreview={(value) => update("aboutImage", value)} uploadEndpoint={mediaUploadEndpoint} />
+      </PanelStack>
+    );
+  }
+  if (activeSection === "how-it-works" || activeSection === "final-quote") {
+    return (
+      <PanelStack>
+        <Field label="Counties/cities covered"><Textarea placeholder="Type service area here" value={form.serviceAreaNotes} onChange={(event) => update("serviceAreaNotes", event.target.value)} /></Field>
+        <Field label="Lead time"><Input value={form.booking.leadTime} onChange={(event) => update("booking", { ...form.booking, leadTime: event.target.value })} /></Field>
+        <Field label="Deposit or payment note"><Input value={form.booking.deposit} onChange={(event) => update("booking", { ...form.booking, deposit: event.target.value })} /></Field>
+        <Field label="Booking process"><Textarea value={form.booking.process} onChange={(event) => update("booking", { ...form.booking, process: event.target.value })} /></Field>
+        <Field label="Availability notes"><Textarea value={form.availabilityNotes} onChange={(event) => update("availabilityNotes", event.target.value)} /></Field>
+      </PanelStack>
+    );
+  }
+  if (activeSection === "faq") {
+    return (
+      <PanelStack>
+        <Button type="button" variant="secondary" onClick={() => update("faqs", [...form.faqs, { id: crypto.randomUUID(), question: "New question", answer: "Answer this in your own words." }])}>
+          <Plus className="h-4 w-4" />Add FAQ
+        </Button>
+        {form.faqs.map((faq, index) => {
+          const collapsed = collapsedFaqIds.includes(faq.id);
+          return (
+          <div key={faq.id} className="rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3">
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <button type="button" className="min-w-0 text-left" onClick={() => toggleFaqCollapsed(faq.id)}>
+                <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">FAQ {index + 1}</span>
+                <span className="block truncate text-sm font-semibold">{faq.question || "Untitled question"}</span>
+              </button>
+              <div className="flex shrink-0 gap-1">
+                <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveFaq(faq.id, -1)}>Up</button>
+                <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveFaq(faq.id, 1)}>Down</button>
+                <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => toggleFaqCollapsed(faq.id)}>{collapsed ? "Expand" : "Collapse"}</button>
+                <button type="button" className="rounded-full border p-1.5 text-muted-foreground hover:text-foreground" onClick={() => removeFaq(faq.id)} aria-label="Delete FAQ">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            {collapsed ? null : (
+              <div className="grid gap-3">
+                <Field label="Question"><Input value={faq.question} onChange={(event) => update("faqs", form.faqs.map((item) => item.id === faq.id ? { ...item, question: event.target.value } : item))} /></Field>
+                <Field label="Answer"><Textarea value={faq.answer} onChange={(event) => update("faqs", form.faqs.map((item) => item.id === faq.id ? { ...item, answer: event.target.value } : item))} /></Field>
+              </div>
+            )}
+          </div>
+          );
+        })}
+      </PanelStack>
+    );
+  }
+  if (activeSection === "reviews") {
+    return <PanelStack><p className="text-sm leading-6 text-muted-foreground">Reviews are verified ShopFia booking records, so vendors can choose placement/visibility but cannot edit review content.</p></PanelStack>;
+  }
+  return (
+    <PanelStack>
+      <Field label="Website"><Input value={form.website} onChange={(event) => update("website", event.target.value)} /></Field>
+      <Field label="Instagram"><Input value={form.instagramUrl} onChange={(event) => update("instagramUrl", event.target.value)} /></Field>
+      <Field label="TikTok"><Input value={form.tiktokUrl} onChange={(event) => update("tiktokUrl", event.target.value)} /></Field>
+      <Button type="button" variant="secondary" onClick={() => update("policies", [...form.policies, { id: crypto.randomUUID(), title: "New policy", body: "Describe the policy clearly." }])}>
+        <Plus className="h-4 w-4" />Add policy
+      </Button>
+    </PanelStack>
+  );
+}
+
+function SectionVisibilityControls({
+  hidden,
+  label,
+  required,
+  section,
+  toggleSection,
+  updateSectionLabel
+}: {
+  hidden: boolean;
+  label: string;
+  required: boolean;
+  section: string;
+  toggleSection: (section: string) => void;
+  updateSectionLabel: (section: string, label: string) => void;
+}) {
+  return (
+    <div className="grid gap-3 rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3">
+      <Field label="Section name">
+        <Input
+          value={label}
+          onChange={(event) => updateSectionLabel(section, event.target.value)}
+          placeholder={STOREFRONT_SECTION_LABELS[section as keyof typeof STOREFRONT_SECTION_LABELS] ?? "Section"}
+        />
+      </Field>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs leading-5 text-muted-foreground">
+          {required ? "Required on every ShopFia storefront." : hidden ? "Hidden from the public storefront." : "Visible on the public storefront."}
+        </p>
+        <Button type="button" variant="secondary" size="sm" disabled={required} onClick={() => toggleSection(section)}>
+          {required ? "Required" : hidden ? "Show on page" : "Hide from page"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ServiceEditor({
+  index,
+  moveService,
+  setServiceVisible,
+  service,
+  updateService
+}: {
+  index: number;
+  moveService: (id: string, direction: -1 | 1) => void;
+  setServiceVisible: (id: string, visible: boolean) => void;
+  service: EditorService;
+  updateService: (id: string, patch: Partial<EditorService>) => void;
+}) {
+  return (
+    <div className={`rounded-[1rem] border p-3 ${service.active ? "border-[#eadbd7] bg-[#fffaf8]" : "border-dashed border-[#eadbd7] bg-white/70 opacity-70"}`}>
+      <div className="grid gap-3 sm:grid-cols-[76px_1fr]">
+        {service.photos[0] ? (
+          <img src={service.photos[0]} alt="" className="aspect-square w-full rounded-[0.75rem] object-cover" />
+        ) : (
+          <div className="grid aspect-square place-items-center rounded-[0.75rem] bg-[#f8ece9]">
+            <ImagePlus className="h-5 w-5 text-primary" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Service {index + 1}</div>
+              <h4 className="truncate text-sm font-semibold text-[#2f2626]">{service.title}</h4>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{service.description}</p>
+            </div>
+            <div className="flex shrink-0 gap-1">
+              <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveService(service.id, -1)}>Up</button>
+              <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => moveService(service.id, 1)}>Down</button>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setServiceVisible(service.id, !service.active)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${service.active ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-[#eadbd7] bg-white text-muted-foreground"}`}
+            >
+              {service.active ? "Visible" : "Hidden"}
+            </button>
+            <button
+              type="button"
+              disabled={!service.active}
+              onClick={() => updateService(service.id, { featured: !service.featured })}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45 ${
+                service.featured ? "border-primary bg-primary/10 text-primary" : "border-[#eadbd7] bg-white text-muted-foreground"
+              }`}
+            >
+              {service.featured ? "Featured" : "Not featured"}
+            </button>
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              {service.messageForPricing || service.basePriceCents == null ? "Custom quote" : `From ${formatCurrency(service.basePriceCents)}`}
+            </span>
+            {!service.isNew ? (
+              <Button asChild type="button" variant="secondary" size="sm" className="h-8 rounded-full px-3 text-xs">
+                <Link href={`/vendor/offering/${service.id}`}>
+                  Edit details/packages
+                </Link>
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DesignControls({
+  form,
+  update
+}: {
+  form: FormState;
+  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+}) {
+  const theme = getPreviewTheme(form);
+  const selectedPalette = getPreviewPalette(form.palette);
+  const [themeOpen, setThemeOpen] = useState(false);
+
+  return (
+    <PanelStack>
+      <div className="grid gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">Storefront layout</h3>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">Choose the public page structure. Content, services, photos, and reviews stay the same when you switch.</p>
+        </div>
+        <div className="grid gap-2">
+          {STOREFRONT_LAYOUTS.map((layout) => (
+            <button
+              key={layout.value}
+              type="button"
+              onClick={() => update("layout", layout.value)}
+              className={`grid gap-3 rounded-[1rem] border p-3 text-left transition ${
+                form.layout === layout.value ? "border-primary bg-[#fff4f5] shadow-sm" : "border-[#eadbd7] bg-white hover:bg-[#fffaf8]"
+              }`}
+              style={form.layout === layout.value ? theme.selectedControlStyle : undefined}
+            >
+              <StorefrontLayoutPreviewCard layout={layout.value} theme={theme} />
+              <span>
+                <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                  {layout.label}
+                  {form.layout === layout.value ? <Check className="h-4 w-4 text-primary" /> : null}
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-muted-foreground">{layout.description}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Palette className="h-4 w-4 text-primary" />
+        <h3 className="text-sm font-semibold">Theme System</h3>
+      </div>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setThemeOpen((open) => !open)}
+          style={{ borderColor: selectedPalette.accent, backgroundColor: `${selectedPalette.accent}12` }}
+          className="flex w-full items-center gap-3 rounded-[0.9rem] border p-3 text-left text-sm transition hover:bg-[#fffaf8]"
+          aria-expanded={themeOpen}
+        >
+          <span className={`h-9 w-9 shrink-0 rounded-full bg-gradient-to-br ${selectedPalette.className}`} />
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Change theme</span>
+            <span className="block text-xs text-muted-foreground">{selectedPalette.label}</span>
+            <span className="mt-1 flex gap-1.5">
+              {selectedPalette.swatches.map((color) => (
+                <span key={color} className="h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: color }} />
+              ))}
+            </span>
+          </span>
+          <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition ${themeOpen ? "rotate-180" : ""}`} />
+        </button>
+        {themeOpen ? (
+          <div className="mt-2 grid max-h-72 gap-2 overflow-y-auto rounded-[1rem] border border-[#eadbd7] bg-white p-2 shadow-[0_14px_40px_rgba(72,44,43,0.12)]">
+            {STOREFRONT_PALETTES.map((palette) => (
+              <button
+                key={palette.value}
+                type="button"
+                onClick={() => {
+                  update("palette", palette.value);
+                  setThemeOpen(false);
+                }}
+                style={form.palette === palette.value ? { borderColor: palette.accent, backgroundColor: `${palette.accent}12` } : undefined}
+                className={`flex items-center gap-3 rounded-[0.8rem] border p-3 text-left text-sm transition ${
+                  form.palette === palette.value ? "" : "border-[#eadbd7] hover:bg-[#fffaf8]"
+                }`}
+              >
+                <span className={`h-8 w-8 shrink-0 rounded-full bg-gradient-to-br ${palette.className}`} />
+                <span className="min-w-0">
+                  <span className="block font-semibold">{palette.label}</span>
+                  <span className="mt-1 flex gap-1.5">
+                    {palette.swatches.map((color) => (
+                      <span key={color} className="h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: color }} />
+                    ))}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">{palette.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      <Field label="Font pairing">
+        <select className="h-10 rounded-[0.75rem] border border-[#eadbd7] bg-white px-3 text-sm" value={form.fontStyle} onChange={(event) => update("fontStyle", event.target.value)}>
+          {STOREFRONT_FONT_STYLES.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+        </select>
+      </Field>
+      <div className={`overflow-hidden border p-3 text-sm ${theme.cardClass} ${theme.sectionRadius}`} style={theme.previewCardStyle}>
+        <div className={`mb-3 h-16 ${theme.imageRadius}`} style={theme.accentBlockStyle} />
+        <div className="text-lg font-semibold" style={theme.headingStyle}>Live theme sample</div>
+        <p className={`mt-1 ${theme.copyClass}`}>
+          This sample uses the selected font, text color, accent color, and image shape.
+        </p>
+        <span className="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>
+          Accent preview
+        </span>
+      </div>
+      <Field label="Text color">
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Auto", value: "AUTO" },
+            { label: "Dark", value: "DARK" },
+            { label: "Light", value: "LIGHT" }
+          ].map((tone) => (
+            <button
+              key={tone.value}
+              type="button"
+              onClick={() => update("textTone", tone.value)}
+              style={form.textTone === tone.value ? theme.selectedControlStyle : undefined}
+              className={`rounded-[0.75rem] border px-3 py-2 text-sm font-semibold ${
+                form.textTone === tone.value ? "" : "border-[#eadbd7]"
+              } ${tone.value === "LIGHT" ? "bg-[#241c1a] text-white" : ""}`}
+            >
+              {tone.label}
+            </button>
+          ))}
+        </div>
+      </Field>
+      <Field label="Image shape">
+        <div className="grid grid-cols-3 gap-2">
+          {STOREFRONT_IMAGE_SHAPES.map((shape) => (
+            <button
+              key={shape.value}
+              type="button"
+              onClick={() => update("imageShape", shape.value)}
+              style={form.imageShape === shape.value ? theme.selectedControlStyle : undefined}
+              className={`rounded-[0.75rem] border px-3 py-2 text-sm font-semibold ${
+                form.imageShape === shape.value ? "" : "border-[#eadbd7]"
+              }`}
+            >
+              {shape.label}
+            </button>
+          ))}
+        </div>
+      </Field>
+      <div className="rounded-[1rem] border border-[#eadbd7] bg-[#fbf7f5] p-3 text-xs leading-5 text-muted-foreground">
+        <Wand2 className="mb-2 h-4 w-4 text-primary" />
+        ShopFia locks spacing, navigation, trust actions, and responsive structure while letting you tune content, media, section order, and polished theme choices.
+      </div>
+    </PanelStack>
+  );
+}
+
+function StorefrontPreview({
+  effectReplay=0,
+  template,
+  heroCustomFont,
+  effectImage="", effectPresentation="emblem", effectWord="",
+  heroMount = "round", heroEdge = "#877a78", heroBackground = "#e6dfd4",
+  onHeroDepthChange,
+  heroDepth,
+  activeSection,
+  business,
+  draggedPhotoIndex,
+  form,
+  mediaUploadEndpoint,
+  movePhoto,
+  moveService,
+  previewMode,
+  removePhoto,
+  sectionLabel,
+  setActiveSection,
+  setDraggedPhotoIndex,
+  setServiceVisible,
+  update,
+  updateService,
+  visibleSections
+}: {
+  effectReplay?:number;
+  template?: StorefrontTemplate | null;
+  heroCustomFont?: string | null;
+  effectImage?:string; effectPresentation?:"emblem"|"product"; effectWord?:string;
+  heroMount?: LogoMount; heroEdge?: string; heroBackground?: string;
+  onHeroDepthChange?: (value: HeroDepth) => void;
+  heroDepth?: HeroDepth;
+  activeSection: string;
+  business: CustomizerBusiness;
+  draggedPhotoIndex: number | null;
+  form: FormState;
+  mediaUploadEndpoint: string;
+  movePhoto: (fromIndex: number, toIndex: number) => void;
+  moveService: (id: string, direction: -1 | 1) => void;
+  previewMode: "desktop" | "mobile";
+  removePhoto: (index: number) => void;
+  sectionLabel: (section: string) => string;
+  setActiveSection: (section: string) => void;
+  setDraggedPhotoIndex: (index: number | null) => void;
+  setServiceVisible: (id: string, visible: boolean) => void;
+  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+  updateService: (id: string, patch: Partial<EditorService>) => void;
+  visibleSections: string[];
+}) {
+  const logoUploadEndpoint = `${mediaUploadEndpoint}?target=logo`;
+  const coverUploadEndpoint = `${mediaUploadEndpoint}?target=cover`;
+  const theme = getPreviewTheme(form, template);
+  const activeServices = form.services.filter((service) => service.active);
+  const featuredServices = activeServices.filter((service) => service.featured).slice(0, 3);
+  const isMobile = previewMode === "mobile";
+  const updateFaq = (id: string, patch: Partial<FaqItem>) => {
+    update("faqs", form.faqs.map((faq) => (faq.id === id ? { ...faq, ...patch } : faq)));
+  };
+  const photos = form.photoUrls.filter(Boolean);
+  return (
+    <div data-template={template?.id} data-page-background={Boolean(template?.backgroundDesign)} data-heading-case={template?.headingFamily?.includes("greatvibes") ? "script" : undefined} data-composition={template?.composition} data-mask={template?.imageMask} data-sections={template?.sections} data-services={template?.services} data-button={template?.button ?? "pill"} data-frame={template?.frame ?? "none"} className={`${template ? "template-surface " : ""}overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={{...theme.bodyStyle,...(template ? templateVariables(template) : {}),...sectionDesignStyle(template?.backgroundDesign)}}>
+      <section data-testid="preview-section-hero" onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
+        <div className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground" style={theme.platformBarStyle}>ShopFia Storefront</div>
+        <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
+          <div className="shrink-0">
+            {form.logoUrl ? (
+              <CroppedImage
+                src={form.logoUrl}
+                alt={`${form.name} logo`}
+                frameFit="contain"
+                crop={form.logoCrop}
+                className={`${heroDepth !== undefined ? "template-brand-logo " : ""}h-20 w-20 bg-white object-contain object-center p-1 ${theme.logoRadius}`}
+              />
+            ) : <div className={`grid h-20 w-20 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
+            {activeSection === "hero" ? (
+              <div className="mt-2 w-32">
+                <ImageUploadField
+                  name="previewLogo"
+                  label="Logo"
+                  value={form.logoUrl}
+                  valueCrop={form.logoCrop}
+                  onChangePreview={(value) => update("logoUrl", value)}
+                  onCropChange={(crop) => update("logoCrop", crop)}
+                  rounded="full"
+                  uploadEndpoint={logoUploadEndpoint}
+                />
+              </div>
+            ) : null}
+          </div>
+          <div className="min-w-0 flex-1">
+            {activeSection === "hero" ? (
+              <InlineTextInput
+                ariaLabel="Business name"
+                className="text-lg font-semibold"
+                onChange={(value) => update("name", value)}
+                style={theme.headingStyle}
+                value={form.name}
+              />
+            ) : (
+              <div className="text-lg font-semibold" style={theme.headingStyle}><InlineStorefrontText label="Storefront name" value={form.name} placeholder="Type storefront name here" onChange={value=>update("name",value)}/></div>
+            )}
+            {activeSection === "hero" ? (
+              <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                <InlineTextInput
+                  ariaLabel="City"
+                  className={`text-sm ${theme.mutedClass}`}
+                  onChange={(value) => update("city", value)}
+                  placeholder="Type location here"
+                  value={form.city}
+                />
+                <InlineTextInput
+                  ariaLabel="State"
+                  className={`text-sm ${theme.mutedClass}`}
+                  onChange={(value) => update("state", value)}
+                  placeholder="Type state here"
+                  value={form.state}
+                />
+              </div>
+            ) : (
+              <div className={`text-sm ${theme.mutedClass}`}>@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
+            )}
+            <span className="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>Follow</span>
+          </div>
+        </div>
+        {heroDepth ? <DimensionalStorefrontHero effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth={heroDepth} mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /> : <PreviewHeroTemplate
+          active={activeSection === "hero"}
+          activeServices={activeServices}
+          business={business}
+          coverUploadEndpoint={coverUploadEndpoint}
+          form={form}
+          isMobile={isMobile}
+          photos={photos}
+          theme={theme}
+          update={update}
+        />}
+      </section>
+      <div className="px-5 pb-8 sm:px-8">
+        {[...visibleSections].sort((a,b)=>a==="all-services"?-1:b==="all-services"?1:0).filter((section) => {
+          if (section === "hero") return false;
+          if (section === activeSection) return true;
+          if (section === "featured-services") return featuredServices.length > 0;
+          if (section === "all-services") return true;
+          if (section === "portfolio") return photos.length > 0 || form.instagramFeedEnabled;
+          if (section === "faq") return form.faqs.length > 0;
+          if (section === "how-it-works") return Boolean(business.storefrontBookingJson || form.serviceAreaNotes);
+          return true;
+        }).map((section) => {
+          if (section === "featured-services") return (
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-featured-services" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
+              <ServiceGrid
+                businessSlug={business.slug}
+                editable={activeSection === section}
+                mode="featured"
+                moveService={moveService}
+                services={activeSection === section ? activeServices : featuredServices}
+                setServiceVisible={setServiceVisible}
+                theme={theme}
+                updateService={updateService}
+              />
+            </PreviewSection>
+          );
+          if (section === "all-services") return (
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title="Packages & services" onClick={() => setActiveSection(section)}>
+              <div className="mb-5 flex items-center justify-between gap-3"><p className="text-sm">{activeServices.length ? "Choose a package for your event." : "Add your packages and pricing to help customers book."}</p><Button type="button" onClick={event=>{event.stopPropagation();setActiveSection("final-quote");document.querySelector('[data-testid="preview-section-final-quote"]')?.scrollIntoView({behavior:"smooth",block:"center"});}}>Book now</Button></div>
+              <ServiceGrid
+                businessSlug={business.slug}
+                editable={activeSection === section}
+                mode="visibility"
+                moveService={moveService}
+                services={activeSection === section ? form.services : activeServices}
+                setServiceVisible={setServiceVisible}
+                theme={theme}
+                updateService={updateService}
+              />
+            </PreviewSection>
+          );
+          if (section === "portfolio") return (
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-portfolio" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
+              {activeSection === section ? (
+                <div className="grid gap-3">
+                  {form.showInstagram && <InstagramFeedPreview form={form} theme={theme} update={update} />}
+                  <ImageUploadField
+                    name="previewPortfolioNew"
+                    label="Add portfolio image"
+                    uploadMode="preserve"
+                    uploadEndpoint={mediaUploadEndpoint}
+                    onChangePreview={(value) => update("photoUrls", [...photos, value])}
+                  />
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                    {photos.map((photo, index) => (
+                      <div
+                        key={`${photo}-${index}`}
+                        draggable
+                        onDragStart={() => setDraggedPhotoIndex(index)}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (draggedPhotoIndex != null) movePhoto(draggedPhotoIndex, index);
+                          setDraggedPhotoIndex(null);
+                        }}
+                        className={`group overflow-hidden border ${theme.imageRadius}`}
+                        style={theme.previewCardStyle}
+                      >
+                        <img src={photo} alt="" className="aspect-[4/3] w-full bg-white object-contain p-1" />
+                        <div className="grid gap-2 bg-white/90 p-2 text-[#2f2626]">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold"><GripVertical className="h-3.5 w-3.5" />Image {index + 1}</span>
+                            <button type="button" className="rounded-full border p-1 text-muted-foreground hover:text-foreground" onClick={(event) => { event.stopPropagation(); removePhoto(index); }} aria-label="Remove image">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <ImageUploadField
+                            name={`previewPortfolioReplace-${index}`}
+                            label="Replace"
+                            value={photo}
+                            uploadMode="preserve"
+                            uploadEndpoint={mediaUploadEndpoint}
+                            onChangePreview={(value) => {
+                              const next = [...photos];
+                              next[index] = value;
+                              update("photoUrls", next);
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {form.instagramFeedEnabled && form.instagramFeedUrl ? <InstagramFeedCallout href={form.instagramFeedUrl} theme={theme} /> : null}
+                  {template && [1,2,18,19,57].includes(template.source.number) ? <TemplateMediaGrid template={template} photos={photos}/> : <div className="grid grid-cols-3 gap-2">{photos.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] bg-white object-contain p-1 ${theme.imageRadius}`} />)}</div>}
+                </div>
+              )}
+            </PreviewSection>
+          );
+          if (section === "about") return (
+            <PreviewSection
+              key={section}
+              active={activeSection === section}
+              testId="preview-section-about"
+              theme={theme}
+              title={<InlineStorefrontText label="About heading" value={form.aboutHeading} placeholder="Type heading here" onChange={value=>update("aboutHeading",value)}/>}
+              onClick={() => setActiveSection(section)}
+            >
+              <p className="mb-5"><InlineStorefrontText label="About description" value={form.bio} placeholder="Describe your business here" onChange={value=>update("bio",value)}/></p>
+              <AboutPhotoGrid images={[form.aboutImage, ...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0) update("aboutImage",value);else {const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}} />
+            </PreviewSection>
+          );
+          if (section === "how-it-works") return (
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-how-it-works" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
+              {activeSection === section ? (
+                <div className="grid gap-3">
+                  <InlineTextarea ariaLabel="Booking process" onChange={(value) => update("booking", { ...form.booking, process: value })} placeholder="Describe how booking works" value={form.booking.process} />
+                  <InlineTextarea ariaLabel="Service area" onChange={(value) => update("serviceAreaNotes", value)} placeholder="Type service area here" value={form.serviceAreaNotes} />
+                  <PreviewRadiusMap city={[form.city, form.state].filter(Boolean).join(", ") || "Service area"} coverageAreas={coverageAreaLabels(form.serviceAreaNotes, [form.city, form.state].filter(Boolean).join(", "))} radiusMiles={business.serviceRadiusMiles} theme={theme} />
+                </div>
+              ) : (
+                <><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p><PreviewRadiusMap city={[form.city, form.state].filter(Boolean).join(", ") || "Service area"} coverageAreas={coverageAreaLabels(form.serviceAreaNotes, [form.city, form.state].filter(Boolean).join(", "))} radiusMiles={business.serviceRadiusMiles} theme={theme} /></>
+              )}
+            </PreviewSection>
+          );
+          if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} testId="preview-section-reviews" theme={theme} title="Real parties & reviews" onClick={() => setActiveSection(section)}><div className="mb-4 flex items-center gap-3"><span className="text-2xl font-semibold">{business.reviewCount ? `★ ${business.averageRating.toFixed(1)}` : "No reviews yet"}</span>{business.reviewCount>0 && <span className="text-sm">{business.reviewCount} verified reviews</span>}</div><p className="text-sm">Reviews from completed ShopFia bookings appear here alongside real parties featuring your business.</p><p className="mt-3 text-xs opacity-60">Party photos and individual reviews are not loaded in this design preview.</p></PreviewSection>;
+          if (section === "faq") return (
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-faq" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
+              {activeSection === section ? (
+                <div className="grid gap-4">
+                  {form.faqs.map((faq) => (
+                    <div key={faq.id} className="grid gap-2">
+                      <InlineTextInput ariaLabel="FAQ question" className="font-semibold" onChange={(value) => updateFaq(faq.id, { question: value })} placeholder="Question" value={faq.question} />
+                      <InlineTextarea ariaLabel="FAQ answer" onChange={(value) => updateFaq(faq.id, { answer: value })} placeholder="Answer" value={faq.answer} />
+                    </div>
+                  ))}
+                  <Button type="button" variant="secondary" style={theme.secondaryButtonStyle} onClick={() => update("faqs", [...form.faqs, { id: crypto.randomUUID(), question: "New question", answer: "Answer this in your own words." }])}>
+                    <Plus className="h-4 w-4" />Add FAQ
+                  </Button>
+                </div>
+              ) : (
+                form.faqs.slice(0, 3).map((faq) => <div key={faq.id} className="mt-2"><div className="font-semibold">{faq.question}</div><p>{faq.answer}</p></div>)
+              )}
+            </PreviewSection>
+          );
+          if (section === "final-quote") return (
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-final-quote" theme={theme} title="Book your event" onClick={() => setActiveSection(section)}>
+              {activeSection === section ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <InlineTextarea ariaLabel="Availability notes" onChange={(value) => update("availabilityNotes", value)} placeholder="Availability notes" value={form.availabilityNotes} />
+                  <InlineTextarea ariaLabel="Deposit or payment note" onChange={(value) => update("booking", { ...form.booking, deposit: value })} placeholder="Deposit or payment note" value={form.booking.deposit} />
+                  <div className="md:col-span-2">
+                    <Button type="button" style={theme.heroCtaStyle}><Send className="h-4 w-4" />Get a quote</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="button" style={theme.heroCtaStyle}><Send className="h-4 w-4" />Get a quote</Button>
+                  {form.availabilityNotes ? <p className={theme.mutedClass}>{form.availabilityNotes}</p> : null}
+                </div>
+              )}
+            </PreviewSection>
+          );
+          return null;
+        })}
+        {(form.showInstagram && form.instagramUrl || form.showTikTok && form.tiktokUrl || form.website) && <footer className="flex flex-wrap items-center justify-center gap-5 border-t border-current/15 py-6 text-sm" aria-label="Social profiles">{form.showInstagram && form.instagramUrl && <a href={form.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a>}{form.showTikTok && form.tiktokUrl && <a href={form.tiktokUrl} target="_blank" rel="noreferrer">TikTok ↗</a>}{form.website && <a href={form.website} target="_blank" rel="noreferrer">Website ↗</a>}</footer>}
+      </div>
+    </div>
+  );
+}
+
+function StorefrontLayoutPreviewCard({ layout, theme }: { layout: string; theme: PreviewTheme }) {
+  const accent = theme.palette.accent;
+  if (layout === "PORTFOLIO_FIRST") {
+    return (
+      <span className="grid h-20 grid-rows-[18px_1fr] overflow-hidden rounded-[0.75rem] border bg-white" style={theme.previewCardStyle}>
+        <span className="flex items-center gap-1 px-2"><span className="h-2 w-8 rounded-full" style={{ backgroundColor: accent }} /><span className="h-2 w-14 rounded-full bg-[#eadbd7]" /></span>
+        <span className="grid grid-cols-3 gap-1 p-1">
+          <span className={theme.imageRadius} style={theme.accentBlockStyle} />
+          <span className={theme.imageRadius} style={theme.softSurfaceStyle} />
+          <span className={theme.imageRadius} style={theme.accentBlockStyle} />
+        </span>
+      </span>
+    );
+  }
+  if (layout === "BRAND_SPOTLIGHT") {
+    return (
+      <span className="grid h-20 place-items-center rounded-[0.75rem] border p-3" style={theme.accentBlockStyle}>
+        <span className="grid h-10 w-20 place-items-center rounded-full bg-white/85 text-[10px] font-semibold" style={theme.headingStyle}>Logo</span>
+      </span>
+    );
+  }
+  if (layout === "STOREFRONT_CLASSIC") {
+    return (
+      <span className="grid h-20 grid-cols-[0.35fr_1fr] overflow-hidden rounded-[0.75rem] border bg-white" style={theme.previewCardStyle}>
+        <span className="grid place-items-center border-r border-[#eadbd7]"><span className="h-8 w-8 rounded-full" style={theme.softSurfaceStyle} /></span>
+        <span className="grid gap-1 p-2">
+          <span className="h-4 rounded-full" style={{ backgroundColor: accent }} />
+          <span className="grid grid-cols-3 gap-1">
+            <span className="h-9 rounded-[0.45rem] bg-[#f8ece9]" />
+            <span className="h-9 rounded-[0.45rem] bg-[#f8ece9]" />
+            <span className="h-9 rounded-[0.45rem] bg-[#f8ece9]" />
+          </span>
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className="grid h-20 grid-cols-[0.55fr_0.45fr] overflow-hidden rounded-[0.75rem] border bg-white" style={theme.previewCardStyle}>
+      <span style={theme.accentBlockStyle} />
+      <span className="grid place-items-center p-2">
+        <span className="grid gap-1">
+          <span className="mx-auto h-7 w-7 rounded-full" style={theme.softSurfaceStyle} />
+          <span className="h-2 w-16 rounded-full" style={{ backgroundColor: accent }} />
+          <span className="h-2 w-12 rounded-full bg-[#eadbd7]" />
+        </span>
+      </span>
+    </span>
+  );
+}
+
+function PreviewHeroLogo({ form, theme, size = "h-16 w-16" }: {
+  form: FormState;
+  theme: PreviewTheme;
+  size?: string;
+}) {
+  return form.logoUrl ? (
+    <CroppedImage src={form.logoUrl} alt="" crop={form.logoCrop} className={`${size} bg-white object-contain p-1 ${theme.logoRadius}`} />
+  ) : (
+    <span className={`grid ${size} place-items-center bg-white font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</span>
+  );
+}
+
+function PreviewHeroTemplate({
+  active,
+  activeServices,
+  business,
+  coverUploadEndpoint,
+  form,
+  isMobile,
+  photos,
+  theme,
+  update
+}: {
+  active: boolean;
+  activeServices: EditorService[];
+  business: CustomizerBusiness;
+  coverUploadEndpoint: string;
+  form: FormState;
+  isMobile: boolean;
+  photos: string[];
+  theme: PreviewTheme;
+  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+}) {
+  const layout = normalizeStorefrontLayout(form.layout);
+  const location = `${form.city}${form.state ? `, ${form.state}` : ""}`;
+  const headline = form.aboutHeading || form.name;
+  const copy = form.tagline || form.bio || "Add a short description for this storefront.";
+  const EditableText = (
+    <>
+      <InlineTextarea
+        ariaLabel="Hero headline"
+        className={`min-h-0 resize-none font-semibold leading-[0.98] tracking-normal  ${isMobile ? "text-3xl" : "text-5xl"}`}
+        onChange={(value) => update("aboutHeading", value)}
+        placeholder={form.name}
+        style={theme.headingStyle}
+        value={form.aboutHeading}
+      />
+      <InlineTextarea
+        ariaLabel="Hero supporting text"
+        className={`mt-3 text-sm leading-6 ${theme.copyClass}`}
+        onChange={(value) => update("tagline", value)}
+        placeholder={form.bio || "Add supporting text"}
+        value={form.tagline}
+      />
+    </>
+  );
+  const CoverEditor = active ? (
+    <div className="mt-4 max-w-sm">
+      <ImageUploadField
+        name="previewCover"
+        label="Cover image"
+        value={form.coverPhoto}
+        valueCrop={form.coverPhotoCrop}
+        onChangePreview={(value) => update("coverPhoto", value)}
+        onCropChange={(crop) => update("coverPhotoCrop", crop)}
+        uploadEndpoint={coverUploadEndpoint}
+      />
+    </div>
+  ) : null;
+
+  if (layout === "PORTFOLIO_FIRST") {
+    return (
+      <section className={`m-4 overflow-hidden ${theme.cardClass} ${theme.sectionRadius}`} style={theme.previewCardStyle}>
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="min-w-0">
+              <span className="block text-xl font-semibold" style={theme.headingStyle}>{form.tagline || form.name}</span>
+              <span className={`block text-xs ${theme.mutedClass}`}>{business.reviewCount ? `${business.averageRating.toFixed(1)} · ${business.reviewCount} reviews` : "No reviews yet"} · {location}</span>
+            </span>
+          </div>
+          <span className="rounded-full px-4 py-2 text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+        </div>
+        {active ? (
+          <div className="border-t p-4" style={theme.navStyle}>
+            {EditableText}
+            {CoverEditor}
+          </div>
+        ) : null}
+        <div className={`grid gap-1 ${isMobile ? "grid-cols-[0.55fr_1fr_0.55fr]" : "grid-cols-3"}`}>
+          {(photos.length ? photos : [form.coverPhoto]).filter(Boolean).slice(0, 3).map((photo, index) => (
+            <img key={`${photo}-${index}`} src={photo} alt="" className="aspect-[4/3] w-full object-cover" />
+          ))}
+        </div>
+        <div className="grid grid-cols-4 gap-2 p-4 text-center text-[11px] font-semibold">
+          {activeServices.slice(0, 4).map((service) => <span key={service.id} className="rounded-[0.75rem] border p-2" style={theme.previewCardStyle}>{service.title}</span>)}
+        </div>
+      </section>
+    );
+  }
+
+  if (layout === "BRAND_SPOTLIGHT") {
+    return (
+      <section className={`m-4 grid min-h-[420px] place-items-center overflow-hidden p-6 ${theme.heroRadius}`} style={theme.previewCardStyle}>
+        <div className="grid w-full max-w-3xl place-items-center gap-5 text-center">
+          <PreviewHeroLogo form={form} theme={theme} size={isMobile ? "h-24 w-24" : "h-32 w-32"} />
+          {active ? EditableText : (
+            <>
+              <h2 className={`${isMobile ? "text-3xl" : "text-5xl"} font-semibold leading-tight`} style={theme.headingStyle}>{headline}</h2>
+              <p className={`max-w-xl text-sm leading-6 ${theme.copyClass}`}>{copy}</p>
+            </>
+          )}
+          <div className="grid w-full max-w-xl gap-3 rounded-[1rem] bg-white/92 p-4 text-left text-[#2f2626] shadow-sm sm:grid-cols-3">
+            <span>{location}</span>
+            <span>{business.reviewCount ? `${business.averageRating.toFixed(1)} · ${business.reviewCount} reviews` : "No reviews yet"}</span>
+            <span>{activeServices.length} services</span>
+            <span className="sm:col-span-3 rounded-full px-4 py-2 text-center text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (layout === "STOREFRONT_CLASSIC") {
+    return (
+      <section className={`m-4 grid max-h-[520px] gap-4 overflow-hidden p-4 ${theme.cardClass} ${theme.sectionRadius} ${isMobile ? "" : "md:grid-cols-[minmax(190px,0.42fr)_minmax(0,1fr)]"}`} style={theme.previewCardStyle}>
+        <aside className="grid content-start gap-3 border-b pb-4 md:border-b-0 md:border-r md:pr-4" style={theme.navStyle}>
+          <PreviewHeroLogo form={form} theme={theme} />
+          <h2 className="break-words text-2xl font-semibold leading-tight" style={theme.headingStyle}>{form.name}</h2>
+          <p className={`line-clamp-5 text-sm leading-6 ${theme.copyClass}`}>{copy}</p>
+          <span className="rounded-full px-4 py-2 text-center text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+        </aside>
+        <div className="grid min-w-0 content-start gap-4">
+          <div>
+            <h3 className="text-sm font-semibold">Featured services</h3>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              {activeServices.length ? (
+                activeServices.slice(0, 3).map((service) => <span key={service.id} className="rounded-[0.75rem] border p-3 text-sm font-semibold" style={theme.previewCardStyle}>{service.title}</span>)
+              ) : (
+                <span className={`rounded-[0.75rem] border p-3 text-sm ${theme.mutedClass}`} style={theme.previewCardStyle}>Services will appear here.</span>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {photos.length ? (
+              photos.slice(0, 3).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] w-full object-cover ${theme.imageRadius}`} />)
+            ) : (
+              <span className={`col-span-3 grid aspect-[4/3] place-items-center text-sm ${theme.mutedClass}`} style={theme.softSurfaceStyle}>Portfolio photos will appear here.</span>
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className={`m-4 grid gap-4 overflow-hidden ${theme.cardClass} ${isMobile ? "" : "md:grid-cols-[1fr_0.88fr]"}`} style={theme.previewCardStyle}>
+      <div className={`relative min-h-[260px] overflow-hidden ${theme.imageRadius} ${isMobile ? "aspect-[4/3]" : ""}`} style={theme.softSurfaceStyle}>
+        {form.coverPhoto ? <CroppedImage src={form.coverPhoto} alt="" crop={form.coverPhotoCrop} className="absolute inset-0 h-full w-full object-cover" /> : null}
+      </div>
+      <div className="grid content-center justify-items-start gap-4 p-6 text-left">
+        {active ? EditableText : (
+          <>
+            <h2 className={`${isMobile ? "text-3xl" : "text-5xl"} font-semibold leading-tight`} style={theme.headingStyle}>{headline}</h2>
+            <p className={`max-w-md text-sm leading-6 ${theme.copyClass}`}>{copy}</p>
+          </>
+        )}
+        <span className={`text-sm ${theme.mutedClass}`}>{location}</span>
+        <span className="rounded-full px-5 py-2.5 text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+        {CoverEditor}
+      </div>
+    </section>
+  );
+}
+
+function InlineTextInput({
+  ariaLabel,
+  className = "",
+  onChange,
+  placeholder,
+  style,
+  value
+}: {
+  ariaLabel: string;
+  className?: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  style?: CSSProperties;
+  value: string;
+}) {
+  return (
+    <input
+      aria-label={ariaLabel}
+      className={`w-full rounded-[0.65rem] border px-2 py-1 outline-none ring-1 ring-transparent transition placeholder:text-current/50 focus:ring-current/20 ${className}`}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      style={{
+        ...style,
+        backgroundColor: "color-mix(in srgb, currentColor 8%, transparent)",
+        borderColor: "color-mix(in srgb, currentColor 18%, transparent)"
+      }}
+      value={value}
+    />
+  );
+}
+
+function InlineTextarea({
+  ariaLabel,
+  className = "",
+  onChange,
+  placeholder,
+  style,
+  value
+}: {
+  ariaLabel: string;
+  className?: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  style?: CSSProperties;
+  value: string;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      aria-label={ariaLabel}
+      ref={textareaRef}
+      className={`min-h-24 w-full resize-y rounded-[0.75rem] border px-2 py-1 outline-none ring-1 ring-transparent transition placeholder:text-current/50 focus:ring-current/20 ${className}`}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      style={{
+        ...style,
+        backgroundColor: "color-mix(in srgb, currentColor 8%, transparent)",
+        borderColor: "color-mix(in srgb, currentColor 18%, transparent)"
+      }}
+      value={value}
+    />
+  );
+}
+
+function ServiceGrid({
+  businessSlug,
+  editable,
+  mode = "visibility",
+  moveService,
+  services,
+  setServiceVisible,
+  theme,
+  updateService
+}: {
+  businessSlug: string;
+  editable?: boolean;
+  mode?: "featured" | "visibility";
+  moveService?: (id: string, direction: -1 | 1) => void;
+  services: EditorService[];
+  setServiceVisible?: (id: string, visible: boolean) => void;
+  theme: PreviewTheme;
+  updateService?: (id: string, patch: Partial<EditorService>) => void;
+}) {
+  if (!services.length) {
+    return (
+      <div className={`grid gap-3 rounded-[1rem] border border-dashed p-4 ${theme.mutedClass}`} style={theme.previewCardStyle}>
+        <p className="text-sm">No services selected yet.</p>
+        <Link
+          href={`/vendor/business/${businessSlug}/services/new`}
+          className="relative z-20 inline-flex w-fit items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold"
+          style={theme.heroCtaStyle}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Plus className="h-4 w-4" />
+          Add service/package
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <div className="template-service-grid grid gap-3 md:grid-cols-3">
+      {services.map((service) => (
+        <div key={service.id} className={`template-service-card overflow-hidden shadow-sm ${theme.cardClass} ${theme.imageRadius} ${service.active ? "" : "opacity-60"}`}>
+          {service.photos[0] ? <img src={service.photos[0]} alt="" className="aspect-[4/3] w-full object-cover" /> : <div className="grid aspect-[4/3] place-items-center bg-[#f8ece9]"><ImagePlus className="h-6 w-6 text-primary" /></div>}
+          <div className="p-3">
+            <div className="line-clamp-1 font-semibold" style={theme.headingStyle}>{service.title}</div>
+            <p className={`mt-1 line-clamp-2 text-sm ${theme.mutedClass}`}>{service.description}</p>
+            <div className="mt-2 flex items-center justify-between text-sm">
+              <span style={theme.accentTextStyle}>{service.messageForPricing || service.basePriceCents == null ? "Custom quote" : `From ${formatCurrency(service.basePriceCents)}`}</span>
+
+            </div>
+            {editable ? (
+              <div className="mt-3 grid gap-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {mode === "visibility" ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setServiceVisible?.(service.id, !service.active);
+                      }}
+                      className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${service.active ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-[#eadbd7] bg-white text-muted-foreground"}`}
+                    >
+                      {service.active ? "Visible" : "Hidden"}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={!service.active}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      updateService?.(service.id, { featured: !service.featured });
+                    }}
+                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45 ${
+                      service.featured ? "border-primary bg-primary/10 text-primary" : "border-[#eadbd7] bg-white text-muted-foreground"
+                    }`}
+                  >
+                    {service.featured ? "Featured" : "Not featured"}
+                  </button>
+                </div>
+                <div className="flex gap-1.5">
+                  <button type="button" className="rounded-full border bg-white px-2.5 py-1 text-xs text-[#2f2626]" onClick={(event) => { event.stopPropagation(); moveService?.(service.id, -1); }}>Up</button>
+                  <button type="button" className="rounded-full border bg-white px-2.5 py-1 text-xs text-[#2f2626]" onClick={(event) => { event.stopPropagation(); moveService?.(service.id, 1); }}>Down</button>
+                  {!service.isNew ? (
+                    <Link
+                      href={`/vendor/offering/${service.id}`}
+                      className="relative z-20 rounded-full border bg-white px-2.5 py-1 text-xs font-semibold text-[#2f2626]"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      Edit
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InstagramFeedPreview({
+  form,
+  theme,
+  update
+}: {
+  form: FormState;
+  theme: PreviewTheme;
+  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+}) {
+  return (
+    <div className={`grid gap-3 border p-3 ${theme.cardClass} ${theme.sectionRadius}`} style={theme.previewCardStyle}>
+      <label className="inline-flex cursor-pointer items-center justify-between gap-3 text-sm font-semibold">
+        <span>Instagram feed</span>
+        <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs">
+          <input
+            type="checkbox"
+            checked={form.instagramFeedEnabled}
+            onChange={(event) => update("instagramFeedEnabled", event.target.checked)}
+          />
+          Sync
+        </span>
+      </label>
+      {form.instagramFeedEnabled ? (
+        <>
+          <Input
+            type="url"
+            value={form.instagramFeedUrl}
+            placeholder="https://instagram.com/yourbusiness"
+            onChange={(event) => update("instagramFeedUrl", event.target.value)}
+            onClick={(event) => event.stopPropagation()}
+          />
+          {form.instagramFeedUrl ? <InstagramFeedCallout href={form.instagramFeedUrl} theme={theme} /> : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function InstagramFeedCallout({ href, theme }: { href: string; theme: PreviewTheme }) {
+  return (
+    <Link
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className={`relative z-20 flex items-center justify-between gap-3 rounded-[1rem] border bg-white p-3 text-sm transition hover:-translate-y-0.5 ${theme.cardClass}`}
+      style={theme.previewCardStyle}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <span className="min-w-0">
+        <span className="block font-semibold" style={theme.headingStyle}>Instagram feed</span>
+        <span className={`block truncate text-xs ${theme.mutedClass}`}>{instagramHandleFromUrl(href)}</span>
+      </span>
+      <span className="rounded-full px-3 py-1.5 text-xs font-semibold" style={theme.heroCtaStyle}>Open</span>
+    </Link>
+  );
+}
+
+function instagramHandleFromUrl(href: string) {
+  try {
+    const url = new URL(href);
+    const handle = url.pathname.split("/").filter(Boolean)[0];
+    return handle ? `@${handle}` : url.hostname;
+  } catch {
+    return href;
+  }
+}
+
+function PreviewSection({ active, children, onClick, testId, theme, title }: { active: boolean; children: ReactNode; onClick: () => void; testId?: string; theme: PreviewTheme; title: ReactNode }) {
+  const design=theme.sectionDesigns?.[testId?.replace("preview-section-", "") ?? ""];
+  return (
+    <section data-custom-background={Boolean(design)} data-testid={testId} onClick={onClick} className={previewButtonClass(active, `mb-5 block w-full cursor-text rounded-[1.5rem] p-6 text-left transition ${theme.cardClass}`)} style={{...(active ? theme.activeSectionStyle : theme.previewCardStyle),...sectionDesignStyle(design)}}>
+      {title ? <h3 className="text-2xl font-semibold tracking-tight" style={{...theme.headingStyle,...(design ? {color:design.ink} : {}),...(theme.subheadingFamily ? {fontFamily:theme.subheadingFamily,fontStyle:theme.subheadingStyle} : {})}}>{title}</h3> : null}
+      <div className={`${title ? "mt-3" : ""} text-sm leading-6 ${theme.copyClass}`}>{children}</div>
+    </section>
+  );
+}
+
+function PreviewRadiusMap({ city, coverageAreas, radiusMiles, theme }: { city: string; coverageAreas: string[]; radiusMiles: number; theme: PreviewTheme }) {
+  return (
+    <div className={`mt-3 grid gap-3 rounded-[1rem] p-3 sm:grid-cols-[104px_1fr] sm:items-center ${theme.cardClass}`} style={theme.previewCardStyle}>
+      <div className="relative mx-auto grid aspect-square w-24 place-items-center overflow-hidden rounded-[0.9rem] border border-current/15" style={theme.softSurfaceStyle}>
+        <div className="absolute inset-0 opacity-55 [background-image:linear-gradient(90deg,currentColor_1px,transparent_1px),linear-gradient(currentColor_1px,transparent_1px)] [background-size:18px_18px]" />
+        <div className="absolute inset-[12%] rounded-full border border-dashed border-current/25 bg-white/20" />
+        <div className="absolute inset-[29%] rounded-full border border-current/20 bg-white/50" />
+        <div className="relative grid h-9 w-9 place-items-center rounded-full text-[10px] font-semibold" style={theme.badgeStyle}>
+          Base
+        </div>
+      </div>
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-[0.18em]" style={theme.accentTextStyle}>Service radius</div>
+        <div className="mt-1 font-semibold" style={theme.headingStyle}>{radiusMiles} miles from {city}</div>
+        <p className={theme.mutedClass}>Customers can request travel beyond this range in their quote.</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {coverageAreas.slice(0, 5).map((area) => (
+            <span key={area} className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={theme.softSurfaceStyle}>
+              {area}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function previewButtonClass(active: boolean, base: string) {
+  return `${base} ${active ? "ring-2 ring-offset-2" : "ring-1 ring-transparent"}`;
+}
+
+type PreviewTheme = ReturnType<typeof getPreviewTheme>;
+
+function getPreviewTheme(form: FormState, template?: StorefrontTemplate | null) {
+  const normalizedPalette = normalizeStorefrontPalette(form.palette);
+  const isDark = !template && (form.textTone === "LIGHT" || (form.textTone === "AUTO" && normalizedPalette === "BLACK_AND_WHITE"));
+  const palette = getPreviewPalette(normalizedPalette);
+  const accent = template?.colors.accent ?? (normalizedPalette === "MATCHA_SOFT" ? "#526747" : normalizedPalette === "BLUSH" ? "#92505d" : normalizedPalette === "LAVENDER" ? "#725481" : palette.accent);
+  const ctaBackground = template ? template.colors.accent : "gradient" in palette ? palette.gradient : accent;
+  const ctaText = template?.colors.accentInk ?? ("ctaText" in palette ? palette.ctaText : "#ffffff");
+  const imageRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.75rem]" : "rounded-[0.9rem]";
+  const sectionRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.5rem]" : "rounded-[1rem]";
+  const logoRadius = form.imageShape === "SQUARE" ? "rounded-[0.35rem]" : form.imageShape === "SOFT" ? "rounded-[1rem]" : "rounded-full";
+  const baseFonts = getStorefrontFontFamilies(form.fontStyle);
+  const fontFamilies = template && form.fontStyle === template.fontStyle ? {heading:template.headingFamily ?? baseFonts.heading,body:template.bodyFamily ?? baseFonts.body} : baseFonts;
+
+  return {
+    sectionDesigns:template?.sectionDesigns,
+    subheadingFamily:template?.subheadingFamily || form.subheadingFamily,
+    subheadingStyle:template?.subheadingStyle,
+    accent,
+    accentBlockStyle: { background: "gradient" in palette ? palette.gradient : `linear-gradient(135deg, ${palette.swatches.join(", ")})` } as CSSProperties,
+    accentTextStyle: { color: accent } as CSSProperties,
+    activeNavItemStyle: { backgroundColor: `${accent}24`, color: template?.colors.ink ?? (isDark ? "#ffffff" : "#2f2626") } as CSSProperties,
+    activeSectionStyle: { borderColor: `${accent}88`, boxShadow: `0 0 0 2px ${accent}` } as CSSProperties,
+    badgeStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
+    bodyStyle: { fontFamily: fontFamilies.body, ...(template ? {color:template.colors.ink,backgroundColor:template.colors.background} : {}) } as CSSProperties,
+    cardClass: template ? "text-[color:var(--template-ink)]" : isDark ? "text-white" : "text-[#2f2626]",
+    copyClass: template ? "text-[color:var(--template-muted)]" : isDark ? "text-white/86" : "text-[#5f5550]",
+    headerClass: isDark ? "border-white/15 bg-[#171315] text-white/70" : "border-[#eadbd7] bg-[#fffaf8] text-[#7a625b]",
+    headingStyle: { fontFamily: fontFamilies.heading } as CSSProperties,
+    heroCtaStyle: { background: ctaBackground, color: ctaText } as CSSProperties,
+    heroRadius: imageRadius,
+    imageRadius,
+    logoRadius,
+    mutedClass: template ? "text-[color:var(--template-muted)]" : isDark ? "text-white/62" : "text-muted-foreground",
+    navClass: template ? "text-[color:var(--template-muted)]" : isDark ? "border-white/15 bg-[#201b1e] text-white/72" : "border-[#eadbd7] bg-white text-muted-foreground",
+    navStyle: { borderWidth: 0 } as CSSProperties,
+    palette,
+    platformBarStyle: { backgroundColor: "transparent", borderWidth: 0 } as CSSProperties,
+    profileClass: template ? "text-[color:var(--template-ink)]" : isDark ? "bg-[#201b1e] text-white" : "bg-white text-[#2f2626]",
+    previewCardStyle: { borderWidth: 0, boxShadow: "0 6px 24px rgba(74,45,62,0.05)", color: template?.colors.ink, backgroundColor: template?.colors.surface ?? (isDark ? "#242124" : "#ffffff") } as CSSProperties,
+    secondaryButtonStyle: { backgroundColor: `${accent}14`, borderColor: `${accent}66`, color: isDark ? "#ffffff" : "#4b403c" } as CSSProperties,
+    sectionRadius,
+    selectedControlStyle: { borderColor: accent, backgroundColor: `${accent}14` } as CSSProperties,
+    shellClass: isDark ? "bg-[#151113] text-white" : "bg-[#fbf0f3] text-[#2f2626]",
+    softSurfaceStyle: { backgroundColor: template?.colors.secondary ?? (isDark ? "#242124" : "#f6f4f1"), color: accent } as CSSProperties
+  };
+}
+
+function getPreviewPalette(value: string) {
+  return STOREFRONT_PALETTES.find((item) => item.value === normalizeStorefrontPalette(value)) ?? STOREFRONT_PALETTES[0];
+}
+
+function Field({ children, label }: { children: ReactNode; label: string }) {
+  return <label className="grid gap-2 text-sm font-semibold text-[#4b403c]">{label}{children}</label>;
+}
+
+function PanelStack({ children }: { children: ReactNode }) {
+  return <div className="grid gap-4">{children}</div>;
+}
+
+type StorefrontDraftState = Partial<FormState> & { hiddenOfferingIds?: string[] };
+
+function readDraft(value: unknown): StorefrontDraftState | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as StorefrontDraftState : null;
+}
+
+function readFaqs(value: unknown): FaqItem[] {
+  return Array.isArray(value) && value.length
+    ? value.filter(isFaqItem)
+    : [
+        { id: "quote", question: "How do I request a quote?", answer: "Share your date, location, guest count, and inspiration through ShopFia." },
+        { id: "custom", question: "Can this be customized?", answer: "Yes. The vendor will confirm options, pricing, and timing in messages." }
+      ];
+}
+
+function readPolicies(value: unknown): PolicyItem[] {
+  return Array.isArray(value) && value.length
+    ? value.filter(isPolicyItem)
+    : [{ id: "changes", title: "Changes", body: "Final scope, timing, and changes are confirmed before booking." }];
+}
+
+function readBooking(value: unknown): BookingInfo {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Partial<BookingInfo>;
+    return {
+      deposit: record.deposit ?? "Deposit details are confirmed in the quote.",
+      leadTime: record.leadTime ?? "Availability is confirmed in messages.",
+      process: record.process ?? "Request a quote, confirm details in messages, then book securely through ShopFia when supported."
+    };
+  }
+  return {
+    deposit: "Deposit details are confirmed in the quote.",
+    leadTime: "Availability is confirmed in messages.",
+    process: "Request a quote, confirm details in messages, then book securely through ShopFia when supported."
+  };
+}
+
+function isFaqItem(item: unknown): item is FaqItem {
+  return item != null && typeof item === "object" && "question" in item && "answer" in item;
+}
+
+function isPolicyItem(item: unknown): item is PolicyItem {
+  return item != null && typeof item === "object" && "title" in item && "body" in item;
+}
+
+function orderServices(services: EditorService[], order: string[]) {
+  return [...services].sort((a, b) => {
+    const aIndex = order.indexOf(a.id);
+    const bIndex = order.indexOf(b.id);
+    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+  });
+}
+
+function mergeDraftServices(draftServices: EditorService[], liveServices: EditorService[]) {
+  const liveById = new Map(liveServices.map((service) => [service.id, service]));
+  return draftServices.map((service) => {
+    const liveService = liveById.get(service.id);
+    return {
+      ...liveService,
+      ...service,
+      photos: service.photos?.length ? service.photos : liveService?.photos ?? []
+    };
+  });
+}
+
+function applyDraftServiceDisplay(services: EditorService[], hiddenOfferingIds: string[] | undefined) {
+  const hidden = new Set(hiddenOfferingIds ?? []);
+  return services.map((service) => ({
+    ...service,
+    active: !hidden.has(service.id),
+    featured: hidden.has(service.id) ? false : service.featured
+  }));
+}
+
+function dollarsToCents(value: string) {
+  const normalized = value.replace(/[$,]/g, "").trim();
+  if (!normalized) return null;
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? Math.round(amount * 100) : null;
+}
+
+const PHOTO_LAYOUTS = [
+ {id:"grid",label:"Square grid",count:4},
+ {id:"row",label:"Wide row",count:3},
+ {id:"layered",label:"Overlapping",count:3},
+ {id:"offset",label:"Off-center",count:3},
+ {id:"cascade",label:"Center stage",count:5},
+ {id:"six",label:"Six squares",count:6},
+ {id:"banner",label:"Trio + banner",count:4},
+ {id:"scallop",label:"Scalloped",count:3},
+] as const;
+
+function photoTileStyle(layout:FormState["aboutPhotoLayout"],index:number):CSSProperties {
+ if(layout==="offset") return index===0?{gridRow:"span 2",aspectRatio:"3 / 4"}:{aspectRatio:"16 / 9"};
+ if(layout==="banner") return index===3?{gridColumn:"1 / -1",aspectRatio:"3 / 1"}:{aspectRatio:"1"};
+ if(layout==="cascade") return {aspectRatio:"3 / 4",transform:`scale(${index===2?1.3:index===1||index===3?1.05:.8})`,zIndex:index===2?3:index===1||index===3?2:1};
+ if(layout==="layered") return {aspectRatio:"1",transform:`translateY(${index===1?14:0}px) rotate(${index===0?-6:index===2?6:0}deg)`,marginLeft:index?-20:0,zIndex:index===1?2:1};
+ return {aspectRatio:layout==="row"?"4 / 3":layout==="scallop"?"4 / 5":"1"};
+}
+function photoGridStyle(layout:FormState["aboutPhotoLayout"]):CSSProperties {
+ return {display:"grid",gridTemplateColumns:`repeat(${layout==="grid"||layout==="offset"?2:layout==="cascade"?5:3},minmax(0,1fr))`,gap:layout==="cascade"?0:12,alignItems:layout==="cascade"?"center":"stretch",padding:layout==="cascade"?"36px 12px":layout==="layered"?"20px 12px":"0"};
+}
+function AboutPhotoGrid({compact=false,images,layout,onLayout,onImage}:{compact?:boolean;images:string[];layout:FormState["aboutPhotoLayout"];onLayout:(value:FormState["aboutPhotoLayout"])=>void;onImage:(index:number,value:string)=>void}) {
+ const [error,setError]=useState("");
+ const [dragging,setDragging]=useState<number|null>(null);
+ const requests=useRef<Record<number,number>>({});
+ function loadImage(file:File|undefined,index:number){
+  if(!file)return;
+  if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>8*1024*1024){setError("Choose a PNG, JPG, or WebP under 8 MB.");return;}
+  const request=(requests.current[index]??0)+1;requests.current[index]=request;
+  const reader=new FileReader();reader.onload=()=>{if(requests.current[index]!==request)return;onImage(index,String(reader.result));setError("");};reader.onerror=()=>setError("Could not read this image. Please try again.");reader.readAsDataURL(file);
+ }
+ const selected=PHOTO_LAYOUTS.find(item=>item.id===layout)??PHOTO_LAYOUTS[0];
+ return <div onClick={event=>event.stopPropagation()}>
+  <div style={photoGridStyle(compact ? "grid" : layout)}>
+   {Array.from({length:selected.count},(_,index)=><div key={index} className="relative min-w-0" style={{...photoTileStyle(compact ? "grid" : layout,index),width:"100%",alignSelf:"start"}}>
+    <label onDragOver={event=>{event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect="copy";setDragging(index);}} onDragLeave={()=>setDragging(null)} onDrop={event=>{event.preventDefault();event.stopPropagation();setDragging(null);loadImage(event.dataTransfer.files[0],index);}} className={`relative block h-full w-full cursor-pointer overflow-hidden border border-current/15 bg-stone-100 focus-within:ring-2 focus-within:ring-current ${dragging===index?"ring-2 ring-current":""}`} style={{backgroundColor:"color-mix(in srgb, currentColor 5%, transparent)",borderRadius:layout==="scallop"?"0 0 22px 22px":0}}>
+    {images[index] ? <img src={images[index]} alt={`About photo ${index+1}`} className="h-full w-full object-cover"/> : <span className="grid h-full place-content-center justify-items-center gap-2 text-center opacity-65"><Upload className="h-5 w-5"/><span className="text-[10px] sm:text-xs">Upload image</span><span className="hidden text-[10px] sm:block">or drag & drop</span></span>}
+    <input type="file" aria-label={`Upload About photo ${index+1}`} accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={event=>{loadImage(event.target.files?.[0],index);event.target.value="";}}/>
+    </label>
+    {layout==="scallop" && <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-4" style={{background:"radial-gradient(circle at 50% 0,currentColor 68%,transparent 71%) 0 0 / 20% 100% repeat-x"}}/>}
+    {images[index] && <button type="button" className="absolute bottom-2 right-2 rounded-full bg-white px-2 py-1 text-[10px] text-stone-800 shadow" aria-label={`Remove photo ${index+1}`} onClick={()=>{requests.current[index]=(requests.current[index]??0)+1;onImage(index,"");}}>Remove</button>}
+   </div>)}
+  </div>
+  {compact && <p className="mt-4 text-xs opacity-60">PNG, JPG or WebP · up to 8 MB. Switching layouts keeps your images.</p>}
+  {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+ </div>;
+}
+
+function PhotoLayoutPicker({layout,onLayout}:{layout:FormState["aboutPhotoLayout"];onLayout:(value:FormState["aboutPhotoLayout"])=>void}) {
+const selected=PHOTO_LAYOUTS.find(item=>item.id===layout)??PHOTO_LAYOUTS[0];
+return (  <details className="mb-5 rounded-xl border border-current/15 p-3">
+   <summary className="cursor-pointer text-sm font-medium">Photo layout · {selected.label}</summary>
+   <div className="mt-4 grid gap-2" style={{gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))"}} role="group" aria-label="About photo layout">
+    {PHOTO_LAYOUTS.map(option=><button type="button" key={option.id} aria-pressed={layout===option.id} onClick={()=>onLayout(option.id)} className="rounded-lg border border-current/15 p-3 text-left aria-pressed:ring-2 aria-pressed:ring-current">
+     <span aria-hidden="true" style={{...photoGridStyle(option.id),height:52,padding:6,gap:3}}>{Array.from({length:option.count},(_,index)=><span key={index} style={{...photoTileStyle(option.id,index),width:"100%",minWidth:0,background:"currentColor",opacity:.25,minHeight:8,maxHeight:36,borderRadius:option.id==="scallop"?"0 0 8px 8px":0}}/>)}</span>
+     <span className="mt-2 block text-xs">{option.label}</span>
+    </button>)}
+   </div>
+  </details>
+);
+}
