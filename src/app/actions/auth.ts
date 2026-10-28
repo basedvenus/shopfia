@@ -1,4 +1,5 @@
 "use server";
+import { getVendorSocialProfile } from "@/lib/vendor-social";
 import { getPartifulInvite } from "@/lib/partiful";
 import { collectPartyVendorRatings, persistPartyVendorRatings } from "@/lib/party-vendor-ratings";
 
@@ -254,9 +255,8 @@ const profileSchema = z.object({
         .regex(/^[a-z0-9._-]+$/, "Use letters, numbers, dots, dashes, or underscores.")
     ),
   bio: z.string().trim().max(280, "Bio is a little too long. Keep it under 280 characters.").optional(),
-  instagramUrl: z.string().trim().url("Enter a valid Instagram link.").optional().or(z.literal("")),
-  tiktokUrl: z.string().trim().url("Enter a valid TikTok link.").optional().or(z.literal("")),
-  partyfulUrl: z.string().trim().url("Enter a valid Partiful link.").optional().or(z.literal(""))
+  instagramUrl: z.string().trim().max(255).optional().refine((value) => !value || Boolean(getVendorSocialProfile(value, "instagram")), "Enter an Instagram username or profile link."),
+  tiktokUrl: z.string().trim().max(255).optional().refine((value) => !value || Boolean(getVendorSocialProfile(value, "tiktok")), "Enter a TikTok username or profile link.")
 });
 
 export async function updateAccountProfileAction(formData: FormData) {
@@ -278,8 +278,7 @@ export async function updateAccountProfileAction(formData: FormData) {
     username: formData.get("username"),
     bio: formData.get("bio") || undefined,
     instagramUrl: formData.get("instagramUrl") || undefined,
-    tiktokUrl: formData.get("tiktokUrl") || undefined,
-    partyfulUrl: formData.get("partyfulUrl") || undefined
+    tiktokUrl: formData.get("tiktokUrl") || undefined
   });
 
   if (!parsed.success) {
@@ -289,7 +288,6 @@ export async function updateAccountProfileAction(formData: FormData) {
         bio: "Bio",
         instagramUrl: "Instagram link",
         name: "Name",
-        partyfulUrl: "Partiful link",
         tiktokUrl: "TikTok link",
         username: "Username"
       }, "Check your profile details.")
@@ -303,9 +301,8 @@ export async function updateAccountProfileAction(formData: FormData) {
         name: parsed.data.name || null,
         username: parsed.data.username,
         bio: parsed.data.bio || null,
-        instagramUrl: parsed.data.instagramUrl || null,
-        tiktokUrl: parsed.data.tiktokUrl || null,
-        partyfulUrl: parsed.data.partyfulUrl || null,
+        instagramUrl: getVendorSocialProfile(parsed.data.instagramUrl, "instagram")?.url ?? null,
+        tiktokUrl: getVendorSocialProfile(parsed.data.tiktokUrl, "tiktok")?.url ?? null,
         imageCrop: parseImageCrop(formData.get("imageCrop")) ?? undefined
       },
       select: userProfileSelect

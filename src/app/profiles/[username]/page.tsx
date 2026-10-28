@@ -1,7 +1,8 @@
+import { VendorSocialFeeds } from "@/components/vendor/vendor-social-feeds";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { CalendarHeart, ExternalLink, Heart, Instagram, Music2, Sparkles, Star, UserPlus } from "lucide-react";
+import { CalendarHeart, ExternalLink, Heart, Instagram, Music2, Star, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
 import { ProfileBadges } from "@/components/badges/profile-badge";
@@ -35,7 +36,6 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         image: true,
         imageCrop: true,
         instagramUrl: true,
-        partyfulUrl: true,
         tiktokUrl: true,
         partyEvents: {
           include: {
@@ -258,7 +258,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                     ))}
                   </div>
                 ) : null}
-                {profile.instagramUrl || profile.tiktokUrl || profile.partyfulUrl ? (
+                {profile.instagramUrl || profile.tiktokUrl ? (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {profile.instagramUrl ? (
                       <SocialProfileLink href={profile.instagramUrl} label="Instagram" icon={<Instagram className="h-4 w-4" />} />
@@ -266,9 +266,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                     {profile.tiktokUrl ? (
                       <SocialProfileLink href={profile.tiktokUrl} label="TikTok" icon={<Music2 className="h-4 w-4" />} />
                     ) : null}
-                    {profile.partyfulUrl ? (
-                      <SocialProfileLink href={profile.partyfulUrl} label="Partiful" icon={<Sparkles className="h-4 w-4" />} />
-                    ) : null}
+
                   </div>
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted-foreground">
@@ -291,6 +289,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           </div>
         </div>
       </section>
+
+      <VendorSocialFeeds instagramUrl={profile.instagramUrl} tiktokUrl={profile.tiktokUrl} />
 
       {profileStorefronts.length ? <section className="space-y-4">
         <div>
