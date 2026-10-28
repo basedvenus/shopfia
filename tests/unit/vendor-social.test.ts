@@ -18,6 +18,7 @@ describe("vendor public social feeds", () => {
     const html = renderToStaticMarkup(createElement(VendorSocialFeeds, { instagramUrl: "https://instagram.com/sample", tiktokUrl: "https://tiktok.com/@sample" }));
     expect(html).toContain('src="https://www.instagram.com/sample/embed/"');
     expect(html).toContain('aria-label="TikTok feed"');
+    expect(html).toContain('src="https://www.tiktok.com/embed/@sample"');
     expect(html).toContain("Open Instagram profile");
     expect(html).toContain("Open TikTok profile");
   });

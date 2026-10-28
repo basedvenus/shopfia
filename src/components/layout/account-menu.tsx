@@ -52,7 +52,7 @@ export function AccountMenu({ initials, signOutAction }: AccountMenuProps) {
       : null);
 
   const links = [
-    { href: "/account", label: "My Profile", icon: User },
+    { href: profile?.username ? `/profiles/${profile.username}` : "/account/setup", label: "My Profile", icon: User },
     { href: "/my-parties", label: "My Parties", icon: CalendarHeart },
     { href: "/favorites", label: "Favorites", icon: Heart },
     { href: "/messages", label: "Messages", icon: MessagesSquare },

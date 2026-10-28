@@ -154,7 +154,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   const sectionOrder = sanitizeStorefrontSections(vendor.storefrontSectionOrder).filter((section) => {
     if (hiddenSections.includes(section)) return false;
     if (!isUnclaimed) return true;
-    if (section === "portfolio") return portfolioPhotos.length > 0 || Boolean(instagramFeedUrl || vendor.tiktokUrl);
+    if (section === "portfolio") return false;
     if (section === "all-services" || section === "featured-services") return vendor.offerings.length > 0;
     if (["how-it-works", "faq", "final-quote", "reviews"].includes(section)) return false;
     return true;
@@ -234,6 +234,46 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
     await toggleFollowAction(formData);
   }
+
+  const partyCredits = taggedEvents.length > 0 ? (
+        <section id="party-credits" className="scroll-mt-28 space-y-4" style={{ order: isUnclaimed ? 0 : 998 }}>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>Seen In Real Parties</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Party credits are connected from ShopFia host galleries and vendor tags.
+              </p>
+            </div>
+            <Badge variant="outline" style={theme.outlineBadgeStyle}>{taggedEvents.length} party credit{taggedEvents.length === 1 ? "" : "s"}</Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+            {taggedEvents.filter((event) => event.coverImageUrl).map((event) => (
+              <Link key={event.slug} href={`/events/${event.slug}`}>
+                <article className="group relative overflow-hidden rounded-lg">
+                  <div className="relative aspect-square bg-muted">
+                    <Image src={event.coverImageUrl} alt={event.title} unoptimized fill sizes="(min-width: 1280px) 31vw, (min-width: 768px) 48vw, 100vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+                  </div>
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 text-white">
+                    <h3 className="font-semibold" style={theme.headingStyle}>{event.title}</h3>
+                    {event.theme ? (
+                      <span className="mt-2 inline-flex h-7 max-w-full items-center rounded-full px-2.5 text-[13px]" style={theme.softChipStyle}>
+                        <span className="truncate">{event.theme}</span>
+                      </span>
+                    ) : null}
+                    {event.contributionNotes[0] ? (
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{event.contributionNotes[0]}</p>
+                    ) : null}
+                    <p className="mt-2 text-xs text-white/80">
+                      Credited by {event.credit}
+                      {event.photoCount ? ` in ${event.photoCount} tagged photo${event.photoCount === 1 ? "" : "s"}` : ""}
+                    </p>
+                  </div>
+                </article>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null;
 
   return (
     <PublishedStorefrontSurface template={template} className={`flex flex-col gap-8 rounded-[1.25rem] ${template ? "" : `bg-gradient-to-br ${palette.className}`} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
@@ -361,7 +401,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <p className="mt-2 text-sm">Share this profile with the owner so they can learn about ShopFia and request an ownership review.</p>
         <ShareUnclaimedVendor name={vendor.name} url={publicStorefrontUrl} />
       </section> : null}
-      {!isUnclaimed && hasStorefrontDesign(vendor.storefrontBookingJson) ? <PublishedStorefrontHero design={design} name={vendor.name} headline={vendor.storefrontAboutHeading || vendor.name} description={vendor.storefrontTagline || vendor.bio || ""} location={[vendor.city,vendor.state].filter(Boolean).join(", ")} image={hero || ""} logo={vendor.logoUrl || ""} crop={coverCrop} headingStyle={theme.headingStyle}/> : <StorefrontTemplateIntro
+      {isUnclaimed ? partyCredits : null}
+      {!isUnclaimed ? (hasStorefrontDesign(vendor.storefrontBookingJson) ? <PublishedStorefrontHero design={design} name={vendor.name} headline={vendor.storefrontAboutHeading || vendor.name} description={vendor.storefrontTagline || vendor.bio || ""} location={[vendor.city,vendor.state].filter(Boolean).join(", ")} image={hero || ""} logo={vendor.logoUrl || ""} crop={coverCrop} headingStyle={theme.headingStyle}/> : <StorefrontTemplateIntro
         completedOrderCount={completedOrderCount}
         coverCrop={coverCrop}
         displayedFeaturedOfferings={displayedFeaturedOfferings}
@@ -379,7 +420,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         verifiedAverageRating={verifiedAverageRating}
         verifiedCredentials={verifiedCredentials}
         verifiedReviewCount={verifiedReviewCount}
-      />}
+      />) : null}
 
       {showSection("about") ? (
         <section id="about" data-testid="preview-section-about" data-custom-background={Boolean(template?.sectionDesigns?.["about"]) } className={`grid scroll-mt-28 gap-5 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-8 ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, ...sectionStyle("about"), order: sectionPriority("about") }}>
@@ -464,7 +505,6 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             </CardContent>
           </Card>
         )}
-        <VendorSocialFeeds instagramUrl={instagramFeedUrl} tiktokUrl={vendor.tiktokUrl} />
 
       </section>
       ) : null}
@@ -628,45 +668,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       </section>
       ) : null}
 
-      {taggedEvents.length > 0 ? (
-        <section id="party-credits" className="scroll-mt-28 space-y-4" style={{ order: 998 }}>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>Seen In Real Parties</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Party credits are connected from ShopFia host galleries and vendor tags.
-              </p>
-            </div>
-            <Badge variant="outline" style={theme.outlineBadgeStyle}>{taggedEvents.length} party credit{taggedEvents.length === 1 ? "" : "s"}</Badge>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {taggedEvents.filter((event) => event.coverImageUrl).map((event) => (
-              <Link key={event.slug} href={`/events/${event.slug}`}>
-                <article className={`group overflow-hidden shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
-                  <div className="relative aspect-[4/3] bg-muted">
-                    <Image src={event.coverImageUrl} alt={event.title} unoptimized fill sizes="(min-width: 1280px) 31vw, (min-width: 768px) 48vw, 100vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold" style={theme.headingStyle}>{event.title}</h3>
-                    {event.theme ? (
-                      <span className="mt-2 inline-flex h-7 max-w-full items-center rounded-full px-2.5 text-[13px]" style={theme.softChipStyle}>
-                        <span className="truncate">{event.theme}</span>
-                      </span>
-                    ) : null}
-                    {event.contributionNotes[0] ? (
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{event.contributionNotes[0]}</p>
-                    ) : null}
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Credited by {event.credit}
-                      {event.photoCount ? ` in ${event.photoCount} tagged photo${event.photoCount === 1 ? "" : "s"}` : ""}
-                    </p>
-                  </div>
-                </article>
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {!isUnclaimed ? partyCredits : null}
+      <section style={{ order: 998.5 }}><VendorSocialFeeds instagramUrl={instagramFeedUrl} tiktokUrl={vendor.tiktokUrl} /></section>
 
       <footer className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm ${theme.mutedClass} ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: 999 }}>
         <span>{vendor.name} storefront, powered by ShopFia.</span>

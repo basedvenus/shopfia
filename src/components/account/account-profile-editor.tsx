@@ -136,8 +136,8 @@ export function AccountProfileEditor({
             uploadEndpoint="/api/uploads/avatar"
           />
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input name="instagramUrl" defaultValue={profile?.instagramUrl ?? ""} aria-label="Instagram username or profile link" placeholder="Instagram username or profile link" />
-            <Input name="tiktokUrl" defaultValue={profile?.tiktokUrl ?? ""} aria-label="TikTok username or profile link" placeholder="TikTok username or profile link" />
+            <label className="grid gap-1 text-sm">Instagram (optional)<Input name="instagramUrl" defaultValue={profile?.instagramUrl ?? ""} aria-label="Instagram username or profile link (optional)" placeholder="@username or profile link" /></label>
+            <label className="grid gap-1 text-sm">TikTok (optional)<Input name="tiktokUrl" defaultValue={profile?.tiktokUrl ?? ""} aria-label="TikTok username or profile link (optional)" placeholder="@username or profile link" /></label>
           </div>
           <Button type="submit" className="w-full sm:w-fit" disabled={isPending}>
             {isPending ? "Saving..." : "Save profile"}

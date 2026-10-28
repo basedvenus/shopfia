@@ -2,7 +2,7 @@ import { VendorSocialFeeds } from "@/components/vendor/vendor-social-feeds";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { CalendarHeart, ExternalLink, Heart, Instagram, Music2, Star, UserPlus } from "lucide-react";
+import { CalendarHeart, ExternalLink, Heart, Instagram, Music2, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
 import { toggleFollowAction } from "@/app/actions/auth";
 import { ProfileBadges } from "@/components/badges/profile-badge";
@@ -133,38 +133,6 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     profile.vendorProfile,
     ...profile.managedBusinesses.map((manager) => manager.vendorProfile)
   ]).filter((storefront) => !isQuarantinedVendorId(storefront.id));
-  const businessIds = profileStorefronts.map((storefront) => storefront.id);
-  const profileReviews = businessIds.length
-    ? await db.review.findMany({
-        where: {
-          flaggedForModeration: false,
-          vendorId: { in: businessIds }
-        },
-        select: {
-          body: true,
-          createdAt: true,
-          id: true,
-          rating: true,
-          reviewerDisplayLabel: true,
-          buyer: {
-            select: {
-              image: true,
-              name: true,
-              username: true
-            }
-          },
-          vendor: {
-            select: {
-              name: true,
-              slug: true
-            }
-          }
-        },
-        orderBy: { createdAt: "desc" },
-        take: 6
-      })
-    : [];
-
   async function toggleFollow(formData: FormData) {
     "use server";
 
@@ -273,10 +241,10 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                   <span>{profile._count.followers} followers</span>
                   <span>{profile._count.following} following</span>
                   <span>{profilePartyEvents.length} parties</span>
-                  {profileStorefronts.length ? <span>{profileReviews.length} reviews</span> : null}
                 </div>
               </div>
             </div>
+            {currentUserId === profile.id ? <Button asChild variant="secondary"><Link href="/account#settings">Edit profile</Link></Button> : null}
             {currentUserId && currentUserId !== profile.id ? (
               <form action={toggleFollow}>
                 <input type="hidden" name="followingId" value={profile.id} />
@@ -289,54 +257,6 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           </div>
         </div>
       </section>
-
-      <VendorSocialFeeds instagramUrl={profile.instagramUrl} tiktokUrl={profile.tiktokUrl} />
-
-      {profileStorefronts.length ? <section className="space-y-4">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Reviews</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Verified ShopFia reviews connected to this member&apos;s storefronts.
-          </p>
-        </div>
-        {profileReviews.length > 0 ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {profileReviews.map((review) => (
-              <article key={review.id} className="rounded-[1.5rem] border border-white/70 bg-white/90 p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-accent text-xs font-semibold text-primary">
-                      {getSafeProfileImage(review.buyer.image) ? (
-                        <img src={getSafeProfileImage(review.buyer.image) ?? ""} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        getInitials(review.buyer.name ?? review.buyer.username)
-                      )}
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold">{review.buyer.name ?? "ShopFia customer"}</p>
-                      <p className="text-xs text-muted-foreground">{review.reviewerDisplayLabel}</p>
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                    <Star className="h-3.5 w-3.5 fill-current" />
-                    {review.rating}
-                  </span>
-                </div>
-                {review.body ? <p className="mt-3 text-sm leading-6 text-muted-foreground">{review.body}</p> : null}
-                <Link href={storefrontPath(review.vendor.slug)} className="mt-3 inline-flex text-xs font-semibold text-primary underline-offset-4 hover:underline">
-                  {review.vendor.name}
-                </Link>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <Card className="border-white/70 bg-white/90">
-            <CardContent className="p-4 text-sm text-muted-foreground">
-              Reviews will appear here when this member&apos;s storefronts receive verified ShopFia reviews.
-            </CardContent>
-          </Card>
-        )}
-      </section> : null}
 
       {profileStorefronts.length ? <>
         <ProfilePartySection emptyText="Upcoming parties will appear here when this host adds a future date." events={upcomingPartyEvents} title="Upcoming Parties" />
@@ -358,6 +278,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           />
         </section>
       )}
+      <VendorSocialFeeds instagramUrl={profile.instagramUrl} tiktokUrl={profile.tiktokUrl} />
+
     </div>
   );
 }
@@ -415,13 +337,13 @@ function ProfilePartySection({
       </div>
 
       {events.length > 0 ? (
-        <div className="grid auto-rows-[230px] gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {events.map((event, index) => {
+        <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+          {events.map((event) => {
             const { crop, image } = getPartyCardImage(event);
             return (
               <article
                 key={event.id}
-                className={`group relative h-full overflow-hidden rounded-[1.75rem] border border-white/80 bg-muted shadow-sm ${index === 0 ? "md:row-span-2" : ""}`}
+                className="group relative aspect-square overflow-hidden rounded-lg bg-muted"
               >
                 <Link href={`/events/${event.slug}`} className="absolute inset-0 z-10" aria-label={`Open ${event.title}`} />
                 <CroppedImage src={image} alt={event.title} crop={crop} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
