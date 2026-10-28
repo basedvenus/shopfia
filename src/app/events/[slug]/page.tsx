@@ -1,3 +1,4 @@
+import { ProfileImage } from "@/components/account/profile-image";
 import { DeletePartyButton } from "@/components/parties/delete-party-button";
 import { PartyPhotoGallery } from "@/components/parties/party-photo-gallery";
 import { PartyContributions } from "@/components/parties/party-contributions";
@@ -288,7 +289,7 @@ export default async function EventPage({
               </p>
             ) : null}
             {visibleCollaborators.length > 0 ? (
-              <div className="flex min-w-0 items-center gap-3 border-t border-border/60 pt-4 md:border-white/20">
+              <div className="flex min-w-0 items-center gap-3">
                 <div className="flex shrink-0 -space-x-2">
                   {visibleCollaborators.slice(0, 5).map((collaborator) => (
                     <Link key={collaborator.id} href={collaborator.user.username ? `/profiles/${collaborator.user.username}` : "#"} className="grid h-9 w-9 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/20 text-xs font-semibold shadow-sm" title={collaborator.user.name ?? collaborator.user.username ?? "ShopFia host"}>
@@ -308,7 +309,7 @@ export default async function EventPage({
                 <ProfileBadge badge={hostBadge} />
               </div>
             ) : null}
-            {guests.length > 0 ? <div className="space-y-2"><p className="text-sm font-semibold">Guests</p><div className="flex flex-wrap gap-2">{guests.map((guest) => <Link key={guest.id} href={guest.user.username ? `/profiles/${guest.user.username}` : "#"} className="rounded-full bg-muted px-3 py-1 text-sm md:bg-white/20">{guest.user.name ?? guest.user.username ?? "Guest"}</Link>)}</div></div> : null}
+
             {pendingCoHosts.length ? (
               <details className="rounded-2xl border border-border/60 p-3 text-sm md:border-white/20" aria-label="Pending co-host invitations">
                 <summary className="cursor-pointer font-medium">Pending co-host invitations ({pendingCoHosts.length})</summary>
@@ -387,6 +388,17 @@ export default async function EventPage({
           </div>
         </div>
       </section>
+
+      {guests.length > 0 ? <section aria-label="Party guests" className="space-y-4 rounded-3xl border bg-white p-5">
+        <h2 className="text-2xl font-semibold">Guests</h2>
+        <ul className="flex flex-wrap gap-3">
+          {guests.map((guest) => {
+            const name = guest.user.name ?? guest.user.username ?? "Guest";
+            const identity = <><span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-muted text-xs font-semibold"><ProfileImage image={guest.user.image} initials={name.slice(0, 2).toUpperCase()} alt={`${name}'s profile photo`} /></span><span className="min-w-0 break-words text-sm font-medium">{name}</span></>;
+            return <li key={guest.id}>{guest.user.username ? <Link href={`/profiles/${guest.user.username}`} className="inline-flex items-center gap-2 rounded-full border px-3 py-2">{identity}</Link> : <span className="inline-flex items-center gap-2 rounded-full border px-3 py-2">{identity}</span>}</li>;
+          })}
+        </ul>
+      </section> : null}
 
       {event && currentUserId ? <PartyContributions eventId={event.id} userId={currentUserId} isOwner={isOwner} canContribute={event.collaborators.some((person) => person.userId === currentUserId && person.status === "ACCEPTED")} /> : null}
 
