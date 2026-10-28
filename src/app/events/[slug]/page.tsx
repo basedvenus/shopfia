@@ -278,9 +278,10 @@ export default async function EventPage({
               {theme ? <Badge variant="default">{theme}</Badge> : null}
             </div> : null}
             <h1 className="max-w-3xl break-words text-3xl font-semibold leading-tight tracking-tight md:text-5xl">{title}</h1>
+            {event && theme && theme !== title ? <p className="text-base font-medium md:text-white/90">Theme: {theme}</p> : null}
             <div className="flex flex-wrap items-center gap-2 text-xs">
               {event?.eventDate ? <span className="rounded-full bg-muted px-3 py-1.5 md:bg-white/15">{formatPartyDate(event.eventDate)}</span> : null}
-              {tags.map((tag) => <span key={tag} className="rounded-full bg-primary/10 px-3 py-1.5 md:bg-white/15">{partyCategoryLabel(tag)}</span>)}
+              {tags.filter((tag) => partyCategoryLabel(tag)).map((tag) => <span key={tag} className="rounded-full bg-primary/10 px-3 py-1.5 md:bg-white/15">{partyCategoryLabel(tag)}</span>)}
             </div>
             {event?.location && event.location !== "Private residence" ? (
               <p className="flex min-w-0 items-start gap-2 text-sm leading-6 text-muted-foreground md:text-white/85">

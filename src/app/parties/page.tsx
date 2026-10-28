@@ -1,4 +1,4 @@
-import { inferPartyOccasion } from "@/lib/party-occasions";
+import { inferPartyOccasion, partyDiscoveryLabels, partySearchTags } from "@/lib/party-occasions";
 import { CountySelector } from "@/components/parties/county-selector";
 import { getCounty, countyDistance } from "@/lib/party-location";
 import { FriendSearchForm } from "@/components/parties/friend-search-form";
@@ -70,6 +70,7 @@ export default async function PartiesPage({
             { county: { contains: partyQuery, mode: "insensitive" as const } },
             { state: { contains: partyQuery, mode: "insensitive" as const } },
             { tags: { has: partyQuery.toLowerCase() } },
+            ...(partySearchTags(partyQuery).length ? [{ tags: { hasEvery: partySearchTags(partyQuery) } }] : []),
             {
               taggedVendors: {
                 some: publicVendorWhere({ name: { contains: partyQuery, mode: "insensitive" as const } })
@@ -358,14 +359,15 @@ export default async function PartiesPage({
                       <FavoriteToggle targetType="party" targetId={party.id} isSaved={savedPartyIds.has(party.id)} variant="floating" />
                     </div>
                     <div className="absolute inset-x-0 bottom-0 p-2.5 text-white sm:p-5">
-                      <h2 className="line-clamp-2 text-sm font-semibold tracking-tight sm:text-2xl">{party.title}</h2>
+                      <div className="mb-2 flex flex-wrap gap-1.5">{partyDiscoveryLabels(party.tags, party.title, party.eventDate).slice(0, 4).map((label) => <span key={label} className="rounded-full bg-black/45 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm sm:text-base">{label}</span>)}</div>
+                      <h2 className="line-clamp-1 text-xs font-medium text-white/85 sm:text-sm">{party.title}</h2>
                       {location || category ? (
                         <div className="mt-1 flex flex-wrap items-start justify-between gap-x-2 gap-y-1 text-[11px] text-white/90 sm:mt-2 sm:text-sm">
                           {location ? <p className="flex min-w-0 flex-1 items-start gap-1 sm:gap-1.5">
                             <MapPin className="mt-0.5 h-3 w-3 shrink-0 sm:h-4 sm:w-4" />
                             <span className="break-words">{location}</span>
                           </p> : null}
-                          {category ? <span className="ml-auto max-w-full rounded-full bg-black/25 px-2 py-0.5 text-right">{category}</span> : null}
+
                         </div>
                       ) : null}
                     </div>

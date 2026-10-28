@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { SlidersHorizontal, Trash2, Loader2, Plus, Search, Star, Upload, X, Tag } from "lucide-react";
 import { createPartyEventAction, updatePartyEventAction, followPartyVendorAction } from "@/app/actions/auth";
 import { UnclaimedVendorSocialEditor } from "@/components/parties/unclaimed-vendor-social-editor";
+import { PartyClassificationFields } from "@/components/parties/party-classification-fields";
 import { UnclaimedVendorModal } from "@/components/parties/unclaimed-vendor-modal";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DEFAULT_IMAGE_CROP, normalizePartyPhotoCrop, type ImageCrop } from "@/lib/image-crop";
 import { getSafeProfileImage } from "@/lib/profile-image";
 
-import { PARTY_OCCASIONS, occasionTag, inferPartyOccasion } from "@/lib/party-occasions";
+import { inferPartyOccasion } from "@/lib/party-occasions";
 
 const MAX_PARTY_UPLOAD_BYTES = 3.5 * 1024 * 1024;
 const MAX_PARTY_UPLOAD_DIMENSION = 2400;
@@ -269,7 +270,6 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
         if (initialParty) {
           formData.set("eventId", initialParty.id);
         }
-        if (occasion) formData.append("tags", occasionTag(occasion));
         formData.set("mainHostId", mainHostId);
         guestIds.forEach((id) => formData.append("guestIds", id));
         coHostIds.forEach((id) => formData.append("coHostIds", id));
@@ -392,20 +392,8 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
           className="min-w-0"
         />
         </label>
-        <input type="hidden" name="theme" value={initialParty?.theme ?? ""} />
       </div>
-      <label className="grid gap-2 text-sm font-medium">
-        Event date <span className="text-xs font-normal text-muted-foreground">Optional</span>
-        <Input name="eventDate" type="date" defaultValue={formatDateInputValue(initialParty?.eventDate)} className="min-w-0" />
-        <span className="text-xs font-normal text-muted-foreground">Only the month and year appear on your party.</span>
-      </label>
-      <label className="grid gap-2 text-sm font-medium">
-        Party category
-        <select name="occasion" value={occasion} onChange={(event) => setOccasion(event.target.value)} className="h-12 w-full rounded-2xl border bg-white px-4 text-sm">
-          <option value="">Choose a category</option>
-          {PARTY_OCCASIONS.map((name) => <option key={name} value={name}>{name}</option>)}
-        </select>
-      </label>
+      <PartyClassificationFields category={occasion} onCategoryChange={setOccasion} tags={initialParty?.tags ?? []} eventDate={initialParty?.eventDate} theme={initialParty?.theme} />
       <div className="grid gap-3">
         {privateResidence ? (
           <div className="grid gap-3 rounded-2xl bg-primary/5 p-4 text-sm text-muted-foreground">
@@ -745,13 +733,6 @@ function getUserDisplayName(user?: UserOption) {
 
 function getUserHandle(user?: UserOption) {
   return user?.username ? `@${user.username}` : "Creator profile";
-}
-
-function formatDateInputValue(value?: Date | string | null) {
-  if (!value) return "";
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 10);
 }
 
 function PhotoVendorTagger({

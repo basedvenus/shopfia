@@ -172,6 +172,15 @@ describe("party owner rights and persistence wiring", () => {
     expect(mocks.tx.partyVendorRating.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { eventId_userId_vendorId: { eventId, userId: ownerId, vendorId } }, create: { eventId, userId: ownerId, vendorId, rating: 5 } }));
     for (const [write] of mocks.tx.partyPhotoVendorRating.upsert.mock.calls) expect(write.create.rating).toBeNull();
   });
+  it("persists controlled category labels, exact birthday age, theme, and month/year", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: ownerId } });
+    const form = editForm();
+    for (const [key, value] of Object.entries({ classificationVersion: "1", occasion: "Birthday Celebration", eventMonth: "10", eventYear: "2026", birthdayAge: "27", partyAudience: "Girl", partyHoliday: "Halloween", theme: "Monsters and Martinis" })) form.set(key, value);
+    form.append("tags", "randomhashtag");
+    expect(await updatePartyEventAction(form)).toMatchObject({ ok: true });
+    expect(mocks.tx.partyEvent.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ theme: "Monsters and Martinis", eventDate: new Date("2026-10-01T00:00:00.000Z"), tags: ["birthdaycelebration", "fall", "age27", "adult", "audiencegirl", "holidayhalloween"] }) }));
+  });
+
   it("renames a legacy party without requiring ratings for its existing vendor tags", async () => {
     mocks.auth.mockResolvedValue({ user: { id: ownerId } });
     const vendorId = "c0000000000000000000000005";

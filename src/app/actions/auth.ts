@@ -1,4 +1,5 @@
 "use server";
+import { classificationTags, validatePartyClassificationForm } from "@/lib/party-occasions";
 import { getVendorSocialProfile } from "@/lib/vendor-social";
 import { getPartifulInvite } from "@/lib/partiful";
 import { collectPartyVendorRatings, persistPartyVendorRatings } from "@/lib/party-vendor-ratings";
@@ -425,6 +426,8 @@ export async function createPartyEventAction(formData: FormData) {
     return { ok: false, error: "Please wait a minute before creating another party." };
   }
 
+  const classificationError = validatePartyClassificationForm(formData);
+  if (classificationError) return { ok: false, error: classificationError };
   const parsed = createPartyEventSchema.safeParse(parsePartyEventFormData(formData));
 
   if (!parsed.success) {
@@ -557,6 +560,8 @@ export async function updatePartyEventAction(formData: FormData) {
     return { ok: false, error: "Please wait a minute before updating this party again." };
   }
 
+  const classificationError = validatePartyClassificationForm(formData);
+  if (classificationError) return { ok: false, error: classificationError };
   const parsed = updatePartyEventSchema.safeParse({
     ...parsePartyEventFormData(formData),
     eventId: formData.get("eventId")
@@ -805,9 +810,9 @@ function parsePartyEventFormData(formData: FormData) {
   return {
     title: formData.get("title"),
     theme: formData.get("theme") || undefined,
-    tags,
+    tags: formData.get("classificationVersion") === "1" ? classificationTags({ category: String(formData.get("occasion") ?? ""), month: String(formData.get("eventMonth") ?? ""), age: String(formData.get("birthdayAge") ?? ""), audience: String(formData.get("partyAudience") ?? ""), graduation: String(formData.get("graduationLevel") ?? ""), holiday: String(formData.get("partyHoliday") ?? "") }) : tags,
     description: formData.get("description") || undefined,
-    eventDate: formData.get("eventDate") || undefined,
+    eventDate: formData.get("classificationVersion") === "1" ? `${formData.get("eventYear")}-${formData.get("eventMonth")}` : formData.get("eventDate") || undefined,
     partyfulUrl: formData.get("partyfulUrl") || undefined,
     location: formData.get("location") || undefined,
     formattedAddress: formData.get("locationFormattedAddress") || undefined,
