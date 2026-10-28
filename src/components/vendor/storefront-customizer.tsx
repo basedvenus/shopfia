@@ -235,7 +235,7 @@ export function StorefrontCustomizer({
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [dirty, setDirty] = useState(false);
-  const [status, setStatus] = useState(errorMessage ? "Needs attention" : draftSaved ? "Draft saved" : saved ? "Published" : "Live");
+  const [status, setStatus] = useState(errorMessage ? "Needs attention" : draftSaved ? "Draft saved" : saved ? "Published" : business.storefrontDraftJson ? "Draft loaded" : "Live");
   const [autosaveMessage, setAutosaveMessage] = useState("");
   const [isAutosaving, startAutosaveTransition] = useTransition();
   const lastAutosaveKeyRef = useRef<string | null>(null);

@@ -1,5 +1,5 @@
 .published-storefront > section:not(#storefront-home) { padding:24px; }
-.published-storefront > section:not(#storefront-home) h2 { font-family:var(--storefront-subheading); font-style:var(--storefront-subheading-style); }
+.published-storefront > section:not(#storefront-home) h2 { font-family:var(--storefront-subheading) !important; font-style:var(--storefront-subheading-style) !important; }
 .published-storefront [data-custom-background=true] { color:var(--section-ink); }
 .published-storefront [data-custom-background=true] :is(h2,h3,p) { color:inherit; }
 .published-storefront .depth-hero { min-width:0; }
