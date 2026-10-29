@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { upsertOfferingAction } from "@/app/actions/vendor";
 import { LegacyOfferingSetupForm, type ExistingOffering } from "@/components/vendor/offering-setup-form";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
-import { ValidatedForm, SubmitButton } from "@/components/ui/validated-form";
+import { SubmitButton } from "@/components/ui/validated-form";
+import { serviceFormIssues, type ServiceFormIssue } from "@/lib/service-form-validation";
 import { serviceTemplates } from "@/lib/service-templates";
 import { readStructuredPricing, servicePricingSchema, promotionSchema, priceLabel, type ServicePricing, type Promotion } from "@/lib/service-pricing";
 import { ServicePricingFields, PricingButton, Field } from "./service-pricing-fields";
@@ -22,9 +23,30 @@ function StructuredForm({ initial, offering, businessId, categories, eventCatego
   const [service, setService] = useState(initial);
   const [template, setTemplate] = useState("");
   const [confirmed, setConfirmed] = useState(true);
+  const [attempted, setAttempted] = useState(false);
+  const [categoryIds, setCategoryIds] = useState<string[]>(offering?.categoryIds ?? (offering?.categoryId ? [offering.categoryId] : []));
+  const [eventIds, setEventIds] = useState<string[]>(offering?.eventCategoryIds ?? []);
+  const formRef = useRef<HTMLFormElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const issues = serviceFormIssues(service, categoryIds, confirmed, eventIds.length);
+  function focusIssue(issue: ServiceFormIssue) {
+    const form = formRef.current;
+    if (!form) return;
+    const scope = issue.group ? Array.from(form.querySelectorAll<HTMLElement>("[data-pricing-group]")).find(el => el.dataset.pricingGroup === issue.group) ?? form : form;
+    const field = Array.from(scope.querySelectorAll<HTMLElement>("[data-field-label]")).find(el => el.dataset.fieldLabel === issue.label) ?? scope;
+    let parent: HTMLElement | null = field;
+    while (parent && parent !== form) { if (parent instanceof HTMLDetailsElement) parent.open = true; parent = parent.parentElement; }
+    const input = field.querySelector<HTMLElement>("input, textarea, select, summary");
+    input?.focus(); field.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
   const [promotions, setPromotions] = useState<Promotion[]>(() => Array.isArray(offering?.promotions) ? offering.promotions.flatMap(p => { const parsed = promotionSchema.safeParse(p); return parsed.success ? [parsed.data] : []; }) : []);
   const parsed = servicePricingSchema.safeParse(service);
-  return <div className="sp-workspace" style={{ padding: 0, minHeight: 0 }}><ValidatedForm action={upsertOfferingAction} className="sp-stack">
+  return <div className="sp-workspace" style={{ padding: 0, minHeight: 0 }}><form ref={formRef} noValidate action={upsertOfferingAction} className="sp-stack" onSubmit={event => {
+    if (!issues.length) return;
+    event.preventDefault(); setAttempted(true);
+    focusIssue(issues[0]);
+    requestAnimationFrame(() => { errorRef.current?.focus(); errorRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }); });
+  }}>
     {offering && <input type="hidden" name="id" value={offering.id} />}
     <input type="hidden" name="businessId" value={businessId ?? ""} />
     {offering && <input type="hidden" name="slug" value={offering.slug} />}
@@ -33,12 +55,13 @@ function StructuredForm({ initial, offering, businessId, categories, eventCatego
     <input type="hidden" name="description" value={service.description} />
     <input type="hidden" name="pricingJson" value={JSON.stringify(service)} />
     <input type="hidden" name="promotionsJson" value={JSON.stringify(promotions)} />
-    <section className="sp-template-bar"><Field label="Service template"><select value={template} onChange={e => { setTemplate(e.target.value); if (!e.target.value) return; const next = structuredClone(serviceTemplates[e.target.value]); next.id = initial.id; setService(next); setPromotions([]); setConfirmed(e.target.value === "blank"); }}><option value="">Choose a template</option>{[["blank", "Start from scratch"], ["catering", "Catering"], ["cart", "Beverage cart"], ["cookies", "Cookies"], ["impersonator", "Impersonators"], ["entertainment", "Event entertainment"], ["play", "Soft play"]].map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></Field></section>
+    <section className="sp-template-bar"><Field label="Service template"><select value={template} onChange={e => { setTemplate(e.target.value); if (!e.target.value) return; const next = structuredClone(serviceTemplates[e.target.value]); next.id = initial.id; setService(next); setPromotions([]); setConfirmed(e.target.value === "blank"); }}><option value="" disabled>Choose a template</option>{[["blank", "Start from scratch"], ["catering", "Catering"], ["cart", "Beverage cart"], ["cookies", "Cookies"], ["impersonator", "Impersonators"], ["entertainment", "Event entertainment"], ["play", "Soft play"]].map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></Field></section>
+    {attempted && issues.length > 0 && <div ref={errorRef} tabIndex={-1} role="alert" className="sp-card sp-save-errors"><h2>Before you save</h2><p>Finish these fields. Select a message to go directly to it.</p><ul>{issues.map((issue, i) => <li key={`${issue.group}-${issue.label}-${i}`}><button type="button" className="sp-link" onClick={() => focusIssue(issue)}>{issue.message}</button></li>)}</ul></div>}
     <ServicePricingFields value={service} onChange={setService} />
-    {!confirmed && <label className="sp-check"><input type="checkbox" onChange={e => setConfirmed(e.target.checked)} />I have reviewed the template’s sample prices and inclusions and set them for my business.</label>}
-    <details className="sp-card"><summary>Photos & categories</summary><div className="sp-stack"><div className="sp-fields"><ImageUploadField name="photos" label="Cover photo" defaultValue={offering?.photos[0]} defaultCrop={offering?.photoCrops?.[0]} /><ImageUploadField name="photos" label="Detail photo" defaultValue={offering?.photos[1]} defaultCrop={offering?.photoCrops?.[1]} /></div>{offering?.photos.slice(2).map((photo, i) => <span key={i}><input type="hidden" name="photos" value={photo} /><input type="hidden" name="photosCrop" value={JSON.stringify(offering.photoCrops?.[i + 2] ?? null)} /></span>)}<fieldset><legend>Service categories</legend>{categories.map(category => <label className="sp-check" key={category.id}><input type="checkbox" name="categoryIds" value={category.id} defaultChecked={(offering?.categoryIds ?? [offering?.categoryId]).includes(category.id)} />{category.name}</label>)}</fieldset><details><summary>Event types (optional)</summary>{eventCategories.map(category => <label className="sp-check" key={category.id}><input type="checkbox" name="eventCategoryIds" value={category.id} defaultChecked={offering?.eventCategoryIds.includes(category.id)} />{category.name}</label>)}</details></div></details>
+    {template && template !== "blank" && <label className="sp-check" data-field-label="Template review"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />I have reviewed the template’s sample prices and inclusions and set them for my business.</label>}
+    <details className="sp-card"><summary>Photos & categories</summary><div className="sp-stack"><div className="sp-fields"><ImageUploadField name="photos" label="Cover photo" defaultValue={offering?.photos[0]} defaultCrop={offering?.photoCrops?.[0]} /><ImageUploadField name="photos" label="Detail photo" defaultValue={offering?.photos[1]} defaultCrop={offering?.photoCrops?.[1]} /></div>{offering?.photos.slice(2).map((photo, i) => <span key={i}><input type="hidden" name="photos" value={photo} /><input type="hidden" name="photosCrop" value={JSON.stringify(offering.photoCrops?.[i + 2] ?? null)} /></span>)}<fieldset data-field-label="Service categories"><legend>Service categories (required)</legend>{categories.map(category => <label className="sp-check" key={category.id}><input type="checkbox" name="categoryIds" value={category.id} checked={categoryIds.includes(category.id)} onChange={e => setCategoryIds(e.target.checked ? [...categoryIds, category.id] : categoryIds.filter(id => id !== category.id))} />{category.name}</label>)}</fieldset><details data-field-label="Event types"><summary>Event types (optional)</summary>{eventCategories.map(category => <label className="sp-check" key={category.id}><input type="checkbox" name="eventCategoryIds" value={category.id} checked={eventIds.includes(category.id)} onChange={e => setEventIds(e.target.checked ? [...eventIds, category.id] : eventIds.filter(id => id !== category.id))} />{category.name}</label>)}</details></div></details>
     <details className="sp-card"><summary>Promotions (optional)</summary><ServicePromotions service={service} promotions={promotions} onChange={setPromotions} live /></details>
     {parsed.success ? <p className="sp-note">Customers see: {priceLabel(parsed.data)}</p> : <p className="sp-note">Complete the service name, description, inclusions and pricing before saving.</p>}
-    <SubmitButton disabled={!parsed.success || !confirmed} pendingText="Saving service…">{offering ? "Save service" : "Create service"}</SubmitButton>
-  </ValidatedForm></div>;
+    <SubmitButton pendingText="Saving service…">{offering ? "Save service" : "Create service"}</SubmitButton>
+  </form></div>;
 }

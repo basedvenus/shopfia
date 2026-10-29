@@ -40,3 +40,5 @@
 .sp-template-select{display:grid;gap:7px;width:300px;max-width:100%;flex-shrink:0;font-size:13px}.sp-template-select>span{font-weight:500}.sp-template-select small{font-size:12px;color:hsl(var(--muted-foreground))}@container(max-width:800px){.sp-template-select{width:100%}}
 
 .sp-template-bar{padding:0 0 20px;background:transparent}.sp-template-bar .sp-template-select{width:360px;max-width:100%}
+
+.sp-save-errors{border-color:#b77980}.sp-save-errors ul,.sp-menu-list{display:grid;gap:8px;padding-left:20px;list-style:disc}.sp-save-errors .sp-link{height:auto;white-space:normal;justify-content:flex-start;text-align:left}

@@ -6,6 +6,14 @@ const text = z.string().trim().min(1).max(2000);
 export const pricingTypes = { fixed: "Fixed price", hour: "Per hour", person: "Per person", item: "Per item", package: "Package", custom: "Custom quote" } as const;
 export const extraTypes = { flat: "Flat fee", item: "Per item", person: "Per person", hour: "Per hour", quoted: "Quoted separately" } as const;
 const packageSchema = z.object({ id: text, name: text, price: money, inclusions: text, coverage: text });
+export const menuSchema = z.object({
+  id: text, name: z.string().trim().min(1).max(120),
+  description: z.string().max(500).optional(),
+  options: z.array(z.string().trim().max(200)).max(60).transform(values => values.filter(Boolean)).pipe(z.array(z.string().min(1)).min(1).max(50)),
+  selection: z.enum(["display", "single", "multiple"]), required: z.boolean()
+}).superRefine((menu, ctx) => {
+  if (new Set(menu.options.map(option => option.toLowerCase())).size !== menu.options.length) ctx.addIssue({ code: "custom", path: ["options"], message: "List each menu choice only once." });
+});
 const baseSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("fixed"), rate: money }),
   z.object({ type: z.literal("hour"), rate: money, minimum: count, increment: z.union([z.literal(0.5), z.literal(1)]) }),
@@ -25,17 +33,18 @@ export const extraSchema = z.object({
 });
 export const servicePricingSchema = z.object({
   version: z.literal(1), id: text, name: text, description: text, inclusions: text,
-  base: baseSchema, extras: z.array(extraSchema).max(40)
+  base: baseSchema, extras: z.array(extraSchema).max(40), menus: z.array(menuSchema).max(12).optional()
 }).superRefine((service, ctx) => {
   if (service.base.type === "person" && service.base.maximum !== undefined && service.base.maximum < service.base.minimum) ctx.addIssue({ code: "custom", path: ["base", "maximum"], message: "Maximum must meet the minimum." });
   const ids = service.extras.map(extra => extra.id);
+  ids.push(...(service.menus ?? []).map(menu => menu.id));
   if (service.base.type === "package") ids.push(...service.base.packages.map(pkg => pkg.id));
   if (new Set(ids).size !== ids.length) ctx.addIssue({ code: "custom", message: "Each option needs a unique ID." });
 });
 export type ServicePricing = z.infer<typeof servicePricingSchema>;
 export type BasePricing = ServicePricing["base"];
 export type Extra = ServicePricing["extras"][number];
-export type Selection = { quantity?: number; packageId?: string; guests?: number; hours?: number; extras: Record<string, number | true>; answers: string[]; location: string; eventDate: string; promoCode: string };
+export type Selection = { quantity?: number; packageId?: string; guests?: number; hours?: number; extras: Record<string, number | true>; menus?: Record<string, string[]>; answers: string[]; location: string; eventDate: string; promoCode: string };
 export type PriceLine = { id: string; name: string; scope: string; quantity: number; unit: string; rate: number | null; amount: number | null; calculation: string };
 export const usd = (cents: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: cents % 100 === 0 ? 0 : 2 }).format(cents / 100);
 export function minimumPrice(service: ServicePricing): number | null {
@@ -85,6 +94,17 @@ export function estimateService(input: ServicePricing, selection: Selection) {
     if (!validQuantity(selection.quantity, b.minimum, increment, b.type === "person" ? b.maximum : undefined)) errors.push(`Choose at least ${b.minimum}, in increments of ${increment}${b.type === "person" && b.maximum ? `, up to ${b.maximum}` : ""}.`);
     else add(service.id, service.name, service.inclusions, selection.quantity!, b.type === "hour" ? "hours" : b.type === "person" ? "people" : b.label, b.rate);
   }
+  const menuNotes: string[] = [];
+  for (const id of Object.keys(selection.menus ?? {})) if (!(service.menus ?? []).some(menu => menu.id === id)) errors.push("A menu is no longer available. Refresh this service.");
+  for (const menu of service.menus ?? []) {
+    const choices = selection.menus?.[menu.id] ?? [];
+    if (choices.some(choice => !menu.options.includes(choice)) || new Set(choices).size !== choices.length || (menu.selection === "single" && choices.length > 1) || (menu.selection === "display" && choices.length > 0)) {
+      errors.push(`Choose valid options for ${menu.name}.`); continue;
+    }
+    if (menu.selection !== "display" && menu.required && !choices.length) errors.push(`Choose ${menu.selection === "single" ? "one option" : "at least one option"} for ${menu.name}.`);
+    if (choices.length) menuNotes.push(`${menu.name}: ${choices.join(", ")}`);
+  }
+  if (lines[0] && menuNotes.length) lines[0].scope += `\n${menuNotes.join("\n")}`;
   for (const id of Object.keys(selection.extras)) {
     const extra = service.extras.find(e => e.id === id);
     if (!extra) { errors.push("An extra is no longer available."); continue; }
@@ -166,4 +186,4 @@ export function readStructuredPricing(value: unknown): ServicePricing | null {
   return result.success ? result.data : null;
 }
 
-export const selectionSchema = z.object({ quantity: count.optional(), packageId: z.string().max(120).optional(), guests: count.int().optional(), hours: count.optional(), extras: z.record(z.union([count, z.literal(true)])), answers: z.array(z.string().max(2000)).max(20), location: z.string().max(240), eventDate: z.string().max(40), promoCode: z.string().max(100) });
+export const selectionSchema = z.object({ quantity: count.optional(), packageId: z.string().max(120).optional(), guests: count.int().optional(), hours: count.optional(), extras: z.record(z.union([count, z.literal(true)])), menus: z.record(z.array(z.string().max(200)).max(50)).optional(), answers: z.array(z.string().max(2000)).max(20), location: z.string().max(240), eventDate: z.string().max(40), promoCode: z.string().max(100) });
