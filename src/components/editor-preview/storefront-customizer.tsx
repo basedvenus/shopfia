@@ -1,5 +1,7 @@
 "use client";
 
+import { StorefrontSectionCanvas } from "./storefront-section-canvas";
+import type { SectionLayout } from "@/lib/storefront-section-layout";
 import { scallopedPhotoStyle } from "@/lib/scalloped-photo";
 
 import Link from "next/link";
@@ -138,6 +140,7 @@ type CustomizerBusiness = {
 };
 
 type FormState = {
+  sectionLayout:SectionLayout;
   showInstagram:boolean;
   showTikTok:boolean;
   subheadingFamily: string;
@@ -302,7 +305,7 @@ export function StorefrontCustomizer({
   const faqJson = useMemo(() => JSON.stringify(form.faqs), [form.faqs]);
   const policiesJson = useMemo(() => JSON.stringify(form.policies), [form.policies]);
   const bookingJson = useMemo(() => JSON.stringify(form.booking), [form.booking]);
-  const designJson = useMemo(()=>JSON.stringify({version:1,template:selectedTemplate,depth:heroDepth,mount:heroMount,edge:heroEdge,background:heroBackground,headingFamily:heroCustomFont || undefined,subheadingFamily:form.subheadingFamily || undefined,bodyFamily:form.bodyFamily || undefined,aboutPhotos:form.aboutPhotos,aboutPhotoLayout:form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,socialVisibility:{instagram:form.showInstagram,tiktok:form.showTikTok}}),[selectedTemplate,heroDepth,heroMount,heroEdge,heroBackground,heroCustomFont,form.subheadingFamily,form.bodyFamily,form.aboutPhotos,form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,form.showInstagram,form.showTikTok]);
+  const designJson = useMemo(()=>JSON.stringify({version:1,template:selectedTemplate,depth:heroDepth,mount:heroMount,edge:heroEdge,background:heroBackground,headingFamily:heroCustomFont || undefined,subheadingFamily:form.subheadingFamily || undefined,bodyFamily:form.bodyFamily || undefined,sectionLayout:form.sectionLayout,aboutPhotos:form.aboutPhotos,aboutPhotoLayout:form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,socialVisibility:{instagram:form.showInstagram,tiktok:form.showTikTok}}),[selectedTemplate,heroDepth,heroMount,heroEdge,heroBackground,heroCustomFont,form.subheadingFamily,form.bodyFamily,form.sectionLayout,form.aboutPhotos,form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,form.showInstagram,form.showTikTok]);
   const autosavePayload = useMemo(
     () => ({
       aboutHeading: form.aboutHeading,
@@ -903,6 +906,7 @@ function createInitialState(business: CustomizerBusiness, previewOnly = false): 
     business.storefrontOfferingOrder
   );
   return {
+    sectionLayout:design.sectionLayout ?? {},
     showInstagram:socialVisibility.instagram,
     showTikTok:socialVisibility.tiktok,
     bodyFamily: design.bodyFamily ?? "",
@@ -1587,11 +1591,7 @@ function StorefrontPreview({
         />}
       </section>
   );
-  return (
-    <div data-template={template?.id} data-page-background={Boolean(template?.backgroundDesign)} data-heading-case={template?.headingFamily?.includes("greatvibes") ? "script" : undefined} data-composition={template?.composition} data-mask={template?.imageMask} data-sections={template?.sections} data-services={template?.services} data-button={template?.button ?? "pill"} data-frame={template?.frame ?? "none"} className={`${template ? "template-surface " : ""}flex flex-col overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={{...theme.bodyStyle,...(template ? templateVariables(template) : {}),...sectionDesignStyle(template?.backgroundDesign)}}>
-
-      <div className="contents">
-        {visibleSections.filter((section) => {
+  const sectionItems = visibleSections.filter((section) => {
           if (section === "hero") return true;
           if (section === activeSection) return true;
           if (section === "featured-services") return featuredServices.length > 0;
@@ -1763,7 +1763,12 @@ function StorefrontPreview({
             </PreviewSection>
           );
           return null;
-        }).map(node => node ? <div key={node.key} style={{order:form.sectionOrder.indexOf(String(node.key))}} className={node.key==="hero"?"":"px-5 pb-8 sm:px-8"}>{node}</div> : null)}
+        }).flatMap(node => node ? [{id:String(node.key),label:sectionLabel(String(node.key)),content:<div className={node.key==="hero"?"":"px-5 pb-8 sm:px-8"}>{node}</div>}] : []);
+  return (
+    <div data-template={template?.id} data-page-background={Boolean(template?.backgroundDesign)} data-heading-case={template?.headingFamily?.includes("greatvibes") ? "script" : undefined} data-composition={template?.composition} data-mask={template?.imageMask} data-sections={template?.sections} data-services={template?.services} data-button={template?.button ?? "pill"} data-frame={template?.frame ?? "none"} className={`${template ? "template-surface " : ""}flex flex-col overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={{...theme.bodyStyle,...(template ? templateVariables(template) : {}),...sectionDesignStyle(template?.backgroundDesign)}}>
+
+      <div className="contents">
+        <StorefrontSectionCanvas items={sectionItems} order={form.sectionOrder} layout={form.sectionLayout} mobile={isMobile} onChange={(order,layout)=>{update("sectionOrder",order);update("sectionLayout",layout);}}/>
 
       </div>
     </div>

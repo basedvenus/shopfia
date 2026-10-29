@@ -127,17 +127,19 @@ function formDataFromPayload(payload: ReturnType<typeof basePayload>) {
 
 describe("storefront customization actions", () => {
   it("saves draft design then publishes it with existing booking text", async () => {
-    const design={...DEFAULT_STOREFRONT_DESIGN,template:STOREFRONT_TEMPLATES[0],depth:"floating" as const};
+    const design={...DEFAULT_STOREFRONT_DESIGN,template:STOREFRONT_TEMPLATES[0],depth:"floating" as const,sectionLayout:{effects:{height:420,beside:"about"}}};
     const payload={...basePayload(),designJson:JSON.stringify(design)};
     expect((await autosaveStorefrontDraftAction(payload)).ok).toBe(true);
     const draft=mocks.db.vendorProfile.update.mock.calls[0][0].data;
     expect(draft.storefrontBookingJson).toBeUndefined();
     expect(draft.storefrontDraftJson.design.depth).toBe("floating");
+    expect(draft.storefrontDraftJson.design.sectionLayout).toEqual(design.sectionLayout);
     const form=formDataFromPayload({...payload,intent:"publish"});
     form.set("designJson",payload.designJson);
     await expect(updateStorefrontCustomizationAction(form)).rejects.toThrow("published=1");
     const published=mocks.db.vendorProfile.update.mock.calls[1][0].data;
     expect(readStorefrontDesign(published.storefrontBookingJson).depth).toBe("floating");
+    expect(readStorefrontDesign(published.storefrontBookingJson).sectionLayout).toEqual(design.sectionLayout);
     expect(published.storefrontBookingJson.deposit).toBe(JSON.parse(payload.bookingJson).deposit);
     expect(published.logoUrl).toBe(payload.logoUrl);
     expect(published.photos).toEqual(payload.photoUrls);

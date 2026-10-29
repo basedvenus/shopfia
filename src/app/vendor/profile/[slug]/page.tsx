@@ -280,7 +280,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       ) : <section id="party-credits" style={{order:sectionPriority("parties")}}><h2 className="text-2xl font-semibold" style={theme.headingStyle}>Real parties</h2><p className="mt-3 text-sm">No tagged parties yet.</p></section>;
 
   return (
-    <PublishedStorefrontSurface template={template} className={`flex flex-col gap-8 rounded-[1.25rem] ${template ? "" : `bg-gradient-to-br ${palette.className}`} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
+    <PublishedStorefrontSurface sectionOrder={sectionOrder} sectionLayout={design.sectionLayout} template={template} className={`flex flex-col gap-8 rounded-[1.25rem] ${template ? "" : `bg-gradient-to-br ${palette.className}`} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
       {isOwnerViewing ? (
         <div style={{order:-1}} className="sticky top-0 z-30 flex flex-col gap-2 rounded-[1rem] border border-[#eadbd7] bg-white/95 px-3 py-2 shadow-[0_12px_34px_rgba(47,38,38,0.10)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
