@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 function studioMessage(message:string) {
+ if (/monthly 3D allowance|three generations for today|Another generation is starting/.test(message)) return message;
  if (/Submission could not be confirmed|check Meshy before/i.test(message)) return 'We could not confirm this request. Contact ShopFia support before starting another model.';
+ if (/daily beta|daily.*limit/i.test(message)) return 'Today’s 3D creation limit has been reached. Your photos are still selected. Please try again tomorrow.';
  if (/Meshy|API|credits|beta|not configured/i.test(message)) return '3D creation is temporarily unavailable. Try again later or upload a 3D model.';
  return message;
 }
@@ -26,7 +28,7 @@ export function ProductModelUpload({endpoint,modelUrl,onModel}:{endpoint?:string
   if(model){if(!model.name.toLowerCase().endsWith('.glb')||model.size>4*1024*1024){setError('Choose a self-contained GLB under 4 MB.');setBusy(false);return;}form.set('model',model);setStatus('Uploading model…');}
   else{if(!files.length||files.length>4||files.reduce((sum,file)=>sum+file.size,0)>3*1024*1024){setError('Choose 1–4 photos under 3 MB total.');setBusy(false);return;}requestId.current ||= `model-${crypto.randomUUID()}`;form.set('requestId',requestId.current);files.forEach(file=>form.append('photos',file));setStatus('Preparing your photos…');}
   try{const response=await fetch(endpoint,{method:'POST',body:form});const data=await response.json();if(!response.ok)throw new Error(data.error || 'Upload failed.');if(data.modelUrl){onModel(data.modelUrl);setStatus('Model uploaded. Inspect all sides before applying.');setBusy(false);}else{setJob(data.job);setRetry(n=>n+1);}}
-  catch(e){setError(e instanceof Error?studioMessage(e.message):'Could not submit. Try again with the same photos.');setBusy(false);}
+  catch(e){setStatus('');setError(e instanceof Error?studioMessage(e.message):'Could not submit. Try again with the same photos.');setBusy(false);}
  }
  return <div className="mt-5 space-y-4">
  <details open={!modelUrl} className="rounded-xl border p-3"><summary className="cursor-pointer text-sm font-medium">Create from photos</summary>

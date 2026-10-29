@@ -1,3 +1,4 @@
+import { modelCreditWindow, MONTHLY_GENERATIONS } from "@/lib/storefront-model-quota";
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
@@ -64,13 +65,17 @@ export async function POST(request:Request,context:Context){
  const files=form.getAll('photos');if(!files.length||files.length>4||files.some(f=>!(f instanceof File))||files.reduce((n,f)=>n+(f as File).size,0)>3*1024*1024)return reply({error:'Choose 1–4 photos of the same product, under 3 MB total.'},400);
  let images:string[];
  try {images=await Promise.all((files as File[]).map(async f=>`data:${f.type};base64,${(await readVerifiedImageFile(f,{allowedTypes:new Set(['image/png','image/jpeg','image/webp']),maxBytes:3*1024*1024})).toString('base64')}`));}catch{return reply({error:'Use valid PNG, JPG, or WebP photos.'},400);}
+ let creditWindow: ReturnType<typeof modelCreditWindow>;
+ try { creditWindow=modelCreditWindow(await meshFetch('balance')); } catch(error) { return reply({error:error instanceof Error?error.message:'Could not check the monthly allowance.'},429); }
  const job:Job={endpoint:images.length===1?'image-to-3d':'multi-image-to-3d',status:'SUBMITTING'};
  // Reserve before contacting Meshy. Serializable quota prevents concurrent paid requests.
  try{await db.$transaction(async tx=>{
-  const count=await tx.vendorStorefrontMedia.count({where:{id:{startsWith:'model-'},createdAt:{gte:new Date(Date.now()-86400000)}}});
-  if(count>=3)throw new Error('The daily beta generation limit has been reached. Upload a GLB or try tomorrow.');
+  const count=await tx.vendorStorefrontMedia.count({where:{vendorProfileId:a.business.id,id:{startsWith:'model-'},createdAt:{gte:new Date(Date.now()-86400000)}}});
+  if(count>=3)throw new Error('This business has used its three generations for today. Please try again after 24 hours.');
+  const monthly=await tx.vendorStorefrontMedia.count({where:{id:{startsWith:'model-'},createdAt:{gte:creditWindow.start,lt:creditWindow.end}}});
+  if(monthly>=MONTHLY_GENERATIONS)throw new Error('The monthly 3D allowance is used up. Creation will resume when the monthly credits reset.');
   const bytes=Buffer.from(JSON.stringify(job));await tx.vendorStorefrontMedia.create({data:{id:requestId,vendorProfileId:a.business.id,uploadedById:a.userId,contentType:MODEL_JOB_TYPE,data:bytes,size:bytes.length}});
- },{isolationLevel:'Serializable'});}catch{return reply({error:'Generation is already pending or the daily beta limit is reached. Reopen the studio to resume.'},429);}
+ },{isolationLevel:'Serializable'});}catch(error){const message=error instanceof Error && /^(This business has used|The monthly 3D allowance)/.test(error.message)?error.message:'Another generation is starting. Please try again shortly.';return reply({error:message},429);}
  try{
   const result=await meshFetch(job.endpoint,{...(images.length===1?{image_url:images[0]}:{image_urls:images}),ai_model:'meshy-7.1',should_texture:true,texture_resolution:'2k',should_remesh:true,target_polycount:10000,target_formats:['glb']});
   if(typeof result.result!=='string')throw new Error('Meshy did not return a task ID.');
