@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import {StorefrontSectionSize} from "@/components/vendor/storefront-section-size";
 import { GripHorizontal, Move, RotateCcw } from 'lucide-react';
 import { placeSection, sectionRows, type SectionLayout, type SectionPlacement } from '@/lib/storefront-section-layout';
 import './storefront-section-layout.css';
@@ -42,7 +43,7 @@ export function StorefrontSectionCanvas({items,order,layout,mobile,onChange}:{it
      ><Move size={13}/>{item.label}</button>
      <button type="button" aria-label={`Reset ${item.label} section layout`} title="Reset size and use a full row" onClick={event=>{event.stopPropagation();const next={...layout};delete next[id];for(const key of Object.keys(next))if(next[key].beside===id){next[key]={...next[key]};delete next[key].beside;}onChange(order,next);}}><RotateCcw size={13}/></button>
     </div>
-    <div className="section-frame-content">{item.content}</div>
+    <StorefrontSectionSize height={height?.id===id?height.value:layout[id]?.height} disabled={mobile}>{item.content}</StorefrontSectionSize>
     {target?.id===id&&<div className="section-drop-zone" data-placement={target.placement}><span>{target.placement==='left'?'Place left':target.placement==='right'?'Place right':target.placement==='above'?'Place above':'Place below'}</span></div>}
     {!mobile&&<button type="button" className="section-resize-handle" aria-label={`Resize ${item.label} section height`} title="Drag to adjust height. Up/Down adjusts 20 px."
      onClick={event=>event.stopPropagation()}
