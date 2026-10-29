@@ -141,6 +141,7 @@ type FormState = {
   showInstagram:boolean;
   showTikTok:boolean;
   subheadingFamily: string;
+  bodyFamily: string;
   aboutHeading: string;
   aboutImage: string;
   aboutPhotos: string[];
@@ -301,7 +302,7 @@ export function StorefrontCustomizer({
   const faqJson = useMemo(() => JSON.stringify(form.faqs), [form.faqs]);
   const policiesJson = useMemo(() => JSON.stringify(form.policies), [form.policies]);
   const bookingJson = useMemo(() => JSON.stringify(form.booking), [form.booking]);
-  const designJson = useMemo(()=>JSON.stringify({version:1,template:selectedTemplate,depth:heroDepth,mount:heroMount,edge:heroEdge,background:heroBackground,headingFamily:heroCustomFont || undefined,subheadingFamily:form.subheadingFamily || undefined,aboutPhotos:form.aboutPhotos,aboutPhotoLayout:form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,socialVisibility:{instagram:form.showInstagram,tiktok:form.showTikTok}}),[selectedTemplate,heroDepth,heroMount,heroEdge,heroBackground,heroCustomFont,form.subheadingFamily,form.aboutPhotos,form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,form.showInstagram,form.showTikTok]);
+  const designJson = useMemo(()=>JSON.stringify({version:1,template:selectedTemplate,depth:heroDepth,mount:heroMount,edge:heroEdge,background:heroBackground,headingFamily:heroCustomFont || undefined,subheadingFamily:form.subheadingFamily || undefined,bodyFamily:form.bodyFamily || undefined,aboutPhotos:form.aboutPhotos,aboutPhotoLayout:form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,socialVisibility:{instagram:form.showInstagram,tiktok:form.showTikTok}}),[selectedTemplate,heroDepth,heroMount,heroEdge,heroBackground,heroCustomFont,form.subheadingFamily,form.bodyFamily,form.aboutPhotos,form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,form.showInstagram,form.showTikTok]);
   const autosavePayload = useMemo(
     () => ({
       aboutHeading: form.aboutHeading,
@@ -827,7 +828,7 @@ export function StorefrontCustomizer({
 
 </>}
               {modernEditor && selectedTemplate ? <SectionBackgroundControls template={selectedTemplate} section={activeSection} label={sectionLabel(activeSection)} onChange={(template)=>{setSelectedTemplate(template);markDirty();}} /> : null}
-              {modernEditor ? <div hidden={activeTool !== "content"}><HeroTypographyControls allowUpload={previewOnly} subheadingFamily={form.subheadingFamily} onSubheading={value=>update("subheadingFamily",value)} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
+              {modernEditor ? <div hidden={activeTool !== "content"}><HeroTypographyControls bodyFamily={form.bodyFamily} onBody={value=>update("bodyFamily",value)} allowUpload={previewOnly} subheadingFamily={form.subheadingFamily} onSubheading={value=>update("subheadingFamily",value)} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
               {activeTool === "design" ? (
                 <DesignControls form={form} update={update} />
               ) : (
@@ -884,6 +885,7 @@ function createInitialState(business: CustomizerBusiness, previewOnly = false): 
   return {
     showInstagram:socialVisibility.instagram,
     showTikTok:socialVisibility.tiktok,
+    bodyFamily: design.bodyFamily ?? "",
     subheadingFamily: design.subheadingFamily ?? draft?.subheadingFamily ?? "",
     aboutHeading: draft?.aboutHeading ?? business.storefrontAboutHeading ?? `About ${business.name}`,
     aboutPhotos: design.aboutPhotos ?? draft?.aboutPhotos ?? [],
@@ -2265,7 +2267,7 @@ function getPreviewTheme(form: FormState, template?: StorefrontTemplate | null) 
     activeNavItemStyle: { backgroundColor: `${accent}24`, color: template?.colors.ink ?? (isDark ? "#ffffff" : "#2f2626") } as CSSProperties,
     activeSectionStyle: { borderColor: `${accent}88`, boxShadow: `0 0 0 2px ${accent}` } as CSSProperties,
     badgeStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
-    bodyStyle: { fontFamily: fontFamilies.body, ...(template ? {color:template.colors.ink,backgroundColor:template.colors.background} : {}) } as CSSProperties,
+    bodyStyle: { fontFamily: form.bodyFamily || fontFamilies.body, ...(template ? {color:template.colors.ink,backgroundColor:template.colors.background} : {}) } as CSSProperties,
     cardClass: template ? "text-[color:var(--template-ink)]" : isDark ? "text-white" : "text-[#2f2626]",
     copyClass: template ? "text-[color:var(--template-muted)]" : isDark ? "text-white/86" : "text-[#5f5550]",
     headerClass: isDark ? "border-white/15 bg-[#171315] text-white/70" : "border-[#eadbd7] bg-[#fffaf8] text-[#7a625b]",

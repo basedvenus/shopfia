@@ -191,6 +191,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
     theme.accentTextStyle={color:template.colors.accent};
     theme.copyClass=""; theme.shellClass=""; theme.cardClass="";
   }
+  if(design.bodyFamily) theme.bodyStyle={...theme.bodyStyle,fontFamily:design.bodyFamily};
   const isFollowingVendor =
     currentUserId && vendor.user && currentUserId !== vendor.user.id
       ? Boolean(

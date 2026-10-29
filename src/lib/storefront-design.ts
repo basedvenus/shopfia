@@ -18,7 +18,7 @@ const template = z.object({
 export const storefrontDesignSchema = z.object({
   version: z.literal(1), template: template.nullable(), depth: z.enum(["flat","floating","layered"]),
   mount: z.enum(["round","square","artwork"]), edge:color, background:color,
-  headingFamily:family.optional(), subheadingFamily:family.optional(),
+  headingFamily:family.optional(), subheadingFamily:family.optional(), bodyFamily:family.optional(),
   socialVisibility:z.object({instagram:z.boolean(),tiktok:z.boolean()}).optional(),
   aboutPhotos:z.array(z.string().max(2048).refine(v=>v==="" || /^https?:\/\//.test(v) || v.startsWith("/"))).max(12).optional(),
   aboutPhotoLayout:z.enum(["grid","row","layered","offset","cascade","six","banner","scallop"]).optional(),
