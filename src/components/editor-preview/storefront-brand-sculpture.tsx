@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 export type LogoMount = "round" | "square" | "artwork";
 
 // A single, textured, bevelled brand emblem. Draw on demand and stop at rest.
-export function StorefrontBrandSculpture({ image, name, interactive, mount, edgeColor, touchPreview, onReady }: { image: string; name: string; interactive: boolean; mount: LogoMount; edgeColor: string; touchPreview: boolean; onReady?: () => void }) {
+export function StorefrontBrandSculpture({ image, name, interactive, mount, edgeColor, touchPreview, showControls = false, onReady }: { image: string; name: string; interactive: boolean; mount: LogoMount; edgeColor: string; touchPreview: boolean; showControls?: boolean; onReady?: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const turnRef = useRef<((direction:number) => void) | null>(null);
   const [ready, setReady] = useState(false);
@@ -171,7 +171,7 @@ export function StorefrontBrandSculpture({ image, name, interactive, mount, edge
   return <div className="brand-sculpture">
     {/* The real saved asset is also the no-WebGL / failed-texture fallback. */}
     <div className={`sculpture-fallback mount-${mount}`} style={{opacity:ready?0:1}}>{image ? <img src={image} alt="" /> : <span>{name || "Your brand"}</span>}</div>
-    {interactive && ready ? <div className="sculpture-turn" role="group" aria-label="Logo rotation"><button type="button" aria-label="Turn logo left" onClick={event=>{event.stopPropagation();turnRef.current?.(-1);}}>↶ Left</button><button type="button" onClick={event=>{event.stopPropagation();turnRef.current?.(0);}}>Front</button><button type="button" aria-label="Turn logo right" onClick={event=>{event.stopPropagation();turnRef.current?.(1);}}>Right ↷</button></div> : null}
+    {showControls && interactive && ready ? <div className="sculpture-turn" role="group" aria-label="Logo rotation"><button type="button" aria-label="Turn logo left" onClick={event=>{event.stopPropagation();turnRef.current?.(-1);}}>↶ Left</button><button type="button" onClick={event=>{event.stopPropagation();turnRef.current?.(0);}}>Front</button><button type="button" aria-label="Turn logo right" onClick={event=>{event.stopPropagation();turnRef.current?.(1);}}>Right ↷</button></div> : null}
     <canvas ref={canvasRef} role="img" aria-label={`${name || "Storefront"} sculptural brand emblem`} style={{opacity:ready?1:0}} />
   </div>;
 }
