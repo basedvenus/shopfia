@@ -1,3 +1,4 @@
+import { StorefrontPublishedDialog } from "@/components/vendor/storefront-published-dialog";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { StorefrontCustomizer } from "@/components/editor-preview/storefront-customizer";
@@ -94,6 +95,8 @@ export default async function StorefrontCustomizerPage({
   if (!business) redirect("/vendor/dashboard");
 
   return (
+    <>
+    <StorefrontPublishedDialog published={resolvedSearchParams.published === "1"} businessId={business.id} publicUrl={storefrontUrl(business.slug)} />
     <StorefrontCustomizer
       business={{
         ...business,
@@ -104,5 +107,6 @@ export default async function StorefrontCustomizerPage({
       draftSaved={Boolean(resolvedSearchParams.draft)}
       errorMessage={resolvedSearchParams.customizeError}
     />
+    </>
   );
 }
