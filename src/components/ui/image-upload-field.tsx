@@ -1,5 +1,7 @@
 "use client";
 
+import {cropImageRect} from "@/lib/image-crop";
+
 import { CheckCircle2, Pencil } from "lucide-react";
 
 import { ChangeEvent, useEffect, useState, useRef } from "react";
@@ -407,16 +409,9 @@ async function cropImageFile(
       context.fillRect(0, 0, outputWidth, outputHeight);
     }
 
-    const baseScale = Math.max(outputWidth / sourceImage.naturalWidth, outputHeight / sourceImage.naturalHeight);
-    const drawScale = baseScale * normalized.zoom;
-    const drawWidth = sourceImage.naturalWidth * drawScale;
-    const drawHeight = sourceImage.naturalHeight * drawScale;
-    const centerX = outputWidth * (normalized.x / 100);
-    const centerY = outputHeight * (normalized.y / 100);
-    const drawX = centerX - drawWidth * (normalized.x / 100);
-    const drawY = centerY - drawHeight * (normalized.y / 100);
-
-    context.drawImage(sourceImage, drawX, drawY, drawWidth, drawHeight);
+    const rect=cropImageRect(sourceImage.naturalWidth,sourceImage.naturalHeight,outputWidth,outputHeight,normalized);
+    context.filter=`brightness(${normalized.brightness??1}) saturate(${normalized.saturation??1})`;
+    context.drawImage(sourceImage,rect.x,rect.y,rect.width,rect.height);
 
     const mimeType = options.outputType ?? (SUPPORTED_IMAGE_TYPES.includes(file.type) ? file.type : "image/jpeg");
     const blob = await canvasToBlob(canvas, mimeType);

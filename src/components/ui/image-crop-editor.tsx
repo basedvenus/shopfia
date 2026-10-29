@@ -3,7 +3,7 @@
 import { Loader2, Minus, Move, Plus } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_IMAGE_CROP, MAX_IMAGE_ZOOM, MIN_IMAGE_ZOOM, normalizeImageCrop, imageCropToCss, type ImageCrop } from "@/lib/image-crop";
+import { DEFAULT_IMAGE_CROP, MAX_IMAGE_ZOOM, MIN_IMAGE_ZOOM, normalizeImageCrop, cropImageRect, fitImageZoom, type ImageCrop } from "@/lib/image-crop";
 
 type ImageCropEditorProps = {
   aspectLabel?: string;
@@ -31,6 +31,10 @@ export function ImageCropEditor({
   previewAspectRatio
 }: ImageCropEditorProps) {
   const [draft, setDraft] = useState<ImageCrop>(() => ({ ...normalizeImageCrop(crop), zoom: Math.max(minZoom, normalizeImageCrop(crop).zoom) }));
+  const [dimensions,setDimensions]=useState({width:0,height:0,frameWidth:0,frameHeight:0});
+  const fitZoom=dimensions.width && dimensions.frameWidth ? fitImageZoom(dimensions.width,dimensions.height,dimensions.frameWidth,dimensions.frameHeight) : minZoom;
+  const effectiveMin=Math.max(minZoom,fitZoom);
+  const rect=dimensions.width && dimensions.frameWidth ? cropImageRect(dimensions.width,dimensions.height,dimensions.frameWidth,dimensions.frameHeight,{...draft,zoom:Math.max(effectiveMin,draft.zoom)}) : null;
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -47,6 +51,9 @@ export function ImageCropEditor({
   }, [crop, imageUrl, minZoom]);
 
   useEffect(() => { setImageLoaded(false); setImageFailed(false); }, [imageUrl]);
+
+  useEffect(()=>{const node=previewRef.current;if(!node)return;const measure=()=>{const bounds=node.getBoundingClientRect();setDimensions(value=>({...value,frameWidth:bounds.width,frameHeight:bounds.height}));};measure();const observer=new ResizeObserver(measure);observer.observe(node);return()=>observer.disconnect();},[]);
+  useEffect(()=>{setDraft(value=>({...value,zoom:Math.max(effectiveMin,value.zoom)}));},[effectiveMin]);
 
   function beginDrag(event: PointerEvent<HTMLDivElement>) {
     if (!imageLoaded) return;
@@ -79,8 +86,8 @@ export function ImageCropEditor({
     if (!image?.naturalWidth || !width || !height) return;
     const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
     const zoom = dragRef.current.crop.zoom;
-    const overflowX = (image.naturalWidth * scale - width) * zoom + width * Math.max(0, zoom - 1);
-    const overflowY = (image.naturalHeight * scale - height) * zoom + height * Math.max(0, zoom - 1);
+    const overflowX = image.naturalWidth * scale * zoom - width;
+    const overflowY = image.naturalHeight * scale * zoom - height;
     setDraft({
       ...draft,
       x: overflowX > 0 ? clamp(dragRef.current.crop.x - deltaX / overflowX * 100, 0, 100) : dragRef.current.crop.x,
@@ -102,7 +109,7 @@ export function ImageCropEditor({
   function updateZoom(nextZoom: number) {
     setDraft((current) => ({
       ...current,
-      zoom: clamp(nextZoom, minZoom, MAX_IMAGE_ZOOM)
+      zoom: clamp(nextZoom, effectiveMin, MAX_IMAGE_ZOOM)
     }));
   }
 
@@ -132,11 +139,11 @@ export function ImageCropEditor({
               ref={imageRef}
               src={imageUrl}
               alt=""
-              className="absolute inset-0 h-full w-full select-none object-cover"
+              className="absolute select-none"
               draggable={false}
-              onLoad={() => setImageLoaded(true)}
+              onLoad={event => {const {naturalWidth:width,naturalHeight:height}=event.currentTarget;setImageLoaded(true);setDimensions(value=>({...value,width,height}));}}
               onError={() => setImageFailed(true)}
-              style={imageCropToCss(draft)}
+              style={{width:rect?.width??"100%",height:rect?.height??"100%",left:rect?.x??0,top:rect?.y??0,maxWidth:"none",filter:`brightness(${draft.brightness??1}) saturate(${draft.saturation??1})`}}
             />
             {!imageLoaded ? <div role="status" className="absolute inset-0 grid place-items-center bg-muted">
               {imageFailed ? <span className="text-sm">Could not load this photo. Close and try again.</span> : <span className="flex items-center gap-2 text-sm"><Loader2 className="h-5 w-5 animate-spin" /> Loading your photo...</span>}
@@ -152,6 +159,7 @@ export function ImageCropEditor({
           <div className="mt-5 rounded-[1.2rem] bg-[#fbf7f5] p-4">
             <div className="mb-2 flex items-center justify-between text-sm">
               <span className="font-medium">Zoom</span>
+              {effectiveMin<1 && <button type="button" className="text-xs underline" onClick={()=>setDraft(current=>({...current,x:50,y:50,zoom:effectiveMin}))}>Fit whole photo</button>}
               <span className="text-muted-foreground">{draft.zoom.toFixed(2)}x</span>
             </div>
             <div className="flex items-center gap-3">
@@ -165,7 +173,7 @@ export function ImageCropEditor({
               <input
                 aria-label="Zoom"
                 type="range"
-                min={minZoom}
+                min={effectiveMin}
                 max={MAX_IMAGE_ZOOM}
                 step="0.01"
                 value={draft.zoom}

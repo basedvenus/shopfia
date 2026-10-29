@@ -70,3 +70,14 @@ function clampNumber(value: unknown, min: number, max: number, fallback: number)
   if (!Number.isFinite(numberValue)) return fallback;
   return Math.min(max, Math.max(min, numberValue));
 }
+
+/** Position the original image, before clipping to the output frame. */
+export function cropImageRect(imageWidth:number,imageHeight:number,frameWidth:number,frameHeight:number,crop:ImageCrop) {
+  const scale=Math.max(frameWidth/imageWidth,frameHeight/imageHeight)*crop.zoom;
+  const width=imageWidth*scale,height=imageHeight*scale;
+  return {width,height,x:(frameWidth-width)*crop.x/100,y:(frameHeight-height)*crop.y/100};
+}
+
+export function fitImageZoom(imageWidth:number,imageHeight:number,frameWidth:number,frameHeight:number) {
+  return Math.min(frameWidth/imageWidth,frameHeight/imageHeight)/Math.max(frameWidth/imageWidth,frameHeight/imageHeight);
+}
