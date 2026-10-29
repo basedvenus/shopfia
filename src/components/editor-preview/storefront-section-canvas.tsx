@@ -1,8 +1,8 @@
 "use client";
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {StorefrontSectionSize} from "@/components/vendor/storefront-section-size";
-import { GripHorizontal, Move, RotateCcw } from 'lucide-react';
-import { placeSection, sectionRows, type SectionLayout, type SectionPlacement } from '@/lib/storefront-section-layout';
+import { GripHorizontal, GripVertical, Move, RotateCcw } from 'lucide-react';
+import { placeSection, sectionRows, rowColumns, resizeSectionWidth, type SectionLayout, type SectionPlacement } from '@/lib/storefront-section-layout';
 import './storefront-section-layout.css';
 
 type Item = {id:string;label:string;content:ReactNode};
@@ -13,6 +13,8 @@ export function StorefrontSectionCanvas({items,order,layout,mobile,onChange}:{it
  const [dragging,setDragging]=useState<string|null>(null);
  const [target,setTarget]=useState<{id:string;placement:SectionPlacement}|null>(null);
  const [height,setHeight]=useState<{id:string;value:number}|null>(null);
+ const [widthPreview,setWidthPreview]=useState<SectionLayout|null>(null);
+ const visibleLayout=widthPreview??layout;
  const [announcement,setAnnouncement]=useState('');
  const byId=new Map(items.map(item=>[item.id,item]));
  const rows=sectionRows(order.filter(id=>byId.has(id)),layout);
@@ -30,8 +32,8 @@ export function StorefrontSectionCanvas({items,order,layout,mobile,onChange}:{it
  }
  return <div ref={root} className="storefront-section-grid" data-mobile={mobile}>
   <span className="sr-only" role="status">{announcement}</span>
-  {rows.map(row=><div key={row.join('-')} className="storefront-section-row" data-paired={row.length===2}>
-   {row.map(id=>{const item=byId.get(id)!;return <div key={id} data-section-frame={id} data-dragging={dragging===id} className="storefront-section-frame" style={{'--section-height':`${height?.id===id?height.value:layout[id]?.height??0}px`} as CSSProperties}>
+  {rows.map(row=><div key={row.join('-')} className="storefront-section-row" data-paired={row.length===2} style={{"--section-columns":rowColumns(row,visibleLayout)} as CSSProperties}>
+   {row.map(id=>{const item=byId.get(id)!;return <div key={id} data-section-frame={id} data-dragging={dragging===id} className="storefront-section-frame" style={{'--section-width':`${visibleLayout[id]?.width??100}%`,'--section-offset':`${visibleLayout[id]?.offset??0}%`,'--section-height':`${height?.id===id?height.value:layout[id]?.height??0}px`} as CSSProperties}>
     <div className="section-edit-tools">
      <button type="button" className="section-move-handle" aria-label={`Move ${item.label} section`} title="Drag to arrange. Alt + arrows to move or place beside."
       onClick={event=>event.stopPropagation()}
@@ -45,6 +47,7 @@ export function StorefrontSectionCanvas({items,order,layout,mobile,onChange}:{it
     </div>
     <StorefrontSectionSize height={height?.id===id?height.value:layout[id]?.height} disabled={mobile}>{item.content}</StorefrontSectionSize>
     {target?.id===id&&<div className="section-drop-zone" data-placement={target.placement}><span>{target.placement==='left'?'Place left':target.placement==='right'?'Place right':target.placement==='above'?'Place above':'Place below'}</span></div>}
+    {!mobile&&(['left','right'] as const).filter(edge=>row.length===1||(row[0]===id?edge==='right':edge==='left')).map(edge=><SectionWidthHandle key={edge} id={id} label={item.label} edge={edge} row={row} layout={layout} onPreview={setWidthPreview} onCommit={next=>{onChange(order,next);setAnnouncement(`${item.label} width updated to ${next[id]?.width} percent.`);}}/>)}
     {!mobile&&<button type="button" className="section-resize-handle" aria-label={`Resize ${item.label} section height`} title="Drag to adjust height. Up/Down adjusts 20 px."
      onClick={event=>event.stopPropagation()}
      onPointerDown={event=>{if(event.button!==0)return;event.preventDefault();event.stopPropagation();const frame=event.currentTarget.closest<HTMLElement>('[data-section-frame]')!;resize.current={id,y:event.clientY,height:frame.getBoundingClientRect().height};event.currentTarget.setPointerCapture(event.pointerId);}}
@@ -56,4 +59,18 @@ export function StorefrontSectionCanvas({items,order,layout,mobile,onChange}:{it
    </div>;})}
   </div>)}
  </div>;
+}
+
+function SectionWidthHandle({id,label,edge,row,layout,onPreview,onCommit}:{id:string;label:string;edge:'left'|'right';row:string[];layout:SectionLayout;onPreview:(layout:SectionLayout|null)=>void;onCommit:(layout:SectionLayout)=>void}) {
+ const start=useRef<{x:number;pixels:number;layout:SectionLayout}|null>(null);
+ const [value,setValue]=useState<number|null>(null);
+ function clear(){start.current=null;setValue(null);onPreview(null);}
+ return <button type="button" className="section-width-handle" data-edge={edge} aria-label={`Resize ${label} section ${edge} edge`} title="Drag left or right to adjust width. Arrow keys adjust 5%."
+  onClick={event=>event.stopPropagation()}
+  onPointerDown={event=>{if(event.button!==0)return;event.preventDefault();event.stopPropagation();const element=event.currentTarget.closest<HTMLElement>('.storefront-section-row')!;const pixels=element.getBoundingClientRect().width-(row.length===2?parseFloat(getComputedStyle(element).columnGap)||0:0);start.current={x:event.clientX,pixels,layout};event.currentTarget.setPointerCapture(event.pointerId);}}
+  onPointerMove={event=>{const active=start.current;if(!active)return;const next=resizeSectionWidth(active.layout,row,id,edge,(event.clientX-active.x)/active.pixels*100);onPreview(next);setValue(next[id]?.width??100);}}
+  onPointerUp={event=>{const active=start.current;if(!active)return;onCommit(resizeSectionWidth(active.layout,row,id,edge,(event.clientX-active.x)/active.pixels*100));clear();}}
+  onPointerCancel={clear}
+  onKeyDown={event=>{if(!['ArrowLeft','ArrowRight'].includes(event.key))return;event.preventDefault();event.stopPropagation();onCommit(resizeSectionWidth(layout,row,id,edge,event.key==='ArrowLeft'?-5:5));}}
+ ><GripVertical size={18}/>{value!==null&&<span>{value}%</span>}</button>;
 }

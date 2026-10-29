@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {placeSection,sectionRows} from '@/lib/storefront-section-layout';
+import {placeSection,sectionRows,resizeSectionWidth,rowColumns} from '@/lib/storefront-section-layout';
 import {bookingWithDesign,DEFAULT_STOREFRONT_DESIGN,readStorefrontDesign,storefrontDesignSchema} from '@/lib/storefront-design';
 describe('storefront section layout',()=>{
  const order=['hero','effects','about','final-quote','reviews'];
@@ -24,5 +24,29 @@ describe('storefront section layout',()=>{
   const design={...DEFAULT_STOREFRONT_DESIGN,sectionLayout:{effects:{height:560,beside:'about'}}};
   expect(readStorefrontDesign(bookingWithDesign({},storefrontDesignSchema.parse(design))).sectionLayout).toEqual(design.sectionLayout);
   for(const sectionLayout of [{effects:{height:-1}},{effects:{height:1201}},{effects:{beside:'unknown'}},{unknown:{height:200}}])expect(storefrontDesignSchema.safeParse({...DEFAULT_STOREFRONT_DESIGN,sectionLayout}).success).toBe(false);
+ });
+});
+
+describe('horizontal section resizing',()=>{
+ it('shrinks and expands a single section from either edge without moving the opposite edge',()=>{
+  const right=resizeSectionWidth({},['about'],'about','right',-30);
+  expect(right.about).toEqual({width:70,offset:0});
+  const left=resizeSectionWidth(right,['about'],'about','left',20);
+  expect(left.about).toEqual({width:50,offset:20});
+  expect(resizeSectionWidth(left,['about'],'about','left',-20).about).toEqual({width:70,offset:0});
+  expect(resizeSectionWidth(right,['about'],'about','right',30).about.width).toBe(100);
+ });
+ it('changes both sides of a paired row while preserving height and pairing',()=>{
+  const next=resizeSectionWidth({about:{height:400},reviews:{beside:'about'}},['about','reviews'],'reviews','left',15);
+  expect(next.about).toEqual({height:400,width:65,offset:0});
+  expect(next.reviews).toEqual({beside:'about',width:35,offset:0});
+  expect(rowColumns(['about','reviews'],next)).toBe('minmax(0,65fr) minmax(0,35fr)');
+ });
+ it('clamps to the page and round trips saved widths',()=>{
+  const layout=resizeSectionWidth({},['about'],'about','left',200);
+  expect(layout.about).toEqual({width:25,offset:75});
+  const design=storefrontDesignSchema.parse({...DEFAULT_STOREFRONT_DESIGN,sectionLayout:layout});
+  expect(readStorefrontDesign(bookingWithDesign({},design)).sectionLayout).toEqual(layout);
+  expect(storefrontDesignSchema.safeParse({...DEFAULT_STOREFRONT_DESIGN,sectionLayout:{about:{width:80,offset:30}}}).success).toBe(false);
  });
 });

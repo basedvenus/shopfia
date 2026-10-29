@@ -18,7 +18,7 @@
 .section-drop-zone[data-placement=right] {left:50%;}
 .section-drop-zone[data-placement=above] {bottom:75%;}
 .section-drop-zone[data-placement=below] {top:75%;}
-@container (min-width:600px) {.storefront-section-grid:not([data-mobile=true])>.storefront-section-row[data-paired=true] {grid-template-columns:repeat(2,minmax(0,1fr));}}
+@container (min-width:600px) {.storefront-section-grid:not([data-mobile=true])>.storefront-section-row[data-paired=true] {grid-template-columns:var(--section-columns,repeat(2,minmax(0,1fr)));}}
 .storefront-section-grid[data-mobile=true] .storefront-section-frame {min-height:0;}
 @media(hover:none){.section-edit-tools {opacity:1;pointer-events:auto;}}
 @media(max-width:680px){.storefront-layout-section {min-height:0;}}
@@ -27,3 +27,14 @@
 
 .storefront-section-row[data-paired=true] .depth-hero {display:block;min-width:0;}
 .storefront-section-row[data-paired=true] .depth-scene {height:300px;}
+
+.section-width-handle{position:absolute;z-index:16;top:0;bottom:0;width:16px;display:none;align-items:center;justify-content:center;padding:0;border:0;background:transparent;color:#796479;cursor:ew-resize;touch-action:none;opacity:0;}
+.section-width-handle[data-edge=left]{left:0;}.section-width-handle[data-edge=right]{right:0;}
+.section-width-handle::before{content:"";position:absolute;top:0;bottom:0;left:7px;border-left:1px dashed #998b9b;}
+.section-width-handle svg{position:relative;background:white;border:1px solid #c9bac9;border-radius:6px;min-width:16px;height:34px;}
+.section-width-handle span{position:absolute;top:calc(50% + 22px);background:white;border:1px solid #c9bac9;border-radius:6px;padding:3px;font:11px system-ui;}
+.storefront-section-frame:hover>.section-width-handle,.storefront-section-frame:focus-within>.section-width-handle{opacity:1;}
+@container(min-width:600px){
+ .storefront-section-grid:not([data-mobile=true])>.storefront-section-row:not([data-paired=true])>.storefront-section-frame,.storefront-section-grid:not([data-mobile=true])>.storefront-section-row:not([data-paired=true])>.storefront-layout-section{width:var(--section-width,100%);margin-left:var(--section-offset,0%);}
+ .storefront-section-grid:not([data-mobile=true]) .section-width-handle{display:flex;}
+}

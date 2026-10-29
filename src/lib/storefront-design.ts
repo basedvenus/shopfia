@@ -19,7 +19,7 @@ export const storefrontDesignSchema = z.object({
   version: z.literal(1), template: template.nullable(), depth: z.enum(["flat","floating","layered"]),
   mount: z.enum(["round","square","artwork"]), edge:color, background:color,
   headingFamily:family.optional(), subheadingFamily:family.optional(), bodyFamily:family.optional(),
-  sectionLayout:z.record(z.object({height:z.number().int().min(120).max(1200).optional(),beside:z.enum(APPROVED_STOREFRONT_SECTIONS).optional()})).refine(value=>Object.keys(value).every(key=>(APPROVED_STOREFRONT_SECTIONS as readonly string[]).includes(key))).optional(),
+  sectionLayout:z.record(z.object({height:z.number().int().min(120).max(1200).optional(),width:z.number().min(25).max(100).optional(),offset:z.number().min(0).max(75).optional(),beside:z.enum(APPROVED_STOREFRONT_SECTIONS).optional()}).refine(value=>(value.width??100)+(value.offset??0)<=100.01,"Section must fit within the page.")).refine(value=>Object.keys(value).every(key=>(APPROVED_STOREFRONT_SECTIONS as readonly string[]).includes(key))).optional(),
   socialVisibility:z.object({instagram:z.boolean(),tiktok:z.boolean()}).optional(),
   aboutPhotos:z.array(z.string().max(2048).refine(v=>v==="" || /^https?:\/\//.test(v) || v.startsWith("/"))).max(12).optional(),
   aboutPhotoLayout:z.enum(["grid","row","layered","offset","cascade","six","banner","scallop"]).optional(),
