@@ -4,7 +4,6 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CategoryAudience } from "@prisma/client";
 import { auth } from "@/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OfferingSetupForm } from "@/components/vendor/offering-setup-form";
 import { businessManagerWhere } from "@/lib/businesses";
 import { db } from "@/lib/db";
@@ -92,11 +91,6 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Service Details</CardTitle>
-        </CardHeader>
-        <CardContent>
           <OfferingSetupForm
             businessId={offering.vendor.id}
             categories={sortedCategories.map((category) => ({
@@ -108,6 +102,8 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
               name: category.name
             }))}
             offering={{
+              pricing: (offering.faqJson as Record<string, unknown> | null)?.pricing,
+              promotions: (offering.faqJson as Record<string, unknown> | null)?.promotions,
               addons: getPricedOptions(offering.addonsJson),
               basePriceCents: offering.basePriceCents,
               categoryId: offering.categoryId,
@@ -128,8 +124,6 @@ export default async function VendorOfferingEditPage({ params }: { params: Promi
               type: offering.type
             }}
           />
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -43,7 +43,9 @@ type ServiceComponent = {
   title: string;
 };
 
-type ExistingOffering = {
+export type ExistingOffering = {
+  pricing?: unknown;
+  promotions?: unknown;
   addons: PricedOption[];
   basePriceCents: number | null;
   categoryId: string;
@@ -69,7 +71,7 @@ function slugify(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-export function OfferingSetupForm({
+export function LegacyOfferingSetupForm({
   businessId,
   categories,
   eventCategories,
@@ -644,3 +646,5 @@ function formatCurrency(value: number) {
     style: "currency"
   }).format(value / 100);
 }
+
+export { LiveOfferingSetupForm as OfferingSetupForm } from "@/components/pricing/live-offering-setup-form";

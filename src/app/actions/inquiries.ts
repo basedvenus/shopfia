@@ -1,5 +1,7 @@
 "use server";
 
+import { readStructuredPricing, selectionSchema, estimateService, applyPromotion, promotionSchema } from "@/lib/service-pricing";
+
 import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { auth } from "@/auth";
@@ -133,6 +135,23 @@ export async function createPublicInquiryAction(formData: FormData) {
     listingId = listingId ?? offering.listing?.id ?? null;
   }
 
+  let pricingSnapshot: object | undefined;
+  if (offeringId) {
+    const current = await db.offering.findUnique({ where: { id: offeringId }, select: { faqJson: true } });
+    const config = current?.faqJson as Record<string, unknown> | null;
+    const pricing = readStructuredPricing(config?.pricing);
+    if (pricing) {
+      try {
+        const selection = selectionSchema.parse(JSON.parse(String(formData.get("pricingSelection") ?? "null")));
+        selection.eventDate = parsed.eventDate; selection.location = parsed.eventLocation;
+        const estimate = estimateService(pricing, selection);
+        if (estimate.errors.length) return { success: false, error: estimate.errors.join(" ") };
+        const promotions = Array.isArray(config?.promotions) ? config.promotions.flatMap(p => { const value = promotionSchema.safeParse(p); return value.success ? [value.data] : []; }) : [];
+        const sale = applyPromotion(estimate.lines, promotions, { now: new Date().toISOString(), eventDate: selection.eventDate, code: selection.promoCode });
+        pricingSnapshot = { version: 1, service: pricing, selection, lines: estimate.lines, subtotal: estimate.subtotal, pending: estimate.pending, sale, promotions };
+      } catch { return { success: false, error: "Open this service and choose its quantities and extras before sending your request." }; }
+    }
+  }
   const now = new Date();
   const eventLocation = parsed.formattedAddress || parsed.eventLocation || null;
   const eventDate = parsed.eventDate ? new Date(parsed.eventDate) : null;
@@ -161,7 +180,7 @@ export async function createPublicInquiryAction(formData: FormData) {
       }
     });
 
-    const existingInquiry = await tx.inquiry.findFirst({
+    const existingInquiry = pricingSnapshot ? null : await tx.inquiry.findFirst({
       where: {
         buyerId: session.user.id,
         vendorProfileId: vendor.id,
@@ -232,6 +251,8 @@ export async function createPublicInquiryAction(formData: FormData) {
       offeringId,
       vendorId: vendor.id
     });
+
+    if (pricingSnapshot) await tx.quoteRequest.update({ where: { id: quoteRequest.id }, data: { pricingSnapshot } });
 
     if (!existingInquiry) {
       await tx.message.create({

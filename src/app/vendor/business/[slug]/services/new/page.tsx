@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CategoryAudience } from "@prisma/client";
 import { auth } from "@/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OfferingSetupForm } from "@/components/vendor/offering-setup-form";
 import { businessManagerWhere } from "@/lib/businesses";
 import { db } from "@/lib/db";
@@ -51,18 +50,11 @@ export default async function NewBusinessServicePage({ params }: { params: Promi
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Service Details</CardTitle>
-        </CardHeader>
-        <CardContent>
           <OfferingSetupForm
             businessId={business.id}
             categories={categories.map((category) => ({ id: category.id, name: displayCategoryName(category.name) }))}
             eventCategories={eventCategories.map((category) => ({ id: category.id, name: category.name }))}
           />
-        </CardContent>
-      </Card>
     </div>
   );
 }

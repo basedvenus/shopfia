@@ -1,5 +1,8 @@
 "use client";
 
+import type { ServicePricing } from "@/lib/service-pricing";
+import { LiveServiceRequest } from "@/components/pricing/live-service-request";
+
 import { usePathname, useRouter } from "next/navigation";
 import { Heart, Lock, Send } from "lucide-react";
 import { useRef, useState, useTransition, type ReactNode } from "react";
@@ -12,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type ListingInquiryFormProps = {
+  pricing?: ServicePricing | null;
+  promotions?: unknown;
   defaultName?: string | null;
   listingId?: string | null;
   offeringId?: string | null;
@@ -23,6 +28,8 @@ const softInputClassName =
 
 export function ListingInquiryPanel({
   className,
+  pricing,
+  promotions,
   defaultName,
   description = "Share a few details about your event and the vendor will personally get back to you.",
   eyebrow = "Let's connect",
@@ -36,6 +43,7 @@ export function ListingInquiryPanel({
   eyebrow?: string;
   title?: string;
 }) {
+  if (pricing && offeringId) return <LiveServiceRequest pricing={pricing} promotions={promotions} offeringId={offeringId} vendorId={vendorProfileId} defaultName={defaultName ?? ""} />;
   return (
     <section
       id="inquiry"

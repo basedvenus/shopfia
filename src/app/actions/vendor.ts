@@ -1,4 +1,6 @@
 "use server";
+
+import { servicePricingSchema, promotionSchema, minimumPrice } from "@/lib/service-pricing";
 import { getVendorSocialProfile } from "@/lib/vendor-social";
 
 import { bookingWithDesign } from "@/lib/storefront-design";
@@ -961,14 +963,24 @@ export async function upsertOfferingAction(formData: FormData) {
   });
   if (!vendor) throw new Error("Create vendor profile first");
 
+  let pricing: ReturnType<typeof servicePricingSchema.parse> | undefined;
+  let promotions: ReturnType<typeof promotionSchema.parse>[] = [];
+  if (formData.get("pricingJson")) {
+    try {
+      pricing = servicePricingSchema.parse(JSON.parse(String(formData.get("pricingJson"))));
+      const raw = JSON.parse(String(formData.get("promotionsJson") || "[]"));
+      if (!Array.isArray(raw) || raw.length > 30) throw new Error("Invalid promotions");
+      promotions = raw.map(p => promotionSchema.parse(p));
+    } catch { redirectWithOfferingError("Check the service pricing, inclusions and promotion details."); }
+  }
   const result = offeringSchema.safeParse({
     id: formData.get("id") || undefined,
     type: formData.get("type"),
-    title: formData.get("title"),
-    slug: formData.get("slug") || slugify(formData.get("title")),
-    description: formData.get("description"),
-    basePriceCents: formData.get("basePriceCents") || (dollarsToCents(formData.get("startingPrice")) ?? undefined),
-    messageForPricing: formData.get("messageForPricing") === "on",
+    title: pricing?.name ?? formData.get("title"),
+    slug: formData.get("slug") || slugify(pricing?.name ?? formData.get("title")),
+    description: pricing?.description ?? formData.get("description"),
+    basePriceCents: pricing ? minimumPrice(pricing) ?? undefined : formData.get("basePriceCents") || (dollarsToCents(formData.get("startingPrice")) ?? undefined),
+    messageForPricing: pricing ? pricing.base.type === "custom" : formData.get("messageForPricing") === "on",
     categoryId: formData.get("categoryId") ? normalizeVendorCategoryId(String(formData.get("categoryId"))) : undefined,
     categoryIds: [...new Set(formDataToArray(formData, "categoryIds").map(normalizeVendorCategoryId))],
     eventCategoryIds: formDataToArray(formData, "eventCategoryIds"),
@@ -1028,7 +1040,7 @@ export async function upsertOfferingAction(formData: FormData) {
     title: parsed.title,
     slug: parsed.slug,
     description: parsed.description,
-    basePriceCents: parsed.messageForPricing ? null : parsed.basePriceCents ?? null,
+    basePriceCents: pricing ? minimumPrice(pricing) : parsed.messageForPricing ? null : parsed.basePriceCents ?? null,
     messageForPricing: parsed.messageForPricing,
     categoryId: primaryCategoryId,
     tags: [],
@@ -1037,7 +1049,8 @@ export async function upsertOfferingAction(formData: FormData) {
     variantsJson: parsed.packages,
     addonsJson: parsed.addons,
     faqJson: {
-      serviceComponents: parsed.serviceComponents
+      serviceComponents: parsed.serviceComponents,
+      ...(pricing ? { pricing, promotions } : {})
     },
     durationMinutes: parsed.durationMinutes ?? null,
     turnaroundDays: parsed.turnaroundDays ?? null,
@@ -1050,7 +1063,9 @@ export async function upsertOfferingAction(formData: FormData) {
   if (parsed.id) {
     const existing = await db.offering.findUnique({ where: { id: parsed.id } });
     if (!existing || existing.vendorId !== vendor.id) throw new Error("Offering not found");
-    await db.offering.update({ where: { id: parsed.id }, data: payload });
+    const previousFaq = existing.faqJson && typeof existing.faqJson === "object" && !Array.isArray(existing.faqJson) ? existing.faqJson : {};
+    if (!pricing && "pricing" in previousFaq) redirectWithOfferingError("Reload this service to edit its current pricing setup.");
+    await db.offering.update({ where: { id: parsed.id }, data: { ...payload, ...(pricing ? { durationMinutes: existing.durationMinutes, turnaroundDays: existing.turnaroundDays, inventoryCount: existing.inventoryCount, allowInstantBook: existing.allowInstantBook, tags: existing.tags } : {}), faqJson: { ...previousFaq, ...payload.faqJson, ...(pricing && "serviceComponents" in previousFaq ? { serviceComponents: previousFaq.serviceComponents } : {}) }, ...(pricing ? { variantsJson: existing.variantsJson ?? undefined, addonsJson: existing.addonsJson ?? undefined } : {}) } });
   } else {
     const offering = await db.offering.create({ data: payload });
     offeringId = offering.id;
@@ -1091,7 +1106,7 @@ export async function upsertOfferingAction(formData: FormData) {
     title: parsed.title,
     category: offeringCategory.name,
     description: parsed.description,
-    priceFrom: parsed.messageForPricing ? null : parsed.basePriceCents ?? null,
+    priceFrom: pricing ? minimumPrice(pricing) : parsed.messageForPricing ? null : parsed.basePriceCents ?? null,
     city: vendor.city,
     state: vendor.state,
     zipCode: vendor.zipCode,

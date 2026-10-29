@@ -1,3 +1,4 @@
+import { readStructuredPricing, priceLabel as structuredPriceLabel } from "@/lib/service-pricing";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -83,8 +84,9 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
     photoCrops[2] ?? photoCrops[0] ?? normalizeImageCrop(null)
   ];
   const priceLabel = formatOfferingPrice(offering);
-  const packages = getPricedOptions(offering.variantsJson);
-  const serviceComponents = getServiceComponents(offering.faqJson);
+  const hasStructuredPricing = readStructuredPricing((offering.faqJson as Record<string, unknown> | null)?.pricing);
+  const packages = hasStructuredPricing ? [] : getPricedOptions(offering.variantsJson);
+  const serviceComponents = hasStructuredPricing ? [] : getServiceComponents(offering.faqJson);
   const componentMap = new Map(serviceComponents.map((component) => [component.id, component]));
   const rating = (
     offering.vendor.sellerRatingAggregate?.weightedAverageRating ??
@@ -371,6 +373,8 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
 
         <aside className="xl:sticky xl:top-24">
           <ListingInquiryPanel
+            pricing={readStructuredPricing((offering.faqJson as Record<string, unknown> | null)?.pricing)}
+            promotions={(offering.faqJson as Record<string, unknown> | null)?.promotions}
             defaultName={session?.user?.name}
             title="Request this service"
             listingId={offering.listing?.id}
@@ -564,7 +568,9 @@ function PricedOptionCard({
   );
 }
 
-function formatOfferingPrice(offering: { basePriceCents: number | null; messageForPricing: boolean }) {
+function formatOfferingPrice(offering: { basePriceCents: number | null; messageForPricing: boolean; faqJson?: unknown }) {
+  const pricing = readStructuredPricing((offering.faqJson as Record<string, unknown> | null)?.pricing);
+  if (pricing) return structuredPriceLabel(pricing);
   if (offering.messageForPricing) return "Custom proposal";
   return offering.basePriceCents ? `Starting at ${formatCurrency(offering.basePriceCents)}` : "Custom proposal";
 }

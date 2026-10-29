@@ -47,7 +47,7 @@ function quoteRequest(overrides: Partial<QuoteRequest> = {}): QuoteRequest {
   return {
     id: "quote-request-a", buyerId: "buyer-a", vendorId: "profile-a", inquiryId: null,
     conversationId: "conversation-a", offeringId: null, eventDate: null, eventLocation: "Venue",
-    budgetCents: null, notes: null, attachments: [], status: "SUBMITTED",
+    pricingSnapshot: null, budgetCents: null, notes: null, attachments: [], status: "SUBMITTED",
     createdAt: timestamp(1), updatedAt: timestamp(1), offering: null, quote: null, ...overrides
   };
 }

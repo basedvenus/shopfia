@@ -36,6 +36,10 @@ export async function prepareQuoteCheckout({
     throw new Error("Forbidden");
   }
 
+  const structured = (quote.lineItemsJson as { structured?: { totals: { total: number; bookingPayment: number } }; superseded?: boolean } | null);
+  if (structured?.structured && (structured.superseded || !canPrepareQuoteCheckout(quote) || structured.structured.totals.total !== quote.amountCents || structured.structured.totals.bookingPayment !== (quote.depositAmountCents ?? quote.amountCents))) {
+    throw new Error("This quote is no longer payable. Review the current quote in your conversation.");
+  }
   const existingOrder = await db.order.findFirst({
     where: {
       quoteId: quote.id,
@@ -149,7 +153,7 @@ export async function prepareQuoteCheckout({
       })
     : null;
 
-  const order = await db.order.create({
+  const createOrder = (client: Pick<typeof db, "order">) => client.order.create({
     data: {
       buyerId,
       vendorId: vendorUser.id,
@@ -165,6 +169,18 @@ export async function prepareQuoteCheckout({
       status: OrderStatus.awaiting_payment
     }
   });
+  const order = structured?.structured ? await db.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${quote.quoteRequest.conversationId ?? quote.id}))`;
+    const current = await tx.quote.findUnique({ where: { id: quote.id } });
+    if (!current || !canAcceptQuote(current) || current.amountCents !== quote.amountCents || current.depositAmountCents !== quote.depositAmountCents) throw new Error("This quote changed. Review the current version before paying.");
+    const alreadyStarted = await tx.order.findFirst({ where: { quoteId: quote.id } });
+    if (alreadyStarted) throw new Error("Checkout has already started. Refresh the conversation to continue payment.");
+    const created = await createOrder(tx);
+    await tx.quote.update({ where: { id: quote.id }, data: { status: QuoteStatus.ACCEPTED } });
+    await tx.quoteRequest.update({ where: { id: quote.quoteRequest.id }, data: { status: QuoteRequestStatus.ACCEPTED } });
+    return created;
+  }) : await createOrder(db);
+
 
   const session = await createCheckoutSessionForOrder({
     amountCents,

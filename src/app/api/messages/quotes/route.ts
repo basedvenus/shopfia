@@ -94,6 +94,7 @@ export async function POST(request: Request) {
     "Event location TBD";
 
   const result = await db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${conversation.id}))`;
     const quoteRequest =
       (await tx.quoteRequest.findFirst({
         where: {
@@ -124,6 +125,7 @@ export async function POST(request: Request) {
         }
       }));
 
+    if (quoteRequest.pricingSnapshot) throw new Error("QUOTE_LOCKED_BY_PAYMENT");
     const existingQuote = await tx.quote.findUnique({
       where: { quoteRequestId: quoteRequest.id },
       select: {

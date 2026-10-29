@@ -1,4 +1,9 @@
 "use client";
+import { LiveQuoteBuilder } from "@/components/pricing/live-quote-builder";
+import { BuyerQuote } from "@/components/pricing/service-quote-builder";
+import { readRequestPricing } from "@/lib/structured-quote";
+import type { QuoteVersion } from "@/lib/service-pricing";
+
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -1183,6 +1188,8 @@ function QuoteReviewModal({
   if (!quote) return null;
 
   const reviewedQuote = quote;
+  const structured = (quote.lineItemsJson as { structured?: QuoteVersion } | null)?.structured;
+  const isUnavailable = quote.status === "EXPIRED" || new Date(quote.expiresAt) <= new Date();
   const latestOrder = getLatestQuoteOrder(reviewedQuote);
   const bookingIsPaid = isPaidBookingOrder(latestOrder?.status);
   const paidAtLabel = formatBookingTimestamp(
@@ -1325,6 +1332,7 @@ function QuoteReviewModal({
               </div>
             </div>
 
+            {structured ? <div className="sp-workspace" style={{ padding: 0, minHeight: 0 }}><BuyerQuote quote={{ ...structured, status: quote.status === "ACCEPTED" ? "accepted" : isUnavailable ? "superseded" : "sent" }} /></div> : <>
             {quoteDetails.lineItems.length > 0 ? (
               <div className="rounded-[1.15rem] border border-[#eadbd3] bg-white p-3">
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#9b6b65]">Included</p>
@@ -1364,6 +1372,8 @@ function QuoteReviewModal({
               </div>
             </div>
 
+            </>}
+
             {reviewedQuote.notes ? (
               <div className="rounded-[1.15rem] border border-[#eadbd3] bg-[#fffdfa] p-3">
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#9b6b65]">Note from vendor</p>
@@ -1382,7 +1392,7 @@ function QuoteReviewModal({
         </div>
 
         <div className="grid shrink-0 gap-2 border-t border-[#eadbd3] bg-white p-3 sm:grid-cols-[1fr_auto]">
-          {bookingIsPaid || readOnly ? (
+          {bookingIsPaid || readOnly || isUnavailable ? (
             <button
               type="button"
               onClick={returnToConversation}
@@ -1458,7 +1468,7 @@ function BuildQuotePromptCard({ onBuildQuote }: { onBuildQuote: (quoteRequest?: 
   );
 }
 
-function QuoteBuilderModal({
+function LegacyQuoteBuilderModal({
   conversation,
   existingQuoteRequest,
   onClose,
@@ -2130,4 +2140,10 @@ declare global {
   interface Window {
     webkitAudioContext?: typeof AudioContext;
   }
+}
+
+function QuoteBuilderModal(props: { conversation: SerializedMessageConversation; existingQuoteRequest?: QuoteRequestItem | null; onClose: () => void; onSent: () => void }) {
+  const request = props.existingQuoteRequest ?? props.conversation.quoteRequests.at(-1);
+  if (request && readRequestPricing(request.pricingSnapshot)) return <LiveQuoteBuilder conversationId={props.conversation.id} requestId={request.id} snapshot={request.pricingSnapshot} quote={request.quote} onClose={props.onClose} onSent={props.onSent} />;
+  return <LegacyQuoteBuilderModal {...props} />;
 }

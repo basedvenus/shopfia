@@ -796,6 +796,7 @@ model ListingFeeEvent {
 }
 
 model QuoteRequest {
+  pricingSnapshot Json?
   id              String             @id @default(cuid())
   buyerId         String
   vendorId        String

@@ -3,6 +3,7 @@ import { OffsiteAdsTier, OrderStatus, QuoteRequestStatus, QuoteStatus } from "@p
 
 const mocks = vi.hoisted(() => {
   const db = {
+    $executeRaw: vi.fn(),
     $transaction: vi.fn(async (input) => input),
     listing: {
       findUnique: vi.fn()
@@ -90,6 +91,21 @@ describe("quote checkout preparation", () => {
     mocks.db.quote.update.mockResolvedValue({ id: "quote_1" });
     mocks.db.quoteRequest.update.mockResolvedValue({ id: "quote_request_1" });
     mocks.stripe.checkout.sessions.retrieve.mockResolvedValue({ id: "cs_test_existing", status: "open", url: "https://checkout.stripe.com/c/pay/existing" });
+  });
+
+  it("rejects a superseded structured quote before reopening checkout", async () => {
+    mocks.db.quote.findUnique.mockResolvedValue({ ...quote, status: QuoteStatus.EXPIRED, lineItemsJson: { superseded: true, structured: { totals: { total: 50000, bookingPayment: 12500 } } } });
+    await expect(prepareQuoteCheckout({ buyerId: "buyer_1", origin: "https://shopfia.app", payMode: "deposit", quoteId: "quote_1" })).rejects.toThrow("no longer payable");
+    expect(mocks.stripe.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a quote replaced while checkout was being prepared", async () => {
+    const structured = { ...quote, lineItemsJson: { structured: { totals: { total: 50000, bookingPayment: 12500 } } } };
+    mocks.db.quote.findUnique.mockResolvedValueOnce(structured).mockResolvedValueOnce({ ...structured, status: QuoteStatus.EXPIRED });
+    mocks.db.$transaction.mockImplementationOnce(async input => typeof input === "function" ? input(mocks.db) : input);
+    await expect(prepareQuoteCheckout({ buyerId: "buyer_1", origin: "https://shopfia.app", payMode: "deposit", quoteId: "quote_1" })).rejects.toThrow("quote changed");
+    expect(mocks.db.order.create).not.toHaveBeenCalled();
+    expect(mocks.stripe.checkout.sessions.create).not.toHaveBeenCalled();
   });
 
   it("creates one awaiting payment order and returns a Stripe Checkout URL", async () => {
