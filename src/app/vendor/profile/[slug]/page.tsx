@@ -149,15 +149,17 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   const serviceAreaLabel = [vendor.city, vendor.state].filter(Boolean).join(", ");
   const coverageAreas = coverageAreaLabels(vendor.serviceAreaNotes, serviceAreaLabel || vendor.city);
   const publicStorefrontUrl = storefrontUrl(vendor.slug);
+  const design = readStorefrontDesign(vendor.storefrontBookingJson);
+  const galleryImageCount = [vendor.storefrontAboutImage, ...(design.aboutPhotos ?? [])].filter(Boolean).length;
   const hiddenSections = sanitizeHiddenStorefrontSections(vendor.storefrontHiddenSections);
   const sectionLabels = sanitizeStorefrontSectionLabels(vendor.storefrontSectionLabels);
   const sectionLabel = (section: keyof typeof STOREFRONT_SECTION_LABELS) => sectionLabels[section] ?? STOREFRONT_SECTION_LABELS[section];
   const sectionOrder = sanitizeStorefrontSections(vendor.storefrontSectionOrder).filter((section) => {
-    if (hiddenSections.includes(section)) return false;
+    if (hiddenSections.includes(section) && !(section === "portfolio" && (vendor.storefrontAboutImage || design.aboutPhotos?.some(Boolean)))) return false;
     if (!isUnclaimed) return true;
     if (section === "portfolio") return false;
     if (section === "all-services" || section === "featured-services") return vendor.offerings.length > 0;
-    if (["how-it-works", "faq", "final-quote", "reviews"].includes(section)) return false;
+    if (["how-it-works", "faq", "final-quote", "reviews", "effects"].includes(section)) return false;
     return true;
   });
   const sectionPriority = (section: string) => sectionOrder.indexOf(section) === -1 ? 999 : sectionOrder.indexOf(section);
@@ -173,7 +175,6 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   const faqItems = readStorefrontFaqs(vendor.storefrontFaqJson);
   const bookingInfo = readStorefrontBooking(vendor.storefrontBookingJson);
   const policies = readStorefrontPolicies(vendor.storefrontPoliciesJson);
-  const design = readStorefrontDesign(vendor.storefrontBookingJson);
   const template = design.template;
   const sectionStyle = (key:string) => sectionDesignStyle(template?.sectionDesigns?.[key]);
   const theme = getStorefrontTheme({
@@ -239,7 +240,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   }
 
   const partyCredits = taggedEvents.length > 0 ? (
-        <section id="party-credits" className="scroll-mt-28 space-y-4" style={{ order: isUnclaimed ? 0 : 998 }}>
+        <section id="party-credits" className="scroll-mt-28 space-y-4" style={{ order: isUnclaimed ? 0 : sectionPriority("parties") }}>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>Seen In Real Parties</h2>
@@ -276,12 +277,12 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             ))}
           </div>
         </section>
-      ) : null;
+      ) : <section id="party-credits" style={{order:sectionPriority("parties")}}><h2 className="text-2xl font-semibold" style={theme.headingStyle}>Real parties</h2><p className="mt-3 text-sm">No tagged parties yet.</p></section>;
 
   return (
     <PublishedStorefrontSurface template={template} className={`flex flex-col gap-8 rounded-[1.25rem] ${template ? "" : `bg-gradient-to-br ${palette.className}`} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
       {isOwnerViewing ? (
-        <div className="sticky top-0 z-30 flex flex-col gap-2 rounded-[1rem] border border-[#eadbd7] bg-white/95 px-3 py-2 shadow-[0_12px_34px_rgba(47,38,38,0.10)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+        <div style={{order:-1}} className="sticky top-0 z-30 flex flex-col gap-2 rounded-[1rem] border border-[#eadbd7] bg-white/95 px-3 py-2 shadow-[0_12px_34px_rgba(47,38,38,0.10)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Owner view</p>
             <p className="truncate text-xs text-muted-foreground">You are viewing your live ShopFia storefront.</p>
@@ -302,7 +303,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           </div>
         </div>
       ) : null}
-      <header className="overflow-hidden rounded-[1rem] border bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]" style={theme.headerShellStyle}>
+      <header className="overflow-hidden rounded-[1rem] border bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]" style={{...theme.headerShellStyle,order:sectionPriority("hero")}}>
         <div className="flex items-center justify-between gap-3 border-b px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]" style={theme.platformBarStyle}>
           <span>ShopFia Storefront</span>
           <span className="hidden sm:inline">{isUnclaimed ? "Community-tagged · Unclaimed business" : "Verified identity, saved services, quotes, and bookings"}</span>
@@ -390,7 +391,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           </div>
         </div>
         <StorefrontNavigation
-          visibleSections={sectionOrder}
+          visibleSections={sectionOrder.filter(section=>section!=="effects" || design.depth!=="flat")}
           sectionLabels={sectionLabels}
           style={theme.navStyle}
           activeItemStyle={theme.activeNavItemStyle}
@@ -405,7 +406,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <ShareUnclaimedVendor name={vendor.name} url={publicStorefrontUrl} />
       </section> : null}
       {isUnclaimed ? partyCredits : null}
-      {!isUnclaimed ? (hasStorefrontDesign(vendor.storefrontBookingJson) ? <PublishedStorefrontHero design={design} name={vendor.name} headline={vendor.storefrontAboutHeading || vendor.name} description={vendor.storefrontTagline || vendor.bio || ""} location={[vendor.city,vendor.state].filter(Boolean).join(", ")} image={hero || ""} logo={vendor.logoUrl || ""} crop={coverCrop} headingStyle={theme.headingStyle}/> : <StorefrontTemplateIntro
+      {!isUnclaimed ? (hasStorefrontDesign(vendor.storefrontBookingJson) ? <PublishedStorefrontHero order={sectionPriority("hero")} design={{...design,depth:"flat"}} name={vendor.name} headline={vendor.storefrontAboutHeading || vendor.name} description={vendor.storefrontTagline || vendor.bio || ""} location={[vendor.city,vendor.state].filter(Boolean).join(", ")} image={hero || ""} logo={vendor.logoUrl || ""} crop={coverCrop} headingStyle={theme.headingStyle}/> : <div style={{order:sectionPriority("hero")}}><StorefrontTemplateIntro
         completedOrderCount={completedOrderCount}
         coverCrop={coverCrop}
         displayedFeaturedOfferings={displayedFeaturedOfferings}
@@ -423,7 +424,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         verifiedAverageRating={verifiedAverageRating}
         verifiedCredentials={verifiedCredentials}
         verifiedReviewCount={verifiedReviewCount}
-      />) : null}
+      /></div>) : null}
+
+      {!isUnclaimed && design.depth !== "flat" && showSection("effects") ? <PublishedStorefrontHero effectOnly order={sectionPriority("effects")} design={design} name={vendor.name} headline={vendor.storefrontAboutHeading || vendor.name} description={vendor.storefrontTagline || vendor.bio || ""} location={[vendor.city,vendor.state].filter(Boolean).join(", ")} image={hero || ""} logo={vendor.logoUrl || ""} crop={coverCrop} headingStyle={theme.headingStyle}/> : null}
 
       {showSection("about") ? (
         <section id="about" data-testid="preview-section-about" data-custom-background={Boolean(template?.sectionDesigns?.["about"]) } className={`grid scroll-mt-28 gap-5 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-8 ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, ...sectionStyle("about"), order: sectionPriority("about") }}>
@@ -432,7 +435,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             <h2 className="mt-3 text-4xl font-normal tracking-normal" style={{...theme.headingStyle,...(design.subheadingFamily ? {fontFamily:design.subheadingFamily}: {})}}>
               {aboutHeading}
             </h2>
-            {vendor.storefrontAboutImage || design.aboutPhotos?.some(Boolean) ? <PublishedAboutGallery images={[vendor.storefrontAboutImage || "",...(design.aboutPhotos ?? [])]} layout={design.aboutPhotoLayout} name={vendor.name}/> : null}
+
           </div>
           <div className="grid gap-4">
             <p className={`text-base leading-8 ${theme.copyClass}`}>
@@ -486,9 +489,10 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
               A browsable look at this vendor&apos;s uploaded work, styled and ordered from the storefront editor.
             </p>
           </div>
-          <Badge variant="outline" style={theme.outlineBadgeStyle}>{portfolioPhotos.length} photo{portfolioPhotos.length === 1 ? "" : "s"}</Badge>
+          <Badge variant="outline" style={theme.outlineBadgeStyle}>{portfolioPhotos.length + galleryImageCount} photo{portfolioPhotos.length + galleryImageCount === 1 ? "" : "s"}</Badge>
         </div>
 
+            {vendor.storefrontAboutImage || design.aboutPhotos?.some(Boolean) ? <PublishedAboutGallery images={[vendor.storefrontAboutImage || "",...(design.aboutPhotos ?? [])]} layout={design.aboutPhotoLayout} name={vendor.name}/> : null}
         {portfolioPhotos.length > 0 ? (template ? <TemplateMediaGrid template={template} photos={portfolioPhotos}/> :
           <StorefrontPortfolioGallery
             businessName={vendor.name}
@@ -497,10 +501,10 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             imageRadius={theme.sectionRadius}
             photos={portfolioPhotos}
           />
-        ) : (
+        ) : galleryImageCount ? null : (
           <Card className="border-white/70 bg-white/90">
             <CardContent className="p-4 text-sm text-muted-foreground">
-              Portfolio images will appear here once this vendor publishes photos from the storefront editor.
+              Photos will appear here once this vendor publishes photos from the storefront editor.
             </CardContent>
           </Card>
         )}
@@ -567,7 +571,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         </section>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]" style={{ order: Math.min(sectionPriority("final-quote"), sectionPriority("reviews")) }}>
+
         {showSection("final-quote") ? (
         <div id="inquiry" className="scroll-mt-28" style={{ ...sectionStyle("final-quote"), order: sectionPriority("final-quote") }}>
           {!isUnclaimed ? (
@@ -578,7 +582,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             />
           ) : null}
         </div>
-        ) : <div />}
+        ) : null}
 
         {showSection("reviews") ? (
         <div id="reviews" className="space-y-4 scroll-mt-28" style={{ ...sectionStyle("reviews"), order: sectionPriority("reviews") }}>
@@ -646,7 +650,6 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           )}
         </div>
         ) : null}
-      </section>
 
       {showSection("faq") ? (
       <section id="faq" data-testid="preview-section-faq" data-custom-background={Boolean(template?.sectionDesigns?.["faq"]) } className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, ...sectionStyle("faq"), order: sectionPriority("faq") }}>
@@ -667,8 +670,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       </section>
       ) : null}
 
-      {!isUnclaimed ? partyCredits : null}
-      <section style={{ order: 998.5 }}><VendorSocialFeeds instagramUrl={design.socialVisibility?.instagram === false ? null : instagramFeedUrl} tiktokUrl={design.socialVisibility?.tiktok === false ? null : vendor.tiktokUrl} /></section>
+      {!isUnclaimed && showSection("parties") ? partyCredits : null}
+      {showSection("socials") && <section id="socials" style={{ order: sectionPriority("socials") }}><VendorSocialFeeds instagramUrl={design.socialVisibility?.instagram === false ? null : instagramFeedUrl} tiktokUrl={design.socialVisibility?.tiktok === false ? null : vendor.tiktokUrl} />{vendor.website && <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block underline">Website ↗</a>}</section>}
 
       <footer className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm ${theme.mutedClass} ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, order: 999 }}>
         <span>{vendor.name} storefront, powered by ShopFia.</span>

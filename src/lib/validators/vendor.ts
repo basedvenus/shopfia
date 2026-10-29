@@ -1,3 +1,4 @@
+import { APPROVED_STOREFRONT_SECTIONS } from "@/lib/businesses";
 import { storefrontDesignJsonSchema } from "@/lib/storefront-design";
 import { z } from "zod";
 
@@ -69,7 +70,7 @@ export const vendorOnboardingSchema = z.object({
   serviceAreaNotes: z.string().max(500, "Service area notes are a little too long.").optional().or(z.literal("")),
   availabilityNotes: z.string().max(300, "Availability notes are a little too long.").optional().or(z.literal("")),
   storefrontAccentColor: z.string().max(40).optional().or(z.literal("")),
-  storefrontSectionOrder: z.array(z.string().max(40)).max(9).default([]),
+  storefrontSectionOrder: z.array(z.string().max(40)).max(APPROVED_STOREFRONT_SECTIONS.length).default([]),
   logoUrl: imageValueSchema.optional().or(z.literal("")),
   categoryIds: z
     .array(databaseIdSchema)
@@ -123,7 +124,7 @@ export const storefrontCustomizationSchema = z.object({
   buttonStyle: z.enum(["PILL", "SOFT", "OUTLINE"]),
   imageShape: z.enum(["ROUNDED", "SOFT", "SQUARE"]),
   textTone: z.enum(["AUTO", "DARK", "LIGHT"]).default("AUTO"),
-  sectionOrder: z.array(z.string().max(40)).max(9).default([]),
+  sectionOrder: z.array(z.string().max(40)).max(APPROVED_STOREFRONT_SECTIONS.length).default([]),
   hiddenSections: z.array(z.string().max(40)).max(8).default([]),
   sectionLabelsJson: z.string().max(10000).optional().or(z.literal("")),
   faqJson: z.string().max(25000).optional().or(z.literal("")),

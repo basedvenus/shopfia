@@ -182,6 +182,17 @@ describe("storefront customization actions", () => {
     });
   });
 
+  it("persists independent booking, social and 3D positions in draft and published settings", async () => {
+    const payload = basePayload();
+    const order = ["hero", "final-quote", "socials", "all-services", "effects", "parties", "reviews", "portfolio", "about", "faq", "featured-services", "how-it-works"];
+    payload.sectionOrder = order;
+    await autosaveStorefrontDraftAction(payload);
+    expect(mocks.db.vendorProfile.update.mock.calls.at(-1)?.[0]?.data.storefrontDraftJson.sectionOrder).toEqual(order);
+    payload.intent = "publish";
+    await expect(updateStorefrontCustomizationAction(formDataFromPayload(payload))).rejects.toThrow("NEXT_REDIRECT:");
+    expect(mocks.db.vendorProfile.update.mock.calls.at(-1)?.[0]?.data.storefrontSectionOrder).toEqual(order);
+  });
+
   it("publishes storefront display settings without rewriting service records", async () => {
     const payload = basePayload();
     payload.intent = "publish";
@@ -200,7 +211,7 @@ describe("storefront customization actions", () => {
         storefrontOfferingOrder: [serviceTwoId, serviceOneId],
         storefrontPalette: "DISCO",
         storefrontSectionLabels: { portfolio: "Our Work", faq: "Questions" },
-        storefrontSectionOrder: ["hero", "portfolio", "all-services", "faq", "featured-services", "about", "how-it-works", "reviews", "final-quote"]
+        storefrontSectionOrder: ["hero", "effects", "portfolio", "all-services", "faq", "featured-services", "about", "how-it-works", "reviews", "final-quote", "parties", "socials"]
       })
     });
     expect(mocks.db.vendorProfile.update.mock.calls[0]?.[0]?.data).not.toHaveProperty("offerings");

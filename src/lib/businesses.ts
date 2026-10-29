@@ -187,19 +187,25 @@ export const APPROVED_STOREFRONT_SECTIONS = [
   "portfolio",
   "reviews",
   "faq",
-  "final-quote"
+  "final-quote",
+  "effects",
+  "parties",
+  "socials"
 ] as const;
 
 export const STOREFRONT_SECTION_LABELS: Record<(typeof APPROVED_STOREFRONT_SECTIONS)[number], string> = {
-  hero: "Hero",
+  hero: "Profile",
   "featured-services": "Featured Services",
-  "all-services": "All Services",
-  about: "About Us",
+  "all-services": "Services",
+  about: "About",
   "how-it-works": "How It Works",
-  portfolio: "Portfolio",
+  portfolio: "Photos",
   reviews: "Reviews",
   faq: "FAQ",
-  "final-quote": "Final Quote Section"
+  "final-quote": "Booking",
+  effects: "3D Effects",
+  parties: "Parties",
+  socials: "Socials"
 };
 
 export const REQUIRED_STOREFRONT_SECTIONS = ["hero", "reviews", "final-quote"] as const;
@@ -284,6 +290,11 @@ export function sanitizeStorefrontSections(sections: string[]) {
       ? requested
       : ["hero", ...requested];
   const combined = [...ordered, ...APPROVED_STOREFRONT_SECTIONS];
+  if (!requested.includes("effects")) {
+    const effectIndex = combined.indexOf("effects");
+    combined.splice(effectIndex, 1);
+    combined.splice(combined.indexOf("hero") + 1, 0, "effects");
+  }
   return Array.from(new Set(combined));
 }
 

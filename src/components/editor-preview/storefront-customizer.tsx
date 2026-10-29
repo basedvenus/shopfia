@@ -188,7 +188,7 @@ const toolLabels: Record<EditorTool, string> = {
 
 function toolForSection(section: string): EditorTool {
   if (section === "featured-services" || section === "all-services") return "services";
-  if (section === "portfolio") return "gallery";
+  if (section === "portfolio" || section === "socials") return "gallery";
   return "content";
 }
 
@@ -233,7 +233,7 @@ export function StorefrontCustomizer({
   const [effectReplay,setEffectReplay]=useState(0);
   const [effectNotice,setEffectNotice]=useState("");
   useEffect(()=>()=>{if(editTimer.current)clearTimeout(editTimer.current);},[]);
-  function replayEffect(){setEffectReplay(v=>v+1);requestAnimationFrame(()=>templatePreviewRef.current?.querySelector('.depth-hero')?.scrollIntoView({block:'center',behavior:'auto'}));}
+  function replayEffect(){setEffectReplay(v=>v+1);requestAnimationFrame(()=>templatePreviewRef.current?.querySelector('[data-testid="preview-section-effects"]')?.scrollIntoView({block:'center',behavior:'auto'}));}
 
   const [heroDepth, setHeroDepth] = useState<HeroDepth>(initialDesign.depth);
   const [designBrief, setDesignBrief] = useState("");
@@ -420,9 +420,11 @@ export function StorefrontCustomizer({
 
   function moveSection(section: string, targetSection: string) {
     if (section === targetSection) return;
-    const without = form.sectionOrder.filter((item) => item !== section);
-    const targetIndex = without.indexOf(targetSection);
-    update("sectionOrder", [...without.slice(0, targetIndex), section, ...without.slice(targetIndex)]);
+    const order = [...form.sectionOrder];
+    const from = order.indexOf(section), to = order.indexOf(targetSection);
+    if (from < 0 || to < 0) return;
+    order.splice(from, 1); order.splice(to, 0, section);
+    update("sectionOrder", order);
   }
 
   function onSectionDrop(event: DragEvent<HTMLButtonElement>, targetSection: string) {
@@ -472,6 +474,7 @@ export function StorefrontCustomizer({
   function movePhoto(fromIndex: number, toIndex: number) {
     if (fromIndex === toIndex) return;
     const photos = form.photoUrls.filter(Boolean);
+
     const [photo] = photos.splice(fromIndex, 1);
     if (!photo) return;
     photos.splice(toIndex, 0, photo);
@@ -802,7 +805,24 @@ export function StorefrontCustomizer({
             </button>
           ) : (
             <div className="p-4">
-              <nav aria-label="Jump to storefront section" className="mb-5 flex flex-wrap gap-2">{[["hero","Profile"],["all-services","Packages"],["about","About & photos"],["reviews","Parties & reviews"],["final-quote","Booking & socials"]].map(([id,label])=><button key={id} type="button" aria-current={activeSection===id?"location":undefined} className="rounded-full border px-3 py-2 text-xs aria-[current=location]:bg-stone-100" onClick={()=>{selectSection(id);requestAnimationFrame(()=>document.querySelector(`[data-testid="preview-section-${id}"]`)?.scrollIntoView({behavior:"smooth",block:"start"}));}}>{label}</button>)}</nav>
+              <p className="mb-2 text-xs text-muted-foreground">Drag sections to reorder your page.</p>
+              <nav aria-label="Reorder storefront sections" className="mb-5 flex flex-wrap gap-2">
+                {visibleSections.filter(id => id !== "effects" || heroDepth !== "flat").map(id => <button
+                  key={id} type="button" draggable={false} data-section-move={id} style={{touchAction:"none"}} aria-label={`Move or edit ${sectionLabel(id)}`}
+                  aria-current={activeSection===id?"location":undefined}
+                  title="Drag to reorder. Or use Alt + Left/Right."
+                  onDragStart={event=>{setDraggedSection(id);event.dataTransfer.setData("text/plain",id);event.dataTransfer.effectAllowed="move";}}
+                  onPointerDown={event=>{if(event.button===0){setDraggedSection(id);event.currentTarget.setPointerCapture(event.pointerId);}}}
+                  onPointerUp={event=>{if(event.button===0){const target=document.elementFromPoint(event.clientX,event.clientY)?.closest<HTMLElement>("[data-section-move]")?.dataset.sectionMove;if(target)moveSection(id,target);setDraggedSection(null);}}}
+                  onPointerCancel={()=>setDraggedSection(null)}
+                  onDragEnd={()=>setDraggedSection(null)}
+                  onDragOver={event=>event.preventDefault()}
+                  onDrop={event=>onSectionDrop(event,id)}
+                  onKeyDown={event=>{if(event.altKey && ["ArrowLeft","ArrowRight"].includes(event.key)){event.preventDefault();const order=[...form.sectionOrder];const from=order.indexOf(id);const to=from+(event.key==="ArrowLeft"?-1:1);if(to>=0&&to<order.length){[order[from],order[to]]=[order[to],order[from]];update("sectionOrder",order);}}}}
+                  className={`inline-flex cursor-grab touch-none select-none items-center gap-1 rounded-full border px-3 py-2 text-xs active:cursor-grabbing aria-[current=location]:bg-stone-100 ${draggedSection===id?"opacity-50":""}`}
+                  onClick={()=>{selectSection(id);requestAnimationFrame(()=>document.querySelector(`[data-testid="preview-section-${id}"]`)?.scrollIntoView({behavior:"smooth",block:"start"}));}}
+                ><GripVertical className="h-3 w-3" aria-hidden="true"/>{sectionLabel(id)}</button>)}
+              </nav>
               <div className="mb-4 grid grid-cols-3 gap-1 rounded-full border border-[#eadbd7] bg-[#fbf7f5] p-1">
                 {(Object.keys(toolLabels) as EditorTool[]).filter(tool=>tool!=="design").map((tool) => (
                   <button
@@ -899,7 +919,7 @@ function createInitialState(business: CustomizerBusiness, previewOnly = false): 
     coverPhotoCrop: normalizeImageCrop(draft?.coverPhotoCrop ?? business.coverPhotoCrop ?? DEFAULT_IMAGE_CROP),
     faqs: draft?.faqs ?? (previewOnly && !business.storefrontFaqJson ? [] : readFaqs(business.storefrontFaqJson)),
     fontStyle: draft?.fontStyle ?? business.storefrontFontStyle,
-    hiddenSections: sanitizeHiddenStorefrontSections(draft?.hiddenSections ?? business.storefrontHiddenSections).filter(section=>section!=="all-services"),
+    hiddenSections: sanitizeHiddenStorefrontSections(draft?.hiddenSections ?? business.storefrontHiddenSections).filter(section=>section!=="all-services" && section!=="portfolio"),
     imageShape: draft?.imageShape ?? business.storefrontImageShape,
     instagramFeedEnabled: Boolean(draft?.instagramFeedEnabled ?? business.storefrontInstagramFeedEnabled),
     instagramFeedUrl: draft?.instagramFeedUrl ?? business.storefrontInstagramFeedUrl ?? business.instagramUrl ?? "",
@@ -912,7 +932,7 @@ function createInitialState(business: CustomizerBusiness, previewOnly = false): 
     photoUrls: draft?.photoUrls ?? [...business.photos, "", "", "", "", "", ""].slice(0, 10),
     policies: draft?.policies ?? (previewOnly && !business.storefrontPoliciesJson ? [] : readPolicies(business.storefrontPoliciesJson)),
     sectionLabels: draft?.sectionLabels ?? sanitizeStorefrontSectionLabels(business.storefrontSectionLabels),
-    sectionOrder: draft?.sectionOrder ?? sanitizeStorefrontSections(business.storefrontSectionOrder),
+    sectionOrder: sanitizeStorefrontSections(draft?.sectionOrder ?? business.storefrontSectionOrder),
     serviceAreaNotes: draft?.serviceAreaNotes ?? business.serviceAreaNotes ?? "",
     services: applyDraftServiceDisplay(
       draft?.services?.length ? mergeDraftServices(draft.services, orderedServices) : orderedServices,
@@ -1490,9 +1510,8 @@ function StorefrontPreview({
     update("faqs", form.faqs.map((faq) => (faq.id === id ? { ...faq, ...patch } : faq)));
   };
   const photos = form.photoUrls.filter(Boolean);
-  return (
-    <div data-template={template?.id} data-page-background={Boolean(template?.backgroundDesign)} data-heading-case={template?.headingFamily?.includes("greatvibes") ? "script" : undefined} data-composition={template?.composition} data-mask={template?.imageMask} data-sections={template?.sections} data-services={template?.services} data-button={template?.button ?? "pill"} data-frame={template?.frame ?? "none"} className={`${template ? "template-surface " : ""}overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={{...theme.bodyStyle,...(template ? templateVariables(template) : {}),...sectionDesignStyle(template?.backgroundDesign)}}>
-      <section data-testid="preview-section-hero" onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
+  const profile = (
+      <section style={{order:form.sectionOrder.indexOf("hero")}} data-testid="preview-section-hero" onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
         <div className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground" style={theme.platformBarStyle}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           <div className="shrink-0">
@@ -1555,7 +1574,7 @@ function StorefrontPreview({
             <span className="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>Follow</span>
           </div>
         </div>
-        {heroDepth ? <DimensionalStorefrontHero effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth={heroDepth} mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /> : <PreviewHeroTemplate
+        {heroDepth ? <DimensionalStorefrontHero effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth="flat" mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /> : <PreviewHeroTemplate
           active={activeSection === "hero"}
           activeServices={activeServices}
           business={business}
@@ -1567,17 +1586,27 @@ function StorefrontPreview({
           update={update}
         />}
       </section>
-      <div className="px-5 pb-8 sm:px-8">
-        {[...visibleSections].sort((a,b)=>a==="all-services"?-1:b==="all-services"?1:0).filter((section) => {
-          if (section === "hero") return false;
+  );
+  return (
+    <div data-template={template?.id} data-page-background={Boolean(template?.backgroundDesign)} data-heading-case={template?.headingFamily?.includes("greatvibes") ? "script" : undefined} data-composition={template?.composition} data-mask={template?.imageMask} data-sections={template?.sections} data-services={template?.services} data-button={template?.button ?? "pill"} data-frame={template?.frame ?? "none"} className={`${template ? "template-surface " : ""}flex flex-col overflow-hidden rounded-[1rem] shadow-soft ${isMobile ? "text-[12px]" : ""} ${theme.shellClass}`} style={{...theme.bodyStyle,...(template ? templateVariables(template) : {}),...sectionDesignStyle(template?.backgroundDesign)}}>
+
+      <div className="contents">
+        {visibleSections.filter((section) => {
+          if (section === "hero") return true;
           if (section === activeSection) return true;
           if (section === "featured-services") return featuredServices.length > 0;
           if (section === "all-services") return true;
-          if (section === "portfolio") return photos.length > 0 || form.instagramFeedEnabled;
+          if (section === "effects") return Boolean(heroDepth && heroDepth !== "flat");
+          if (section === "portfolio") return true;
           if (section === "faq") return form.faqs.length > 0;
           if (section === "how-it-works") return Boolean(business.storefrontBookingJson || form.serviceAreaNotes);
           return true;
         }).map((section) => {
+          if (section === "hero") return <div key={section}>{profile}</div>;
+          if (section === "effects") return <div key={section} data-testid="preview-section-effects" onClick={()=>setActiveSection(section)}><DimensionalStorefrontHero effectOnly effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth={heroDepth ?? "flat"} mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /></div>;
+          if (section === "parties") return <PreviewSection key={section} active={activeSection===section} testId="preview-section-parties" theme={theme} title="Real parties" onClick={()=>setActiveSection(section)}><p>Real parties featuring your business appear here when hosts tag you.</p></PreviewSection>;
+          if (section === "socials") return <PreviewSection key={section} active={activeSection===section} testId="preview-section-socials" theme={theme} title="Socials" onClick={()=>setActiveSection(section)}><div className="flex flex-wrap gap-5">{form.showInstagram && form.instagramUrl && <a href={form.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a>}{form.showTikTok && form.tiktokUrl && <a href={form.tiktokUrl} target="_blank" rel="noreferrer">TikTok ↗</a>}{form.website && <a href={form.website} target="_blank" rel="noreferrer">Website ↗</a>}</div>{!form.instagramUrl && !form.tiktokUrl && !form.website && <p>Add your social links in Gallery.</p>}</PreviewSection>;
+
           if (section === "featured-services") return (
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-featured-services" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               <ServiceGrid
@@ -1593,8 +1622,8 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "all-services") return (
-            <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title="Packages & services" onClick={() => setActiveSection(section)}>
-              <div className="mb-5 flex items-center justify-between gap-3"><p className="text-sm">{activeServices.length ? "Choose a package for your event." : "Add your packages and pricing to help customers book."}</p><Button type="button" onClick={event=>{event.stopPropagation();setActiveSection("final-quote");document.querySelector('[data-testid="preview-section-final-quote"]')?.scrollIntoView({behavior:"smooth",block:"center"});}}>Book now</Button></div>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title="Services" onClick={() => setActiveSection(section)}>
+              <div className="mb-5 flex items-center justify-between gap-3"><p className="text-sm">{activeServices.length ? "Choose a service for your event." : "Add your services and pricing to help customers book."}</p><Button type="button" onClick={event=>{event.stopPropagation();setActiveSection("final-quote");document.querySelector('[data-testid="preview-section-final-quote"]')?.scrollIntoView({behavior:"smooth",block:"center"});}}>Book now</Button></div>
               <ServiceGrid
                 businessSlug={business.slug}
                 editable={activeSection === section}
@@ -1609,9 +1638,10 @@ function StorefrontPreview({
           );
           if (section === "portfolio") return (
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-portfolio" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
+              <AboutPhotoGrid uploadEndpoint={mediaUploadEndpoint.includes("preview-only") ? undefined : mediaUploadEndpoint} images={[form.aboutImage, ...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0) update("aboutImage",value);else {const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}} />
               {activeSection === section ? (
                 <div className="grid gap-3">
-                  {form.showInstagram && <InstagramFeedPreview form={form} theme={theme} update={update} />}
+
                   <ImageUploadField
                     name="previewPortfolioNew"
                     label="Add portfolio image"
@@ -1662,8 +1692,8 @@ function StorefrontPreview({
                 </div>
               ) : (
                 <div className="grid gap-3">
-                  {form.instagramFeedEnabled && form.instagramFeedUrl ? <InstagramFeedCallout href={form.instagramFeedUrl} theme={theme} /> : null}
-                  {template && [1,2,18,19,57].includes(template.source.number) ? <TemplateMediaGrid template={template} photos={photos}/> : <div className="grid grid-cols-3 gap-2">{photos.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] bg-white object-contain p-1 ${theme.imageRadius}`} />)}</div>}
+
+                  {photos.length > 0 && template && [1,2,18,19,57].includes(template.source.number) ? <TemplateMediaGrid template={template} photos={photos}/> : <div className="grid grid-cols-3 gap-2">{photos.slice(0, 6).map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className={`aspect-[4/3] bg-white object-contain p-1 ${theme.imageRadius}`} />)}</div>}
                 </div>
               )}
             </PreviewSection>
@@ -1678,7 +1708,7 @@ function StorefrontPreview({
               onClick={() => setActiveSection(section)}
             >
               <p className="mb-5"><InlineStorefrontText label="About description" value={form.bio} placeholder="Describe your business here" onChange={value=>update("bio",value)}/></p>
-              <AboutPhotoGrid uploadEndpoint={mediaUploadEndpoint.includes("preview-only") ? undefined : mediaUploadEndpoint} images={[form.aboutImage, ...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0) update("aboutImage",value);else {const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}} />
+
             </PreviewSection>
           );
           if (section === "how-it-works") return (
@@ -1694,7 +1724,7 @@ function StorefrontPreview({
               )}
             </PreviewSection>
           );
-          if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} testId="preview-section-reviews" theme={theme} title="Real parties & reviews" onClick={() => setActiveSection(section)}><div className="mb-4 flex items-center gap-3"><span className="text-2xl font-semibold">{business.reviewCount ? `★ ${business.averageRating.toFixed(1)}` : "No reviews yet"}</span>{business.reviewCount>0 && <span className="text-sm">{business.reviewCount} verified reviews</span>}</div><p className="text-sm">Reviews from completed ShopFia bookings appear here alongside real parties featuring your business.</p><p className="mt-3 text-xs opacity-60">Party photos and individual reviews are not loaded in this design preview.</p></PreviewSection>;
+          if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} testId="preview-section-reviews" theme={theme} title="Reviews" onClick={() => setActiveSection(section)}><div className="mb-4 flex items-center gap-3"><span className="text-2xl font-semibold">{business.reviewCount ? `★ ${business.averageRating.toFixed(1)}` : "No reviews yet"}</span>{business.reviewCount>0 && <span className="text-sm">{business.reviewCount} verified reviews</span>}</div><p className="text-sm">Reviews from completed ShopFia bookings appear here.</p><p className="mt-3 text-xs opacity-60">Individual reviews are not loaded in this design preview.</p></PreviewSection>;
           if (section === "faq") return (
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-faq" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               {activeSection === section ? (
@@ -1733,8 +1763,8 @@ function StorefrontPreview({
             </PreviewSection>
           );
           return null;
-        })}
-        {(form.showInstagram && form.instagramUrl || form.showTikTok && form.tiktokUrl || form.website) && <footer className="flex flex-wrap items-center justify-center gap-5 border-t border-current/15 py-6 text-sm" aria-label="Social profiles">{form.showInstagram && form.instagramUrl && <a href={form.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a>}{form.showTikTok && form.tiktokUrl && <a href={form.tiktokUrl} target="_blank" rel="noreferrer">TikTok ↗</a>}{form.website && <a href={form.website} target="_blank" rel="noreferrer">Website ↗</a>}</footer>}
+        }).map(node => node ? <div key={node.key} style={{order:form.sectionOrder.indexOf(String(node.key))}} className={node.key==="hero"?"":"px-5 pb-8 sm:px-8"}>{node}</div> : null)}
+
       </div>
     </div>
   );

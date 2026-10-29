@@ -20,7 +20,8 @@ export const HERO_DEPTH_PRESETS: { value: HeroDepth; label: string; detail: stri
   { value: "floating", label: "3D Effect", detail: "Stays visible and interactive" }
 ];
 
-export function DimensionalStorefrontHero({ effectModel="", effectImage="", presentation="emblem", backgroundWord="", template, name, headline, description, onHeadlineChange, onDescriptionChange, descriptionLabel="Tagline", location, image, crop, logo, depth, mobile, headingStyle, onBook, onDepthChange, mount, edgeColor, sceneColor }: {
+export function DimensionalStorefrontHero({ effectOnly=false, effectModel="", effectImage="", presentation="emblem", backgroundWord="", template, name, headline, description, onHeadlineChange, onDescriptionChange, descriptionLabel="Tagline", location, image, crop, logo, depth, mobile, headingStyle, onBook, onDepthChange, mount, edgeColor, sceneColor }: {
+  effectOnly?:boolean;
   previewReplay?:number;
   effectModel?:string; effectImage?:string; presentation?:"emblem"|"product"|"spin"; backgroundWord?:string;
   template?: StorefrontTemplate;
@@ -35,15 +36,15 @@ export function DimensionalStorefrontHero({ effectModel="", effectImage="", pres
   const [effectsOpen, setEffectsOpen] = useState(false);
   const headlineContent = (template?.id === "reference-02" ? <span className="reference-inline-title"><span>{(headline || name).split(" ").slice(0,1).join(" ")}</span>{" "}<TemplateIllustration kind={template.illustration || "ribbon"} className="reference-title-art"/><span>{(headline || name).split(" ").slice(1).join(" ")}</span></span> : <TemplateHeading text={headline || name || "Your storefront"} treatment={template?.headingTreatment} accentFamily={template?.accentHeadingFamily}/>);
   return (
-    <div ref={rootRef} className={`depth-hero ${mobile ? "depth-mobile" : ""}`} data-preview-playing={playing} data-depth={depth} data-presentation={presentation} data-reference={template?.id} style={{"--scene-color":sceneColor,...sectionDesignStyle(template?.sectionDesigns?.hero),...(template?.sectionDesigns?.hero ? {"--template-heroInk":template.sectionDesigns.hero.ink} : {})} as CSSProperties}>
+    <div ref={rootRef} className={`depth-hero ${mobile ? "depth-mobile" : ""}`} data-preview-playing={playing} data-depth={depth} data-presentation={presentation} data-reference={template?.id} style={{...(effectOnly?{display:"block"}:{}),"--scene-color":sceneColor,...sectionDesignStyle(template?.sectionDesigns?.hero),...(template?.sectionDesigns?.hero ? {"--template-heroInk":template.sectionDesigns.hero.ink} : {})} as CSSProperties}>
 
-      <div className="depth-copy">
+      {!effectOnly && <div className="depth-copy">
         {template?.illustration && template.id !== "reference-02" && <TemplateIllustration kind={template.illustration} className="mb-3 h-20 w-20"/>}
         {location ? <p className="depth-location">{location}</p> : null}
         <h2 style={headingStyle}>{onHeadlineChange ? <InlineStorefrontText label="Headline" value={headline} placeholder="Type headline here" onChange={onHeadlineChange}>{headlineContent}</InlineStorefrontText> : headlineContent}</h2>
         {onDescriptionChange ? <p className="depth-description"><InlineStorefrontText label={descriptionLabel} value={description} placeholder="Type tagline here" onChange={onDescriptionChange}/></p> : description ? <p className="depth-description">{description}</p> : null}
         <button type="button" className="depth-book" onClick={(event) => { event.stopPropagation(); onBook(); }}>Request a quote <ArrowUpRight size={17} aria-hidden="true" /></button>
-      </div>
+      </div>}
       <div className="depth-scene" data-playing={playing}>
         <div className="depth-regular-cover">{image ? <CroppedImage src={image} frameFit={image === logo ? "contain" : "cover"} crop={crop} alt={`${name || "Storefront"} cover`} loading="eager" className="h-full w-full object-cover" /> : <span className="depth-empty">Add a cover image</span>}</div>
         {playing ? <div className="depth-permanent-layer">
