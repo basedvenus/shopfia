@@ -110,3 +110,17 @@
 @media(prefers-reduced-motion:no-preference) { .product-spin-image { animation:product-cutout-spin 14s linear infinite; } .product-spin:hover .product-spin-image,.product-spin[data-paused=true] .product-spin-image { animation-play-state:paused; } }
 @keyframes product-cutout-spin { from {transform:rotateY(0deg) scale(.84);} to {transform:rotateY(-360deg) scale(.84);} }
 @media(prefers-reduced-motion:reduce) { .product-spin .product-controls {display:none;} }
+
+/* Product models sit directly on the vendor's chosen page background. */
+.depth-hero[data-preview-playing="true"]:is([data-presentation="spin"],[data-presentation="product"]) {
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.depth-hero:is([data-presentation="spin"],[data-presentation="product"]) :is(.depth-scene[data-playing="true"],.depth-permanent-layer) {
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
