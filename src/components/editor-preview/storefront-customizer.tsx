@@ -1,5 +1,7 @@
 "use client";
 
+import { scallopedPhotoStyle } from "@/lib/scalloped-photo";
+
 import Link from "next/link";
 import { readStorefrontDesign } from "@/lib/storefront-design";
 import { uploadStorefrontImage } from "./upload-storefront-image";
@@ -217,6 +219,7 @@ export function StorefrontCustomizer({
   const [heroMount, setHeroMount] = useState<LogoMount>(initialDesign.mount);
   const [heroEdge, setHeroEdge] = useState(initialDesign.edge);
   const [heroBackground, setHeroBackground] = useState(initialDesign.background);
+  const [effectModel,setEffectModel]=useState(initialDesign.effectModel ?? "");
   const [effectImage,setEffectImage]=useState(initialDesign.effectImage ?? "");
   const [effectPresentation,setEffectPresentation]=useState<"emblem"|"product"|"spin">(initialDesign.effectPresentation ?? "emblem");
   const [effectWord,setEffectWord]=useState(initialDesign.effectWord ?? "");
@@ -298,7 +301,7 @@ export function StorefrontCustomizer({
   const faqJson = useMemo(() => JSON.stringify(form.faqs), [form.faqs]);
   const policiesJson = useMemo(() => JSON.stringify(form.policies), [form.policies]);
   const bookingJson = useMemo(() => JSON.stringify(form.booking), [form.booking]);
-  const designJson = useMemo(()=>JSON.stringify({version:1,template:selectedTemplate,depth:heroDepth,mount:heroMount,edge:heroEdge,background:heroBackground,headingFamily:heroCustomFont || undefined,subheadingFamily:form.subheadingFamily || undefined,aboutPhotos:form.aboutPhotos,aboutPhotoLayout:form.aboutPhotoLayout,effectImage,effectPresentation,effectWord,socialVisibility:{instagram:form.showInstagram,tiktok:form.showTikTok}}),[selectedTemplate,heroDepth,heroMount,heroEdge,heroBackground,heroCustomFont,form.subheadingFamily,form.aboutPhotos,form.aboutPhotoLayout,effectImage,effectPresentation,effectWord,form.showInstagram,form.showTikTok]);
+  const designJson = useMemo(()=>JSON.stringify({version:1,template:selectedTemplate,depth:heroDepth,mount:heroMount,edge:heroEdge,background:heroBackground,headingFamily:heroCustomFont || undefined,subheadingFamily:form.subheadingFamily || undefined,aboutPhotos:form.aboutPhotos,aboutPhotoLayout:form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,socialVisibility:{instagram:form.showInstagram,tiktok:form.showTikTok}}),[selectedTemplate,heroDepth,heroMount,heroEdge,heroBackground,heroCustomFont,form.subheadingFamily,form.aboutPhotos,form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,form.showInstagram,form.showTikTok]);
   const autosavePayload = useMemo(
     () => ({
       aboutHeading: form.aboutHeading,
@@ -517,7 +520,7 @@ export function StorefrontCustomizer({
         setTemplateLibraryOpen(false);markDirty(false);
         requestAnimationFrame(()=>templatePreviewRef.current?.scrollIntoView({block:"start",behavior:"auto"}));
       }} /> : null}
-      {modernEditor && studioOpen && <Storefront3DStudio uploadEndpoint={previewOnly ? undefined : mediaUploadEndpoint} initialImage={effectImage} initialPresentation={effectPresentation} initialWord={effectWord} invitation={studioInvitation} name={form.name} logo={form.logoUrl || form.coverPhoto} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount,image,presentation,word)=>{setEffectImage(image);setEffectPresentation(presentation);setEffectWord(word);studioInvited.current=true;setHeroDepth(depth);setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`3D Effect applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
+      {modernEditor && studioOpen && <Storefront3DStudio modelsEndpoint={previewOnly ? undefined : mediaUploadEndpoint.replace(/\/media(?:\?.*)?$/, "/models")} uploadEndpoint={previewOnly ? undefined : mediaUploadEndpoint} initialModel={effectModel} initialImage={effectImage} initialPresentation={effectPresentation} initialWord={effectWord} invitation={studioInvitation} name={form.name} logo={form.logoUrl || form.coverPhoto} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount,image,presentation,word,model)=>{setEffectModel(model);setEffectImage(image);setEffectPresentation(presentation);setEffectWord(word);studioInvited.current=true;setHeroDepth(depth);setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`3D Effect applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
       <input type="hidden" name="businessId" value={business.id} />
       <input type="hidden" name="businessSlug" value={business.slug} />
       <input type="hidden" name="name" value={form.name} />
@@ -762,7 +765,7 @@ export function StorefrontCustomizer({
           {modernEditor && effectNotice && <div role="status" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-3 text-sm"><div><strong>{effectNotice}</strong><p className="mt-1 text-xs text-muted-foreground">{previewOnly ? "Preview only · your live storefront has not changed." : "Publish to update your live storefront."}</p></div>{heroDepth!=='flat' && <button type="button" onClick={replayEffect} className="rounded-full border px-4 py-2 text-xs">Show on page</button>}</div>}
           <div ref={templatePreviewRef} data-testid="storefront-preview-frame" style={{ scrollMarginTop: 90, containerType: "inline-size", containerName: "storefront-preview" }} className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
             <StorefrontPreview
-              effectImage={effectImage} effectPresentation={effectPresentation} effectWord={effectWord}
+              effectModel={effectModel} effectImage={effectImage} effectPresentation={effectPresentation} effectWord={effectWord}
               template={selectedTemplate}
               heroCustomFont={heroCustomFont} heroMount={heroMount} heroEdge={heroEdge} heroBackground={heroBackground}
               onHeroDepthChange={(value) => { setHeroDepth(value); markDirty(); }}
@@ -1430,7 +1433,7 @@ function StorefrontPreview({
   effectReplay=0,
   template,
   heroCustomFont,
-  effectImage="", effectPresentation="emblem", effectWord="",
+  effectModel="", effectImage="", effectPresentation="emblem", effectWord="",
   heroMount = "round", heroEdge = "#877a78", heroBackground = "#e6dfd4",
   onHeroDepthChange,
   heroDepth,
@@ -1454,7 +1457,7 @@ function StorefrontPreview({
   effectReplay?:number;
   template?: StorefrontTemplate | null;
   heroCustomFont?: string | null;
-  effectImage?:string; effectPresentation?:"emblem"|"product"|"spin"; effectWord?:string;
+  effectModel?:string; effectImage?:string; effectPresentation?:"emblem"|"product"|"spin"; effectWord?:string;
   heroMount?: LogoMount; heroEdge?: string; heroBackground?: string;
   onHeroDepthChange?: (value: HeroDepth) => void;
   heroDepth?: HeroDepth;
@@ -1550,7 +1553,7 @@ function StorefrontPreview({
             <span className="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>Follow</span>
           </div>
         </div>
-        {heroDepth ? <DimensionalStorefrontHero effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth={heroDepth} mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /> : <PreviewHeroTemplate
+        {heroDepth ? <DimensionalStorefrontHero effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth={heroDepth} mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /> : <PreviewHeroTemplate
           active={activeSection === "hero"}
           activeServices={activeServices}
           business={business}
@@ -2415,11 +2418,11 @@ export function AboutPhotoGrid({readOnly=false,uploadEndpoint,compact=false,imag
  return <div onClick={event=>event.stopPropagation()}>
   <div style={photoGridStyle(compact ? "grid" : layout)}>
    {Array.from({length:readOnly ? Math.min(images.length,selected.count) : selected.count},(_,index)=><div key={index} className="relative min-w-0" style={{...photoTileStyle(compact ? "grid" : layout,index),width:"100%",alignSelf:"start"}}>
-    <label onDragOver={event=>{event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect="copy";setDragging(index);}} onDragLeave={()=>setDragging(null)} onDrop={event=>{event.preventDefault();event.stopPropagation();setDragging(null);loadImage(event.dataTransfer.files[0],index);}} className={`relative block h-full w-full cursor-pointer overflow-hidden border border-current/15 bg-stone-100 focus-within:ring-2 focus-within:ring-current ${dragging===index?"ring-2 ring-current":""}`} style={{backgroundColor:"color-mix(in srgb, currentColor 5%, transparent)",borderRadius:layout==="scallop"?"0 0 22px 22px":0}}>
+    <label onDragOver={event=>{event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect="copy";setDragging(index);}} onDragLeave={()=>setDragging(null)} onDrop={event=>{event.preventDefault();event.stopPropagation();setDragging(null);loadImage(event.dataTransfer.files[0],index);}} className={`relative block h-full w-full cursor-pointer overflow-hidden border border-current/15 bg-stone-100 focus-within:ring-2 focus-within:ring-current ${dragging===index?"ring-2 ring-current":""}`} style={{backgroundColor:"color-mix(in srgb, currentColor 5%, transparent)",...(layout==="scallop" && !compact ? scallopedPhotoStyle : {})}}>
     {images[index] ? <img src={images[index]} alt={`About photo ${index+1}`} className="h-full w-full object-cover"/> : <span className="grid h-full place-content-center justify-items-center gap-2 text-center opacity-65"><Upload className="h-5 w-5"/><span className="text-[10px] sm:text-xs">Upload image</span><span className="hidden text-[10px] sm:block">or drag & drop</span></span>}
     <input disabled={readOnly} type="file" aria-label={`Upload About photo ${index+1}`} accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={event=>{loadImage(event.target.files?.[0],index);event.target.value="";}}/>
     </label>
-    {layout==="scallop" && <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-4" style={{background:"radial-gradient(circle at 50% 0,currentColor 68%,transparent 71%) 0 0 / 20% 100% repeat-x"}}/>}
+
     {!readOnly && images[index] && <button type="button" className="absolute bottom-2 right-2 rounded-full bg-white px-2 py-1 text-[10px] text-stone-800 shadow" aria-label={`Remove photo ${index+1}`} onClick={()=>{requests.current[index]=(requests.current[index]??0)+1;onImage(index,"");}}>Remove</button>}
    </div>)}
   </div>
@@ -2434,7 +2437,7 @@ return (  <details className="mb-5 rounded-xl border border-current/15 p-3">
    <summary className="cursor-pointer text-sm font-medium">Photo layout · {selected.label}</summary>
    <div className="mt-4 grid gap-2" style={{gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))"}} role="group" aria-label="About photo layout">
     {PHOTO_LAYOUTS.map(option=><button type="button" key={option.id} aria-pressed={layout===option.id} onClick={()=>onLayout(option.id)} className="rounded-lg border border-current/15 p-3 text-left aria-pressed:ring-2 aria-pressed:ring-current">
-     <span aria-hidden="true" style={{...photoGridStyle(option.id),height:52,padding:6,gap:3}}>{Array.from({length:option.count},(_,index)=><span key={index} style={{...photoTileStyle(option.id,index),width:"100%",minWidth:0,background:"currentColor",opacity:.25,minHeight:8,maxHeight:36,borderRadius:option.id==="scallop"?"0 0 8px 8px":0}}/>)}</span>
+     <span aria-hidden="true" style={{...photoGridStyle(option.id),height:52,padding:6,gap:3}}>{Array.from({length:option.count},(_,index)=><span key={index} style={{...photoTileStyle(option.id,index),width:"100%",minWidth:0,background:"currentColor",opacity:.25,minHeight:8,maxHeight:36,...(option.id==="scallop"?scallopedPhotoStyle:{})}}/>)}</span>
      <span className="mt-2 block text-xs">{option.label}</span>
     </button>)}
    </div>

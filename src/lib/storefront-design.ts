@@ -22,6 +22,7 @@ export const storefrontDesignSchema = z.object({
   socialVisibility:z.object({instagram:z.boolean(),tiktok:z.boolean()}).optional(),
   aboutPhotos:z.array(z.string().max(2048).refine(v=>v==="" || /^https?:\/\//.test(v) || v.startsWith("/"))).max(12).optional(),
   aboutPhotoLayout:z.enum(["grid","row","layered","offset","cascade","six","banner","scallop"]).optional(),
+  effectModel:z.string().regex(/^$|^\/api\/vendor-media\/[a-zA-Z0-9-]+$/).max(200).optional(),
   effectImage:z.string().max(2048).refine(v=>v==="" || /^https?:\/\//.test(v) || v.startsWith("/")).optional(),
   effectPresentation:z.enum(["emblem","product","spin"]).optional(),effectWord:z.string().max(24).optional()
 });

@@ -1,0 +1,10 @@
+import {describe,it,expect} from 'vitest';
+import {validateGlb,isMeshyAsset,MAX_MODEL_BYTES} from '@/lib/storefront-model';
+import {storefrontDesignSchema,DEFAULT_STOREFRONT_DESIGN,bookingWithDesign,readStorefrontDesign} from '@/lib/storefront-design';
+function glb(extra={}) {let json=JSON.stringify({asset:{version:'2.0'},meshes:[{primitives:[]}],...extra});while(json.length%4)json+=' ';const bytes=Buffer.alloc(20+json.length);bytes.writeUInt32LE(0x46546c67,0);bytes.writeUInt32LE(2,4);bytes.writeUInt32LE(bytes.length,8);bytes.writeUInt32LE(json.length,12);bytes.writeUInt32LE(0x4e4f534a,16);bytes.write(json,20);return bytes;}
+describe('storefront 3D model boundaries',()=>{
+ it('accepts an embedded GLB and rejects invalid or oversized binaries',()=>{expect(()=>validateGlb(glb())).not.toThrow();expect(()=>validateGlb(Buffer.from('not a model'))).toThrow();expect(()=>validateGlb(Buffer.alloc(MAX_MODEL_BYTES+1))).toThrow();const broken=glb();broken.writeUInt32LE(1,8);expect(()=>validateGlb(broken)).toThrow();});
+ it('rejects external image or buffer dependencies including nested extension URIs',()=>{expect(()=>validateGlb(glb({images:[{uri:'https://tracking.example/image.png'}]}))).toThrow();expect(()=>validateGlb(glb({extensions:{any:{uri:'file:///etc/passwd'}}}))).toThrow();});
+ it('only downloads provider-owned HTTPS assets',()=>{expect(isMeshyAsset('https://assets.meshy.ai/model.glb')).toBe(true);for(const url of ['http://assets.meshy.ai/a','https://assets.meshy.ai.evil.test/a','https://127.0.0.1/a','https://user:password@assets.meshy.ai/a','https://assets.meshy.ai:80/a'])expect(isMeshyAsset(url)).toBe(false);});
+ it('persists the same model across Spin and Spotlight and rejects arbitrary URLs',()=>{for(const effectPresentation of ['spin','product']){const design=storefrontDesignSchema.parse({...DEFAULT_STOREFRONT_DESIGN,effectPresentation,effectModel:'/api/vendor-media/model-123'});expect(readStorefrontDesign(bookingWithDesign({},design)).effectModel).toBe('/api/vendor-media/model-123');}expect(storefrontDesignSchema.safeParse({...DEFAULT_STOREFRONT_DESIGN,effectModel:'https://example.com/file.glb'}).success).toBe(false);});
+});

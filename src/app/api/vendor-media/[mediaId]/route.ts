@@ -24,7 +24,7 @@ export async function GET(
     }
   });
 
-  if (!media) {
+  if (!media || !["image/jpeg","image/png","image/webp","model/gltf-binary"].includes(media.contentType)) {
     return NextResponse.json({ error: "Image not found." }, { status: 404 });
   }
 
@@ -33,6 +33,7 @@ export async function GET(
       "Cache-Control": "public, max-age=31536000, immutable",
       "Content-Length": String(media.size),
       "Content-Type": media.contentType,
+      "X-Content-Type-Options": "nosniff",
       "Last-Modified": media.updatedAt.toUTCString()
     }
   });
