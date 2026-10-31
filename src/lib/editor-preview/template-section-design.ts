@@ -3,7 +3,7 @@ import type { SectionDesign, StorefrontTemplate } from "./storefront-template-li
 
 export const SECTION_PATTERNS = ["solid","clouds","stripes","grid","dots","checker","waves"] as const;
 export function patternBackground(design: SectionDesign): string {
-  const color=design.patternColor ?? "#ffffff";
+  const color=`${design.patternColor ?? "#ffffff"}${Math.round((design.patternOpacity??1)*255).toString(16).padStart(2,"0")}`;
   if(design.pattern === "clouds") return 'url("/preview-templates/cloud-sky.svg")';
   if(design.pattern === "stripes") return `repeating-linear-gradient(90deg,transparent 0 22px,${color} 22px 44px)`;
   if(design.pattern === "grid") return `linear-gradient(${color} 1px,transparent 1px),linear-gradient(90deg,${color} 1px,transparent 1px)`;
@@ -18,7 +18,8 @@ export function sectionDesignStyle(design?: SectionDesign): CSSProperties {
   const overlay=/^#[0-9a-f]{6}$/i.test(design.overlayColor ?? "") ? design.overlayColor! : "#ffffff";
   const rgba=`rgba(${[1,3,5].map(index=>parseInt(overlay.slice(index,index+2),16)).join(",")},${opacity})`;
   const pattern=patternBackground(design);
-  const image=opacity ? `linear-gradient(${rgba},${rgba}),${pattern}` : pattern;
+  const patternFade=design.pattern==="clouds" && design.patternOpacity!==undefined ? `linear-gradient(${design.background}${Math.round((1-design.patternOpacity)*255).toString(16).padStart(2,"0")},${design.background}${Math.round((1-design.patternOpacity)*255).toString(16).padStart(2,"0")}),` : "";
+  const image=patternFade + (opacity ? `linear-gradient(${rgba},${rgba}),${pattern}` : pattern);
   const size=design.pattern === "clouds" ? "320px 320px" : design.pattern === "stripes" ? "auto" : "28px 28px";
   return {"--section-background":design.background,"--section-ink":design.ink,"--section-pattern":image,"--section-pattern-size":size,backgroundColor:design.background,backgroundImage:image,backgroundSize:size,color:design.ink} as CSSProperties;
 }

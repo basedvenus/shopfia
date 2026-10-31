@@ -50,3 +50,11 @@ describe('horizontal section resizing',()=>{
   expect(storefrontDesignSchema.safeParse({...DEFAULT_STOREFRONT_DESIGN,sectionLayout:{about:{width:80,offset:30}}}).success).toBe(false);
  });
 });
+
+ it('can return a paired section to its original full row',()=>{
+  const original=['hero','effects','photos'];
+  const paired=placeSection(original,{},'effects','photos','right');
+  const restored=placeSection(paired.order,paired.layout,'effects','photos','above');
+  expect(restored.order).toEqual(original);
+  expect(sectionRows(restored.order,restored.layout)).toEqual([['hero'],['effects'],['photos']]);
+ });

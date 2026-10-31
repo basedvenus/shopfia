@@ -49,7 +49,7 @@ describe("save feedback", () => {
   it("identifies an incomplete extra inside its own collapsed group", () => {
     const service = structuredClone(serviceTemplates.cart);
     service.extras[0].description = "";
-    expect(serviceFormIssues(service, ["cart"], true)).toEqual([{ label: "Extra description", group: "extras.0", message: "Additional assistant: Complete extra description." }]);
+    expect(serviceFormIssues(service, ["cart"], true)).toEqual([{ label: "Add-on description", group: "extras.0", message: "Additional assistant: Complete add-on description." }]);
   });
   it("allows a completed service and identifies an empty menu", () => {
     expect(serviceFormIssues(withMenu, ["cookies"], true)).toEqual([]);

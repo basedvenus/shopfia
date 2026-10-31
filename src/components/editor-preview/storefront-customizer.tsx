@@ -1,7 +1,14 @@
 "use client";
 
+import {ServiceBuilderPopup} from "./service-builder-popup";
+import {TextFormatting,TextFormattingToolbar,SelectedTextFonts,useTextSelection} from "./text-formatting";
+import type {StorefrontTextStyle} from "@/lib/storefront-text-style";
+import { ColorPicker,ColorPalette } from "./color-picker";
+import { SectionOrganizer } from "./section-organizer";
+import { useEditorHistory } from "@/hooks/use-editor-history";
+import { Undo2, Redo2, LayoutTemplate, Box, Type, Paintbrush, ArrowUpDown, BadgeCheck, FileText, CircleHelp, Images, BriefcaseBusiness, Share2, Instagram, Music2 } from "lucide-react";
 import { StorefrontSectionCanvas } from "./storefront-section-canvas";
-import type { SectionLayout } from "@/lib/storefront-section-layout";
+import { placeSection, type SectionLayout } from "@/lib/storefront-section-layout";
 import { scallopedPhotoStyle } from "@/lib/scalloped-photo";
 
 import Link from "next/link";
@@ -218,8 +225,9 @@ export function StorefrontCustomizer({
   const templatePreviewRef = useRef<HTMLDivElement>(null);
   const [templateFontRevision, setTemplateFontRevision] = useState(0);
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(initialTemplateLibraryOpen);
-  const [selectedTemplate, setSelectedTemplate] = useState<StorefrontTemplate | null>(initialDesign.template);
+  const [selectedTemplate, setSelectedTemplate] = useState<StorefrontTemplate | null>(previewOnly && initialDesign.template ? {...initialDesign.template,buttonColor:initialDesign.template.buttonColor??initialDesign.template.colors.accent,colors:{...initialDesign.template.colors,accentInk:"#ffffff"}} : initialDesign.template);
   const [heroCustomFont, setHeroCustomFont] = useState<string | null>(initialDesign.headingFamily ?? null);
+  const [textStyles,setTextStyles]=useState<Record<string,StorefrontTextStyle>>(initialDesign.textStyles??{});
   const [heroMount, setHeroMount] = useState<LogoMount>(initialDesign.mount);
   const [heroEdge, setHeroEdge] = useState(initialDesign.edge);
   const [heroBackground, setHeroBackground] = useState(initialDesign.background);
@@ -253,7 +261,7 @@ export function StorefrontCustomizer({
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [dirty, setDirty] = useState(false);
-  const [status, setStatus] = useState(errorMessage ? "Needs attention" : draftSaved ? "Draft saved" : saved ? "Published" : "Live");
+  const [status, setStatus] = useState(errorMessage ? "Needs attention" : draftSaved || business.storefrontDraftJson ? "Draft saved · Not published" : saved ? "Published" : "Live");
   const [autosaveMessage, setAutosaveMessage] = useState("");
   const [isAutosaving, startAutosaveTransition] = useTransition();
   const lastAutosaveKeyRef = useRef<string | null>(null);
@@ -261,18 +269,26 @@ export function StorefrontCustomizer({
   const [draggedPhotoIndex, setDraggedPhotoIndex] = useState<number | null>(null);
   const [collapsedFaqIds, setCollapsedFaqIds] = useState<string[]>([]);
   const [form, setForm] = useState<FormState>(() => createInitialState(business, previewOnly));
+  const history = useEditorHistory({textStyles,form,selectedTemplate,heroCustomFont,heroMount,heroEdge,heroBackground,heroDepth,effectModel,effectImage,effectPresentation,effectWord}, snapshot=>{
+    setTextStyles(snapshot.textStyles);
+    setForm(snapshot.form);setSelectedTemplate(snapshot.selectedTemplate);setHeroCustomFont(snapshot.heroCustomFont);
+    setHeroMount(snapshot.heroMount);setHeroEdge(snapshot.heroEdge);setHeroBackground(snapshot.heroBackground);setHeroDepth(snapshot.heroDepth);
+    setEffectModel(snapshot.effectModel);setEffectImage(snapshot.effectImage);setEffectPresentation(snapshot.effectPresentation);setEffectWord(snapshot.effectWord);
+    setTemplateFontRevision(value=>value+1);setDirty(true);setStatus("Unpublished changes");
+  });
   const recommendedLook = recommendStorefrontLook(`${form.name} ${designBrief || form.bio} ${business.categories.map((item) => item.category.name).join(" ")}`);
   useEffect(() => {
     if (!advanced) guidedHeadingRef.current?.focus({ preventScroll: true });
     guidedPanelRef.current?.scrollTo({ top: 0 });
   }, [guidedStep, advanced, styleStage]);
 
+  const [serviceBuilderUrl,setServiceBuilderUrl]=useState<string|null>(null);
   const visibleSections = useMemo(
-    () => form.sectionOrder.filter((section) => section === "reviews" || !form.hiddenSections.includes(section)),
+    () => form.sectionOrder.filter((section) => !form.hiddenSections.includes(section) && section!=="reviews"),
     [form.hiddenSections, form.sectionOrder]
   );
   const sectionLabel = useCallback(
-    (section: string) =>
+    (section: string) => section==="parties" ? "Past parties" :
       form.sectionLabels[section as keyof typeof STOREFRONT_SECTION_LABELS] ??
       STOREFRONT_SECTION_LABELS[section as keyof typeof STOREFRONT_SECTION_LABELS] ??
       "Section",
@@ -305,7 +321,7 @@ export function StorefrontCustomizer({
   const faqJson = useMemo(() => JSON.stringify(form.faqs), [form.faqs]);
   const policiesJson = useMemo(() => JSON.stringify(form.policies), [form.policies]);
   const bookingJson = useMemo(() => JSON.stringify(form.booking), [form.booking]);
-  const designJson = useMemo(()=>JSON.stringify({version:1,template:selectedTemplate,depth:heroDepth,mount:heroMount,edge:heroEdge,background:heroBackground,headingFamily:heroCustomFont || undefined,subheadingFamily:form.subheadingFamily || undefined,bodyFamily:form.bodyFamily || undefined,sectionLayout:form.sectionLayout,aboutPhotos:form.aboutPhotos,aboutPhotoLayout:form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,socialVisibility:{instagram:form.showInstagram,tiktok:form.showTikTok}}),[selectedTemplate,heroDepth,heroMount,heroEdge,heroBackground,heroCustomFont,form.subheadingFamily,form.bodyFamily,form.sectionLayout,form.aboutPhotos,form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,form.showInstagram,form.showTikTok]);
+  const designJson = useMemo(()=>JSON.stringify({version:1,textStyles,template:selectedTemplate,depth:heroDepth,mount:heroMount,edge:heroEdge,background:heroBackground,headingFamily:heroCustomFont || undefined,subheadingFamily:form.subheadingFamily || undefined,bodyFamily:form.bodyFamily || undefined,sectionLayout:form.sectionLayout,aboutPhotos:form.aboutPhotos,aboutPhotoLayout:form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,socialVisibility:{instagram:form.showInstagram,tiktok:form.showTikTok}}),[textStyles,selectedTemplate,heroDepth,heroMount,heroEdge,heroBackground,heroCustomFont,form.subheadingFamily,form.bodyFamily,form.sectionLayout,form.aboutPhotos,form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,form.showInstagram,form.showTikTok]);
   const autosavePayload = useMemo(
     () => ({
       aboutHeading: form.aboutHeading,
@@ -368,7 +384,7 @@ export function StorefrontCustomizer({
       const result = await autosaveStorefrontDraftAction(payload);
       if (result.ok) {
         lastAutosaveKeyRef.current = payloadKey;
-        setStatus("Draft autosaved");
+        setStatus("Draft saved · Not published");
         setAutosaveMessage("Draft saved. Publish when it looks right.");
       } else {
         setStatus("Draft needs attention");
@@ -399,10 +415,15 @@ export function StorefrontCustomizer({
     markDirty();
   }
 
+  const [designPanel,setDesignPanel]=useState<string | null>(null);
+  const [toolPopup,setToolPopup]=useState<string|null>(null);
+  const [organizerOpen,setOrganizerOpen]=useState(false);
   function selectSection(section: string) {
+    setDesignPanel("backgrounds");
     setAdvanced(true);
     setActiveSection(section);
-    setActiveTool(toolForSection(section));
+    setActiveTool("content");
+    if(["portfolio","all-services","socials","faq","policies"].includes(section))setToolPopup(section);
     setPanelCollapsed(false);
   }
 
@@ -426,8 +447,9 @@ export function StorefrontCustomizer({
     const order = [...form.sectionOrder];
     const from = order.indexOf(section), to = order.indexOf(targetSection);
     if (from < 0 || to < 0) return;
-    order.splice(from, 1); order.splice(to, 0, section);
-    update("sectionOrder", order);
+    const next = placeSection(order, form.sectionLayout, section, targetSection, from < to ? "below" : "above");
+    setForm(current => ({...current, sectionOrder:next.order, sectionLayout:next.layout}));
+    markDirty();
   }
 
   function onSectionDrop(event: DragEvent<HTMLButtonElement>, targetSection: string) {
@@ -511,14 +533,19 @@ export function StorefrontCustomizer({
   }
 
   return (
-    <form action={previewOnly ? undefined : updateStorefrontCustomizationAction} onSubmit={previewOnly ? (event) => event.preventDefault() : undefined} data-testid="storefront-editor-shell" className={`${modernEditor ? "editor-review " : ""}relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
+    <ColorPalette colors={selectedTemplate?Object.values(selectedTemplate.colors):[]}><TextFormatting onOpenFonts={()=>{setActiveTool("content");setDesignPanel("fonts");}} styles={textStyles} onChange={value=>{setTextStyles(value);markDirty();}}><form onClickCapture={event=>{const link=(event.target as Element).closest("a");if(link?.getAttribute("href")?.includes(`/vendor/business/${business.slug}/services/new`)){event.preventDefault();event.stopPropagation();setServiceBuilderUrl(link.getAttribute("href"));}}} action={previewOnly ? undefined : updateStorefrontCustomizationAction} onSubmit={previewOnly ? (event) => event.preventDefault() : undefined} data-testid="storefront-editor-shell" className={`${modernEditor ? "editor-review " : ""}relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
       {modernEditor ? <style>{`
         .editor-review [data-testid="preview-section-${activeSection}"] { outline: 2px solid #81916b; outline-offset: -2px; }
         .editor-review { background: #f8f8f5; border-radius: 20px; }
         .editor-review .editor-workspace { grid-template-columns: minmax(0,1fr) 320px; }
         .editor-review .editor-inspector { max-height: calc(100vh - 190px); overflow-y: auto; }
         .editor-review .editor-canvas { background: #eeefea; padding: 28px; }
-        .editor-review .editor-inspector details > summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+        .editor-review .editor-inspector details > summary { cursor:pointer;font-size:14px;font-weight:600;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#675f59; }
+        .editor-review .editor-inspector details > summary::-webkit-details-marker{display:none}
+        .editor-review .editor-inspector details > summary::after{content:'+';font-size:20px;font-weight:400;color:#b77980}
+        .editor-review .editor-inspector details[open] > summary::after{content:'−'}
+        .editor-review .editor-inspector details{border-color:#eadbd7;border-radius:18px;background:#fffaf8;padding:16px}
+        .editor-review .editor-inspector details > summary { }
         @media(max-width:1023px) { .editor-review .editor-workspace { display:flex; flex-direction:column; } .editor-review .editor-inspector { max-height:none; } .editor-review .editor-canvas { padding:12px; } }
       `}</style> : null}
       {modernEditor && templateLibraryOpen ? <StorefrontTemplateLibrary vendorName={form.name} initialScroll={templateScroll} onScroll={setTemplateScroll} selected={selectedTemplate?.id ?? null} image={form.logoUrl || form.coverPhoto} photos={form.photoUrls.filter(Boolean)} onClose={()=>setTemplateLibraryOpen(false)} onApply={(template)=>{
@@ -527,7 +554,9 @@ export function StorefrontCustomizer({
         setTemplateLibraryOpen(false);markDirty(false);
         requestAnimationFrame(()=>templatePreviewRef.current?.scrollIntoView({block:"start",behavior:"auto"}));
       }} /> : null}
-      {modernEditor && studioOpen && <Storefront3DStudio modelsEndpoint={previewOnly ? undefined : mediaUploadEndpoint.replace(/\/media(?:\?.*)?$/, "/models")} uploadEndpoint={previewOnly ? undefined : mediaUploadEndpoint} initialModel={effectModel} initialImage={effectImage} initialPresentation={effectPresentation} initialWord={effectWord} invitation={studioInvitation} name={form.name} logo={form.logoUrl || form.coverPhoto} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount,image,presentation,word,model)=>{setEffectModel(model);setEffectImage(image);setEffectPresentation(presentation);setEffectWord(word);studioInvited.current=true;setHeroDepth(depth);setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`3D Effect applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
+      {serviceBuilderUrl && <ServiceBuilderPopup businessId={business.id} previewOnly={previewOnly} onClose={()=>setServiceBuilderUrl(null)} onSaved={services=>{setForm(current=>({...current,services:[...current.services,...services.filter(service=>!current.services.some(existing=>existing.id===service.id))]}));markDirty();}}/>}
+      {organizerOpen && <SectionOrganizer order={visibleSections.filter(id=>id!=="effects"||heroDepth!=="flat")} layout={form.sectionLayout} label={sectionLabel} onClose={()=>setOrganizerOpen(false)} onRename={(id,value)=>update("sectionLabels",{...form.sectionLabels,[id]:value.trim() || undefined})} onChange={(order,layout)=>{setForm(current=>({...current,sectionOrder:[...order,...current.sectionOrder.filter(id=>!order.includes(id))],sectionLayout:layout}));markDirty();}}/>}
+      {modernEditor && studioOpen && <Storefront3DStudio modelsEndpoint={previewOnly ? undefined : mediaUploadEndpoint.replace(/\/media(?:\?.*)?$/, "/models")} uploadEndpoint={previewOnly ? undefined : mediaUploadEndpoint} initialModel={effectModel} initialImage={effectImage} initialPresentation={effectPresentation} initialWord={effectWord} invitation={studioInvitation} name={form.name} logo={form.logoUrl} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount,image,presentation,word,model)=>{setEffectModel(model);setEffectImage(image);setEffectPresentation(presentation);setEffectWord(word);studioInvited.current=true;setHeroDepth(depth);setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`3D Effect applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
       <input type="hidden" name="businessId" value={business.id} />
       <input type="hidden" name="businessSlug" value={business.slug} />
       <input type="hidden" name="name" value={form.name} />
@@ -577,6 +606,10 @@ export function StorefrontCustomizer({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div role="group" aria-label="Edit history" className="flex gap-1">
+            <button type="button" aria-label="Undo" disabled={!history.canUndo} onClick={history.undo} title="Undo last edit" className="grid h-9 w-9 place-items-center rounded-lg text-[#675f59] transition hover:bg-[#eee9e7] disabled:opacity-30"><Undo2 className="h-6 w-6" strokeWidth={1.7}/></button>
+            <button type="button" aria-label="Redo" disabled={!history.canRedo} onClick={history.redo} title="Redo edit" className="grid h-9 w-9 place-items-center rounded-lg text-[#675f59] transition hover:bg-[#eee9e7] disabled:opacity-30"><Redo2 className="h-6 w-6" strokeWidth={1.7}/></button>
+          </div>
           <span className="inline-flex items-center gap-1 rounded-full bg-[#fbf7f5] px-3 py-1.5 text-xs font-semibold text-muted-foreground">
             <Check className="h-3.5 w-3.5" />
             {previewOnly ? (dirty ? "Unsaved preview changes" : "Preview · saved content loaded") : isAutosaving ? "Autosaving draft" : status}
@@ -765,7 +798,8 @@ export function StorefrontCustomizer({
           </div>
         </aside>}
 
-        <main className="editor-canvas min-w-0 bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
+        <main onClickCapture={event=>{if((event.target as HTMLElement).closest("[data-storefront-button]")){event.preventDefault();event.stopPropagation();setActiveTool("content");setDesignPanel("buttons");setPanelCollapsed(false);requestAnimationFrame(()=>document.querySelector('[data-button-settings]')?.scrollIntoView({block:"nearest"}));}}} className="editor-canvas min-w-0 bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
+          <TextFormattingToolbar/>
           <div className="mb-3 flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>{previewOnly ? "Preview only · changes reset on refresh" : "Select a section to edit"}</span>
           </div>
@@ -808,10 +842,10 @@ export function StorefrontCustomizer({
             </button>
           ) : (
             <div className="p-4">
-              <p className="mb-2 text-xs text-muted-foreground">Drag sections to reorder your page.</p>
+{activeTool === "content" && <><div className="mb-4 grid grid-cols-3 gap-2" aria-label="Design tools">{[{id:'templates',label:'Templates',Icon:LayoutTemplate},{id:'brand',label:'Brand',Icon:BadgeCheck},{id:'effects',label:'3D Effects',Icon:Box},{id:'fonts',label:'Fonts',Icon:Type},{id:'backgrounds',label:'Backgrounds',Icon:Paintbrush},{id:'sections',label:'Rearrange',Icon:ArrowUpDown},{id:'all-services',label:'Services',Icon:BriefcaseBusiness},{id:'portfolio',label:'Gallery',Icon:Images},{id:'socials',label:'Social media',Icon:Share2},{id:'policies',label:'Policies',Icon:FileText},{id:'faq',label:'FAQ',Icon:CircleHelp}].map(({id,label,Icon})=><button key={id} type="button" aria-pressed={designPanel===id} onClick={()=>{if(["all-services","portfolio","socials","faq","policies"].includes(id)){setToolPopup(id);return;}if(id==="templates"){setTemplateLibraryOpen(true);return;}if(id==="effects"){setStudioInvitation(false);setStudioOpen(true);return;}if(id==="sections"){setOrganizerOpen(true);return;}setDesignPanel(designPanel===id?null:id);}} className="grid grid-rows-[24px_32px] justify-items-center items-center gap-2 rounded-2xl border border-[#eadbd7] bg-white p-3 text-xs text-[#675f59] hover:bg-stone-100 aria-pressed:bg-[#f5e7e6] aria-pressed:border-[#d9a6a3]"><Icon size={22}/><span className="text-center leading-4">{label}</span></button>)}</div><details open hidden={designPanel!=="sections"} className="mb-4 rounded-2xl border p-4"><summary>Rearrange sections</summary><div className="mt-4">              <p className="mb-3 text-xs font-normal text-muted-foreground">Drag to reorder. Select a section to edit it.</p>
               <nav aria-label="Reorder storefront sections" className="mb-5 flex flex-wrap gap-2">
-                {visibleSections.filter(id => id !== "effects" || heroDepth !== "flat").map(id => <button
-                  key={id} type="button" draggable={false} data-section-move={id} style={{touchAction:"none"}} aria-label={`Move or edit ${sectionLabel(id)}`}
+                {visibleSections.filter(id => id !== "effects" || heroDepth !== "flat").map(id => <span key={id} className="inline-flex items-center gap-1"><button
+                  type="button" draggable={false} data-section-move={id} style={{touchAction:"none"}} aria-label={`Move or edit ${sectionLabel(id)}`}
                   aria-current={activeSection===id?"location":undefined}
                   title="Drag to reorder. Or use Alt + Left/Right."
                   onDragStart={event=>{setDraggedSection(id);event.dataTransfer.setData("text/plain",id);event.dataTransfer.effectAllowed="move";}}
@@ -824,40 +858,38 @@ export function StorefrontCustomizer({
                   onKeyDown={event=>{if(event.altKey && ["ArrowLeft","ArrowRight"].includes(event.key)){event.preventDefault();const order=[...form.sectionOrder];const from=order.indexOf(id);const to=from+(event.key==="ArrowLeft"?-1:1);if(to>=0&&to<order.length){[order[from],order[to]]=[order[to],order[from]];update("sectionOrder",order);}}}}
                   className={`inline-flex cursor-grab touch-none select-none items-center gap-1 rounded-full border px-3 py-2 text-xs active:cursor-grabbing aria-[current=location]:bg-stone-100 ${draggedSection===id?"opacity-50":""}`}
                   onClick={()=>{selectSection(id);requestAnimationFrame(()=>document.querySelector(`[data-testid="preview-section-${id}"]`)?.scrollIntoView({behavior:"smooth",block:"start"}));}}
-                ><GripVertical className="h-3 w-3" aria-hidden="true"/>{sectionLabel(id)}</button>)}
+                ><GripVertical className="h-4 w-4" aria-hidden="true"/>{sectionLabel(id)}</button>
+                  {!requiredSections.has(id) && <button type="button" aria-label={`Remove ${sectionLabel(id)} section`} title="Remove section; content is kept" className="rounded-full px-2 py-1 text-sm text-muted-foreground hover:bg-stone-100" onClick={()=>{update("hiddenSections",[...form.hiddenSections,id]);if(activeSection===id)setActiveSection("hero");}}>×</button>}
+                </span>)}
               </nav>
-              <div className="mb-4 grid grid-cols-3 gap-1 rounded-full border border-[#eadbd7] bg-[#fbf7f5] p-1">
-                {(Object.keys(toolLabels) as EditorTool[]).filter(tool=>tool!=="design").map((tool) => (
-                  <button
-                    key={tool}
-                    type="button"
-                    onClick={() => selectTool(tool)}
-                    aria-pressed={activeTool === tool}
-                    className={`rounded-full px-2 py-2 text-xs font-semibold transition ${activeTool === tool ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"}`}
-                  >
-                    {toolLabels[tool]}
-                  </button>
-                ))}
-              </div>
-{activeTool === "content" && <>          {modernEditor ? <div className="mb-4 rounded-2xl border border-[#e0ddd5] bg-white p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.15em] text-muted-foreground">Storefront design</p><p className="mt-1 text-sm font-semibold">{selectedTemplate?.name ?? "Your saved design"}</p></div><div className="flex gap-2">{selectedTemplate ? <button type="button" className="px-2 text-xs text-muted-foreground underline" onClick={()=>{const initial=createInitialState(business,true);setSelectedTemplate(initialDesign.template);setHeroCustomFont(initialDesign.headingFamily ?? null);setTemplateFontRevision(value=>value+1);setForm(current=>({...current,fontStyle:initial.fontStyle,imageShape:initial.imageShape}));markDirty();}}>Use saved design</button> : null}<Button type="button" variant="secondary" onClick={()=>setTemplateLibraryOpen(true)}>Browse templates</Button></div></div>
-            {selectedTemplate ? <details className="mt-3 border-t pt-3"><summary className="cursor-pointer text-xs font-medium">Customize colors</summary><div className="mt-3 flex flex-wrap gap-4">{(["background","surface","ink","accent","accentInk","secondary"] as const).map(key=><label key={key} className="grid gap-1 text-[10px] capitalize">{key === "accentInk" ? "Button text" : key}<input aria-label={`Template ${key} color`} type="color" value={selectedTemplate.colors[key]} onChange={(event)=>{setSelectedTemplate({...selectedTemplate,colors:{...selectedTemplate.colors,[key]:event.target.value}});markDirty();}} className="h-8 w-12 rounded border" /></label>)}</div></details> : null}
-          </div> : null}
-              {modernEditor && activeTool === "content" ? <details className="mb-4 rounded-xl border border-[#e0ddd5] bg-white p-3"><summary className="cursor-pointer text-xs font-semibold">3D Effects · optional</summary><fieldset className="mt-3">
+              <details className="mb-4 rounded-xl border border-[#eadbd8] p-3">
+                <summary className="cursor-pointer text-sm font-medium">Add section</summary>
+                <p className="mt-2 text-xs text-muted-foreground">Removed sections keep their content.</p>
+                <div className="mt-2 flex flex-wrap gap-2">{form.sectionOrder.filter(id=>id!=="reviews" && form.hiddenSections.includes(id)).map(id=><button key={id} type="button" className="rounded-full border px-3 py-2 text-xs" onClick={()=>{update("hiddenSections",form.hiddenSections.filter(section=>section!==id));if(id==="effects")setHeroDepth("floating");selectSection(id);}}>+ {sectionLabel(id)}</button>)}</div>
+                {!form.hiddenSections.length && <p className="mt-2 text-xs text-muted-foreground">All sections are already on your page.</p>}
+              </details>
+</div></details>          {modernEditor ? <details open hidden={designPanel!=="templates"} className="mb-4 rounded-2xl border border-[#e0ddd5] bg-white p-4"><summary>Templates</summary>
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.15em] text-muted-foreground">Selected template</p><p className="mt-1 text-sm font-semibold">{selectedTemplate?.name ?? "Your saved design"}</p></div><div className="flex flex-wrap gap-2">{selectedTemplate ? <button type="button" className="whitespace-nowrap px-2 text-xs text-muted-foreground underline" onClick={()=>{const initial=createInitialState(business,true);setSelectedTemplate(initialDesign.template);setHeroCustomFont(initialDesign.headingFamily ?? null);setTemplateFontRevision(value=>value+1);setForm(current=>({...current,fontStyle:initial.fontStyle,imageShape:initial.imageShape}));markDirty();}}>Use saved design</button> : null}<Button type="button" variant="secondary" className="whitespace-nowrap" onClick={()=>setTemplateLibraryOpen(true)}>Browse templates</Button></div></div>
+          </details> : null}
+              {modernEditor && activeTool === "content" ? <details open hidden={designPanel!=="effects"} className="mb-4 rounded-xl border border-[#e0ddd5] bg-white p-3"><summary className="cursor-pointer text-xs font-semibold">3D Effects</summary><fieldset className="mt-3">
                 <legend className="mb-2 text-sm font-semibold">3D Effects</legend><button type="button" onClick={()=>{studioInvited.current=true;if(editTimer.current)clearTimeout(editTimer.current);setStudioInvitation(false);setStudioOpen(true);}} className="mb-3 rounded-full border px-4 py-2 text-xs">Open 3D Studio</button>
-                <p className="mb-3 text-xs text-muted-foreground">Suggested for {form.name || "your storefront"}: an interactive element using your logo. Booking stays available.</p>
+                <p className="mb-3 text-xs text-muted-foreground">Add a logo or product in 3D.</p>
                 <div className="grid grid-cols-3 gap-2">{HERO_DEPTH_PRESETS.map((preset) => <button key={preset.value} type="button" aria-pressed={heroDepth === preset.value} onClick={() => { setHeroDepth(preset.value); markDirty(); }} className={`rounded-xl border px-2 py-3 text-left transition ${heroDepth === preset.value ? "border-[#627b40] bg-[#f0f3e8] ring-1 ring-[#627b40]" : "border-[#e5e5dc] bg-white"}`}><span className="block text-xs font-semibold">{preset.label}</span><span className="mt-1 block text-[10px] leading-4 text-muted-foreground">{preset.detail}</span></button>)}</div>
               </fieldset></details> : null}
 
 </>}
-              {modernEditor && selectedTemplate ? <SectionBackgroundControls template={selectedTemplate} section={activeSection} label={sectionLabel(activeSection)} onChange={(template)=>{setSelectedTemplate(template);markDirty();}} /> : null}
-              {modernEditor ? <div hidden={activeTool !== "content"}><HeroTypographyControls bodyFamily={form.bodyFamily} onBody={value=>update("bodyFamily",value)} allowUpload={previewOnly} subheadingFamily={form.subheadingFamily} onSubheading={value=>update("subheadingFamily",value)} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
+              {activeTool==="content" && designPanel==="buttons" && selectedTemplate && <section data-button-settings className="rounded-2xl border bg-[#fffaf8] p-4"><h3 className="mb-4 font-semibold">Buttons</h3><div role="group" aria-label="Button shape" className="mb-4 flex gap-2">{(["pill","block"] as const).map(shape=><button key={shape} type="button" aria-pressed={selectedTemplate.button===shape} onClick={()=>{setSelectedTemplate({...selectedTemplate,button:shape});markDirty();}} className="border px-4 py-2 text-sm aria-pressed:bg-[#f5e7e6]" style={{borderRadius:shape==="pill"?999:0}}>{shape==="pill"?"Round":"Square"}</button>)}</div><label className="grid gap-2 text-sm">Button text<input className="rounded-xl border px-3 py-2" maxLength={60} value={selectedTemplate.buttonText??"Request a quote"} onChange={e=>{setSelectedTemplate({...selectedTemplate,buttonText:e.target.value});markDirty();}}/></label><div className="mt-4 grid grid-cols-2 gap-3"><ColorPicker label="Button color" value={selectedTemplate.buttonColor??selectedTemplate.colors.accent} onChange={value=>{setSelectedTemplate({...selectedTemplate,buttonColor:value});markDirty();}}/><ColorPicker label="Button text color" value={selectedTemplate.colors.accentInk} onChange={value=>{setSelectedTemplate({...selectedTemplate,buttonColor:selectedTemplate.buttonColor??selectedTemplate.colors.accent,colors:{...selectedTemplate.colors,accentInk:value}});markDirty();}}/></div></section>}
+              {activeTool==="content" && designPanel==="brand" && <section className="mb-4 rounded-2xl border bg-[#fffaf8] p-4"><h3 className="mb-4 font-semibold">Brand</h3><ImageUploadField name="brandLogo" label="Brand logo" value={form.logoUrl} valueCrop={form.logoCrop} onChangePreview={value=>update("logoUrl",value)} onCropChange={crop=>update("logoCrop",crop)} uploadEndpoint={`${mediaUploadEndpoint}?target=logo`}/><p className="mb-3 mt-5 text-sm font-semibold">Your template palette</p><div className="grid grid-cols-2 gap-3">{selectedTemplate && Object.entries(selectedTemplate.colors).map(([key,color])=><ColorPicker key={key} label={({background:'Background',surface:'Cards',ink:'Text',muted:'Small text',accent:'Accent',accentInk:'Button text',secondary:'Details'} as Record<string,string>)[key]} value={color} onChange={value=>{setSelectedTemplate({...selectedTemplate,colors:{...selectedTemplate.colors,[key]:value}});markDirty();}}/>)}</div></section>}
+              {modernEditor && selectedTemplate && designPanel==="backgrounds" ? <SectionBackgroundControls template={selectedTemplate} section={activeSection} label={sectionLabel(activeSection)} onChange={(template)=>{setSelectedTemplate(template);markDirty();}} /> : null}
+              {modernEditor ? <div hidden={activeTool !== "content" || designPanel!=="fonts"}><SelectedTextFonts/><HeroTypographyControls bodyFamily={form.bodyFamily} onBody={value=>update("bodyFamily",value)} allowUpload={previewOnly} subheadingFamily={form.subheadingFamily} onSubheading={value=>update("subheadingFamily",value)} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
               {activeTool === "design" ? (
                 <DesignControls form={form} update={update} />
               ) : (
+                <EditorToolPopup title={toolPopup==="portfolio"?"Gallery":toolPopup==="socials"?"Social media":toolPopup==="faq"?"FAQ":toolPopup==="policies"?"Policies":"Services"} open={Boolean(toolPopup)} onClose={()=>{setToolPopup(null);setActiveSection("hero");}}>
                 <PanelStack>
+                  {["faq","policies"].includes(toolPopup??"") && <label className="flex items-center gap-3 rounded-xl border p-3 text-sm"><input type="checkbox" checked={!form.hiddenSections.includes(toolPopup!)} onChange={event=>update("hiddenSections",event.target.checked?form.hiddenSections.filter(id=>id!==toolPopup):[...form.hiddenSections,toolPopup!])}/>Show on storefront</label>}
                   <SectionEditor
-                    activeSection={panelSection}
+                    activeSection={toolPopup??(["faq","policies"].includes(panelSection)?"none":panelSection)}
                     business={business}
                     collapsedFaqIds={collapsedFaqIds}
                     form={form}
@@ -875,14 +907,14 @@ export function StorefrontCustomizer({
                     draggedPhotoIndex={draggedPhotoIndex}
                     setServiceVisible={setServiceVisible}
                   />
-                </PanelStack>
+                </PanelStack></EditorToolPopup>
               )}
             </div>
           )}
         </aside>
       </div>
       )}
-    </form>
+    </form></TextFormatting></ColorPalette>
   );
 }
 
@@ -991,6 +1023,7 @@ function SectionEditor({
   const coverUploadEndpoint = `${mediaUploadEndpoint}?target=cover`;
 
   if (activeSection === "hero") {
+    return null;
     return (
       <PanelStack>
         <details className="rounded-xl border p-3"><summary>Logo</summary><div className="mt-4">
@@ -1019,7 +1052,7 @@ function SectionEditor({
                 Add or edit actual services here. Packages, menu items, photos, pricing, and categories live on each service.
               </p>
             </div>
-            <Button asChild type="button" size="sm">
+            <Button asChild type="button" size="sm" className="h-10 shrink-0 whitespace-nowrap px-4">
               <Link href={`/vendor/business/${business.slug}/services/new`}>
                 <Plus className="h-4 w-4" />
                 Add service
@@ -1046,13 +1079,20 @@ function SectionEditor({
       </PanelStack>
     );
   }
+  if(activeSection==="socials")return (<details open className="rounded-xl border p-3"><summary>Social media</summary><div className="mt-4 space-y-4">
+        <label className="flex justify-between text-sm"><span className="flex items-center gap-2"><Instagram size={18}/>Instagram</span><input aria-label="Show Instagram" type="checkbox" checked={form.showInstagram} onChange={event=>update("showInstagram",event.target.checked)}/></label>
+        {form.showInstagram && <Field label="Instagram feed"><Input type="url" placeholder="Paste Instagram profile link" value={form.instagramFeedEnabled ? form.instagramFeedUrl : form.instagramUrl} onChange={event=>{update("instagramUrl",event.target.value);update("instagramFeedUrl",event.target.value);}}/></Field>}
+        <label className="flex justify-between text-sm"><span className="flex items-center gap-2"><Music2 size={18}/>TikTok</span><input aria-label="Show TikTok" type="checkbox" checked={form.showTikTok} onChange={event=>update("showTikTok",event.target.checked)}/></label>
+        {form.showTikTok && <Field label="TikTok feed"><Input type="url" placeholder="Paste TikTok profile link" value={form.tiktokUrl} onChange={event=>update("tiktokUrl",event.target.value)}/></Field>}
+        <p className="text-xs text-muted-foreground">Profile links appear at the bottom of your page. Live feed embedding is not connected in this preview.</p>
+        </div></details>);
   if (activeSection === "portfolio") {
     const photos = form.photoUrls.filter(Boolean);
     return (
       <PanelStack>
         <details open className="rounded-xl border p-3"><summary>Cover image</summary>
         <ImageUploadField
-          name="editorCover"
+          editMenu name="editorCover"
           label="Cover image"
           value={form.coverPhoto}
           valueCrop={form.coverPhotoCrop}
@@ -1064,13 +1104,6 @@ function SectionEditor({
         <details className="rounded-xl border p-3" open><summary>Gallery</summary><div className="mt-4">
         <PhotoLayoutPicker layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)}/>
         <AboutPhotoGrid uploadEndpoint={mediaUploadEndpoint.includes("preview-only") ? undefined : mediaUploadEndpoint} compact images={[form.aboutImage,...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0)update("aboutImage",value);else{const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}}/>
-        </div></details>
-        <details className="rounded-xl border p-3"><summary>Social media</summary><div className="mt-4 space-y-4">
-        <label className="flex justify-between text-sm">Show Instagram<input type="checkbox" checked={form.showInstagram} onChange={event=>update("showInstagram",event.target.checked)}/></label>
-        {form.showInstagram && <Field label="Instagram feed"><Input type="url" placeholder="Paste Instagram profile link" value={form.instagramFeedEnabled ? form.instagramFeedUrl : form.instagramUrl} onChange={event=>{update("instagramUrl",event.target.value);update("instagramFeedUrl",event.target.value);}}/></Field>}
-        <label className="flex justify-between text-sm">Show TikTok<input type="checkbox" checked={form.showTikTok} onChange={event=>update("showTikTok",event.target.checked)}/></label>
-        {form.showTikTok && <Field label="TikTok feed"><Input type="url" placeholder="Paste TikTok profile link" value={form.tiktokUrl} onChange={event=>update("tiktokUrl",event.target.value)}/></Field>}
-        <p className="text-xs text-muted-foreground">Profile links appear at the bottom of your page. Live feed embedding is not connected in this preview.</p>
         </div></details>
         <details className="rounded-xl border p-3"><summary>More gallery images</summary>
         <ImageUploadField
@@ -1142,17 +1175,22 @@ function SectionEditor({
       </PanelStack>
     );
   }
+  if (activeSection === "none") return null;
+  if (activeSection === "policies") return <PanelStack>
+    <Button type="button" variant="secondary" onClick={()=>update("policies",[...form.policies,{id:crypto.randomUUID(),title:"",body:""}])}><Plus size={16}/>Add policy</Button>
+    {form.policies.map((policy,index)=><div key={policy.id} className="grid min-w-0 gap-3 rounded-2xl border p-4"><div className="flex items-center justify-between"><span className="text-sm font-semibold">Policy {index+1}</span><button type="button" aria-label="Remove policy" onClick={()=>update("policies",form.policies.filter(item=>item.id!==policy.id))}><Trash2 size={16}/></button></div><Field label="Policy title"><Input placeholder="Type policy title here" value={policy.title} onChange={event=>update("policies",form.policies.map(item=>item.id===policy.id?{...item,title:event.target.value}:item))}/></Field><Field label="Policy details"><Textarea placeholder="Describe your policy here" value={policy.body} onChange={event=>update("policies",form.policies.map(item=>item.id===policy.id?{...item,body:event.target.value}:item))}/></Field></div>)}
+  </PanelStack>;
   if (activeSection === "faq") {
     return (
       <PanelStack>
-        <Button type="button" variant="secondary" onClick={() => update("faqs", [...form.faqs, { id: crypto.randomUUID(), question: "New question", answer: "Answer this in your own words." }])}>
+        <Button type="button" variant="secondary" onClick={() => update("faqs", [...form.faqs, { id: crypto.randomUUID(), question: "", answer: "" }])}>
           <Plus className="h-4 w-4" />Add FAQ
         </Button>
         {form.faqs.map((faq, index) => {
           const collapsed = collapsedFaqIds.includes(faq.id);
           return (
           <div key={faq.id} className="rounded-[1rem] border border-[#eadbd7] bg-[#fffaf8] p-3">
-            <div className="mb-3 flex items-start justify-between gap-2">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
               <button type="button" className="min-w-0 text-left" onClick={() => toggleFaqCollapsed(faq.id)}>
                 <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">FAQ {index + 1}</span>
                 <span className="block truncate text-sm font-semibold">{faq.question || "Untitled question"}</span>
@@ -1515,7 +1553,7 @@ function StorefrontPreview({
   };
   const photos = form.photoUrls.filter(Boolean);
   const profile = (
-      <section style={{order:form.sectionOrder.indexOf("hero")}} data-testid="preview-section-hero" onClick={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
+      <section style={{order:form.sectionOrder.indexOf("hero")}} data-testid="preview-section-hero" onClickCapture={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
         <div className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground" style={theme.platformBarStyle}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           <div className="shrink-0">
@@ -1578,7 +1616,7 @@ function StorefrontPreview({
             <span className="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>Follow</span>
           </div>
         </div>
-        {heroDepth ? <DimensionalStorefrontHero effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth="flat" mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /> : <PreviewHeroTemplate
+        {heroDepth ? <DimensionalStorefrontHero onCoverCropChange={value=>update("coverPhotoCrop",value)} coverEditor={<ImageUploadField editMenu name="inlineCover" label="Upload cover image" value={form.coverPhoto} valueCrop={form.coverPhotoCrop} onChangePreview={value=>update("coverPhoto",value)} onCropChange={crop=>update("coverPhotoCrop",crop)} uploadEndpoint={coverUploadEndpoint} />} effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth="flat" mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /> : <PreviewHeroTemplate
           active={activeSection === "hero"}
           activeServices={activeServices}
           business={business}
@@ -1604,8 +1642,8 @@ function StorefrontPreview({
         }).map((section) => {
           if (section === "hero") return <div key={section}>{profile}</div>;
           if (section === "effects") return <div key={section} data-testid="preview-section-effects" onClick={()=>setActiveSection(section)}><DimensionalStorefrontHero effectOnly effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth={heroDepth ?? "flat"} mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /></div>;
-          if (section === "parties") return <PreviewSection key={section} active={activeSection===section} testId="preview-section-parties" theme={theme} title="Real parties" onClick={()=>setActiveSection(section)}><p>Real parties featuring your business appear here when hosts tag you.</p></PreviewSection>;
-          if (section === "socials") return <PreviewSection key={section} active={activeSection===section} testId="preview-section-socials" theme={theme} title="Socials" onClick={()=>setActiveSection(section)}><div className="flex flex-wrap gap-5">{form.showInstagram && form.instagramUrl && <a href={form.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a>}{form.showTikTok && form.tiktokUrl && <a href={form.tiktokUrl} target="_blank" rel="noreferrer">TikTok ↗</a>}{form.website && <a href={form.website} target="_blank" rel="noreferrer">Website ↗</a>}</div>{!form.instagramUrl && !form.tiktokUrl && !form.website && <p>Add your social links in Gallery.</p>}</PreviewSection>;
+          if (section === "parties") return <PreviewSection key={section} active={activeSection===section} testId="preview-section-parties" theme={theme} title="Past parties" onClick={()=>setActiveSection(section)}><div className="mb-4"><p className="text-sm font-semibold">Average party rating</p><p className="mt-2">{business.reviewCount ? `★ ${business.averageRating.toFixed(1)} / 5 · ${business.reviewCount} confirmed party ratings` : "No confirmed party ratings"}</p></div><p>Parties featuring your business appear here when hosts tag you.</p></PreviewSection>;
+          if (section === "socials") return <PreviewSection key={section} active={activeSection===section} testId="preview-section-socials" theme={theme} title="Socials" onClick={()=>setActiveSection(section)}><div className="flex flex-wrap gap-5">{form.showInstagram && form.instagramUrl && <a href={form.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a>}{form.showTikTok && form.tiktokUrl && <a href={form.tiktokUrl} target="_blank" rel="noreferrer">TikTok ↗</a>}{form.website && <a href={form.website} target="_blank" rel="noreferrer">Website ↗</a>}</div>{!form.instagramUrl && !form.tiktokUrl && !form.website && <p>Add your links in Social media.</p>}</PreviewSection>;
 
           if (section === "featured-services") return (
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-featured-services" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
@@ -1623,7 +1661,7 @@ function StorefrontPreview({
           );
           if (section === "all-services") return (
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title="Services" onClick={() => setActiveSection(section)}>
-              <div className="mb-5 flex items-center justify-between gap-3"><p className="text-sm">{activeServices.length ? "Choose a service for your event." : "Add your services and pricing to help customers book."}</p><Button type="button" onClick={event=>{event.stopPropagation();setActiveSection("final-quote");document.querySelector('[data-testid="preview-section-final-quote"]')?.scrollIntoView({behavior:"smooth",block:"center"});}}>Book now</Button></div>
+              <div className="mb-5 flex items-center justify-between gap-3"><p className="text-sm">{activeServices.length ? "Choose a service for your event." : "Add your services and pricing to help customers book."}</p><Button data-storefront-button style={theme.heroCtaStyle} type="button" onClick={event=>{event.stopPropagation();setActiveSection("final-quote");document.querySelector('[data-testid="preview-section-final-quote"]')?.scrollIntoView({behavior:"smooth",block:"center"});}}>{template?.buttonText||"Book now"}</Button></div>
               <ServiceGrid
                 businessSlug={business.slug}
                 editable={activeSection === section}
@@ -1724,24 +1762,11 @@ function StorefrontPreview({
               )}
             </PreviewSection>
           );
-          if (section === "reviews") return <PreviewSection key={section} active={activeSection === section} testId="preview-section-reviews" theme={theme} title="Reviews" onClick={() => setActiveSection(section)}><div className="mb-4 flex items-center gap-3"><span className="text-2xl font-semibold">{business.reviewCount ? `★ ${business.averageRating.toFixed(1)}` : "No reviews yet"}</span>{business.reviewCount>0 && <span className="text-sm">{business.reviewCount} verified reviews</span>}</div><p className="text-sm">Reviews from completed ShopFia bookings appear here.</p><p className="mt-3 text-xs opacity-60">Individual reviews are not loaded in this design preview.</p></PreviewSection>;
+          if (section === "reviews") return null;
+          if (section === "policies") return <PreviewSection key={section} active={activeSection===section} testId="preview-section-policies" theme={theme} title="Policies" onClick={()=>setActiveSection(section)}><div className="grid gap-4">{form.policies.map(policy=><div key={policy.id}><h3 className="font-semibold">{policy.title}</h3><p>{policy.body}</p></div>)}{!form.policies.length&&<p>Click to add your policies.</p>}</div></PreviewSection>;
           if (section === "faq") return (
-            <PreviewSection key={section} active={activeSection === section} testId="preview-section-faq" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
-              {activeSection === section ? (
-                <div className="grid gap-4">
-                  {form.faqs.map((faq) => (
-                    <div key={faq.id} className="grid gap-2">
-                      <InlineTextInput ariaLabel="FAQ question" className="font-semibold" onChange={(value) => updateFaq(faq.id, { question: value })} placeholder="Question" value={faq.question} />
-                      <InlineTextarea ariaLabel="FAQ answer" onChange={(value) => updateFaq(faq.id, { answer: value })} placeholder="Answer" value={faq.answer} />
-                    </div>
-                  ))}
-                  <Button type="button" variant="secondary" style={theme.secondaryButtonStyle} onClick={() => update("faqs", [...form.faqs, { id: crypto.randomUUID(), question: "New question", answer: "Answer this in your own words." }])}>
-                    <Plus className="h-4 w-4" />Add FAQ
-                  </Button>
-                </div>
-              ) : (
-                form.faqs.slice(0, 3).map((faq) => <div key={faq.id} className="mt-2"><div className="font-semibold">{faq.question}</div><p>{faq.answer}</p></div>)
-              )}
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-faq" theme={theme} title={<InlineStorefrontText label="Policies heading" value={sectionLabel(section)} placeholder="FAQ" onChange={value=>update("sectionLabels",{...form.sectionLabels,[section]:value})}/>} onClick={() => setActiveSection(section)}>
+              <div className="grid gap-4">{form.faqs.map(faq=><div key={faq.id}><div className="font-semibold"><InlineStorefrontText label="FAQ question" value={faq.question} placeholder="Type question here" onChange={value=>updateFaq(faq.id,{question:value})}/></div><p><InlineStorefrontText label="FAQ answer" value={faq.answer} placeholder="Type answer here" onChange={value=>updateFaq(faq.id,{answer:value})}/></p></div>)}<Button type="button" variant="secondary" onClick={()=>update("faqs",[...form.faqs,{id:crypto.randomUUID(),question:"",answer:""}])}><Plus size={16}/>Add FAQ</Button></div>
             </PreviewSection>
           );
           if (section === "final-quote") return (
@@ -1751,12 +1776,12 @@ function StorefrontPreview({
                   <InlineTextarea ariaLabel="Availability notes" onChange={(value) => update("availabilityNotes", value)} placeholder="Availability notes" value={form.availabilityNotes} />
                   <InlineTextarea ariaLabel="Deposit or payment note" onChange={(value) => update("booking", { ...form.booking, deposit: value })} placeholder="Deposit or payment note" value={form.booking.deposit} />
                   <div className="md:col-span-2">
-                    <Button type="button" style={theme.heroCtaStyle}><Send className="h-4 w-4" />Get a quote</Button>
+                    <Button data-storefront-button type="button" style={theme.heroCtaStyle}><Send className="h-4 w-4" />{template?.buttonText||"Get a quote"}</Button>
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-3">
-                  <Button type="button" style={theme.heroCtaStyle}><Send className="h-4 w-4" />Get a quote</Button>
+                  <Button data-storefront-button type="button" style={theme.heroCtaStyle}><Send className="h-4 w-4" />{template?.buttonText||"Get a quote"}</Button>
                   {form.availabilityNotes ? <p className={theme.mutedClass}>{form.availabilityNotes}</p> : null}
                 </div>
               )}
@@ -1905,7 +1930,7 @@ function PreviewHeroTemplate({
               <span className={`block text-xs ${theme.mutedClass}`}>{business.reviewCount ? `${business.averageRating.toFixed(1)} · ${business.reviewCount} reviews` : "No reviews yet"} · {location}</span>
             </span>
           </div>
-          <span className="rounded-full px-4 py-2 text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+          <span className="rounded-full px-4 py-2 text-xs font-semibold" data-storefront-button role="button" tabIndex={0} style={theme.heroCtaStyle}>Request a quote</span>
         </div>
         {active ? (
           <div className="border-t p-4" style={theme.navStyle}>
@@ -1940,7 +1965,7 @@ function PreviewHeroTemplate({
             <span>{location}</span>
             <span>{business.reviewCount ? `${business.averageRating.toFixed(1)} · ${business.reviewCount} reviews` : "No reviews yet"}</span>
             <span>{activeServices.length} services</span>
-            <span className="sm:col-span-3 rounded-full px-4 py-2 text-center text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+            <span className="sm:col-span-3 rounded-full px-4 py-2 text-center text-xs font-semibold" data-storefront-button role="button" tabIndex={0} style={theme.heroCtaStyle}>Request a quote</span>
           </div>
         </div>
       </section>
@@ -1954,7 +1979,7 @@ function PreviewHeroTemplate({
           <PreviewHeroLogo form={form} theme={theme} />
           <h2 className="break-words text-2xl font-semibold leading-tight" style={theme.headingStyle}>{form.name}</h2>
           <p className={`line-clamp-5 text-sm leading-6 ${theme.copyClass}`}>{copy}</p>
-          <span className="rounded-full px-4 py-2 text-center text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+          <span className="rounded-full px-4 py-2 text-center text-xs font-semibold" data-storefront-button role="button" tabIndex={0} style={theme.heroCtaStyle}>Request a quote</span>
         </aside>
         <div className="grid min-w-0 content-start gap-4">
           <div>
@@ -1992,7 +2017,7 @@ function PreviewHeroTemplate({
           </>
         )}
         <span className={`text-sm ${theme.mutedClass}`}>{location}</span>
-        <span className="rounded-full px-5 py-2.5 text-xs font-semibold" style={theme.heroCtaStyle}>Request a quote</span>
+        <span className="rounded-full px-5 py-2.5 text-xs font-semibold" data-storefront-button role="button" tabIndex={0} style={theme.heroCtaStyle}>Request a quote</span>
         {CoverEditor}
       </div>
     </section>
@@ -2014,8 +2039,9 @@ function InlineTextInput({
   style?: CSSProperties;
   value: string;
 }) {
+  const selection=useTextSelection(ariaLabel,value,onChange);
   return (
-    <input
+    <input {...selection}
       aria-label={ariaLabel}
       className={`w-full rounded-[0.65rem] border px-2 py-1 outline-none ring-1 ring-transparent transition placeholder:text-current/50 focus:ring-current/20 ${className}`}
       onChange={(event) => onChange(event.target.value)}
@@ -2045,6 +2071,7 @@ function InlineTextarea({
   style?: CSSProperties;
   value: string;
 }) {
+  const selection=useTextSelection(ariaLabel,value,onChange);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -2055,7 +2082,7 @@ function InlineTextarea({
   }, [value]);
 
   return (
-    <textarea
+    <textarea {...selection}
       aria-label={ariaLabel}
       ref={textareaRef}
       className={`min-h-24 w-full resize-y rounded-[0.75rem] border px-2 py-1 outline-none ring-1 ring-transparent transition placeholder:text-current/50 focus:ring-current/20 ${className}`}
@@ -2239,7 +2266,7 @@ function instagramHandleFromUrl(href: string) {
 function PreviewSection({ active, children, onClick, testId, theme, title }: { active: boolean; children: ReactNode; onClick: () => void; testId?: string; theme: PreviewTheme; title: ReactNode }) {
   const design=theme.sectionDesigns?.[testId?.replace("preview-section-", "") ?? ""];
   return (
-    <section data-custom-background={Boolean(design)} data-testid={testId} onClick={onClick} className={previewButtonClass(active, `mb-5 block w-full cursor-text rounded-[1.5rem] p-6 text-left transition ${theme.cardClass}`)} style={{...(active ? theme.activeSectionStyle : theme.previewCardStyle),...sectionDesignStyle(design)}}>
+    <section data-custom-background={Boolean(design)} data-testid={testId} onClickCapture={onClick} className={previewButtonClass(active, `mb-5 block w-full cursor-text rounded-[1.5rem] p-6 text-left transition ${theme.cardClass}`)} style={{...(active ? theme.activeSectionStyle : theme.previewCardStyle),...sectionDesignStyle(design)}}>
       {title ? <h3 className="text-2xl font-semibold tracking-tight" style={{...theme.headingStyle,...(design ? {color:design.ink} : {}),...(theme.subheadingFamily ? {fontFamily:theme.subheadingFamily,fontStyle:theme.subheadingStyle} : {})}}>{title}</h3> : null}
       <div className={`${title ? "mt-3" : ""} text-sm leading-6 ${theme.copyClass}`}>{children}</div>
     </section>
@@ -2284,7 +2311,7 @@ function getPreviewTheme(form: FormState, template?: StorefrontTemplate | null) 
   const isDark = !template && (form.textTone === "LIGHT" || (form.textTone === "AUTO" && normalizedPalette === "BLACK_AND_WHITE"));
   const palette = getPreviewPalette(normalizedPalette);
   const accent = template?.colors.accent ?? (normalizedPalette === "MATCHA_SOFT" ? "#526747" : normalizedPalette === "BLUSH" ? "#92505d" : normalizedPalette === "LAVENDER" ? "#725481" : palette.accent);
-  const ctaBackground = template ? template.colors.accent : "gradient" in palette ? palette.gradient : accent;
+  const ctaBackground = template ? (template.buttonColor ?? template.colors.accent) : "gradient" in palette ? palette.gradient : accent;
   const ctaText = template?.colors.accentInk ?? ("ctaText" in palette ? palette.ctaText : "#ffffff");
   const imageRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.75rem]" : "rounded-[0.9rem]";
   const sectionRadius = form.imageShape === "SQUARE" ? "rounded-none" : form.imageShape === "SOFT" ? "rounded-[1.5rem]" : "rounded-[1rem]";
@@ -2307,7 +2334,7 @@ function getPreviewTheme(form: FormState, template?: StorefrontTemplate | null) 
     copyClass: template ? "text-[color:var(--template-muted)]" : isDark ? "text-white/86" : "text-[#5f5550]",
     headerClass: isDark ? "border-white/15 bg-[#171315] text-white/70" : "border-[#eadbd7] bg-[#fffaf8] text-[#7a625b]",
     headingStyle: { fontFamily: fontFamilies.heading } as CSSProperties,
-    heroCtaStyle: { background: ctaBackground, color: ctaText } as CSSProperties,
+    heroCtaStyle: { background: ctaBackground, color: ctaText, borderRadius: template?.button === "pill" ? 999 : 0 } as CSSProperties,
     heroRadius: imageRadius,
     imageRadius,
     logoRadius,
@@ -2470,7 +2497,7 @@ export function AboutPhotoGrid({readOnly=false,uploadEndpoint,compact=false,imag
 
 function PhotoLayoutPicker({layout,onLayout}:{layout:FormState["aboutPhotoLayout"];onLayout:(value:FormState["aboutPhotoLayout"])=>void}) {
 const selected=PHOTO_LAYOUTS.find(item=>item.id===layout)??PHOTO_LAYOUTS[0];
-return (  <details className="mb-5 rounded-xl border border-current/15 p-3">
+return (  <details open className="mb-5 rounded-xl border border-current/15 p-3">
    <summary className="cursor-pointer text-sm font-medium">Photo layout · {selected.label}</summary>
    <div className="mt-4 grid gap-2" style={{gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))"}} role="group" aria-label="About photo layout">
     {PHOTO_LAYOUTS.map(option=><button type="button" key={option.id} aria-pressed={layout===option.id} onClick={()=>onLayout(option.id)} className="rounded-lg border border-current/15 p-3 text-left aria-pressed:ring-2 aria-pressed:ring-current">
@@ -2480,4 +2507,11 @@ return (  <details className="mb-5 rounded-xl border border-current/15 p-3">
    </div>
   </details>
 );
+}
+
+function EditorToolPopup({open,title,onClose,children}:{open:boolean;title:string;onClose:()=>void;children:ReactNode}){
+ const ref=useRef<HTMLDialogElement>(null);
+ useEffect(()=>{if(open)ref.current?.showModal();},[open]);
+ if(!open)return <>{children}</>;
+ return <dialog ref={ref} aria-label={title} onCancel={event=>{event.preventDefault();onClose();}} className="m-auto max-h-[88vh] w-[min(760px,94vw)] overflow-y-auto rounded-3xl border border-[#eadbd7] bg-[#fffaf8] p-6 shadow-xl backdrop:bg-black/25"><header className="sticky top-0 z-10 mb-5 flex items-center justify-between bg-[#fffaf8] py-2"><h2 className="text-xl font-semibold">{title}</h2><button type="button" onClick={onClose} className="rounded-full border px-4 py-2">Done</button></header>{children}</dialog>;
 }

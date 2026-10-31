@@ -5,8 +5,10 @@ import { APPROVED_STOREFRONT_SECTIONS, STOREFRONT_FONT_STYLES, getStorefrontFont
 const color = z.string().regex(/^#[0-9a-f]{6}$/i);
 const families = new Set(STOREFRONT_TEMPLATES.flatMap(t => [t.headingFamily, t.bodyFamily, t.subheadingFamily, t.accentHeadingFamily]).concat(STOREFRONT_FONT_STYLES.flatMap(t => Object.values(getStorefrontFontFamilies(t.value)))).filter(Boolean));
 const family = z.string().max(250).refine(value => families.has(value), "Choose a font from the library.");
-const section = z.object({ background: color, ink: color, pattern: z.enum(["solid","clouds","stripes","grid","dots","checker","waves"]), patternColor: color.optional(), overlayColor: color.optional(), overlayOpacity: z.number().min(0).max(.8).optional() });
+const section = z.object({ patternOpacity:z.number().min(0).max(1).optional(), background: color, ink: color, pattern: z.enum(["solid","clouds","stripes","grid","dots","checker","waves"]), patternColor: color.optional(), overlayColor: color.optional(), overlayOpacity: z.number().min(0).max(.8).optional() });
 const template = z.object({
+  buttonColor: color.optional(),
+  buttonText:z.string().trim().min(1).max(60).optional(),
   id: z.string().refine(id => STOREFRONT_TEMPLATES.some(t => t.id === id)),
   colors: z.object({ background:color, surface:color, ink:color, muted:color, accent:color, accentInk:color, secondary:color }),
   headingFamily: family.optional(), bodyFamily: family.optional(), subheadingFamily: family.optional(),
@@ -16,6 +18,7 @@ const template = z.object({
   illustration: z.enum(["ribbon","botanical","cake","balloons","bouquet","sparkle","citrus"]).nullish()
 }).transform(patch => ({ ...STOREFRONT_TEMPLATES.find(t => t.id === patch.id)!, ...patch, illustration: patch.illustration ?? undefined, headingFamily:patch.headingFamily, bodyFamily:patch.bodyFamily } as StorefrontTemplate));
 export const storefrontDesignSchema = z.object({
+  textStyles:z.record(z.object({color:color.optional(),fontFamily:family.optional(),fontSize:z.number().min(10).max(120).optional(),fontWeight:z.number().min(100).max(900).optional(),fontStyle:z.enum(['normal','italic']).optional(),textDecoration:z.enum(['none','underline']).optional(),textAlign:z.enum(['left','center','right']).optional(),letterSpacing:z.number().min(-2).max(12).optional(),lineHeight:z.number().min(.8).max(2.5).optional()})).refine(styles=>Object.keys(styles).length<=100&&Object.keys(styles).every(key=>/^[a-z0-9-]{1,80}$/.test(key))).optional(),
   version: z.literal(1), template: template.nullable(), depth: z.enum(["flat","floating","layered"]),
   mount: z.enum(["round","square","artwork"]), edge:color, background:color,
   headingFamily:family.optional(), subheadingFamily:family.optional(), bodyFamily:family.optional(),

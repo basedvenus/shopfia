@@ -4,7 +4,6 @@ import { STOREFRONT_SECTION_LABELS } from "@/lib/businesses";
 type Section = keyof typeof STOREFRONT_SECTION_LABELS;
 const sectionLinks: ReadonlyArray<{ section: Section; href: string }> = [
   { section: "hero", href: "#storefront-home" },
-  { section: "effects", href: "#effects" },
   { section: "all-services", href: "#services" },
   { section: "portfolio", href: "#portfolio" },
   { section: "about", href: "#about" },
@@ -12,7 +11,8 @@ const sectionLinks: ReadonlyArray<{ section: Section; href: string }> = [
   { section: "reviews", href: "#reviews" },
   { section: "final-quote", href: "#inquiry" },
   { section: "socials", href: "#socials" },
-  { section: "faq", href: "#faq" }
+  { section: "faq", href: "#faq" },
+  { section: "policies", href: "#policies" }
 ];
 
 export function StorefrontNavigation({ visibleSections, sectionLabels, style, activeItemStyle }: {

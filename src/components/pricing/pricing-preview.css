@@ -42,3 +42,35 @@
 .sp-template-bar{padding:0 0 20px;background:transparent}.sp-template-bar .sp-template-select{width:360px;max-width:100%}
 
 .sp-save-errors{border-color:#b77980}.sp-save-errors ul,.sp-menu-list{display:grid;gap:8px;padding-left:20px;list-style:disc}.sp-save-errors .sp-link{height:auto;white-space:normal;justify-content:flex-start;text-align:left}
+
+/* Public service requests share ShopFia's page surface and compact form rhythm. */
+.sp-workspace.sp-live-request{padding:0;min-height:0;background:transparent;scroll-margin-top:100px;font-family:inherit}
+.sp-live-request .sp-card{padding:24px;border-radius:24px;gap:16px;background:rgba(255,255,255,.94)}
+.sp-live-request .sp-price{font-size:18px;line-height:1.5}
+.sp-live-request .sp-buyer-price-note{background:hsl(var(--muted));font-size:13px}
+.sp-live-request .sp-primary{width:100%;min-height:48px}
+.sp-live-request .sp-total{flex-wrap:wrap;gap:8px}
+.sp-live-request .sp-stack,.sp-live-request .sp-card{min-width:0}
+.sp-live-request .sp-check span{min-width:0;overflow-wrap:anywhere}
+
+/* A single focus outline encloses the currency prefix and amount. */
+.sp-workspace .sp-money {border-radius:999px;overflow:hidden;gap:8px;padding:0 14px;min-height:44px;}
+.sp-workspace .sp-money:focus-within {outline:2px solid #b77980;outline-offset:2px;}
+.sp-workspace .sp-money input:not([type=checkbox]) {border:0;border-radius:0;outline:none!important;box-shadow:none!important;padding:10px 0;min-width:0;appearance:textfield;background:transparent;}
+.sp-workspace .sp-money input::-webkit-inner-spin-button,.sp-workspace .sp-money input::-webkit-outer-spin-button {appearance:none;margin:0;}
+.sp-required,.sp-workspace .sp-field-error {color:#b42338!important;}
+.sp-workspace .sp-field-error {font-size:12px;line-height:1.4;}
+.sp-field[data-invalid=true]>input,.sp-field[data-invalid=true]>textarea,.sp-field[data-invalid=true]>select,.sp-field[data-invalid=true]>.sp-money {border-color:#b42338;}
+.sp-check[data-invalid=true] {color:#b42338;}
+.sp-save-area {display:grid;justify-items:start;gap:14px;padding:18px 0;}
+.sp-save-area .sp-check {font-size:13px;max-width:600px;align-items:flex-start;}
+.sp-addons {gap:12px;}
+.sp-addons .sp-disclosure {border:1px solid var(--sp-line);border-radius:14px;padding:12px 14px;}
+.sp-addons .sp-disclosure summary {font-size:14px;padding:0;}
+.sp-addons .sp-disclosure[open]>summary {padding-bottom:12px;}
+.sp-addons .sp-stack {gap:10px;}
+.sp-addons .sp-fields {gap:12px;}
+.sp-addons .sp-field {gap:4px;}
+.sp-addons .sp-field>span,.sp-addons .sp-check {font-size:12px;}
+.sp-addons input:not([type=checkbox]),.sp-addons select,.sp-addons .sp-money {min-height:36px;font-size:13px;}
+.sp-addons input:not([type=checkbox]),.sp-addons select {padding:7px 10px;}

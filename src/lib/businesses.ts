@@ -187,6 +187,7 @@ export const APPROVED_STOREFRONT_SECTIONS = [
   "portfolio",
   "reviews",
   "faq",
+  "policies",
   "final-quote",
   "effects",
   "parties",
@@ -202,13 +203,14 @@ export const STOREFRONT_SECTION_LABELS: Record<(typeof APPROVED_STOREFRONT_SECTI
   portfolio: "Photos",
   reviews: "Reviews",
   faq: "FAQ",
+  policies: "Policies",
   "final-quote": "Booking",
   effects: "3D Effects",
   parties: "Parties",
   socials: "Socials"
 };
 
-export const REQUIRED_STOREFRONT_SECTIONS = ["hero", "reviews", "final-quote"] as const;
+export const REQUIRED_STOREFRONT_SECTIONS = ["hero", "final-quote"] as const;
 
 export function sanitizeStorefrontSectionLabels(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -280,15 +282,11 @@ export function sanitizeStorefrontSections(sections: string[]) {
     "social-links": "final-quote",
     credentials: "how-it-works"
   };
-  const hasLegacySections = sections.some((section) => section in aliases);
   const requested = sections
     .map((section) => aliases[section] ?? section)
     .filter((section) => approved.has(section));
-  const ordered = hasLegacySections
-    ? APPROVED_STOREFRONT_SECTIONS
-    : requested.includes("hero")
-      ? requested
-      : ["hero", ...requested];
+  // Rename legacy IDs in place; migration must never reset a vendor’s order.
+  const ordered = requested.includes("hero") ? requested : ["hero", ...requested];
   const combined = [...ordered, ...APPROVED_STOREFRONT_SECTIONS];
   if (!requested.includes("effects")) {
     const effectIndex = combined.indexOf("effects");

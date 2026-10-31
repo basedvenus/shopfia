@@ -57,7 +57,7 @@ export const vendorOnboardingSchema = z.object({
   instagramFeedEnabled: booleanValueSchema.default(false),
   instagramFeedUrl: z.string().url("Enter a valid Instagram feed link.").optional().or(z.literal("")),
   tiktokUrl: z.string().url("Enter a valid TikTok link.").optional().or(z.literal("")),
-  bio: z.string().max(600, "Business description is a little too long.").optional().or(z.literal("")),
+  bio: z.string().max(600, "Business description must be 600 characters or fewer. Shorten it and save again.").optional().or(z.literal("")),
   formattedAddress: z.string().max(240, "Business location is a little too long.").optional().or(z.literal("")),
   city: z.string().min(2, "City is required.").max(80, "City is a little too long."),
   state: z.string().max(40, "State is a little too long.").optional().or(z.literal("")),

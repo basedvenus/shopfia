@@ -146,10 +146,10 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
         Back to {offering.vendor.name}
       </Link>
 
-      <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1.38fr)_minmax(390px,0.62fr)]">
-        <section className="space-y-7">
-          <div className="grid gap-3 md:grid-cols-[1.45fr_0.68fr]">
-            <div className="relative min-h-[430px] overflow-hidden rounded-[1.15rem] bg-[#f8ece9] shadow-soft md:min-h-[520px]">
+      <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.85fr)]">
+        <section className="min-w-0 space-y-6">
+          <div className={`grid gap-3 ${galleryPhotos.length > 1 ? "md:grid-cols-[1.45fr_0.68fr]" : ""}`}>
+            <div className="relative aspect-[4/3] max-h-[460px] overflow-hidden rounded-3xl bg-[#f8ece9]">
               {galleryPhotos[0] ? (
                 <Image
                   src={galleryPhotos[0]}
@@ -167,7 +167,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
                 <FavoriteToggle targetType="offering" targetId={offering.id} isSaved={Boolean(isSavedOffering)} variant="floating" />
               </div>
             </div>
-            <div className="grid gap-3">
+            <div className={galleryPhotos.length > 1 ? "grid gap-3" : "hidden"}>
               {galleryPhotos.slice(1).map((photo, index) => (
                 <div
                   key={`${photo}-${index}`}
@@ -214,7 +214,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
           </div>
 
           <div className="space-y-5">
-            <h1 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-5xl font-normal leading-[0.98] tracking-normal text-foreground md:text-6xl">
+            <h1 className="text-3xl font-semibold leading-tight tracking-tight text-foreground md:text-4xl">
               {offering.title}
             </h1>
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
@@ -371,7 +371,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
           </section>
         </section>
 
-        <aside className="xl:sticky xl:top-24">
+        <aside className="min-w-0">
           <ListingInquiryPanel
             pricing={readStructuredPricing((offering.faqJson as Record<string, unknown> | null)?.pricing)}
             promotions={(offering.faqJson as Record<string, unknown> | null)?.promotions}

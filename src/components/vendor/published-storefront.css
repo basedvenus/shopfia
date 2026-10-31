@@ -9,3 +9,5 @@
 .storefront-layout-section > :only-child {flex:1;min-width:0;}
 
 .storefront-layout-section .storefront-section-natural {display:flex!important;flex-direction:column;gap:24px;}
+
+.published-storefront .storefront-layout-section .storefront-section-natural > section#effects{padding:0;border:0;background:transparent;box-shadow:none;}

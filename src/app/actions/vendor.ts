@@ -9,6 +9,7 @@ import { US_STATE_CODES } from "@/lib/us-states";
 import { UNCLAIMED_VENDOR_CATEGORIES, VENDOR_BOOKING_CHANNELS } from "@/lib/unclaimed-vendor";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { CategoryAudience, OffsiteAdsTier, Prisma, UserRole, VendorProfileStatus, VerificationDocumentType } from "@prisma/client";
 import { z } from "zod";
 import { requireRole, requireSession, requireVerifiedVendorProfile } from "@/lib/auth/guards";
@@ -635,7 +636,25 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
   redirect(`/vendor/business/${vendor.slug}/storefront?published=1`);
 }
 
-export async function upsertVendorProfileAction(formData: FormData) {
+class VendorProfileSaveError extends Error {}
+
+function failVendorProfile(message: string, _options?: { businessSlug?: string; newBusiness?: boolean }): never {
+  throw new VendorProfileSaveError(message);
+}
+
+export async function upsertVendorProfileAction(formData: FormData): Promise<{ error: string }> {
+  try {
+    const { auth } = await import("@/auth");
+    const session = await auth();
+    if (!session?.user?.id) return { error: "Your session expired. Sign in in another tab, then try saving again. Your entries are still here." };
+    return await saveVendorProfile(formData);
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    return { error: error instanceof VendorProfileSaveError ? error.message : "Your business could not be saved. Your entries are still here. Please try again." };
+  }
+}
+
+async function saveVendorProfile(formData: FormData): Promise<never> {
   const { db } = await import("@/lib/db");
   const session = await requireSession();
   const rate = await checkServerActionRateLimit([
@@ -643,7 +662,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
     { key: `vendor-profile:user:${session.user.id}`, limit: 8, intervalMs: 60_000 }
   ]);
   if (!rate.ok) {
-    redirectWithVendorProfileError("Please wait a minute before saving your vendor profile again.");
+    failVendorProfile("Please wait a minute before saving your vendor profile again.");
   }
 
   const businessId = String(formData.get("businessId") ?? "").trim();
@@ -682,7 +701,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
         orderBy: { createdAt: "asc" }
       });
   if (businessId && !existingVendor) {
-    redirectWithVendorProfileError("That business could not be found for your account.", { newBusiness: isCreatingNewBusiness });
+    failVendorProfile("That business could not be found for your account.", { newBusiness: isCreatingNewBusiness });
   }
   const profileErrorOptions = { businessSlug: existingVendor?.slug, newBusiness: isCreatingNewBusiness };
   let targetVendor = existingVendor;
@@ -694,7 +713,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
     .replace(/^@/, "")
     .toLowerCase();
   if (isReservedStorefrontSlug(requestedSlug)) {
-    redirectWithVendorProfileError("That storefront URL is reserved. Choose a different ending.", profileErrorOptions);
+    failVendorProfile("That storefront URL is reserved. Choose a different ending.", profileErrorOptions);
   }
   const conflictingBusinesses = requestedSlug || submittedVendorUsername
     ? await db.vendorProfile.findMany({
@@ -719,7 +738,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
       })
     : [];
   if (existingVendor && conflictingBusinesses.length > 0) {
-    redirectWithVendorProfileError("That username or storefront URL belongs to another business. Choose an available one.", profileErrorOptions);
+    failVendorProfile("That username or storefront URL belongs to another business. Choose an available one.", profileErrorOptions);
   }
   if (conflictingBusinesses.length > 0) {
     // Matching a public business name/slug is not proof of ownership, even if
@@ -732,7 +751,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
     );
     if (blockedBusiness) {
       const conflictField = blockedBusiness.username === submittedVendorUsername ? "username" : "storefront URL";
-      redirectWithVendorProfileError(`That ${conflictField} is already taken by another storefront.`, profileErrorOptions);
+      failVendorProfile(`That ${conflictField} is already taken by another storefront.`, profileErrorOptions);
     }
 
     const exactSlugMatch = reusableBusinesses.find((business) => business.slug === requestedSlug);
@@ -742,7 +761,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
       reusableBusinesses.length > 1 &&
       !reusableBusinesses.some((business) => business.slug === requestedSlug && business.username === submittedVendorUsername);
     if (isOwnerlessExactMatch) {
-      redirectWithVendorProfileError("We found more than one saved copy of that business. Open it from your vendor dashboard and update it there.", profileErrorOptions);
+      failVendorProfile("We found more than one saved copy of that business. Open it from your vendor dashboard and update it there.", profileErrorOptions);
     }
     targetVendor = reusableBusiness;
   }
@@ -775,7 +794,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
   });
   if (!result.success) {
     securityLog("vendor_profile_validation_failed", { userId: session.user.id });
-    redirectWithVendorProfileError(
+    failVendorProfile(
       firstValidationMessage(result.error, {
         name: "Business Name",
         city: "City",
@@ -800,7 +819,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
       })
     : 0;
   if (validVendorCategoryCount !== parsed.categoryIds.length) {
-    redirectWithVendorProfileError("One or more selected categories are invalid for vendors.", profileErrorOptions);
+    failVendorProfile("One or more selected categories are invalid for vendors.", profileErrorOptions);
   }
 
   const existingPrimaryVendor = targetVendor
@@ -906,7 +925,7 @@ export async function upsertVendorProfileAction(formData: FormData) {
       code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : "unknown",
       userId: session.user.id
     });
-    redirectWithVendorProfileError(
+    failVendorProfile(
       isUniqueConstraintError(error)
         ? "That vendor username or shop username is already taken."
         : "Your vendor profile could not be saved. Please try again.",
@@ -1128,6 +1147,7 @@ export async function upsertOfferingAction(formData: FormData) {
   revalidatePath("/listings");
   revalidatePath("/explore");
   revalidatePath("/categories");
+  if(formData.get("stayInStorefront")==="1") return;
   redirect("/vendor/dashboard#services");
 }
 

@@ -9,18 +9,24 @@ function render(visibleSections: readonly string[], sectionLabels = {}) {
   return renderToStaticMarkup(createElement(StorefrontNavigation, { visibleSections, sectionLabels }));
 }
 describe("storefront navigation", () => {
+  it("never exposes the editor-only 3D Effects navigation label", () => {
+    const html = render(["hero", "effects", "portfolio"]);
+    expect(html).not.toContain("3D Effects");
+    expect(html).not.toContain('href="#effects"');
+    expect(html).toContain('href="#portfolio"');
+  });
   it("preserves all links when the matching sections are visible", () => {
     const html = render(APPROVED_STOREFRONT_SECTIONS);
     for (const anchor of ["storefront-home", "services", "portfolio", "about", "reviews", "faq"]) {
       expect(html).toContain(`href="#${anchor}"`);
     }
   });
-  it("omits only links whose sections were hidden, retaining required reviews and home", () => {
+  it("omits only links whose sections were hidden, retaining the required profile", () => {
     const hidden = sanitizeHiddenStorefrontSections(["all-services", "portfolio", "about", "faq", "reviews"]);
     const sections = sanitizeStorefrontSections([]).filter((section) => !hidden.includes(section));
     const html = render(sections);
     for (const anchor of ["services", "portfolio", "about", "faq"]) expect(html).not.toContain(`href="#${anchor}"`);
-    expect(html).toContain('href="#reviews"');
+    expect(html).not.toContain('href="#reviews"');
     expect(html).toContain('href="#storefront-home"');
   });
   it("keeps customized section labels and their stable anchors", () => {
@@ -29,10 +35,9 @@ describe("storefront navigation", () => {
   });
   it("uses the same visibility list as page sections and preserves the separate inquiry action", () => {
     const source = readFileSync(new URL("../../src/app/vendor/profile/[slug]/page.tsx", import.meta.url), "utf8");
-    expect(source).toContain("visibleSections={sectionOrder}");
+    expect(source).toContain("visibleSections={sectionOrder.filter");
     expect(source).toContain('const showSection = (section: string) => sectionOrder.includes(section as never)');
     expect(source).toContain('<a href="#inquiry">');
-    expect(source).toContain('value={STOREFRONT_LAYOUTS.find((layout) => layout.value === storefrontLayout)!.label}');
     expect(source).not.toContain("vendor.storefrontLayout.toLowerCase()");
   });
   it.each(["PORTFOLIO_FIRST", "PORTFOLIO", null])("displays an existing readable label for layout %s", (value) => {

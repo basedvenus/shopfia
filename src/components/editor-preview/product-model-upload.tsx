@@ -7,9 +7,10 @@ function studioMessage(message:string) {
  if (/Meshy|API|credits|beta|not configured/i.test(message)) return '3D creation is temporarily unavailable. Try again later or upload a 3D model.';
  return message;
 }
-export function ProductModelUpload({endpoint,modelUrl,onModel}:{endpoint?:string;modelUrl:string;onModel:(url:string)=>void}) {
+export function ProductModelUpload({endpoint,modelUrl,onModel,onBusyChange}:{endpoint?:string;modelUrl:string;onModel:(url:string)=>void;onBusyChange?:(busy:boolean)=>void}) {
  const [files,setFiles]=useState<File[]>([]),[job,setJob]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[status,setStatus]=useState(''),[configured,setConfigured]=useState(false),[retry,setRetry]=useState(0);
  const requestId=useRef('');
+ useEffect(()=>{onBusyChange?.(busy);},[busy,onBusyChange]);
  useEffect(()=>{if(!endpoint)return;let active=true;fetch(endpoint).then(r=>r.json()).then(data=>{if(!active)return;setConfigured(data.configured);if(data.connectionError)setError(studioMessage(data.connectionError));if(!modelUrl && data.recent){if(data.recent.modelUrl)onModel(data.recent.modelUrl);else setJob(data.recent.id);}}).catch(()=>{if(active)setError('Could not connect to 3D Studio. Reopen it to retry.');});return()=>{active=false;};},[endpoint]); // Restore a server-owned job after closing the studio.
  useEffect(()=>{
   if(!job||!endpoint)return;let active=true,timer:ReturnType<typeof setTimeout>;
@@ -31,7 +32,7 @@ export function ProductModelUpload({endpoint,modelUrl,onModel}:{endpoint?:string
   catch(e){setStatus('');setError(e instanceof Error?studioMessage(e.message):'Could not submit. Try again with the same photos.');setBusy(false);}
  }
  return <div className="mt-5 space-y-4">
- <details open={!modelUrl} className="rounded-xl border p-3"><summary className="cursor-pointer text-sm font-medium">Create from photos</summary>
+ <details open className="rounded-xl border p-3"><summary className="cursor-pointer text-sm font-medium">Create from photos</summary>
  <p className="my-3 text-xs leading-5">Add 1–4 clear photos of your product, front view first.</p>
  <label className="block cursor-pointer rounded-xl border border-dashed p-4 text-center text-sm">↑ Choose product photos<input disabled={busy} type="file" multiple accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={e=>{setFiles(Array.from(e.target.files||[]));requestId.current='';setError('');}}/></label>
  {files.length>0&&<p className="mt-2 break-words text-xs">{files.length} photo{files.length===1?'':'s'} selected</p>}
@@ -39,7 +40,9 @@ export function ProductModelUpload({endpoint,modelUrl,onModel}:{endpoint?:string
  <button type="button" disabled={busy||!configured||!files.length} onClick={()=>submit()} className="rounded-full bg-[#493e46] px-4 py-2 text-sm text-white disabled:opacity-40">Generate 3D model</button>
  {!configured&&<p className="mt-2 text-xs">{endpoint ? "Photo creation is temporarily unavailable." : "Open your live editor to create from photos."}</p>}
  </details>
- <label className="block cursor-pointer rounded-xl border border-dashed p-4 text-center text-sm">↑ Upload a 3D model<input disabled={busy} type="file" accept=".glb,model/gltf-binary" className="sr-only" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)submit(file);}}/><span className="mt-1 block text-xs text-muted-foreground">GLB file · up to 4 MB</span></label>
+ <details className="rounded-xl border p-3"><summary className="cursor-pointer text-sm font-medium">Upload a 3D model</summary>
+ <label className="mt-3 block cursor-pointer rounded-xl border border-dashed p-4 text-center text-sm">↑ Choose 3D model<input disabled={busy} type="file" accept=".glb,model/gltf-binary" className="sr-only" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)submit(file);}}/><span className="mt-1 block text-xs text-muted-foreground">GLB file · up to 4 MB</span></label>
+ </details>
  {status&&<p role="status" className="text-sm">{status}</p>}{error&&<p role="alert" className="text-sm text-red-700">{error}</p>}
  {job&&!busy&&<button type="button" className="text-sm underline" onClick={()=>{setError('');setRetry(n=>n+1);}}>Check existing generation</button>}
  {busy&&<p className="text-xs">You can close the studio. Reopen it to resume checking this model.</p>}

@@ -153,9 +153,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
   const galleryImageCount = [vendor.storefrontAboutImage, ...(design.aboutPhotos ?? [])].filter(Boolean).length;
   const hiddenSections = sanitizeHiddenStorefrontSections(vendor.storefrontHiddenSections);
   const sectionLabels = sanitizeStorefrontSectionLabels(vendor.storefrontSectionLabels);
-  const sectionLabel = (section: keyof typeof STOREFRONT_SECTION_LABELS) => sectionLabels[section] ?? STOREFRONT_SECTION_LABELS[section];
+  const sectionLabel = (section: keyof typeof STOREFRONT_SECTION_LABELS) => section === "parties" ? "Past parties" : sectionLabels[section] ?? STOREFRONT_SECTION_LABELS[section];
   const sectionOrder = sanitizeStorefrontSections(vendor.storefrontSectionOrder).filter((section) => {
-    if (hiddenSections.includes(section) && !(section === "portfolio" && (vendor.storefrontAboutImage || design.aboutPhotos?.some(Boolean)))) return false;
+    if (section === "reviews" || hiddenSections.includes(section)) return false;
     if (!isUnclaimed) return true;
     if (section === "portfolio") return false;
     if (section === "all-services" || section === "featured-services") return vendor.offerings.length > 0;
@@ -188,7 +188,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
     theme.bodyStyle={fontFamily:template.bodyFamily ?? theme.bodyStyle.fontFamily,backgroundColor:template.colors.background,color:template.colors.ink};
     theme.headingStyle={fontFamily:template.headingFamily ?? theme.headingStyle.fontFamily,fontWeight:template.headingWeight};
     theme.cardStyle={...theme.cardStyle,backgroundColor:template.colors.surface,color:template.colors.ink};
-    theme.ctaStyle=theme.heroCtaStyle={background:template.colors.accent,color:template.colors.accentInk,borderColor:template.colors.accent};
+    theme.ctaStyle=theme.heroCtaStyle={background:template.buttonColor ?? template.colors.accent,color:template.colors.accentInk,borderColor:template.buttonColor ?? template.colors.accent,borderRadius:template.button==="pill"?999:0};
     theme.accentTextStyle={color:template.colors.accent};
     theme.copyClass=""; theme.shellClass=""; theme.cardClass="";
   }
@@ -239,18 +239,19 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
     await toggleFollowAction(formData);
   }
 
+  const partyRating = <div className="my-4"><h3 className="text-sm font-semibold">Average party rating</h3><p className="mt-2">{verifiedReviewCount ? `★ ${verifiedAverageRating.toFixed(1)} / 5 · ${verifiedReviewCount} confirmed party ratings` : "No confirmed party ratings"}</p></div>;
   const partyCredits = taggedEvents.length > 0 ? (
         <section id="party-credits" className="scroll-mt-28 space-y-4" style={{ order: isUnclaimed ? 0 : sectionPriority("parties") }}>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>Seen In Real Parties</h2>
+              <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>Past parties</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Party credits are connected from ShopFia host galleries and vendor tags.
               </p>
             </div>
             <Badge variant="outline" style={theme.outlineBadgeStyle}>{taggedEvents.length} party credit{taggedEvents.length === 1 ? "" : "s"}</Badge>
           </div>
-          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+          {partyRating}<div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
             {taggedEvents.filter((event) => event.coverImageUrl).map((event) => (
               <Link key={event.slug} href={`/events/${event.slug}`}>
                 <article className="group relative overflow-hidden rounded-lg">
@@ -277,10 +278,10 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             ))}
           </div>
         </section>
-      ) : <section id="party-credits" style={{order:sectionPriority("parties")}}><h2 className="text-2xl font-semibold" style={theme.headingStyle}>Real parties</h2><p className="mt-3 text-sm">No tagged parties yet.</p></section>;
+      ) : <section id="party-credits" style={{order:sectionPriority("parties")}}><h2 className="text-2xl font-semibold" style={theme.headingStyle}>Past parties</h2>{partyRating}<p className="mt-3 text-sm">No tagged parties yet.</p></section>;
 
   return (
-    <PublishedStorefrontSurface sectionOrder={sectionOrder} sectionLayout={design.sectionLayout} template={template} className={`flex flex-col gap-8 rounded-[1.25rem] ${template ? "" : `bg-gradient-to-br ${palette.className}`} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
+    <PublishedStorefrontSurface textStyles={design.textStyles} sectionOrder={sectionOrder} sectionLayout={design.sectionLayout} template={template} className={`flex flex-col gap-8 rounded-[1.25rem] ${template ? "" : `bg-gradient-to-br ${palette.className}`} p-0 md:p-2 ${theme.shellClass}`} style={theme.bodyStyle}>
       {isOwnerViewing ? (
         <div style={{order:-1}} className="sticky top-0 z-30 flex flex-col gap-2 rounded-[1rem] border border-[#eadbd7] bg-white/95 px-3 py-2 shadow-[0_12px_34px_rgba(47,38,38,0.10)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
@@ -330,7 +331,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-semibold tracking-tight md:text-2xl" style={theme.headingStyle}>{vendor.name}</h1>
+              <h1 data-storefront-text="name" className="text-xl font-semibold tracking-tight md:text-2xl" style={theme.headingStyle}>{vendor.name}</h1>
               {trustStatus.tone === "verified" || vendor.verified ? (
                 <Badge variant="accent" className="gap-1 rounded-full" style={theme.badgeStyle}>
                   <BadgeCheck className="h-3.5 w-3.5" />
@@ -433,13 +434,13 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={theme.accentTextStyle}>About</p>
             <h2 className="mt-3 text-4xl font-normal tracking-normal" style={{...theme.headingStyle,...(design.subheadingFamily ? {fontFamily:design.subheadingFamily}: {})}}>
-              {aboutHeading}
+              <span data-storefront-text="about-heading">{aboutHeading}</span>
             </h2>
 
           </div>
           <div className="grid gap-4">
             <p className={`text-base leading-8 ${theme.copyClass}`}>
-              {vendor.bio ?? "This storefront is being prepared with business details, services, and recent work."}
+              <span data-storefront-text="about-description">{vendor.bio ?? "This storefront is being prepared with business details, services, and recent work."}</span>
             </p>
             <div className="grid gap-3 sm:grid-cols-3">
               <EditorialStat label={verifiedReviewCount > 0 ? "Verified rating" : "Event credits"} value={verifiedReviewCount > 0 ? verifiedAverageRating.toFixed(1) : String(taggedEvents.length)} theme={theme} />
@@ -547,9 +548,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             <Badge variant="outline" className="rounded-full" style={theme.outlineBadgeStyle}>ShopFia-supported quotes</Badge>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <TrustFaqItem title="Process" body={bookingInfo.process} theme={theme} />
-            <TrustFaqItem title="Lead time" body={bookingInfo.leadTime || vendor.availabilityNotes || "Availability is confirmed in ShopFia messages."} theme={theme} />
-            <TrustFaqItem title="Payment details" body={bookingInfo.deposit || "Deposit and payment details are confirmed in the quote."} theme={theme} />
+            <TrustFaqItem styleKey="booking-process" title="Process" body={bookingInfo.process} theme={theme} />
+            <TrustFaqItem styleKey="availability-notes" title="Lead time" body={bookingInfo.leadTime || vendor.availabilityNotes || "Availability is confirmed in ShopFia messages."} theme={theme} />
+            <TrustFaqItem styleKey="deposit-or-payment-note" title="Payment details" body={bookingInfo.deposit || "Deposit and payment details are confirmed in the quote."} theme={theme} />
           </div>
           <p className={`mt-4 text-sm leading-6 ${theme.copyClass}`}>
             {vendor.serviceAreaNotes ?? `${vendor.name} serves ${serviceAreaLabel || "local events"} within ${vendor.serviceRadiusMiles} miles.`}
@@ -561,13 +562,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             serviceAreaNotes={vendor.serviceAreaNotes}
             theme={theme}
           /> : null}
-          {policies.length ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {policies.slice(0, 4).map((policy) => (
-                <TrustFaqItem key={policy.id} title={policy.title} body={policy.body} theme={theme} />
-              ))}
-            </div>
-          ) : null}
+
         </section>
       ) : null}
 
@@ -587,7 +582,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         {showSection("reviews") ? (
         <div id="reviews" className="space-y-4 scroll-mt-28" style={{ ...sectionStyle("reviews"), order: sectionPriority("reviews") }}>
             <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold tracking-tight">{sectionLabel("reviews")}</h2>
+            <h2 data-storefront-text="reviews-heading" className="text-2xl font-semibold tracking-tight">{sectionLabel("reviews")}</h2>
             <div className="text-sm text-muted-foreground">
               {verifiedReviewCount > 0
                 ? `${verifiedAverageRating.toFixed(1)} average from ${verifiedReviewCount} booking-based review${verifiedReviewCount === 1 ? "" : "s"}`
@@ -651,11 +646,12 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         </div>
         ) : null}
 
+      {showSection("policies") && policies.length>0 && <section id="policies" className={`scroll-mt-28 p-5 ${theme.cardClass} ${theme.sectionRadius}`} style={{...theme.cardStyle,...sectionStyle("policies"),order:sectionPriority("policies")}}><h2 className="text-2xl font-semibold" style={theme.headingStyle}>{sectionLabel("policies")}</h2><div className="mt-5 grid gap-3">{policies.map(policy=><TrustFaqItem key={policy.id} title={policy.title} body={policy.body} theme={theme}/>)}</div></section>}
       {showSection("faq") ? (
       <section id="faq" data-testid="preview-section-faq" data-custom-background={Boolean(template?.sectionDesigns?.["faq"]) } className={`scroll-mt-28 p-5 shadow-sm ${theme.cardClass} ${theme.sectionRadius}`} style={{ ...theme.cardStyle, ...sectionStyle("faq"), order: sectionPriority("faq") }}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{sectionLabel("faq")}</h2>
+            <h2 data-storefront-text="policies-heading" className="text-2xl font-semibold tracking-tight" style={theme.headingStyle}>{sectionLabel("faq")}</h2>
             <p className={`mt-1 text-sm leading-6 ${theme.copyClass}`}>
               ShopFia keeps quoting, messaging, saved services, reviews, and booking records connected to your account.
             </p>
@@ -877,11 +873,11 @@ function StorefrontTemplateIntro({
   );
 }
 
-function TrustFaqItem({ body, theme, title }: { body: string; theme: StorefrontTheme; title: string }) {
+function TrustFaqItem({ body, theme, title, styleKey }: { body: string; theme: StorefrontTheme; title: string; styleKey?:string }) {
   return (
     <div className={`p-4 ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
-      <h3 className="font-semibold" style={theme.headingStyle}>{title}</h3>
-      <p className={`mt-2 text-sm leading-6 ${theme.copyClass}`}>{body}</p>
+      <h3 data-storefront-text={styleKey?undefined:"faq-question"} className="font-semibold" style={theme.headingStyle}>{title}</h3>
+      <p data-storefront-text={styleKey??"faq-answer"} className={`mt-2 text-sm leading-6 ${theme.copyClass}`}>{body}</p>
     </div>
   );
 }

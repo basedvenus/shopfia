@@ -1,23 +1,19 @@
 "use client";
-
-import { TemplateIllustration } from "./template-illustration";
-import { useState } from "react";
+import { ColorPicker } from "./color-picker";
 import type { SectionDesign, StorefrontTemplate } from "@/lib/editor-preview/storefront-template-library";
 import { getSectionDesign, SECTION_PATTERNS } from "@/lib/editor-preview/template-section-design";
-
-export function SectionBackgroundControls({ template, section, label, onChange }: { template: StorefrontTemplate; section: string; label: string; onChange: (template: StorefrontTemplate)=>void }) {
-  const [scope,setScope]=useState<"section"|"page">("section");
-  const design:SectionDesign=scope === "page" ? template.backgroundDesign ?? {background:template.colors.background,ink:template.colors.ink,pattern:"solid",patternColor:template.colors.secondary,overlayColor:"#ffffff",overlayOpacity:0} : getSectionDesign(template,section);
-  function update(patch:Partial<SectionDesign>) {
-    const next={...design,...patch};
-    onChange(scope === "page" ? {...template,backgroundDesign:next} : {...template,sectionDesigns:{...template.sectionDesigns,[section]:next}});
-  }
-  return <details className="mb-4 rounded-xl border p-3"><summary className="cursor-pointer text-xs font-semibold">Backgrounds & illustrations</summary><div className="mt-4 space-y-4 text-xs">
-    {section === "hero" && <fieldset><legend className="mb-2 font-semibold">Illustrations</legend><div className="grid grid-cols-3 gap-2">{([undefined,"ribbon","botanical","bouquet","cake","balloons","citrus","sparkle"] as const).map(kind=><button key={kind ?? "none"} type="button" aria-label={`Use ${kind ?? "no"} illustration`} aria-pressed={template.illustration===kind} onClick={()=>onChange({...template,illustration:kind})} className="grid justify-items-center gap-1 rounded-lg border p-2 aria-pressed:bg-stone-100" style={{color:template.colors.ink}}>{kind ? <TemplateIllustration kind={kind} className="h-9 w-9"/> : <span className="grid h-9 place-items-center">—</span>}<span>{kind === "botanical" ? "Flower" : kind === "ribbon" ? "Bow" : kind ?? "None"}</span></button>)}</div></fieldset>}
-    <label className="grid gap-2">Editing<select aria-label="Background area" value={scope} onChange={event=>setScope(event.target.value as "section"|"page")} className="h-10 w-full rounded-lg border bg-white px-2"><option value="section">{label} section</option><option value="page">Page backdrop</option></select></label>
-    <label className="grid gap-2">Pattern<select aria-label="Background pattern" value={design.pattern} onChange={event=>update({pattern:event.target.value as SectionDesign["pattern"]})} className="h-10 w-full rounded-lg border bg-white px-2">{SECTION_PATTERNS.map(pattern=><option key={pattern} value={pattern}>{pattern[0].toUpperCase()+pattern.slice(1)}</option>)}</select></label>
-    <div className="grid grid-cols-3 gap-3">{([['background','Base'],['patternColor','Pattern'],['ink','Text']] as const).map(([key,title])=><label key={key} className="grid gap-2">{title}<input aria-label={`Section ${title.toLowerCase()} color`} type="color" value={design[key] ?? '#ffffff'} onChange={event=>update({[key]:event.target.value})} className="h-9 w-full rounded border"/></label>)}</div>
-    <div className="flex items-center justify-between"><label htmlFor="section-overlay-color">Overlay color</label><input id="section-overlay-color" type="color" value={design.overlayColor ?? '#ffffff'} onChange={event=>update({overlayColor:event.target.value})} className="h-8 w-12 rounded border"/></div>
-    <label className="grid gap-2">Overlay · {Math.round((design.overlayOpacity ?? 0)*100)}%<input aria-label="Background overlay strength" type="range" min="0" max="80" step="5" value={Math.round((design.overlayOpacity ?? 0)*100)} onChange={event=>update({overlayOpacity:Number(event.target.value)/100})}/></label>
-  </div></details>;
+export function SectionBackgroundControls({template,section,label,onChange}:{template:StorefrontTemplate;section:string;label:string;onChange:(template:StorefrontTemplate)=>void}) {
+ const design=getSectionDesign(template,section);
+ const palette=Array.from(new Set(Object.values(template.colors)));
+ function update(patch:Partial<SectionDesign>){onChange({...template,sectionDesigns:{...template.sectionDesigns,[section]:{...design,...patch}}});}
+ return <section className="mb-4 rounded-2xl border border-[#eadbd7] bg-[#fffaf8] p-4">
+ <h3 className="text-sm font-semibold">Background colors and patterns</h3>
+ <p className="mt-2 text-xs text-muted-foreground">Click the section you want to edit.</p>
+ <p className="my-4 rounded-xl bg-stone-100 px-3 py-2 text-sm font-medium">{label}</p>
+ <p className="mb-2 text-xs font-semibold">Your template palette</p>
+ <div className="mb-5 flex flex-wrap gap-2">{palette.map(color=><button type="button" key={color} title={color} aria-label={`Set ${label} background to ${color}`} aria-pressed={design.background===color} onClick={()=>update({background:color})} style={{background:color}} className="h-8 w-8 rounded-full border border-stone-300 aria-pressed:ring-2 aria-pressed:ring-[#b77980] aria-pressed:ring-offset-2"/>)}</div>
+ <div className="grid grid-cols-2 gap-4">{([['background','Background'],['ink','Text color'],['patternColor','Pattern color']] as const).map(([key,title])=><ColorPicker key={key} label={title} value={design[key]??"#ffffff"} onChange={value=>update({[key]:value})}/>)}</div>
+ <label className="mt-4 grid gap-2 text-xs">Pattern opacity · {Math.round((design.patternOpacity??1)*100)}%<input type="range" min="0" max="100" value={(design.patternOpacity??1)*100} onChange={e=>update({patternOpacity:+e.target.value/100})}/></label><p className="mb-2 mt-5 text-xs font-semibold">Pattern</p><div className="grid grid-cols-2 gap-2">{SECTION_PATTERNS.map(pattern=><button type="button" key={pattern} aria-pressed={design.pattern===pattern} onClick={()=>update({pattern})} className="rounded-xl border border-[#eadbd7] p-2 text-xs capitalize hover:bg-stone-100 aria-pressed:bg-stone-200">{pattern}</button>)}</div>
+ <details className="mt-5"><summary>Buttons</summary><div className="mt-3 grid grid-cols-2 gap-3"><ColorPicker label="Button color" value={template.buttonColor??template.colors.accent} onChange={value=>onChange({...template,buttonColor:value})}/><ColorPicker label="Button text" value={template.colors.accentInk} onChange={value=>onChange({...template,colors:{...template.colors,accentInk:value}})}/></div></details>
+ </section>;
 }

@@ -1,10 +1,11 @@
+import { BusinessProfileForm, BusinessDescription } from "@/components/vendor/business-profile-form";
 import { VENDOR_CATEGORY_NAMES } from "@/lib/vendor-categories";
 import { CategoryAudience, UserRole } from "@prisma/client";
 import { upsertVendorProfileAction } from "@/app/actions/vendor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FieldShell, SubmitButton, ValidatedForm } from "@/components/ui/validated-form";
+import { FieldShell, SubmitButton } from "@/components/ui/validated-form";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import { OfferingSetupForm } from "@/components/vendor/offering-setup-form";
@@ -143,7 +144,7 @@ export default async function VendorOnboardingPage({
               {resolvedSearchParams.profileError}
             </div>
           ) : null}
-          <ValidatedForm
+          <BusinessProfileForm
             action={upsertVendorProfileAction}
             className="grid gap-4 md:grid-cols-2"
             errorIntro="Your business storefront is almost there. Fix the highlighted field and save again."
@@ -251,12 +252,7 @@ export default async function VendorOnboardingPage({
             </FieldShell>
             <div className="md:col-span-2">
               <FieldShell label="Business Description" optional helperText="A few warm details help hosts understand your style and specialties.">
-                <Textarea
-                  name="bio"
-                  placeholder="Describe your style, specialties, and the types of celebrations you love creating..."
-                  defaultValue={existingVendor?.bio ?? ""}
-                  className="min-h-[120px]"
-                />
+                <BusinessDescription defaultValue={existingVendor?.bio ?? ""} />
               </FieldShell>
             </div>
             <FieldShell
@@ -343,7 +339,7 @@ export default async function VendorOnboardingPage({
                 </SubmitButton>
               </div>
             </div>
-          </ValidatedForm>
+          </BusinessProfileForm>
         </CardContent>
       </Card>
 

@@ -35,6 +35,7 @@ describe("business storefront utilities", () => {
   it("keeps only approved storefront sections", () => {
     expect(sanitizeStorefrontSections(["portfolio", "custom-html", "about"])).toEqual([
       "hero",
+      "effects",
       "portfolio",
       "about",
       "featured-services",
@@ -42,7 +43,9 @@ describe("business storefront utilities", () => {
       "how-it-works",
       "reviews",
       "faq",
-      "final-quote"
+      "final-quote",
+      "parties",
+      "socials"
     ]);
   });
 });

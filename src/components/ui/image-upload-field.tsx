@@ -272,7 +272,8 @@ export function ImageUploadField({
         </span> : null}
         <input ref={uploadInput} type="file" accept={SUPPORTED_IMAGE_TYPES.join(",")} className="sr-only" onChange={handleFile} />
       </label>
-      {editMenu ? <button type="button" aria-label="Edit profile picture" title="Edit profile picture" onClick={() => setMenuOpen((open) => !open)} className="absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full border bg-white shadow-sm"><Pencil className="h-4 w-4" /></button> : null}
+      {previewValue && onCropChange && !editMenu ? <button type="button" className="mt-2 rounded-full border px-3 py-2 text-sm" onClick={()=>{setPendingFile(null);setPendingPreview(previewValue);setEditorOpen(true);}}>Adjust image</button> : null}
+      {editMenu ? <button type="button" aria-label={`Adjust ${label.toLowerCase()}`} title="Adjust image" onClick={() => setMenuOpen((open) => !open)} className="absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full border bg-white shadow-sm"><Pencil className="h-4 w-4" /></button> : null}
       {editMenu && menuOpen ? <div className="absolute left-0 top-full z-20 mt-2 min-w-48 rounded-2xl border bg-white p-2 shadow-lg">
         {previewValue ? <button type="button" className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted" onClick={() => { setPendingFile(null); setPendingPreview(previewValue); setEditorOpen(true); setMenuOpen(false); }}>Adjust picture</button> : null}
         <button type="button" className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted" onClick={() => { setMenuOpen(false); uploadInput.current?.click(); }}>Change picture</button>
@@ -303,6 +304,8 @@ export function ImageUploadField({
       {editorOpen && pendingPreview ? (
         <ImageCropEditor
           allowAdjustments={editMenu}
+          preserveFrame={Boolean(onCropChange)}
+          allowFrameResize={Boolean(onCropChange)&&!isRound}
           aspectLabel={isRound ? "Profile crop" : uploadMode === "preserve" ? "Image preview" : "Image crop"}
           crop={crop}
           imageUrl={pendingPreview}

@@ -12,6 +12,7 @@ type ImageCropEditorProps = {
   imageUrl: string;
   minZoom?: number;
   preserveFrame?: boolean;
+  allowFrameResize?:boolean;
   onCancel: () => void;
   onSave: (crop: ImageCrop) => void;
   previewClassName?: string;
@@ -24,12 +25,15 @@ export function ImageCropEditor({
   crop,
   imageUrl,
   preserveFrame = false,
+  allowFrameResize=false,
   minZoom = MIN_IMAGE_ZOOM,
   onCancel,
   onSave,
   previewClassName = "aspect-[4/3]",
   previewAspectRatio
 }: ImageCropEditorProps) {
+  const dialog=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{dialog.current?.showModal();},[]);
   const [draft, setDraft] = useState<ImageCrop>(() => ({ ...normalizeImageCrop(crop), zoom: Math.max(minZoom, normalizeImageCrop(crop).zoom) }));
   const [dimensions,setDimensions]=useState({width:0,height:0,frameWidth:0,frameHeight:0});
   const fitZoom=dimensions.width && dimensions.frameWidth ? fitImageZoom(dimensions.width,dimensions.height,dimensions.frameWidth,dimensions.frameHeight) : minZoom;
@@ -56,6 +60,8 @@ export function ImageCropEditor({
   useEffect(()=>{setDraft(value=>({...value,zoom:Math.max(effectiveMin,value.zoom)}));},[effectiveMin]);
 
   function beginDrag(event: PointerEvent<HTMLDivElement>) {
+    const bounds=event.currentTarget.getBoundingClientRect();
+    if(allowFrameResize&&event.clientX>bounds.right-24&&event.clientY>bounds.bottom-24)return;
     if (!imageLoaded) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -114,7 +120,7 @@ export function ImageCropEditor({
   }
 
   return (
-    <div className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-black/45 p-4 backdrop-blur-sm">
+    <dialog ref={dialog} aria-label="Adjust image crop" onCancel={event=>{event.preventDefault();onCancel();}} className="fixed inset-0 m-auto z-[80] w-full max-w-none max-h-none bg-transparent p-4 backdrop:bg-black/45"><div className="grid place-items-center">
       <div className="max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-[1.75rem] border border-white/70 bg-white shadow-[0_28px_90px_rgba(55,34,30,0.22)]">
         <div className="border-b border-border/70 px-5 py-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{aspectLabel}</p>
@@ -128,7 +134,7 @@ export function ImageCropEditor({
           <div
             ref={previewRef}
             className={`relative mx-auto overflow-hidden rounded-[1.4rem] bg-muted touch-none ${previewClassName}`}
-            style={previewAspectRatio ? { aspectRatio: previewAspectRatio } : undefined}
+            style={{...(previewAspectRatio ? {aspectRatio:previewAspectRatio}:{}),...(allowFrameResize?{resize:"both",minWidth:160,minHeight:100,maxWidth:"100%",maxHeight:500}: {})}}
             onPointerDown={beginDrag}
             onPointerMove={updateDrag}
             onPointerUp={endDrag}
@@ -218,7 +224,7 @@ export function ImageCropEditor({
           </Button>
         </div>
       </div>
-    </div>
+    </div></dialog>
   );
 }
 

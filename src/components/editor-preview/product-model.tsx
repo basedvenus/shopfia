@@ -27,6 +27,7 @@ export function ProductModel({src,name,spin=false,studio=false,onReady}:{src:str
  {ready && createElement('model-viewer',{ref:viewer,src,alt:`${name || 'Product'} interactive 3D model`,'camera-controls':'','touch-action':'pan-y','disable-zoom':'','shadow-intensity':'1','camera-orbit':`${-angle}deg 75deg 105%`,'interaction-prompt':'none',style:{display:'block',width:'100%',height:studio?'calc(100% - 42px)':'100%',minHeight:210,background:'transparent'} as CSSProperties})}
  {!loaded&&!error&&<p role="status" className="pointer-events-none absolute inset-0 grid place-content-center text-sm">Loading 3D model…</p>}
  {error&&<p role="alert" className="absolute inset-0 grid place-content-center p-6 text-sm">{error}</p>}
+ {studio&&<p className="absolute left-2 right-2 top-2 rounded-full bg-white/90 px-3 py-2 text-center text-xs font-semibold pointer-events-none">↕ Drag up/down · ↔ Drag to turn 360°</p>}
  {studio&&<label className="flex items-center gap-3 px-3 text-xs">Inspect 360°<input aria-label="Inspect model angle" type="range" min="0" max="360" value={angle} onChange={e=>setAngle(Number(e.target.value))} className="min-w-0 flex-1"/></label>}
  </div>;
 }

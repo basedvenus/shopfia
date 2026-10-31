@@ -351,7 +351,7 @@ export default async function PartiesPage({
                   className="group relative overflow-hidden rounded-[1.05rem] border border-white/75 bg-white/90 shadow-sm transition-shadow hover:shadow-soft sm:rounded-[1.35rem]"
                 >
                   <Link href={`/events/${party.slug}`} className="absolute inset-0 z-10" aria-label={`Open ${party.title}`} />
-                  <div className={`relative isolate overflow-hidden rounded-[1.05rem] bg-muted [clip-path:inset(0_round_1.05rem)] sm:rounded-none sm:rounded-t-[1.35rem] sm:[clip-path:inset(0_round_1.35rem_1.35rem_0_0)] ${tall ? "aspect-[3/4]" : "aspect-[4/5]"}`}>
+                  <div className={`relative overflow-hidden rounded-[1.05rem] bg-muted sm:rounded-none sm:rounded-t-[1.35rem] ${tall ? "aspect-[3/4]" : "aspect-[4/5]"}`}>
                     <CroppedImage src={image} alt={party.title} crop={crop} loading={index < 4 ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                     <div className="absolute right-3 top-3 z-20">
