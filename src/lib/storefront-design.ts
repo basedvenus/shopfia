@@ -25,6 +25,7 @@ export const storefrontDesignSchema = z.object({
   sectionLayout:z.record(z.object({height:z.number().int().min(120).max(1200).optional(),width:z.number().min(25).max(100).optional(),offset:z.number().min(0).max(75).optional(),beside:z.enum(APPROVED_STOREFRONT_SECTIONS).optional()}).refine(value=>(value.width??100)+(value.offset??0)<=100.01,"Section must fit within the page.")).refine(value=>Object.keys(value).every(key=>(APPROVED_STOREFRONT_SECTIONS as readonly string[]).includes(key))).optional(),
   socialVisibility:z.object({instagram:z.boolean(),tiktok:z.boolean()}).optional(),
   aboutPhotos:z.array(z.string().max(2048).refine(v=>v==="" || /^https?:\/\//.test(v) || v.startsWith("/"))).max(12).optional(),
+  aboutPhotoCrops:z.record(z.object({x:z.number().min(0).max(100),y:z.number().min(0).max(100),zoom:z.number().min(1).max(3),aspectRatio:z.number().min(.1).max(10).optional(),brightness:z.number().min(.5).max(1.5).optional(),saturation:z.number().min(0).max(2).optional()})).refine(value=>Object.keys(value).length<=13).optional(),
   aboutPhotoLayout:z.enum(["grid","row","layered","offset","cascade","six","banner","scallop"]).optional(),
   effectModel:z.string().regex(/^$|^\/api\/vendor-media\/[a-zA-Z0-9-]+$/).max(200).optional(),
   effectImage:z.string().max(2048).refine(v=>v==="" || /^https?:\/\//.test(v) || v.startsWith("/")).optional(),

@@ -493,7 +493,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <Badge variant="outline" style={theme.outlineBadgeStyle}>{portfolioPhotos.length + galleryImageCount} photo{portfolioPhotos.length + galleryImageCount === 1 ? "" : "s"}</Badge>
         </div>
 
-            {vendor.storefrontAboutImage || design.aboutPhotos?.some(Boolean) ? <PublishedAboutGallery images={[vendor.storefrontAboutImage || "",...(design.aboutPhotos ?? [])]} layout={design.aboutPhotoLayout} name={vendor.name}/> : null}
+            {vendor.storefrontAboutImage || design.aboutPhotos?.some(Boolean) ? <PublishedAboutGallery crops={design.aboutPhotoCrops} images={[vendor.storefrontAboutImage || "",...(design.aboutPhotos ?? [])]} layout={design.aboutPhotoLayout} name={vendor.name}/> : null}
         {portfolioPhotos.length > 0 ? (template ? <TemplateMediaGrid template={template} photos={portfolioPhotos}/> :
           <StorefrontPortfolioGallery
             businessName={vendor.name}

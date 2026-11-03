@@ -1,4 +1,5 @@
 "use client";
+import { InlineCoverCrop } from "./inline-cover-crop";
 
 import {ServiceBuilderPopup} from "./service-builder-popup";
 import {TextFormatting,TextFormattingToolbar,SelectedTextFonts,useTextSelection} from "./text-formatting";
@@ -155,6 +156,7 @@ type FormState = {
   aboutHeading: string;
   aboutImage: string;
   aboutPhotos: string[];
+  aboutPhotoCrops: Record<string, ImageCrop>;
   aboutPhotoLayout: "grid" | "row" | "layered" | "offset" | "cascade" | "six" | "banner" | "scallop";
   availabilityNotes: string;
   bio: string;
@@ -321,7 +323,7 @@ export function StorefrontCustomizer({
   const faqJson = useMemo(() => JSON.stringify(form.faqs), [form.faqs]);
   const policiesJson = useMemo(() => JSON.stringify(form.policies), [form.policies]);
   const bookingJson = useMemo(() => JSON.stringify(form.booking), [form.booking]);
-  const designJson = useMemo(()=>JSON.stringify({version:1,textStyles,template:selectedTemplate,depth:heroDepth,mount:heroMount,edge:heroEdge,background:heroBackground,headingFamily:heroCustomFont || undefined,subheadingFamily:form.subheadingFamily || undefined,bodyFamily:form.bodyFamily || undefined,sectionLayout:form.sectionLayout,aboutPhotos:form.aboutPhotos,aboutPhotoLayout:form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,socialVisibility:{instagram:form.showInstagram,tiktok:form.showTikTok}}),[textStyles,selectedTemplate,heroDepth,heroMount,heroEdge,heroBackground,heroCustomFont,form.subheadingFamily,form.bodyFamily,form.sectionLayout,form.aboutPhotos,form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,form.showInstagram,form.showTikTok]);
+  const designJson = useMemo(()=>JSON.stringify({version:1,textStyles,template:selectedTemplate,depth:heroDepth,mount:heroMount,edge:heroEdge,background:heroBackground,headingFamily:heroCustomFont || undefined,subheadingFamily:form.subheadingFamily || undefined,bodyFamily:form.bodyFamily || undefined,sectionLayout:form.sectionLayout,aboutPhotoCrops:form.aboutPhotoCrops,aboutPhotos:form.aboutPhotos,aboutPhotoLayout:form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,socialVisibility:{instagram:form.showInstagram,tiktok:form.showTikTok}}),[textStyles,selectedTemplate,heroDepth,heroMount,heroEdge,heroBackground,heroCustomFont,form.subheadingFamily,form.bodyFamily,form.sectionLayout,form.aboutPhotoCrops,form.aboutPhotos,form.aboutPhotoLayout,effectModel,effectImage,effectPresentation,effectWord,form.showInstagram,form.showTikTok]);
   const autosavePayload = useMemo(
     () => ({
       aboutHeading: form.aboutHeading,
@@ -423,7 +425,8 @@ export function StorefrontCustomizer({
     setAdvanced(true);
     setActiveSection(section);
     setActiveTool("content");
-    if(["portfolio","all-services","socials","faq","policies"].includes(section))setToolPopup(section);
+    // Canvas selection opens styling; content managers are explicit toolbar actions.
+    setToolPopup(null);
     setPanelCollapsed(false);
   }
 
@@ -535,7 +538,7 @@ export function StorefrontCustomizer({
   return (
     <ColorPalette colors={selectedTemplate?Object.values(selectedTemplate.colors):[]}><TextFormatting onOpenFonts={()=>{setActiveTool("content");setDesignPanel("fonts");}} styles={textStyles} onChange={value=>{setTextStyles(value);markDirty();}}><form onClickCapture={event=>{const link=(event.target as Element).closest("a");if(link?.getAttribute("href")?.includes(`/vendor/business/${business.slug}/services/new`)){event.preventDefault();event.stopPropagation();setServiceBuilderUrl(link.getAttribute("href"));}}} action={previewOnly ? undefined : updateStorefrontCustomizationAction} onSubmit={previewOnly ? (event) => event.preventDefault() : undefined} data-testid="storefront-editor-shell" className={`${modernEditor ? "editor-review " : ""}relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
       {modernEditor ? <style>{`
-        .editor-review [data-testid="preview-section-${activeSection}"] { outline: 2px solid #81916b; outline-offset: -2px; }
+        .editor-review [data-testid="preview-section-${activeSection}"] { outline: 2px solid #d86b93; outline-offset: -2px; }
         .editor-review { background: #f8f8f5; border-radius: 20px; }
         .editor-review .editor-workspace { grid-template-columns: minmax(0,1fr) 320px; }
         .editor-review .editor-inspector { max-height: calc(100vh - 190px); overflow-y: auto; }
@@ -889,7 +892,7 @@ export function StorefrontCustomizer({
                 <PanelStack>
                   {["faq","policies"].includes(toolPopup??"") && <label className="flex items-center gap-3 rounded-xl border p-3 text-sm"><input type="checkbox" checked={!form.hiddenSections.includes(toolPopup!)} onChange={event=>update("hiddenSections",event.target.checked?form.hiddenSections.filter(id=>id!==toolPopup):[...form.hiddenSections,toolPopup!])}/>Show on storefront</label>}
                   <SectionEditor
-                    activeSection={toolPopup??(["faq","policies"].includes(panelSection)?"none":panelSection)}
+                    activeSection={toolPopup ?? (modernEditor ? "none" : panelSection)}
                     business={business}
                     collapsedFaqIds={collapsedFaqIds}
                     form={form}
@@ -944,6 +947,7 @@ function createInitialState(business: CustomizerBusiness, previewOnly = false): 
     bodyFamily: design.bodyFamily ?? "",
     subheadingFamily: design.subheadingFamily ?? draft?.subheadingFamily ?? "",
     aboutHeading: draft?.aboutHeading ?? business.storefrontAboutHeading ?? `About ${business.name}`,
+    aboutPhotoCrops: design.aboutPhotoCrops ?? {},
     aboutPhotos: design.aboutPhotos ?? draft?.aboutPhotos ?? [],
     aboutPhotoLayout: design.aboutPhotoLayout ?? draft?.aboutPhotoLayout ?? "grid",
     aboutImage: draft?.aboutImage ?? business.storefrontAboutImage ?? "",
@@ -1103,7 +1107,7 @@ function SectionEditor({
         </details>
         <details className="rounded-xl border p-3" open><summary>Gallery</summary><div className="mt-4">
         <PhotoLayoutPicker layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)}/>
-        <AboutPhotoGrid uploadEndpoint={mediaUploadEndpoint.includes("preview-only") ? undefined : mediaUploadEndpoint} compact images={[form.aboutImage,...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0)update("aboutImage",value);else{const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}}/>
+        <AboutPhotoGrid crops={form.aboutPhotoCrops} onCrop={(url,crop)=>update("aboutPhotoCrops",Object.fromEntries([form.aboutImage,...form.aboutPhotos].filter(Boolean).map(image=>[image,image===url?crop:form.aboutPhotoCrops[image]??DEFAULT_IMAGE_CROP])))} uploadEndpoint={mediaUploadEndpoint.includes("preview-only") ? undefined : mediaUploadEndpoint} compact images={[form.aboutImage,...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0)update("aboutImage",value);else{const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}}/>
         </div></details>
         <details className="rounded-xl border p-3"><summary>More gallery images</summary>
         <ImageUploadField
@@ -1660,7 +1664,7 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "all-services") return (
-            <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title="Services" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title={<InlineStorefrontText label="Services heading" value={sectionLabel(section)} placeholder="Services" onChange={value=>update("sectionLabels",{...form.sectionLabels,[section]:value})}/>} onClick={() => setActiveSection(section)}>
               <div className="mb-5 flex items-center justify-between gap-3"><p className="text-sm">{activeServices.length ? "Choose a service for your event." : "Add your services and pricing to help customers book."}</p><Button data-storefront-button style={theme.heroCtaStyle} type="button" onClick={event=>{event.stopPropagation();setActiveSection("final-quote");document.querySelector('[data-testid="preview-section-final-quote"]')?.scrollIntoView({behavior:"smooth",block:"center"});}}>{template?.buttonText||"Book now"}</Button></div>
               <ServiceGrid
                 businessSlug={business.slug}
@@ -1676,7 +1680,7 @@ function StorefrontPreview({
           );
           if (section === "portfolio") return (
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-portfolio" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
-              <AboutPhotoGrid uploadEndpoint={mediaUploadEndpoint.includes("preview-only") ? undefined : mediaUploadEndpoint} images={[form.aboutImage, ...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0) update("aboutImage",value);else {const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}} />
+              <AboutPhotoGrid crops={form.aboutPhotoCrops} onCrop={(url,crop)=>update("aboutPhotoCrops",Object.fromEntries([form.aboutImage,...form.aboutPhotos].filter(Boolean).map(image=>[image,image===url?crop:form.aboutPhotoCrops[image]??DEFAULT_IMAGE_CROP])))} uploadEndpoint={mediaUploadEndpoint.includes("preview-only") ? undefined : mediaUploadEndpoint} images={[form.aboutImage, ...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0) update("aboutImage",value);else {const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}} />
               {activeSection === section ? (
                 <div className="grid gap-3">
 
@@ -2266,7 +2270,7 @@ function instagramHandleFromUrl(href: string) {
 function PreviewSection({ active, children, onClick, testId, theme, title }: { active: boolean; children: ReactNode; onClick: () => void; testId?: string; theme: PreviewTheme; title: ReactNode }) {
   const design=theme.sectionDesigns?.[testId?.replace("preview-section-", "") ?? ""];
   return (
-    <section data-custom-background={Boolean(design)} data-testid={testId} onClickCapture={onClick} className={previewButtonClass(active, `mb-5 block w-full cursor-text rounded-[1.5rem] p-6 text-left transition ${theme.cardClass}`)} style={{...(active ? theme.activeSectionStyle : theme.previewCardStyle),...sectionDesignStyle(design)}}>
+    <section data-custom-background={Boolean(design)} data-testid={testId} onClickCapture={event=>{if(!(event.target as HTMLElement).closest("button, a, input, textarea, select"))onClick();}} className={previewButtonClass(active, `mb-5 block w-full cursor-text rounded-[1.5rem] p-6 text-left transition ${theme.cardClass}`)} style={{...(active ? theme.activeSectionStyle : theme.previewCardStyle),...sectionDesignStyle(design)}}>
       {title ? <h3 className="text-2xl font-semibold tracking-tight" style={{...theme.headingStyle,...(design ? {color:design.ink} : {}),...(theme.subheadingFamily ? {fontFamily:theme.subheadingFamily,fontStyle:theme.subheadingStyle} : {})}}>{title}</h3> : null}
       <div className={`${title ? "mt-3" : ""} text-sm leading-6 ${theme.copyClass}`}>{children}</div>
     </section>
@@ -2301,7 +2305,7 @@ function PreviewRadiusMap({ city, coverageAreas, radiusMiles, theme }: { city: s
 }
 
 function previewButtonClass(active: boolean, base: string) {
-  return `${base} ${active ? "ring-2 ring-offset-2" : "ring-1 ring-transparent"}`;
+  return `${base} ${active ? "ring-2 ring-[#d86b93] ring-offset-2" : "ring-1 ring-transparent"}`;
 }
 
 type PreviewTheme = ReturnType<typeof getPreviewTheme>;
@@ -2327,7 +2331,7 @@ function getPreviewTheme(form: FormState, template?: StorefrontTemplate | null) 
     accentBlockStyle: { background: "gradient" in palette ? palette.gradient : `linear-gradient(135deg, ${palette.swatches.join(", ")})` } as CSSProperties,
     accentTextStyle: { color: accent } as CSSProperties,
     activeNavItemStyle: { backgroundColor: `${accent}24`, color: template?.colors.ink ?? (isDark ? "#ffffff" : "#2f2626") } as CSSProperties,
-    activeSectionStyle: { borderColor: `${accent}88`, boxShadow: `0 0 0 2px ${accent}` } as CSSProperties,
+    activeSectionStyle: { borderColor: "#d86b93", boxShadow: "0 0 0 2px #d86b93" } as CSSProperties,
     badgeStyle: { background: ctaBackground, borderColor: accent, color: ctaText } as CSSProperties,
     bodyStyle: { fontFamily: form.bodyFamily || fontFamilies.body, ...(template ? {color:template.colors.ink,backgroundColor:template.colors.background} : {}) } as CSSProperties,
     cardClass: template ? "text-[color:var(--template-ink)]" : isDark ? "text-white" : "text-[#2f2626]",
@@ -2467,10 +2471,11 @@ function photoTileStyle(layout:FormState["aboutPhotoLayout"],index:number):CSSPr
 function photoGridStyle(layout:FormState["aboutPhotoLayout"]):CSSProperties {
  return {display:"grid",gridTemplateColumns:`repeat(${layout==="grid"||layout==="offset"?2:layout==="cascade"?5:3},minmax(0,1fr))`,gap:layout==="cascade"?0:12,alignItems:layout==="cascade"?"center":"stretch",padding:layout==="cascade"?"36px 12px":layout==="layered"?"20px 12px":"0"};
 }
-export function AboutPhotoGrid({readOnly=false,uploadEndpoint,compact=false,images,layout,onLayout,onImage}:{readOnly?:boolean;uploadEndpoint?:string;compact?:boolean;images:string[];layout:FormState["aboutPhotoLayout"];onLayout:(value:FormState["aboutPhotoLayout"])=>void;onImage:(index:number,value:string)=>void}) {
+export function AboutPhotoGrid({readOnly=false,uploadEndpoint,compact=false,images,layout,onLayout,onImage,crops={},onCrop}:{crops?:Record<string,ImageCrop>;onCrop?:(url:string,crop:ImageCrop)=>void;readOnly?:boolean;uploadEndpoint?:string;compact?:boolean;images:string[];layout:FormState["aboutPhotoLayout"];onLayout:(value:FormState["aboutPhotoLayout"])=>void;onImage:(index:number,value:string)=>void}) {
  const [error,setError]=useState("");
  const [dragging,setDragging]=useState<number|null>(null);
  const requests=useRef<Record<number,number>>({});
+ const inputs=useRef<Record<number,HTMLInputElement|null>>({});
  async function loadImage(file:File|undefined,index:number){
   if(readOnly || !file)return;
   if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>8*1024*1024){setError("Choose a PNG, JPG, or WebP under 8 MB.");return;}
@@ -2482,10 +2487,10 @@ export function AboutPhotoGrid({readOnly=false,uploadEndpoint,compact=false,imag
  return <div onClick={event=>event.stopPropagation()}>
   <div style={photoGridStyle(compact ? "grid" : layout)}>
    {Array.from({length:readOnly ? Math.min(images.length,selected.count) : selected.count},(_,index)=><div key={index} className="relative min-w-0" style={{...photoTileStyle(compact ? "grid" : layout,index),width:"100%",alignSelf:"start"}}>
-    <label onDragOver={event=>{event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect="copy";setDragging(index);}} onDragLeave={()=>setDragging(null)} onDrop={event=>{event.preventDefault();event.stopPropagation();setDragging(null);loadImage(event.dataTransfer.files[0],index);}} className={`relative block h-full w-full cursor-pointer overflow-hidden border border-current/15 bg-stone-100 focus-within:ring-2 focus-within:ring-current ${dragging===index?"ring-2 ring-current":""}`} style={{backgroundColor:"color-mix(in srgb, currentColor 5%, transparent)",...(layout==="scallop" && !compact ? scallopedPhotoStyle : {})}}>
-    {images[index] ? <img src={images[index]} alt={`About photo ${index+1}`} className="h-full w-full object-cover"/> : <span className="grid h-full place-content-center justify-items-center gap-2 text-center opacity-65"><Upload className="h-5 w-5"/><span className="text-[10px] sm:text-xs">Upload image</span><span className="hidden text-[10px] sm:block">or drag & drop</span></span>}
-    <input disabled={readOnly} type="file" aria-label={`Upload About photo ${index+1}`} accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={event=>{loadImage(event.target.files?.[0],index);event.target.value="";}}/>
-    </label>
+    <div onDragOver={event=>{event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect="copy";setDragging(index);}} onDragLeave={()=>setDragging(null)} onDrop={event=>{event.preventDefault();event.stopPropagation();setDragging(null);loadImage(event.dataTransfer.files[0],index);}} className={`relative block h-full w-full cursor-pointer overflow-hidden border border-current/15 bg-stone-100 focus-within:ring-2 focus-within:ring-current ${dragging===index?"ring-2 ring-current":""}`} style={{backgroundColor:"color-mix(in srgb, currentColor 5%, transparent)",...(layout==="scallop" && !compact ? scallopedPhotoStyle : {})}}>
+    {images[index] ? (!readOnly&&onCrop?<InlineCoverCrop src={images[index]} alt={`Gallery photo ${index+1}`} crop={crops[images[index]]??DEFAULT_IMAGE_CROP} onChange={crop=>onCrop(images[index],crop)} onReplace={()=>inputs.current[index]?.click()}/>:<CroppedImage src={images[index]} alt={`Gallery photo ${index+1}`} crop={crops[images[index]]??DEFAULT_IMAGE_CROP} className="h-full w-full object-cover"/>) : <span onClick={()=>inputs.current[index]?.click()} className="grid h-full place-content-center justify-items-center gap-2 text-center opacity-65"><Upload className="h-5 w-5"/><span className="text-[10px] sm:text-xs">Upload image</span><span className="hidden text-[10px] sm:block">or drag & drop</span></span>}
+    <input ref={element=>{inputs.current[index]=element;}} disabled={readOnly} type="file" aria-label={`Upload About photo ${index+1}`} accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={event=>{loadImage(event.target.files?.[0],index);event.target.value="";}}/>
+    </div>
 
     {!readOnly && images[index] && <button type="button" className="absolute bottom-2 right-2 rounded-full bg-white px-2 py-1 text-[10px] text-stone-800 shadow" aria-label={`Remove photo ${index+1}`} onClick={()=>{requests.current[index]=(requests.current[index]??0)+1;onImage(index,"");}}>Remove</button>}
    </div>)}

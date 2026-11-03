@@ -1,4 +1,5 @@
 "use client";
+import { InlineCoverCrop } from "./inline-cover-crop";
 import { ProductSpin } from "./product-spin";
 import { ProductSpotlight } from "./product-spotlight";
 import { InlineStorefrontText } from "./inline-storefront-text";
@@ -51,8 +52,8 @@ export function DimensionalStorefrontHero({ onCoverCropChange, coverEditor, effe
         <button type="button" data-storefront-button style={{...(template?.buttonColor?{background:template.buttonColor,color:template.colors.accentInk}:{}),borderRadius:template?.button==="pill"?999:0}} className="depth-book" onClick={(event) => { event.stopPropagation(); onBook(); }}>{template?.buttonText || "Request a quote"} <ArrowUpRight size={17} aria-hidden="true" /></button>
       </div>}
       <div className="depth-scene" data-playing={playing}>
-        <div className="depth-regular-cover" style={{position:"relative",...(crop.aspectRatio?{aspectRatio:crop.aspectRatio,height:"auto",minHeight:0,maxHeight:"none"}:{})}}>{image ? <CroppedImage src={image} frameFit={image === logo ? "contain" : "cover"} crop={crop} alt={`${name || "Storefront"} cover`} loading="eager" className="h-full w-full object-cover" /> : <span className="depth-empty">{coverEditor ? "" : "Add a cover image"}</span>}
-          {coverEditor && <button type="button" aria-label={image ? "Edit cover image" : "Upload cover image"} onDoubleClick={event=>{event.stopPropagation();if(image&&onCoverCropChange)setCropOpen(true);}} onClick={event=>{event.stopPropagation();if(image&&onCoverCropChange)setCropOpen(true);else coverDialog.current?.showModal();}} className="group absolute inset-0 z-10 flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-primary">
+        <div className="depth-regular-cover" >{image && onCoverCropChange ? <InlineCoverCrop src={image} alt={`${name || "Storefront"} cover`} crop={crop} onChange={onCoverCropChange} onReplace={()=>coverDialog.current?.showModal()}/> : image ? <CroppedImage src={image} frameFit="cover" crop={crop} alt={`${name || "Storefront"} cover`} loading="eager" className="h-full w-full object-cover" /> : <span className="depth-empty">{coverEditor ? "" : "Add a cover image"}</span>}
+          {coverEditor && !(image && onCoverCropChange) && <button type="button" aria-label={image ? "Edit cover image" : "Upload cover image"} onDoubleClick={event=>{event.stopPropagation();if(image&&onCoverCropChange)setCropOpen(true);}} onClick={event=>{event.stopPropagation();if(image&&onCoverCropChange)setCropOpen(true);else coverDialog.current?.showModal();}} className="group absolute inset-0 z-10 flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-primary">
             <span className={`inline-flex items-center gap-2 rounded-full border border-[#eadbd8] bg-white px-4 py-2 text-sm text-[#675f59] shadow-sm ${image ? "opacity-90 group-hover:opacity-100" : ""}`}>{image ? <Pencil size={17}/> : <Upload size={17}/>} {image ? "Edit cover image" : "Upload cover image"}</span>
           </button>}
         </div>

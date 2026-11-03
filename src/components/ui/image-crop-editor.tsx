@@ -3,7 +3,7 @@
 import { Loader2, Minus, Move, Plus } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_IMAGE_CROP, MAX_IMAGE_ZOOM, MIN_IMAGE_ZOOM, normalizeImageCrop, cropImageRect, fitImageZoom, type ImageCrop } from "@/lib/image-crop";
+import { DEFAULT_IMAGE_CROP, MAX_IMAGE_ZOOM, MIN_IMAGE_ZOOM, normalizeImageCrop, cropImageRect, type ImageCrop } from "@/lib/image-crop";
 
 type ImageCropEditorProps = {
   aspectLabel?: string;
@@ -36,8 +36,7 @@ export function ImageCropEditor({
   useEffect(()=>{dialog.current?.showModal();},[]);
   const [draft, setDraft] = useState<ImageCrop>(() => ({ ...normalizeImageCrop(crop), zoom: Math.max(minZoom, normalizeImageCrop(crop).zoom) }));
   const [dimensions,setDimensions]=useState({width:0,height:0,frameWidth:0,frameHeight:0});
-  const fitZoom=dimensions.width && dimensions.frameWidth ? fitImageZoom(dimensions.width,dimensions.height,dimensions.frameWidth,dimensions.frameHeight) : minZoom;
-  const effectiveMin=Math.max(minZoom,fitZoom);
+  const effectiveMin=Math.max(1,minZoom);
   const rect=dimensions.width && dimensions.frameWidth ? cropImageRect(dimensions.width,dimensions.height,dimensions.frameWidth,dimensions.frameHeight,{...draft,zoom:Math.max(effectiveMin,draft.zoom)}) : null;
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);

@@ -1,3 +1,5 @@
+import { CroppedImage } from "@/components/ui/cropped-image";
+import { DEFAULT_IMAGE_CROP, type ImageCrop } from "@/lib/image-crop";
 
 import { scallopedPhotoStyle } from "@/lib/scalloped-photo";
 import type { CSSProperties } from "react";
@@ -24,4 +26,4 @@ function photoGridStyle(layout:PhotoLayout):CSSProperties {
  return {display:"grid",gridTemplateColumns:`repeat(${layout==="grid"||layout==="offset"?2:layout==="cascade"?5:3},minmax(0,1fr))`,gap:layout==="cascade"?0:12,alignItems:layout==="cascade"?"center":"stretch",padding:layout==="cascade"?"36px 12px":layout==="layered"?"20px 12px":"0"};
 }
 
-export function PublishedAboutGallery({images,layout="grid",name}:{images:string[];layout?:PhotoLayout;name:string}){const count=PHOTO_LAYOUTS.find(item=>item.id===layout)?.count??4;return <div className="mt-5" style={photoGridStyle(layout)}>{images.slice(0,count).map((url,index)=>url?<div key={index} className="relative min-w-0" style={{...photoTileStyle(layout,index),width:"100%",alignSelf:"start"}}><img src={url} alt={`${name} gallery photo ${index+1}`} loading="lazy" className="h-full w-full object-cover" style={layout==="scallop"?scallopedPhotoStyle:undefined}/></div>:null)}</div>}
+export function PublishedAboutGallery({images,layout="grid",name,crops={}}:{crops?:Record<string,ImageCrop>;images:string[];layout?:PhotoLayout;name:string}){const count=PHOTO_LAYOUTS.find(item=>item.id===layout)?.count??4;return <div className="mt-5" style={photoGridStyle(layout)}>{images.slice(0,count).map((url,index)=>url?<div key={index} className="relative min-w-0" style={{...photoTileStyle(layout,index),width:"100%",alignSelf:"start",overflow:"hidden",...(layout==="scallop"?scallopedPhotoStyle:{})}}><CroppedImage crop={crops[url]??DEFAULT_IMAGE_CROP} src={url} alt={`${name} gallery photo ${index+1}`} loading="lazy" className="h-full w-full object-cover"/></div>:null)}</div>}
