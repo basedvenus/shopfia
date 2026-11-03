@@ -264,6 +264,18 @@ export function StorefrontCustomizer({
   const [activeSection, setActiveSection] = useState<string>("hero");
   const [activeTool, setActiveTool] = useState<EditorTool>("content");
   const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [mobilePanelExpanded, setMobilePanelExpanded] = useState(false);
+  const mobileToolsRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const tools = mobileToolsRef.current;
+    const shell = tools?.closest<HTMLElement>("[data-testid=storefront-editor-shell]");
+    if (!tools || !shell) return;
+    const measure = () => shell.style.setProperty("--mobile-tools-height", `${tools.getBoundingClientRect().height}px`);
+    const observer = new ResizeObserver(measure);
+    observer.observe(tools);
+    measure();
+    return () => observer.disconnect();
+  }, []);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState(errorMessage ? "Needs attention" : draftSaved || business.storefrontDraftJson ? "Draft saved · Not published" : saved ? "Published" : "Live");
@@ -559,7 +571,7 @@ export function StorefrontCustomizer({
   }
 
   return (
-    <ColorPalette colors={selectedTemplate?Object.values(selectedTemplate.colors):[]}><TextFormatting onOpenColors={()=>{setActiveTool("content");setDesignPanel("text-colors");setPanelCollapsed(false);}} onOpenFonts={()=>{setActiveTool("content");setDesignPanel("fonts");setPanelCollapsed(false);}} styles={textStyles} onChange={value=>{setTextStyles(value);markDirty();}}><form onClickCapture={event=>{const link=(event.target as Element).closest("a");if(link?.getAttribute("href")?.includes(`/vendor/business/${business.slug}/services/new`)){event.preventDefault();event.stopPropagation();setServiceBuilderUrl(link.getAttribute("href"));}}} action={previewOnly ? undefined : updateStorefrontCustomizationAction} onSubmit={previewOnly ? (event) => event.preventDefault() : undefined} data-testid="storefront-editor-shell" className={`${modernEditor ? "editor-review " : ""}relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
+    <ColorPalette colors={selectedTemplate?Object.values(selectedTemplate.colors):[]}><TextFormatting onOpenColors={()=>{setActiveTool("content");setDesignPanel("text-colors");setPanelCollapsed(false);}} onOpenFonts={()=>{setActiveTool("content");setDesignPanel("fonts");setPanelCollapsed(false);}} styles={textStyles} onChange={value=>{setTextStyles(value);markDirty();}}><form onClickCapture={event=>{const link=(event.target as Element).closest("a");if(link?.getAttribute("href")?.includes(`/vendor/business/${business.slug}/services/new`)){event.preventDefault();event.stopPropagation();setServiceBuilderUrl(link.getAttribute("href"));}}} action={previewOnly ? undefined : updateStorefrontCustomizationAction} onSubmit={previewOnly ? (event) => event.preventDefault() : undefined} data-preview-mode={previewMode} data-testid="storefront-editor-shell" className={`${modernEditor ? "editor-review " : ""}relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
       {modernEditor && <><InlineButtonEditor onChange={text=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,buttonText:text});markDirty();}}}/><BackgroundSelectionToolbar onOpen={section=>{selectSection(section);requestAnimationFrame(()=>document.querySelector("[data-background-settings]")?.scrollIntoView({block:"nearest"}));}}/></>}{modernEditor ? <style>{`
         .editor-review { background: #f8f8f5; border-radius: 20px; }
         .editor-review .editor-workspace { grid-template-columns: minmax(0,1fr) 380px; }
@@ -586,7 +598,33 @@ export function StorefrontCustomizer({
         .editor-review .editor-inspector details[open] > summary::after{content:'−'}
         .editor-review .editor-inspector details{border-color:#eadbd7;border-radius:18px;background:#fffaf8;padding:16px}
         .editor-review .editor-inspector details > summary { }
-        @media(max-width:1023px) { .editor-review .editor-workspace { display:flex; flex-direction:column; } .editor-review .editor-inspector { height:65vh;max-height:65vh;position:relative;top:0; } .editor-review .editor-canvas { padding:12px; } }
+        .editor-mobile-sheet-toggle,.mobile-quick-colors {display:none;}
+        @media(max-width:767px) {
+          body:has(.editor-review) > * nav.fixed.bottom-0, body:has(.editor-review) nav.fixed.inset-x-0.bottom-0 {display:none;}
+          .editor-review {left:0!important;transform:none!important;width:100%!important;overflow:visible!important;}
+          .editor-review .editor-workspace {display:flex;flex-direction:column;padding-bottom:var(--mobile-tools-height,72px);}
+          .editor-review .editor-canvas {padding:8px;}
+          .editor-review .editor-inspector {position:fixed;inset:auto 0 0;z-index:60;height:auto;max-height:50dvh;width:100%;display:flex;flex-direction:column-reverse;border-radius:22px 22px 0 0;box-shadow:0 -4px 20px #503d481a;padding-bottom:env(safe-area-inset-bottom);overflow:visible;}
+          .editor-tool-rail {display:flex;flex-direction:row;flex-wrap:nowrap;width:100%;flex:0 0 auto;overflow-x:auto;overflow-y:hidden;border:0;padding:4px 8px;gap:4px;}
+          .editor-tool-button {width:68px;min-width:68px;min-height:64px;margin:0;padding:3px 0;font-size:10px;}
+          .editor-tool-icon {width:32px;height:32px;border-radius:12px;}
+          .editor-panel-content {position:relative;border-radius:22px 22px 0 0;overflow:hidden;flex:0 1 auto;}
+          .editor-mobile-sheet-toggle {display:flex;justify-content:flex-end;padding:4px 12px;flex-shrink:0;}
+          .editor-mobile-sheet-toggle button {width:40px;height:32px;border-radius:16px;background:#f3f1f1;font-size:22px;}
+          .editor-panel-heading {padding:4px 16px;font-size:13px;flex-shrink:0;}
+          .editor-panel-scroll {padding:10px 14px;overflow-y:auto;overscroll-behavior:contain;max-height:calc(50dvh - 150px);}
+          .editor-inspector[data-mobile-expanded="false"] .editor-panel-scroll {display:none;}
+          .editor-inspector[data-mobile-expanded="false"][data-color-panel="true"] .editor-panel-heading {display:none;}
+          .editor-inspector[data-mobile-expanded="false"][data-color-panel="true"] .editor-panel-scroll {display:block;padding:0 60px 8px 12px;overflow:hidden;}
+          .editor-inspector[data-mobile-expanded="false"][data-color-panel="true"] .editor-mobile-sheet-toggle {position:absolute;right:0;top:6px;z-index:2;}
+          .editor-inspector[data-mobile-expanded="false"][data-color-panel="true"] [data-background-settings] {margin:0;padding:0;border:0;background:transparent;}
+          .editor-inspector[data-mobile-expanded="false"] [data-background-settings] > :not(.mobile-quick-colors) {display:none;}
+          .editor-inspector[data-mobile-expanded="false"] .mobile-quick-colors {display:flex;gap:10px;overflow-x:auto;padding:10px 3px;}
+          .mobile-quick-colors button {width:32px;min-width:32px;height:32px;}
+        }
+
+        @media(min-width:768px) and (max-width:1023px) { .editor-review .editor-workspace {display:flex;flex-direction:column;} .editor-review .editor-inspector {height:65vh;max-height:65vh;position:relative;top:0;} }
+
       `}</style> : null}
       {modernEditor && templateLibraryOpen ? <StorefrontTemplateLibrary vendorName={form.name} initialScroll={templateScroll} onScroll={setTemplateScroll} selected={selectedTemplate?.id ?? null} image={form.logoUrl || form.coverPhoto} photos={form.photoUrls.filter(Boolean)} onClose={()=>setTemplateLibraryOpen(false)} onApply={(template)=>{
         setSelectedTemplate(template);setHeroCustomFont(null);setTemplateFontRevision(value=>value+1);
@@ -871,9 +909,9 @@ export function StorefrontCustomizer({
           </div>
         </main>
 
-        <aside data-panel-open={!panelCollapsed && Boolean(designPanel)} className="editor-inspector min-w-0 border-t border-[#eadbd8] bg-white lg:border-l lg:border-t-0">
-<div className="editor-tool-rail" aria-label="Design tools">{[{id:'brand',label:'Brand',Icon:BadgeCheck},{id:'sections',label:'Rearrange',Icon:ArrowUpDown},{id:'templates',label:'Templates',Icon:LayoutTemplate},{id:'fonts',label:'Text',Icon:Type},{id:'backgrounds',label:'Backgrounds',Icon:Paintbrush},{id:'buttons',label:'Buttons',Icon:SewingButtonIcon},{id:'effects',label:'3D Effects',Icon:Box},{id:'portfolio',label:'Gallery',Icon:Images},{id:'all-services',label:'Services',Icon:BriefcaseBusiness},{id:'policies',label:'Policies',Icon:FileText},{id:'faq',label:'FAQ',Icon:CircleHelp},{id:'socials',label:'Social media',Icon:Share2},{id:'patterns',label:'Patterns',Icon:Paintbrush}].map(({id,label,Icon})=><button key={id} type="button" aria-pressed={!panelCollapsed && designPanel===id} onClick={()=>{setActiveTool("content");if(["all-services","portfolio","socials","faq","policies"].includes(id)){setToolPopup(id);return;}if(id==="templates"){setTemplateLibraryOpen(true);return;}if(id==="effects"){setStudioInvitation(false);setStudioOpen(true);return;}if(id==="sections"){setOrganizerOpen(true);return;}setPanelCollapsed(!panelCollapsed&&designPanel===id);setDesignPanel(id);}} className="editor-tool-button"><span className="editor-tool-icon"><Icon size={22}/></span><span className="text-center leading-4">{label}</span></button>)}</div><div className="editor-panel-content" hidden={panelCollapsed || !designPanel}>
-              <div className="editor-panel-heading"><strong>{({fonts:"Text",backgrounds:"Color",'text-colors':"Text color",buttons:"Buttons",brand:"Brand",patterns:"Patterns"} as Record<string,string>)[designPanel??""]??"Design"}</strong><button type="button" aria-label="Close settings panel" onClick={()=>setPanelCollapsed(true)}>›</button></div>
+        <aside ref={mobileToolsRef} data-mobile-expanded={mobilePanelExpanded} data-color-panel={designPanel === "backgrounds" || designPanel === "text-colors"} data-panel-open={!panelCollapsed && Boolean(designPanel)} className="editor-inspector min-w-0 border-t border-[#eadbd8] bg-white lg:border-l lg:border-t-0">
+<div className="editor-tool-rail" aria-label="Design tools">{[{id:'brand',label:'Brand',Icon:BadgeCheck},{id:'sections',label:'Rearrange',Icon:ArrowUpDown},{id:'templates',label:'Templates',Icon:LayoutTemplate},{id:'fonts',label:'Text',Icon:Type},{id:'backgrounds',label:'Backgrounds',Icon:Paintbrush},{id:'buttons',label:'Buttons',Icon:SewingButtonIcon},{id:'effects',label:'3D Effects',Icon:Box},{id:'portfolio',label:'Gallery',Icon:Images},{id:'all-services',label:'Services',Icon:BriefcaseBusiness},{id:'policies',label:'Policies',Icon:FileText},{id:'faq',label:'FAQ',Icon:CircleHelp},{id:'socials',label:'Social media',Icon:Share2},{id:'patterns',label:'Patterns',Icon:Paintbrush}].map(({id,label,Icon})=><button key={id} type="button" aria-pressed={!panelCollapsed && designPanel===id} onClick={()=>{setMobilePanelExpanded(false);setActiveTool("content");if(["all-services","portfolio","socials","faq","policies"].includes(id)){setToolPopup(id);return;}if(id==="templates"){setTemplateLibraryOpen(true);return;}if(id==="effects"){setStudioInvitation(false);setStudioOpen(true);return;}if(id==="sections"){setOrganizerOpen(true);return;}setPanelCollapsed(!panelCollapsed&&designPanel===id);setDesignPanel(id);}} className="editor-tool-button"><span className="editor-tool-icon"><Icon size={22}/></span><span className="text-center leading-4">{label}</span></button>)}</div><div className="editor-panel-content" hidden={panelCollapsed || !designPanel}>
+              <div className="editor-mobile-sheet-toggle"><button type="button" aria-label={mobilePanelExpanded ? "Collapse tools" : "Expand tools"} aria-expanded={mobilePanelExpanded} onClick={()=>setMobilePanelExpanded(value=>!value)}>{mobilePanelExpanded ? "⌄" : "↑"}</button></div><div className="editor-panel-heading"><strong>{({fonts:"Text",backgrounds:"Color",'text-colors':"Text color",buttons:"Buttons",brand:"Brand",patterns:"Patterns"} as Record<string,string>)[designPanel??""]??"Design"}</strong><button type="button" aria-label="Close settings panel" onClick={()=>setPanelCollapsed(true)}>›</button></div>
               <div className="editor-panel-scroll" key={designPanel}>
 {activeTool === "content" && <><details open hidden={designPanel!=="sections"} className="mb-4 rounded-2xl border p-4"><summary>Rearrange sections</summary><div className="mt-4">              <p className="mb-3 text-xs font-normal text-muted-foreground">Drag to reorder. Select a section to edit it.</p>
               <nav aria-label="Reorder storefront sections" className="mb-5 flex flex-wrap gap-2">

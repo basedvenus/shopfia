@@ -22,6 +22,7 @@ export function SectionBackgroundControls({template,section,label,onChange,mode=
  function sourceRow(src:string,colors:string[],alt:string){return <div key={src} className="grid grid-cols-6 items-center gap-2"><img src={src} alt={alt} className="aspect-square w-full rounded-xl object-cover"/>{colors.slice(0,5).map(swatch)}</div>;}
  function update(patch:Partial<SectionDesign>){onChange({...template,sectionDesigns:{...template.sectionDesigns,[section]:{...design,...patch}}});}
  return <section data-background-settings className="mb-4 rounded-2xl border border-[#eadbd7] bg-[#fffaf8] p-4">
+ <div className="mobile-quick-colors" aria-label="Quick colors">{palette.map(swatch)}</div>
  <h3 className="mb-4 text-sm font-semibold">{mode==='colors'?'Color':'Patterns'}</h3>
  {mode==='colors' && <>
  {textMode?<ColorPicker label="Text color" value={selectedText.color??"#000000"} onChange={chooseColor}/>:<div className="grid grid-cols-2 gap-4">{([['background','Background'],['ink','Text color']] as const).map(([key,title])=><div key={key} onPointerDownCapture={()=>setColorTarget(key)} onFocusCapture={()=>setColorTarget(key)}><ColorPicker label={title} value={design[key]??"#ffffff"} onChange={value=>update({[key]:value})}/></div>)}</div>}
