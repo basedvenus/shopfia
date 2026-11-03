@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {StorefrontSectionSize} from "@/components/vendor/storefront-section-size";
-import { Move, RotateCcw } from 'lucide-react';
+import { GripVertical } from 'lucide-react';
 import { placeSection, sectionRows, rowColumns, resizeSectionWidth, type SectionLayout, type SectionPlacement } from '@/lib/storefront-section-layout';
 import './storefront-section-layout.css';
 
@@ -33,6 +33,11 @@ export function StorefrontSectionCanvas({items,order,layout,mobile,onChange}:{it
    element=candidates.sort((a,b)=>{const distance=(frame:HTMLElement)=>{const r=frame.getBoundingClientRect();return Math.hypot(Math.max(r.left-x,0,x-r.right),Math.max(r.top-y,0,y-r.bottom));};return distance(a)-distance(b);})[0];
   }
   if(!element || element.dataset.sectionFrame===drag.current)return null;
+  const row=element.closest<HTMLElement>('.storefront-section-row');
+  if(row?.dataset.paired==='true'&&!row.querySelector(`[data-section-frame="${drag.current}"]`)){
+   const bounds=row.getBoundingClientRect();
+   return {id:element.dataset.sectionFrame!,placement:(x<bounds.left+bounds.width/2?'left':'right') as SectionPlacement};
+  }
   const bounds=element.getBoundingClientRect(), dx=(x-bounds.left)/bounds.width,dy=(y-bounds.top)/bounds.height;
   const placement:SectionPlacement=dy<.2?'above':dy>.8?'below':dx<.25?'left':dx>.75?'right':dy<.5?'above':'below';
   return {id:element.dataset.sectionFrame!,placement};
@@ -55,14 +60,13 @@ export function StorefrontSectionCanvas({items,order,layout,mobile,onChange}:{it
       onPointerUp={event=>{if(drag.current)finishMove(event.clientX,event.clientY);}}
       onPointerCancel={()=>{drag.current=null;setDragging(null);setTarget(null);}}
       onKeyDown={event=>{if(!event.altKey||!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key))return;event.preventDefault();const visible=order.filter(key=>byId.has(key));const index=visible.indexOf(id);const other=visible[event.key==='ArrowUp'?index-1:event.key==='ArrowDown'?index+1:index>0?index-1:index+1];if(other){const placement:SectionPlacement=event.key==='ArrowUp'?'above':event.key==='ArrowDown'?'below':event.key==='ArrowLeft'?'left':'right';const next=placeSection(order,layout,id,other,placement);onChange(next.order,next.layout);}}}
-     ><Move size={17}/></button>
-     <button type="button" aria-label={`Reset ${item.label} section layout`} title="Reset size and use a full row" onClick={event=>{event.stopPropagation();const next={...layout};delete next[id];for(const key of Object.keys(next))if(next[key].beside===id){next[key]={...next[key]};delete next[key].beside;}onChange(order,next);}}><RotateCcw size={13}/></button>
+     ><GripVertical size={17} aria-hidden="true"/></button>
     </div>
-    <StorefrontSectionSize height={height?.id===id?height.value:visibleLayout[id]?.height} disabled={mobile}>{item.content}</StorefrontSectionSize>
-    {target?.id===id&&<div className="section-drop-zone" data-placement={target.placement}><span>{target.placement==='left'?'Place left':target.placement==='right'?'Place right':target.placement==='above'?'Place above':'Place below'}</span></div>}
-    {!mobile&&(['left','right'] as const).filter(edge=>row.length===1||(row[0]===id?edge==='right':edge==='left')).map(edge=><SectionWidthHandle key={edge} id={id} label={item.label} edge={edge} row={row} layout={layout} onPreview={setWidthPreview} onCommit={next=>{onChange(order,next);setAnnouncement(`${item.label} width updated to ${next[id]?.width} percent.`);}}/>)}
-    {!mobile&&row.length===1&&(['top-left','top-right','bottom-left','bottom-right'] as const).map(corner=><SectionWidthHandle key={corner} corner={corner} id={id} label={item.label} edge={corner.endsWith('left')?'left':'right'} row={row} layout={layout} onPreview={setWidthPreview} onCommit={next=>onChange(order,next)}/>)}
-    {!mobile&&(['top','bottom'] as const).map(edge=><button key={edge} type="button" data-edge={edge} className="section-resize-handle" aria-label={`Resize ${item.label} section ${edge} height`} title="Drag to adjust height. Up/Down adjusts 20 px."
+    <StorefrontSectionSize height={height?.id===id?height.value:visibleLayout[id]?.height}>{item.content}</StorefrontSectionSize>
+    {target?.id===id&&<div className="section-drop-zone" data-placement={target.placement}><span>{target.placement==='left'?'Place left':target.placement==='right'?'Place right':target.placement==='above'?'Place above':'Place below'}{row.length===2 && (target.placement==='left'||target.placement==='right') && <small className="block mt-2">{byId.get(row[target.placement==='left'?1:0])?.label} moves below · 2 per row</small>}</span></div>}
+    {(['left','right'] as const).filter(edge=>row.length===1||(row[0]===id?edge==='right':edge==='left')).map(edge=><SectionWidthHandle key={edge} id={id} label={item.label} edge={edge} row={row} layout={layout} onPreview={setWidthPreview} onCommit={next=>{onChange(order,next);setAnnouncement(`${item.label} width updated to ${next[id]?.width} percent.`);}}/>)}
+    {row.length===1&&(['top-left','top-right','bottom-left','bottom-right'] as const).map(corner=><SectionWidthHandle key={corner} corner={corner} id={id} label={item.label} edge={corner.endsWith('left')?'left':'right'} row={row} layout={layout} onPreview={setWidthPreview} onCommit={next=>onChange(order,next)}/>)}
+    {(['top','bottom'] as const).map(edge=><button key={edge} type="button" data-edge={edge} className="section-resize-handle" aria-label={`Resize ${item.label} section ${edge} height`} title="Drag to adjust height. Up/Down adjusts 20 px."
      onClick={event=>event.stopPropagation()}
      onPointerDown={event=>{if(event.button!==0)return;event.preventDefault();event.stopPropagation();const frame=event.currentTarget.closest<HTMLElement>('[data-section-frame]')!;resize.current={id,y:event.clientY,height:frame.getBoundingClientRect().height};event.currentTarget.setPointerCapture(event.pointerId);}}
      onPointerMove={event=>{if(resize.current){const value=Math.max(120,Math.min(1200,Math.round(resize.current.height+(event.clientY-resize.current.y)*(edge==='top'?-1:1))));setHeight({id,value});}}}

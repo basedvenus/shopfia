@@ -21,7 +21,7 @@ export function sectionDesignStyle(design?: SectionDesign): CSSProperties {
   const patternFade=design.pattern==="clouds" && design.patternOpacity!==undefined ? `linear-gradient(${design.background}${Math.round((1-design.patternOpacity)*255).toString(16).padStart(2,"0")},${design.background}${Math.round((1-design.patternOpacity)*255).toString(16).padStart(2,"0")}),` : "";
   const image=patternFade + (opacity ? `linear-gradient(${rgba},${rgba}),${pattern}` : pattern);
   const size=design.pattern === "clouds" ? "320px 320px" : design.pattern === "stripes" ? "auto" : "28px 28px";
-  return {"--section-background":design.background,"--section-ink":design.ink,"--section-pattern":image,"--section-pattern-size":size,backgroundColor:design.background,backgroundImage:image,backgroundSize:size,color:design.ink} as CSSProperties;
+  return {...(design.buttonColor?{"--section-button-color":design.buttonColor}:{}),...(design.buttonInk?{"--section-button-ink":design.buttonInk}:{}),...(design.buttonShape?{"--section-button-radius":design.buttonShape==="pill"?"999px":"0px"}:{}),"--section-background":design.background,"--section-ink":design.ink,"--section-pattern":image,"--section-pattern-size":size,backgroundColor:design.background,backgroundImage:image,backgroundSize:size,color:design.ink} as CSSProperties;
 }
 export function getSectionDesign(template: StorefrontTemplate, section: string): SectionDesign {
   return template.sectionDesigns?.[section] ?? {background:section === "hero" ? template.heroBackground ?? template.colors.surface : template.colors.surface,ink:section === "hero" ? template.heroInk ?? template.colors.ink : template.colors.ink,pattern:"solid",patternColor:template.colors.secondary,overlayColor:"#ffffff",overlayOpacity:0};

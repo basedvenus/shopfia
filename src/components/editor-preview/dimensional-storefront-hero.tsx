@@ -22,8 +22,9 @@ export const HERO_DEPTH_PRESETS: { value: HeroDepth; label: string; detail: stri
   { value: "floating", label: "3D Effect", detail: "Stays visible and interactive" }
 ];
 
-export function DimensionalStorefrontHero({ onCoverCropChange, coverEditor, effectOnly=false, effectModel="", effectImage="", presentation="emblem", backgroundWord="", template, name, headline, description, onHeadlineChange, onDescriptionChange, descriptionLabel="Tagline", location, image, crop, logo, depth, mobile, headingStyle, onBook, onDepthChange, mount, edgeColor, sceneColor }: {
+export function DimensionalStorefrontHero({ onCoverRemove, onCoverCropChange, coverEditor, effectOnly=false, effectModel="", effectImage="", presentation="emblem", backgroundWord="", template, name, headline, description, onHeadlineChange, onDescriptionChange, descriptionLabel="Tagline", location, image, crop, logo, depth, mobile, headingStyle, onBook, onDepthChange, mount, edgeColor, sceneColor }: {
   coverEditor?: ReactNode;
+  onCoverRemove?:()=>void;
   onCoverCropChange?:(crop:ImageCrop)=>void;
   effectOnly?:boolean;
   previewReplay?:number;
@@ -49,10 +50,10 @@ export function DimensionalStorefrontHero({ onCoverCropChange, coverEditor, effe
         {location ? <p className="depth-location">{location}</p> : null}
         <h2 style={headingStyle}>{onHeadlineChange ? <InlineStorefrontText label="Headline" value={headline} placeholder="Type headline here" onChange={onHeadlineChange}>{headlineContent}</InlineStorefrontText> : <span data-storefront-text="headline">{headlineContent}</span>}</h2>
         {onDescriptionChange ? <p className="depth-description"><InlineStorefrontText label={descriptionLabel} value={description} placeholder="Type tagline here" onChange={onDescriptionChange}/></p> : description ? <p className="depth-description" data-storefront-text="description">{description}</p> : null}
-        <button type="button" data-storefront-button style={{...(template?.buttonColor?{background:template.buttonColor,color:template.colors.accentInk}:{}),borderRadius:template?.button==="pill"?999:0}} className="depth-book" onClick={(event) => { event.stopPropagation(); onBook(); }}>{template?.buttonText || "Request a quote"} <ArrowUpRight size={17} aria-hidden="true" /></button>
+        <button type="button" data-storefront-button style={{...(template?.buttonColor?{background:`var(--section-button-color, ${template.buttonColor})`,color:`var(--section-button-ink, ${template.colors.accentInk})`}:{}),borderRadius:`var(--section-button-radius, ${template?.button==="pill"?"999px":"0px"})`}} className="depth-book" onClick={(event) => { event.stopPropagation(); onBook(); }}>{template?.buttonText || "Request a quote"} <ArrowUpRight size={17} aria-hidden="true" /></button>
       </div>}
-      <div className="depth-scene" data-playing={playing}>
-        <div className="depth-regular-cover" >{image && onCoverCropChange ? <InlineCoverCrop src={image} alt={`${name || "Storefront"} cover`} crop={crop} onChange={onCoverCropChange} onReplace={()=>coverDialog.current?.showModal()}/> : image ? <CroppedImage src={image} frameFit="cover" crop={crop} alt={`${name || "Storefront"} cover`} loading="eager" className="h-full w-full object-cover" /> : <span className="depth-empty">{coverEditor ? "" : "Add a cover image"}</span>}
+      <div className="depth-scene" data-profile-frame={!effectOnly ? "true" : undefined} style={!effectOnly && template?.sectionDesigns?.["profile-frame"] ? {background:template.sectionDesigns["profile-frame"].background} : undefined} data-playing={playing}>
+        <div className="depth-regular-cover" >{image && onCoverCropChange ? <InlineCoverCrop src={image} alt={`${name || "Storefront"} cover`} crop={crop} onChange={onCoverCropChange} onReplace={()=>coverDialog.current?.showModal()} onRemove={onCoverRemove}/> : image ? <CroppedImage src={image} frameFit="cover" crop={crop} alt={`${name || "Storefront"} cover`} loading="eager" className="h-full w-full object-cover" /> : <span className="depth-empty">{coverEditor ? "" : "Add a cover image"}</span>}
           {coverEditor && !(image && onCoverCropChange) && <button type="button" aria-label={image ? "Edit cover image" : "Upload cover image"} onDoubleClick={event=>{event.stopPropagation();if(image&&onCoverCropChange)setCropOpen(true);}} onClick={event=>{event.stopPropagation();if(image&&onCoverCropChange)setCropOpen(true);else coverDialog.current?.showModal();}} className="group absolute inset-0 z-10 flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-primary">
             <span className={`inline-flex items-center gap-2 rounded-full border border-[#eadbd8] bg-white px-4 py-2 text-sm text-[#675f59] shadow-sm ${image ? "opacity-90 group-hover:opacity-100" : ""}`}>{image ? <Pencil size={17}/> : <Upload size={17}/>} {image ? "Edit cover image" : "Upload cover image"}</span>
           </button>}

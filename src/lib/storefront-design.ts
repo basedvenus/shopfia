@@ -5,9 +5,10 @@ import { APPROVED_STOREFRONT_SECTIONS, STOREFRONT_FONT_STYLES, getStorefrontFont
 const color = z.string().regex(/^#[0-9a-f]{6}$/i);
 const families = new Set(STOREFRONT_TEMPLATES.flatMap(t => [t.headingFamily, t.bodyFamily, t.subheadingFamily, t.accentHeadingFamily]).concat(STOREFRONT_FONT_STYLES.flatMap(t => Object.values(getStorefrontFontFamilies(t.value)))).filter(Boolean));
 const family = z.string().max(250).refine(value => families.has(value), "Choose a font from the library.");
-const section = z.object({ patternOpacity:z.number().min(0).max(1).optional(), background: color, ink: color, pattern: z.enum(["solid","clouds","stripes","grid","dots","checker","waves"]), patternColor: color.optional(), overlayColor: color.optional(), overlayOpacity: z.number().min(0).max(.8).optional() });
+const section = z.object({ buttonColor:color.optional(),buttonInk:color.optional(),buttonShape:z.enum(["pill","block"]).optional(), patternOpacity:z.number().min(0).max(1).optional(), background: color, ink: color, pattern: z.enum(["solid","clouds","stripes","grid","dots","checker","waves"]), patternColor: color.optional(), overlayColor: color.optional(), overlayOpacity: z.number().min(0).max(.8).optional() });
 const template = z.object({
   buttonColor: color.optional(),
+  button:z.enum(["pill","block","outline","offset","ticket"]).optional(),
   buttonText:z.string().trim().min(1).max(60).optional(),
   id: z.string().refine(id => STOREFRONT_TEMPLATES.some(t => t.id === id)),
   colors: z.object({ background:color, surface:color, ink:color, muted:color, accent:color, accentInk:color, secondary:color }),

@@ -13,6 +13,18 @@ export function sectionRows(order: string[], layout: SectionLayout) {
 
 export function placeSection(order: string[], layout: SectionLayout, source: string, target: string, placement: SectionPlacement) {
  if (source === target || !order.includes(source) || !order.includes(target)) return {order, layout};
+ const pair=sectionRows(order,layout).find(row=>row.includes(target)&&row.length===2&&!row.includes(source));
+ if(pair&&(placement==='left'||placement==='right')){
+  const keep=placement==='left'?pair[0]:pair[1],displaced=placement==='left'?pair[1]:pair[0];
+  const remaining=order.filter(id=>id!==source&&!pair.includes(id));
+  const index=order.slice(0,order.indexOf(pair[0])).filter(id=>id!==source).length;
+  const newPair=placement==='left'?[source,keep]:[keep,source];
+  remaining.splice(index,0,...newPair,displaced);
+  const next:SectionLayout=Object.fromEntries(Object.entries(layout).map(([id,v])=>{const item={...v};if([source,...pair].includes(id)||item.beside===source||pair.includes(item.beside??''))delete item.beside;return [id,item];}));
+  for(const id of newPair)next[id]={...next[id],width:50,offset:0};
+  next[newPair[1]]={...next[newPair[1]],beside:newPair[0]};next[displaced]={...next[displaced],width:100,offset:0};
+  return {order:remaining,layout:next};
+ }
  const nextLayout: SectionLayout = Object.fromEntries(Object.entries(layout).map(([id,value]) => {
   const next = {...value};
   if (id === source || id === target || next.beside === source || next.beside === target) delete next.beside;

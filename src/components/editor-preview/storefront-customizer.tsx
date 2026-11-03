@@ -42,6 +42,9 @@ import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { StorefrontDesignChat } from "@/components/editor-preview/storefront-design-chat";
+import { ButtonControls } from "./button-controls";
+import {InlineButtonEditor} from "./inline-button-editor";
+import {BackgroundSelectionToolbar} from "./background-selection-toolbar";
 import { SectionBackgroundControls } from "@/components/editor-preview/section-background-controls";
 import { sectionDesignStyle } from "@/lib/editor-preview/template-section-design";
 import { TemplateMediaGrid } from "./template-media-grid";
@@ -278,6 +281,22 @@ export function StorefrontCustomizer({
     setEffectModel(snapshot.effectModel);setEffectImage(snapshot.effectImage);setEffectPresentation(snapshot.effectPresentation);setEffectWord(snapshot.effectWord);
     setTemplateFontRevision(value=>value+1);setDirty(true);setStatus("Unpublished changes");
   });
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing || event.altKey || !(event.metaKey || event.ctrlKey)) return;
+      const target = event.target;
+      // Preserve normal text-field undo while someone is typing.
+      if (target instanceof HTMLElement && (target.closest("input, textarea, select") || target.isContentEditable)) return;
+      const key = event.key.toLowerCase();
+      const redo = (key === "z" && event.shiftKey) || (key === "y" && event.ctrlKey && !event.metaKey);
+      if (key !== "z" && !redo) return;
+      event.preventDefault();
+      if (redo) history.redo();
+      else history.undo();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [history.undo, history.redo]);
   const recommendedLook = recommendStorefrontLook(`${form.name} ${designBrief || form.bio} ${business.categories.map((item) => item.category.name).join(" ")}`);
   useEffect(() => {
     if (!advanced) guidedHeadingRef.current?.focus({ preventScroll: true });
@@ -286,8 +305,8 @@ export function StorefrontCustomizer({
 
   const [serviceBuilderUrl,setServiceBuilderUrl]=useState<string|null>(null);
   const visibleSections = useMemo(
-    () => form.sectionOrder.filter((section) => !form.hiddenSections.includes(section) && section!=="reviews"),
-    [form.hiddenSections, form.sectionOrder]
+    () => form.sectionOrder.filter((section) => !form.hiddenSections.includes(section) && section!=="reviews" && (section!=="socials" || form.showInstagram || form.showTikTok)),
+    [form.hiddenSections, form.sectionOrder, form.showInstagram, form.showTikTok]
   );
   const sectionLabel = useCallback(
     (section: string) => section==="parties" ? "Past parties" :
@@ -413,7 +432,11 @@ export function StorefrontCustomizer({
   }, [autosavePayload, dirty, saveDraftSnapshot, previewOnly]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      const next={...current,[key]:value};
+      if(key==="showInstagram"||key==="showTikTok")next.hiddenSections=next.showInstagram||next.showTikTok?next.hiddenSections.filter(id=>id!=="socials"):Array.from(new Set([...next.hiddenSections,"socials"]));
+      return next;
+    });
     markDirty();
   }
 
@@ -536,12 +559,26 @@ export function StorefrontCustomizer({
   }
 
   return (
-    <ColorPalette colors={selectedTemplate?Object.values(selectedTemplate.colors):[]}><TextFormatting onOpenFonts={()=>{setActiveTool("content");setDesignPanel("fonts");}} styles={textStyles} onChange={value=>{setTextStyles(value);markDirty();}}><form onClickCapture={event=>{const link=(event.target as Element).closest("a");if(link?.getAttribute("href")?.includes(`/vendor/business/${business.slug}/services/new`)){event.preventDefault();event.stopPropagation();setServiceBuilderUrl(link.getAttribute("href"));}}} action={previewOnly ? undefined : updateStorefrontCustomizationAction} onSubmit={previewOnly ? (event) => event.preventDefault() : undefined} data-testid="storefront-editor-shell" className={`${modernEditor ? "editor-review " : ""}relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
-      {modernEditor ? <style>{`
-        .editor-review [data-testid="preview-section-${activeSection}"] { outline: 2px solid #d86b93; outline-offset: -2px; }
+    <ColorPalette colors={selectedTemplate?Object.values(selectedTemplate.colors):[]}><TextFormatting onOpenColors={()=>{setActiveTool("content");setDesignPanel("text-colors");setPanelCollapsed(false);}} onOpenFonts={()=>{setActiveTool("content");setDesignPanel("fonts");setPanelCollapsed(false);}} styles={textStyles} onChange={value=>{setTextStyles(value);markDirty();}}><form onClickCapture={event=>{const link=(event.target as Element).closest("a");if(link?.getAttribute("href")?.includes(`/vendor/business/${business.slug}/services/new`)){event.preventDefault();event.stopPropagation();setServiceBuilderUrl(link.getAttribute("href"));}}} action={previewOnly ? undefined : updateStorefrontCustomizationAction} onSubmit={previewOnly ? (event) => event.preventDefault() : undefined} data-testid="storefront-editor-shell" className={`${modernEditor ? "editor-review " : ""}relative left-1/2 w-[calc(100vw-24px)] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/80 bg-white shadow-[0_18px_50px_rgba(72,44,43,0.08)]`}>
+      {modernEditor && <><InlineButtonEditor onChange={text=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,buttonText:text});markDirty();}}}/><BackgroundSelectionToolbar onOpen={section=>{selectSection(section);requestAnimationFrame(()=>document.querySelector("[data-background-settings]")?.scrollIntoView({block:"nearest"}));}}/></>}{modernEditor ? <style>{`
         .editor-review { background: #f8f8f5; border-radius: 20px; }
-        .editor-review .editor-workspace { grid-template-columns: minmax(0,1fr) 320px; }
-        .editor-review .editor-inspector { max-height: calc(100vh - 190px); overflow-y: auto; }
+        .editor-review .editor-workspace { grid-template-columns: minmax(0,1fr) 380px; }
+        .editor-review .editor-workspace:has(.editor-inspector[data-panel-open="false"]) { grid-template-columns:minmax(0,1fr) 88px; }
+        .editor-review .editor-inspector { height:calc(100vh - 190px); max-height:calc(100vh - 190px); position:sticky;top:90px; display:flex;flex-direction:row-reverse;overflow:visible;align-self:start; }
+        .editor-tool-rail { width:88px;flex:0 0 88px;overflow-y:auto;padding:8px 6px;background:#faf8f7;border-left:1px solid #eadbd8; }
+        .editor-tool-button { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:100%;min-height:68px;border-radius:12px;font-size:11px;line-height:14px;color:#675f59;margin-bottom:3px;padding:7px 2px; }
+        .editor-tool-icon {display:grid;place-items:center;width:40px;height:40px;border-radius:14px;border:1px solid transparent;transition:background .15s,color .15s,box-shadow .15s;}
+        .editor-tool-button:hover .editor-tool-icon {background:#ececee;border-color:#e3e3e7;}
+        .editor-tool-button[aria-pressed=true] {color:#403a37;font-weight:600;}
+        .editor-tool-button[aria-pressed=true] .editor-tool-icon {background:white;color:#f5b9b9;border-color:#eee8e7;box-shadow:0 3px 8px #503d481a;}
+        .editor-review [data-add-services] {width:32px;height:32px;min-width:32px;padding:0;border-radius:9px;color:#b9757d;background:#f7eded;}
+        .editor-review [data-add-services]:hover {background:#ececee;}
+        .editor-panel-content {min-width:0;flex:1;display:flex;flex-direction:column;background:white;}
+        .editor-panel-content[hidden] {display:none}
+        .editor-panel-heading {display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #eee7e3;font-size:14px;}
+        .editor-panel-heading button {width:30px;height:30px;border-radius:9px;font-size:25px;color:#675f59;}
+        .editor-panel-heading button:hover {background:#f5e7e6}
+        .editor-panel-scroll {overflow-y:auto;min-height:0;padding:14px;flex:1; }
         .editor-review .editor-canvas { background: #eeefea; padding: 28px; }
         .editor-review .editor-inspector details > summary { cursor:pointer;font-size:14px;font-weight:600;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#675f59; }
         .editor-review .editor-inspector details > summary::-webkit-details-marker{display:none}
@@ -549,7 +586,7 @@ export function StorefrontCustomizer({
         .editor-review .editor-inspector details[open] > summary::after{content:'−'}
         .editor-review .editor-inspector details{border-color:#eadbd7;border-radius:18px;background:#fffaf8;padding:16px}
         .editor-review .editor-inspector details > summary { }
-        @media(max-width:1023px) { .editor-review .editor-workspace { display:flex; flex-direction:column; } .editor-review .editor-inspector { max-height:none; } .editor-review .editor-canvas { padding:12px; } }
+        @media(max-width:1023px) { .editor-review .editor-workspace { display:flex; flex-direction:column; } .editor-review .editor-inspector { height:65vh;max-height:65vh;position:relative;top:0; } .editor-review .editor-canvas { padding:12px; } }
       `}</style> : null}
       {modernEditor && templateLibraryOpen ? <StorefrontTemplateLibrary vendorName={form.name} initialScroll={templateScroll} onScroll={setTemplateScroll} selected={selectedTemplate?.id ?? null} image={form.logoUrl || form.coverPhoto} photos={form.photoUrls.filter(Boolean)} onClose={()=>setTemplateLibraryOpen(false)} onApply={(template)=>{
         setSelectedTemplate(template);setHeroCustomFont(null);setTemplateFontRevision(value=>value+1);
@@ -801,7 +838,7 @@ export function StorefrontCustomizer({
           </div>
         </aside>}
 
-        <main onClickCapture={event=>{if((event.target as HTMLElement).closest("[data-storefront-button]")){event.preventDefault();event.stopPropagation();setActiveTool("content");setDesignPanel("buttons");setPanelCollapsed(false);requestAnimationFrame(()=>document.querySelector('[data-button-settings]')?.scrollIntoView({block:"nearest"}));}}} className="editor-canvas min-w-0 bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
+        <main onClickCapture={event=>{if((event.target as HTMLElement).closest("[data-profile-frame]") && !(event.target as HTMLElement).closest("[data-inline-photo]")){event.stopPropagation();selectSection("profile-frame");return;}if((event.target as HTMLElement).closest("[data-service-card]")){event.stopPropagation();setActiveTool("content");setDesignPanel("backgrounds");setActiveSection("services-card");return;}if((event.target as HTMLElement).closest("[data-add-services]")){event.preventDefault();event.stopPropagation();setToolPopup("all-services");return;}if((event.target as HTMLElement).closest("[data-storefront-button]")){event.preventDefault();event.stopPropagation();setActiveTool("content");setDesignPanel("buttons");setActiveSection((event.target as HTMLElement).closest("[data-section-frame]")?.getAttribute("data-section-frame")??"hero");setPanelCollapsed(false);requestAnimationFrame(()=>document.querySelector('[data-button-settings]')?.scrollIntoView({block:"nearest"}));}}} className="editor-canvas min-w-0 bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
           <TextFormattingToolbar/>
           <div className="mb-3 flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>{previewOnly ? "Preview only · changes reset on refresh" : "Select a section to edit"}</span>
@@ -834,18 +871,11 @@ export function StorefrontCustomizer({
           </div>
         </main>
 
-        <aside className="editor-inspector min-w-0 border-t border-[#eadbd8] bg-white lg:border-l lg:border-t-0">
-          {panelCollapsed ? (
-            <button
-              type="button"
-              onClick={() => setPanelCollapsed(false)}
-              className="grid h-full min-h-24 w-full place-items-center text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground hover:bg-[#fbf7f5]"
-            >
-              Edit
-            </button>
-          ) : (
-            <div className="p-4">
-{activeTool === "content" && <><div className="mb-4 grid grid-cols-3 gap-2" aria-label="Design tools">{[{id:'templates',label:'Templates',Icon:LayoutTemplate},{id:'brand',label:'Brand',Icon:BadgeCheck},{id:'effects',label:'3D Effects',Icon:Box},{id:'fonts',label:'Fonts',Icon:Type},{id:'backgrounds',label:'Backgrounds',Icon:Paintbrush},{id:'sections',label:'Rearrange',Icon:ArrowUpDown},{id:'all-services',label:'Services',Icon:BriefcaseBusiness},{id:'portfolio',label:'Gallery',Icon:Images},{id:'socials',label:'Social media',Icon:Share2},{id:'policies',label:'Policies',Icon:FileText},{id:'faq',label:'FAQ',Icon:CircleHelp}].map(({id,label,Icon})=><button key={id} type="button" aria-pressed={designPanel===id} onClick={()=>{if(["all-services","portfolio","socials","faq","policies"].includes(id)){setToolPopup(id);return;}if(id==="templates"){setTemplateLibraryOpen(true);return;}if(id==="effects"){setStudioInvitation(false);setStudioOpen(true);return;}if(id==="sections"){setOrganizerOpen(true);return;}setDesignPanel(designPanel===id?null:id);}} className="grid grid-rows-[24px_32px] justify-items-center items-center gap-2 rounded-2xl border border-[#eadbd7] bg-white p-3 text-xs text-[#675f59] hover:bg-stone-100 aria-pressed:bg-[#f5e7e6] aria-pressed:border-[#d9a6a3]"><Icon size={22}/><span className="text-center leading-4">{label}</span></button>)}</div><details open hidden={designPanel!=="sections"} className="mb-4 rounded-2xl border p-4"><summary>Rearrange sections</summary><div className="mt-4">              <p className="mb-3 text-xs font-normal text-muted-foreground">Drag to reorder. Select a section to edit it.</p>
+        <aside data-panel-open={!panelCollapsed && Boolean(designPanel)} className="editor-inspector min-w-0 border-t border-[#eadbd8] bg-white lg:border-l lg:border-t-0">
+<div className="editor-tool-rail" aria-label="Design tools">{[{id:'brand',label:'Brand',Icon:BadgeCheck},{id:'sections',label:'Rearrange',Icon:ArrowUpDown},{id:'templates',label:'Templates',Icon:LayoutTemplate},{id:'fonts',label:'Text',Icon:Type},{id:'backgrounds',label:'Backgrounds',Icon:Paintbrush},{id:'buttons',label:'Buttons',Icon:SewingButtonIcon},{id:'effects',label:'3D Effects',Icon:Box},{id:'portfolio',label:'Gallery',Icon:Images},{id:'all-services',label:'Services',Icon:BriefcaseBusiness},{id:'policies',label:'Policies',Icon:FileText},{id:'faq',label:'FAQ',Icon:CircleHelp},{id:'socials',label:'Social media',Icon:Share2},{id:'patterns',label:'Patterns',Icon:Paintbrush}].map(({id,label,Icon})=><button key={id} type="button" aria-pressed={!panelCollapsed && designPanel===id} onClick={()=>{setActiveTool("content");if(["all-services","portfolio","socials","faq","policies"].includes(id)){setToolPopup(id);return;}if(id==="templates"){setTemplateLibraryOpen(true);return;}if(id==="effects"){setStudioInvitation(false);setStudioOpen(true);return;}if(id==="sections"){setOrganizerOpen(true);return;}setPanelCollapsed(!panelCollapsed&&designPanel===id);setDesignPanel(id);}} className="editor-tool-button"><span className="editor-tool-icon"><Icon size={22}/></span><span className="text-center leading-4">{label}</span></button>)}</div><div className="editor-panel-content" hidden={panelCollapsed || !designPanel}>
+              <div className="editor-panel-heading"><strong>{({fonts:"Text",backgrounds:"Color",'text-colors':"Text color",buttons:"Buttons",brand:"Brand",patterns:"Patterns"} as Record<string,string>)[designPanel??""]??"Design"}</strong><button type="button" aria-label="Close settings panel" onClick={()=>setPanelCollapsed(true)}>›</button></div>
+              <div className="editor-panel-scroll" key={designPanel}>
+{activeTool === "content" && <><details open hidden={designPanel!=="sections"} className="mb-4 rounded-2xl border p-4"><summary>Rearrange sections</summary><div className="mt-4">              <p className="mb-3 text-xs font-normal text-muted-foreground">Drag to reorder. Select a section to edit it.</p>
               <nav aria-label="Reorder storefront sections" className="mb-5 flex flex-wrap gap-2">
                 {visibleSections.filter(id => id !== "effects" || heroDepth !== "flat").map(id => <span key={id} className="inline-flex items-center gap-1"><button
                   type="button" draggable={false} data-section-move={id} style={{touchAction:"none"}} aria-label={`Move or edit ${sectionLabel(id)}`}
@@ -881,10 +911,10 @@ export function StorefrontCustomizer({
               </fieldset></details> : null}
 
 </>}
-              {activeTool==="content" && designPanel==="buttons" && selectedTemplate && <section data-button-settings className="rounded-2xl border bg-[#fffaf8] p-4"><h3 className="mb-4 font-semibold">Buttons</h3><div role="group" aria-label="Button shape" className="mb-4 flex gap-2">{(["pill","block"] as const).map(shape=><button key={shape} type="button" aria-pressed={selectedTemplate.button===shape} onClick={()=>{setSelectedTemplate({...selectedTemplate,button:shape});markDirty();}} className="border px-4 py-2 text-sm aria-pressed:bg-[#f5e7e6]" style={{borderRadius:shape==="pill"?999:0}}>{shape==="pill"?"Round":"Square"}</button>)}</div><label className="grid gap-2 text-sm">Button text<input className="rounded-xl border px-3 py-2" maxLength={60} value={selectedTemplate.buttonText??"Request a quote"} onChange={e=>{setSelectedTemplate({...selectedTemplate,buttonText:e.target.value});markDirty();}}/></label><div className="mt-4 grid grid-cols-2 gap-3"><ColorPicker label="Button color" value={selectedTemplate.buttonColor??selectedTemplate.colors.accent} onChange={value=>{setSelectedTemplate({...selectedTemplate,buttonColor:value});markDirty();}}/><ColorPicker label="Button text color" value={selectedTemplate.colors.accentInk} onChange={value=>{setSelectedTemplate({...selectedTemplate,buttonColor:selectedTemplate.buttonColor??selectedTemplate.colors.accent,colors:{...selectedTemplate.colors,accentInk:value}});markDirty();}}/></div></section>}
+              {activeTool==="content" && designPanel==="buttons" && selectedTemplate && <ButtonControls template={selectedTemplate} section={activeSection} onChange={template=>{setSelectedTemplate(template);markDirty();}}/>}
               {activeTool==="content" && designPanel==="brand" && <section className="mb-4 rounded-2xl border bg-[#fffaf8] p-4"><h3 className="mb-4 font-semibold">Brand</h3><ImageUploadField name="brandLogo" label="Brand logo" value={form.logoUrl} valueCrop={form.logoCrop} onChangePreview={value=>update("logoUrl",value)} onCropChange={crop=>update("logoCrop",crop)} uploadEndpoint={`${mediaUploadEndpoint}?target=logo`}/><p className="mb-3 mt-5 text-sm font-semibold">Your template palette</p><div className="grid grid-cols-2 gap-3">{selectedTemplate && Object.entries(selectedTemplate.colors).map(([key,color])=><ColorPicker key={key} label={({background:'Background',surface:'Cards',ink:'Text',muted:'Small text',accent:'Accent',accentInk:'Button text',secondary:'Details'} as Record<string,string>)[key]} value={color} onChange={value=>{setSelectedTemplate({...selectedTemplate,colors:{...selectedTemplate.colors,[key]:value}});markDirty();}}/>)}</div></section>}
-              {modernEditor && selectedTemplate && designPanel==="backgrounds" ? <SectionBackgroundControls template={selectedTemplate} section={activeSection} label={sectionLabel(activeSection)} onChange={(template)=>{setSelectedTemplate(template);markDirty();}} /> : null}
-              {modernEditor ? <div hidden={activeTool !== "content" || designPanel!=="fonts"}><SelectedTextFonts/><HeroTypographyControls bodyFamily={form.bodyFamily} onBody={value=>update("bodyFamily",value)} allowUpload={previewOnly} subheadingFamily={form.subheadingFamily} onSubheading={value=>update("subheadingFamily",value)} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
+              {modernEditor && selectedTemplate && (designPanel==="backgrounds" || designPanel==="patterns" || designPanel==="text-colors") ? <SectionBackgroundControls textMode={designPanel==="text-colors"} logo={form.logoUrl} photos={form.aboutPhotos} mode={designPanel==="patterns"?"patterns":"colors"} template={selectedTemplate} section={activeSection} label={activeSection==="services-card"?"Service card":sectionLabel(activeSection)} onChange={(template)=>{setSelectedTemplate(template);markDirty();}} /> : null}
+              {modernEditor ? <div hidden={activeTool !== "content" || designPanel!=="fonts"}><details className="mb-3 rounded-xl border p-3"><summary className="cursor-pointer text-sm">Selected text font</summary><SelectedTextFonts/></details><HeroTypographyControls bodyFamily={form.bodyFamily} onBody={value=>update("bodyFamily",value)} allowUpload={false} subheadingFamily={form.subheadingFamily} onSubheading={value=>update("subheadingFamily",value)} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
               {activeTool === "design" ? (
                 <DesignControls form={form} update={update} />
               ) : (
@@ -912,8 +942,8 @@ export function StorefrontCustomizer({
                   />
                 </PanelStack></EditorToolPopup>
               )}
+              </div>
             </div>
-          )}
         </aside>
       </div>
       )}
@@ -1620,7 +1650,7 @@ function StorefrontPreview({
             <span className="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>Follow</span>
           </div>
         </div>
-        {heroDepth ? <DimensionalStorefrontHero onCoverCropChange={value=>update("coverPhotoCrop",value)} coverEditor={<ImageUploadField editMenu name="inlineCover" label="Upload cover image" value={form.coverPhoto} valueCrop={form.coverPhotoCrop} onChangePreview={value=>update("coverPhoto",value)} onCropChange={crop=>update("coverPhotoCrop",crop)} uploadEndpoint={coverUploadEndpoint} />} effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth="flat" mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /> : <PreviewHeroTemplate
+        {heroDepth ? <DimensionalStorefrontHero onCoverRemove={()=>update("coverPhoto","")} onCoverCropChange={value=>update("coverPhotoCrop",value)} coverEditor={<ImageUploadField editMenu name="inlineCover" label="Upload cover image" value={form.coverPhoto} valueCrop={form.coverPhotoCrop} onChangePreview={value=>update("coverPhoto",value)} onCropChange={crop=>update("coverPhotoCrop",crop)} uploadEndpoint={coverUploadEndpoint} />} effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth="flat" mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /> : <PreviewHeroTemplate
           active={activeSection === "hero"}
           activeServices={activeServices}
           business={business}
@@ -1645,8 +1675,8 @@ function StorefrontPreview({
           return true;
         }).map((section) => {
           if (section === "hero") return <div key={section}>{profile}</div>;
-          if (section === "effects") return <div key={section} data-testid="preview-section-effects" onClick={()=>setActiveSection(section)}><DimensionalStorefrontHero effectOnly effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || photos[0] || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth={heroDepth ?? "flat"} mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /></div>;
-          if (section === "parties") return <PreviewSection key={section} active={activeSection===section} testId="preview-section-parties" theme={theme} title="Past parties" onClick={()=>setActiveSection(section)}><div className="mb-4"><p className="text-sm font-semibold">Average party rating</p><p className="mt-2">{business.reviewCount ? `★ ${business.averageRating.toFixed(1)} / 5 · ${business.reviewCount} confirmed party ratings` : "No confirmed party ratings"}</p></div><p>Parties featuring your business appear here when hosts tag you.</p></PreviewSection>;
+          if (section === "effects") return <div key={section} data-testid="preview-section-effects" onClick={()=>setActiveSection(section)}><DimensionalStorefrontHero effectOnly effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth={heroDepth ?? "flat"} mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /></div>;
+          if (section === "parties") return <PreviewSection key={section} active={activeSection===section} testId="preview-section-parties" theme={theme} title={<ServiceSubheading text="Past parties" label="Past parties heading"/>} onClick={()=>setActiveSection(section)}><div className="mb-4"><p className="text-sm font-semibold"><ServiceSubheading text="Average party rating" label="Party rating subheading"/></p><p className="mt-2">{business.reviewCount ? `★ ${business.averageRating.toFixed(1)} / 5 · ${business.reviewCount} confirmed party ratings` : "No confirmed party ratings"}</p></div><p>Parties featuring your business appear here when hosts tag you.</p></PreviewSection>;
           if (section === "socials") return <PreviewSection key={section} active={activeSection===section} testId="preview-section-socials" theme={theme} title="Socials" onClick={()=>setActiveSection(section)}><div className="flex flex-wrap gap-5">{form.showInstagram && form.instagramUrl && <a href={form.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a>}{form.showTikTok && form.tiktokUrl && <a href={form.tiktokUrl} target="_blank" rel="noreferrer">TikTok ↗</a>}{form.website && <a href={form.website} target="_blank" rel="noreferrer">Website ↗</a>}</div>{!form.instagramUrl && !form.tiktokUrl && !form.website && <p>Add your links in Social media.</p>}</PreviewSection>;
 
           if (section === "featured-services") return (
@@ -1664,8 +1694,8 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "all-services") return (
-            <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title={<InlineStorefrontText label="Services heading" value={sectionLabel(section)} placeholder="Services" onChange={value=>update("sectionLabels",{...form.sectionLabels,[section]:value})}/>} onClick={() => setActiveSection(section)}>
-              <div className="mb-5 flex items-center justify-between gap-3"><p className="text-sm">{activeServices.length ? "Choose a service for your event." : "Add your services and pricing to help customers book."}</p><Button data-storefront-button style={theme.heroCtaStyle} type="button" onClick={event=>{event.stopPropagation();setActiveSection("final-quote");document.querySelector('[data-testid="preview-section-final-quote"]')?.scrollIntoView({behavior:"smooth",block:"center"});}}>{template?.buttonText||"Book now"}</Button></div>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-all-services" theme={theme} title={<span className="inline-flex items-center gap-2"><button type="button" data-add-services aria-label="Add services" className="order-2 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-stone-100 text-stone-600"><Plus size={16}/></button><InlineStorefrontText label="Services heading" value={sectionLabel(section)} placeholder="Services" onChange={value=>update("sectionLabels",{...form.sectionLabels,[section]:value})}/></span>} onClick={() => setActiveSection(section)}>
+              <div className="mb-5 flex items-center justify-between gap-3"><div className="text-sm"><ServiceSubheading text={activeServices.length ? "Choose a service for your event." : "Add your services and pricing to help customers book."}/></div><Button data-storefront-button style={theme.heroCtaStyle} type="button" onClick={event=>{event.stopPropagation();setActiveSection("final-quote");document.querySelector('[data-testid="preview-section-final-quote"]')?.scrollIntoView({behavior:"smooth",block:"center"});}}>{template?.buttonText||"Book now"}</Button></div>
               <ServiceGrid
                 businessSlug={business.slug}
                 editable={activeSection === section}
@@ -1774,7 +1804,7 @@ function StorefrontPreview({
             </PreviewSection>
           );
           if (section === "final-quote") return (
-            <PreviewSection key={section} active={activeSection === section} testId="preview-section-final-quote" theme={theme} title="Book your event" onClick={() => setActiveSection(section)}>
+            <PreviewSection key={section} active={activeSection === section} testId="preview-section-final-quote" theme={theme} title={<InlineStorefrontText label="Booking heading" placeholder="Type heading here" value={form.sectionLabels["final-quote"]||"Book your event"} onChange={value=>update("sectionLabels",{...form.sectionLabels,["final-quote"]:value})}/>} onClick={() => setActiveSection(section)}>
               {activeSection === section ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   <InlineTextarea ariaLabel="Availability notes" onChange={(value) => update("availabilityNotes", value)} placeholder="Availability notes" value={form.availabilityNotes} />
@@ -2123,17 +2153,9 @@ function ServiceGrid({
 }) {
   if (!services.length) {
     return (
-      <div className={`grid gap-3 rounded-[1rem] border border-dashed p-4 ${theme.mutedClass}`} style={theme.previewCardStyle}>
+      <div className={`grid gap-3 rounded-[1rem] border border-dashed p-4 ${theme.mutedClass}`} data-service-card style={{...theme.previewCardStyle,...sectionDesignStyle(theme.sectionDesigns?.["services-card"])}}>
         <p className="text-sm">No services selected yet.</p>
-        <Link
-          href={`/vendor/business/${businessSlug}/services/new`}
-          className="relative z-20 inline-flex w-fit items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold"
-          style={theme.heroCtaStyle}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <Plus className="h-4 w-4" />
-          Add service/package
-        </Link>
+
       </div>
     );
   }
@@ -2270,7 +2292,7 @@ function instagramHandleFromUrl(href: string) {
 function PreviewSection({ active, children, onClick, testId, theme, title }: { active: boolean; children: ReactNode; onClick: () => void; testId?: string; theme: PreviewTheme; title: ReactNode }) {
   const design=theme.sectionDesigns?.[testId?.replace("preview-section-", "") ?? ""];
   return (
-    <section data-custom-background={Boolean(design)} data-testid={testId} onClickCapture={event=>{if(!(event.target as HTMLElement).closest("button, a, input, textarea, select"))onClick();}} className={previewButtonClass(active, `mb-5 block w-full cursor-text rounded-[1.5rem] p-6 text-left transition ${theme.cardClass}`)} style={{...(active ? theme.activeSectionStyle : theme.previewCardStyle),...sectionDesignStyle(design)}}>
+    <section data-custom-background={Boolean(design)} data-testid={testId} onClickCapture={event=>{if(!(event.target as HTMLElement).closest("button, a, input, textarea, select"))onClick();}} className={previewButtonClass(active, `mb-5 block w-full cursor-text rounded-[1.5rem] p-6 text-left transition ${theme.cardClass}`)} style={{...theme.previewCardStyle,...sectionDesignStyle(design)}}>
       {title ? <h3 className="text-2xl font-semibold tracking-tight" style={{...theme.headingStyle,...(design ? {color:design.ink} : {}),...(theme.subheadingFamily ? {fontFamily:theme.subheadingFamily,fontStyle:theme.subheadingStyle} : {})}}>{title}</h3> : null}
       <div className={`${title ? "mt-3" : ""} text-sm leading-6 ${theme.copyClass}`}>{children}</div>
     </section>
@@ -2305,7 +2327,7 @@ function PreviewRadiusMap({ city, coverageAreas, radiusMiles, theme }: { city: s
 }
 
 function previewButtonClass(active: boolean, base: string) {
-  return `${base} ${active ? "ring-2 ring-[#d86b93] ring-offset-2" : "ring-1 ring-transparent"}`;
+  return base;
 }
 
 type PreviewTheme = ReturnType<typeof getPreviewTheme>;
@@ -2338,7 +2360,7 @@ function getPreviewTheme(form: FormState, template?: StorefrontTemplate | null) 
     copyClass: template ? "text-[color:var(--template-muted)]" : isDark ? "text-white/86" : "text-[#5f5550]",
     headerClass: isDark ? "border-white/15 bg-[#171315] text-white/70" : "border-[#eadbd7] bg-[#fffaf8] text-[#7a625b]",
     headingStyle: { fontFamily: fontFamilies.heading } as CSSProperties,
-    heroCtaStyle: { background: ctaBackground, color: ctaText, borderRadius: template?.button === "pill" ? 999 : 0 } as CSSProperties,
+    heroCtaStyle: { background: `var(--section-button-color, ${ctaBackground})`, color: `var(--section-button-ink, ${ctaText})`, borderRadius: `var(--section-button-radius, ${template?.button === "pill" ? "999px" : "0px"})` } as CSSProperties,
     heroRadius: imageRadius,
     imageRadius,
     logoRadius,
@@ -2488,11 +2510,11 @@ export function AboutPhotoGrid({readOnly=false,uploadEndpoint,compact=false,imag
   <div style={photoGridStyle(compact ? "grid" : layout)}>
    {Array.from({length:readOnly ? Math.min(images.length,selected.count) : selected.count},(_,index)=><div key={index} className="relative min-w-0" style={{...photoTileStyle(compact ? "grid" : layout,index),width:"100%",alignSelf:"start"}}>
     <div onDragOver={event=>{event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect="copy";setDragging(index);}} onDragLeave={()=>setDragging(null)} onDrop={event=>{event.preventDefault();event.stopPropagation();setDragging(null);loadImage(event.dataTransfer.files[0],index);}} className={`relative block h-full w-full cursor-pointer overflow-hidden border border-current/15 bg-stone-100 focus-within:ring-2 focus-within:ring-current ${dragging===index?"ring-2 ring-current":""}`} style={{backgroundColor:"color-mix(in srgb, currentColor 5%, transparent)",...(layout==="scallop" && !compact ? scallopedPhotoStyle : {})}}>
-    {images[index] ? (!readOnly&&onCrop?<InlineCoverCrop src={images[index]} alt={`Gallery photo ${index+1}`} crop={crops[images[index]]??DEFAULT_IMAGE_CROP} onChange={crop=>onCrop(images[index],crop)} onReplace={()=>inputs.current[index]?.click()}/>:<CroppedImage src={images[index]} alt={`Gallery photo ${index+1}`} crop={crops[images[index]]??DEFAULT_IMAGE_CROP} className="h-full w-full object-cover"/>) : <span onClick={()=>inputs.current[index]?.click()} className="grid h-full place-content-center justify-items-center gap-2 text-center opacity-65"><Upload className="h-5 w-5"/><span className="text-[10px] sm:text-xs">Upload image</span><span className="hidden text-[10px] sm:block">or drag & drop</span></span>}
+    {images[index] ? (!readOnly&&onCrop?<InlineCoverCrop src={images[index]} alt={`Gallery photo ${index+1}`} crop={crops[images[index]]??DEFAULT_IMAGE_CROP} onChange={crop=>onCrop(images[index],crop)} onReplace={()=>inputs.current[index]?.click()} onRemove={()=>{requests.current[index]=(requests.current[index]??0)+1;onImage(index,"");}}/>:<CroppedImage src={images[index]} alt={`Gallery photo ${index+1}`} crop={crops[images[index]]??DEFAULT_IMAGE_CROP} className="h-full w-full object-cover"/>) : <span onClick={()=>inputs.current[index]?.click()} className="grid h-full place-content-center justify-items-center gap-2 text-center opacity-65"><Upload className="h-5 w-5"/><span className="text-[10px] sm:text-xs">Upload image</span><span className="hidden text-[10px] sm:block">or drag & drop</span></span>}
     <input ref={element=>{inputs.current[index]=element;}} disabled={readOnly} type="file" aria-label={`Upload About photo ${index+1}`} accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={event=>{loadImage(event.target.files?.[0],index);event.target.value="";}}/>
     </div>
 
-    {!readOnly && images[index] && <button type="button" className="absolute bottom-2 right-2 rounded-full bg-white px-2 py-1 text-[10px] text-stone-800 shadow" aria-label={`Remove photo ${index+1}`} onClick={()=>{requests.current[index]=(requests.current[index]??0)+1;onImage(index,"");}}>Remove</button>}
+
    </div>)}
   </div>
   {compact && <p className="mt-4 text-xs opacity-60">PNG, JPG or WebP · up to 8 MB. Switching layouts keeps your images.</p>}
@@ -2519,4 +2541,21 @@ function EditorToolPopup({open,title,onClose,children}:{open:boolean;title:strin
  useEffect(()=>{if(open)ref.current?.showModal();},[open]);
  if(!open)return <>{children}</>;
  return <dialog ref={ref} aria-label={title} onCancel={event=>{event.preventDefault();onClose();}} className="m-auto max-h-[88vh] w-[min(760px,94vw)] overflow-y-auto rounded-3xl border border-[#eadbd7] bg-[#fffaf8] p-6 shadow-xl backdrop:bg-black/25"><header className="sticky top-0 z-10 mb-5 flex items-center justify-between bg-[#fffaf8] py-2"><h2 className="text-xl font-semibold">{title}</h2><button type="button" onClick={onClose} className="rounded-full border px-4 py-2">Done</button></header>{children}</dialog>;
+}
+
+function ServiceSubheading({text,label="Services subheading"}:{text:string;label?:string}) {const selection=useTextSelection(label,text,()=>{});return <span {...selection} tabIndex={0}>{text}</span>;}
+
+function SewingButtonIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="7.5" strokeWidth="1" />
+      <g fill="currentColor" stroke="none">
+        <circle cx="9.5" cy="9.5" r="1.25" />
+        <circle cx="14.5" cy="9.5" r="1.25" />
+        <circle cx="9.5" cy="14.5" r="1.25" />
+        <circle cx="14.5" cy="14.5" r="1.25" />
+      </g>
+    </svg>
+  );
 }

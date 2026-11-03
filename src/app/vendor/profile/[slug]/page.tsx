@@ -188,7 +188,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
     theme.bodyStyle={fontFamily:template.bodyFamily ?? theme.bodyStyle.fontFamily,backgroundColor:template.colors.background,color:template.colors.ink};
     theme.headingStyle={fontFamily:template.headingFamily ?? theme.headingStyle.fontFamily,fontWeight:template.headingWeight};
     theme.cardStyle={...theme.cardStyle,backgroundColor:template.colors.surface,color:template.colors.ink};
-    theme.ctaStyle=theme.heroCtaStyle={background:template.buttonColor ?? template.colors.accent,color:template.colors.accentInk,borderColor:template.buttonColor ?? template.colors.accent,borderRadius:template.button==="pill"?999:0};
+    theme.ctaStyle=theme.heroCtaStyle={background:`var(--section-button-color, ${template.buttonColor ?? template.colors.accent})`,color:`var(--section-button-ink, ${template.colors.accentInk})`,borderColor:`var(--section-button-color, ${template.buttonColor ?? template.colors.accent})`,borderRadius:`var(--section-button-radius, ${template.button==="pill"?"999px":"0px"})`};
     theme.accentTextStyle={color:template.colors.accent};
     theme.copyClass=""; theme.shellClass=""; theme.cardClass="";
   }
