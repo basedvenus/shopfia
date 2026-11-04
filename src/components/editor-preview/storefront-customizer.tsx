@@ -1630,7 +1630,7 @@ function StorefrontPreview({
   const photos = form.photoUrls.filter(Boolean);
   const profile = (
       <section style={{order:form.sectionOrder.indexOf("hero")}} data-testid="preview-section-hero" onClickCapture={() => setActiveSection("hero")} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
-        <div className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground" style={theme.platformBarStyle}>ShopFia Storefront</div>
+        <div className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground" style={{...theme.platformBarStyle,color:"hsl(2 53% 79%)"}}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           <div className="shrink-0">
             {form.logoUrl ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import {savePreviewServicePresets} from "@/lib/service-presets";
 import { PricingButton } from "./service-pricing-fields";
 
 import { useEffect, useState } from "react";
@@ -34,7 +35,7 @@ export function PricingPreview() {
   const valid = servicePricingSchema.safeParse(service);
   function savePreview() {
     if (!valid.success) { setNotice("Complete the required service fields before saving."); return; }
-    try { localStorage.setItem(storageKey, JSON.stringify({ service, selection, promotions, history, quoteLines, quoteSelection })); setNotice("Saved in this browser only. Production is unchanged."); } catch { setNotice("Browser storage is unavailable. Keep this tab open to retain your preview."); }
+    try { savePreviewServicePresets(service); localStorage.setItem(storageKey, JSON.stringify({ service, selection, promotions, history, quoteLines, quoteSelection })); setNotice("Saved in this browser only. Production is unchanged."); } catch { setNotice("Browser storage is unavailable. Keep this tab open to retain your preview."); }
   }
   function changeService(next: ServicePricing) {
     if (next.base.type !== service.base.type) setSelection(initialSelection(next));
@@ -58,7 +59,7 @@ export function PricingPreview() {
     {notice && <div role="status" className="sp-notice">{notice}</div>}
     <div className="sp-layout"><div>
       <section className="sp-template-bar" aria-label="Choose a service template"><label className="sp-template-select"><span>Service template</span><select value={Object.keys(samples).find(key => samples[key].id === service.id) ?? "blank"} onChange={e => applyTemplate(e.target.value)}><option value="blank">Start from scratch</option><option value="catering">Catering</option><option value="cart">Beverage cart</option><option value="cookies">Cookies</option><option value="impersonator">Impersonators</option><option value="entertainment">Event entertainment</option><option value="play">Soft play</option></select><small>Switch templates to see the form update. Sample prices are editable.</small></label></section>
-      {step === 0 && <ServicePricingFields value={service} onChange={changeService} />}
+      {step === 0 && <ServicePricingFields previewOnly value={service} onChange={changeService} />}
       {step === 1 && valid.success && <ServiceRequestPricing service={valid.data} selection={selection} onChange={setSelection} promotions={promotions} now={now} onRequest={requestQuote} />}
       <div hidden={step !== 2}>{quoteLines.length > 0 ? <ServiceQuoteBuilder key={requestVersion} initialLines={quoteLines} selection={quoteSelection} promotions={promotions} history={history} onHistory={setHistory} /> : <section className="sp-card"><h2>Start with a customer request.</h2><p>Choose quantities and extras to bring the complete calculation into a quote.</p><PricingButton type="button" disabled={!valid.success} onClick={() => setStep(1)}>Try customer request</PricingButton></section>}</div>
       {step === 3 && <ServicePromotions service={service} promotions={promotions} onChange={setPromotions} />}

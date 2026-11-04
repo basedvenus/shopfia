@@ -306,7 +306,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
       ) : null}
       <header className="overflow-hidden rounded-[1rem] border bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]" style={{...theme.headerShellStyle,order:sectionPriority("hero")}}>
         <div className="flex items-center justify-between gap-3 border-b px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]" style={theme.platformBarStyle}>
-          <span>ShopFia Storefront</span>
+          <span style={{color:"hsl(2 53% 79%)"}}>ShopFia Storefront</span>
           <span className="hidden sm:inline">{isUnclaimed ? "Community-tagged · Unclaimed business" : "Verified identity, saved services, quotes, and bookings"}</span>
         </div>
         <div className="grid gap-3 p-3 md:grid-cols-[auto_1fr_auto] md:items-center md:p-4">

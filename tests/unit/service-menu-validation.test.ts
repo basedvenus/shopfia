@@ -54,6 +54,6 @@ describe("save feedback", () => {
   it("allows a completed service and identifies an empty menu", () => {
     expect(serviceFormIssues(withMenu, ["cookies"], true)).toEqual([]);
     const issues = serviceFormIssues({ ...withMenu, menus: [{ ...withMenu.menus![0], options: [] }] }, ["cookies"], true);
-    expect(issues[0]).toMatchObject({ label: "Menu choices", group: "menus.0" });
+    expect(issues[0]).toMatchObject({ label: "Choices", group: "menus.0" });
   });
 });
