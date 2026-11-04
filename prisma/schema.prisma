@@ -1247,4 +1247,5 @@ model ServicePreset {
   payload Json
   createdAt DateTime @default(now())
   @@index([businessId, createdAt])
+  @@unique([businessId, kind, name])
 }

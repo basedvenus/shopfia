@@ -9,3 +9,4 @@ CREATE TABLE "ServicePreset" (
  CONSTRAINT "ServicePreset_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "VendorProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE INDEX "ServicePreset_businessId_createdAt_idx" ON "ServicePreset"("businessId", "createdAt");
+CREATE UNIQUE INDEX "ServicePreset_businessId_kind_name_key" ON "ServicePreset"("businessId", "kind", "name");

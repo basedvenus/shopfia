@@ -17,3 +17,28 @@ describe("business service preset library",()=>{
  it("scopes deletion to the business without deleting service data",async()=>{await removeServicePreset("business","saved");expect(mocks.remove).toHaveBeenCalledWith({where:{id:"saved",businessId:"business"}});});
  it("applies an independent copy with a new ID each time",()=>{const a=copyServicePreset(option),b=copyServicePreset(option);expect(a.payload.id).not.toBe(option.payload.id);expect(a.payload.id).not.toBe(b.payload.id);if(a.kind==="options")a.payload.options[0]="Banana";expect(option.payload.options[0]).toBe("Chocolate");});
 });
+
+import {serviceTemplates} from "@/lib/service-templates";
+import {servicePresetEntries} from "@/lib/service-presets";
+import {saveServicePresetsForService} from "@/lib/save-service-presets";
+describe("automatic reuse when saving a service",()=>{
+ it("collects both titled sections and add-ons and merges repeated titles",()=>{
+  const service={...serviceTemplates.cookies,menus:[option.payload,{...option.payload,id:"another"}]};
+  const entries=servicePresetEntries(service);
+  expect(entries.filter(item=>item.kind==="options")).toHaveLength(1);
+  expect(entries.filter(item=>item.kind==="addon")).toHaveLength(service.extras.length);
+ });
+ it("upserts by the business and chosen title so repeated saves do not duplicate items",async()=>{
+  const upsert=vi.fn().mockResolvedValue({});
+  const tx={servicePreset:{upsert}} as unknown as Parameters<typeof saveServicePresetsForService>[0];
+  const service={...serviceTemplates.blank,menus:[option.payload],extras:[{id:"a",name:"Extra assistant",description:"Another staff member",type:"hour" as const,rate:10000,minimum:1,increment:1,separateHours:true,locationRequired:false}]};
+  await saveServicePresetsForService(tx,"business",service);
+  expect(upsert).toHaveBeenCalledTimes(2);
+  expect(upsert).toHaveBeenCalledWith(expect.objectContaining({where:{businessId_kind_name:{businessId:"business",kind:"options",name:"Flavors"}}}));
+  expect(upsert).toHaveBeenCalledWith(expect.objectContaining({where:{businessId_kind_name:{businessId:"business",kind:"addon",name:"Extra assistant"}},update:{payload:expect.objectContaining({rate:10000,type:"hour"})}}));
+ });
+ it("propagates storage failure so the surrounding service transaction can roll back",async()=>{
+  const tx={servicePreset:{upsert:vi.fn().mockRejectedValue(new Error("offline"))}} as unknown as Parameters<typeof saveServicePresetsForService>[0];
+  await expect(saveServicePresetsForService(tx,"business",{...serviceTemplates.blank,menus:[option.payload]})).rejects.toThrow("offline");
+ });
+});

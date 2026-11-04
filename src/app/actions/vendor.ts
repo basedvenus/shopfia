@@ -1,5 +1,6 @@
 "use server";
 
+import {saveServicePresetsForService} from "@/lib/save-service-presets";
 import { servicePricingSchema, promotionSchema, minimumPrice } from "@/lib/service-pricing";
 import { getVendorSocialProfile } from "@/lib/vendor-social";
 
@@ -1077,16 +1078,17 @@ export async function upsertOfferingAction(formData: FormData) {
     allowInstantBook: parsed.allowInstantBook
   };
 
+  const offeringId = await db.$transaction(async tx => {
   let offeringId = parsed.id;
 
   if (parsed.id) {
-    const existing = await db.offering.findUnique({ where: { id: parsed.id } });
+    const existing = await tx.offering.findUnique({ where: { id: parsed.id } });
     if (!existing || existing.vendorId !== vendor.id) throw new Error("Offering not found");
     const previousFaq = existing.faqJson && typeof existing.faqJson === "object" && !Array.isArray(existing.faqJson) ? existing.faqJson : {};
     if (!pricing && "pricing" in previousFaq) redirectWithOfferingError("Reload this service to edit its current pricing setup.");
-    await db.offering.update({ where: { id: parsed.id }, data: { ...payload, ...(pricing ? { durationMinutes: existing.durationMinutes, turnaroundDays: existing.turnaroundDays, inventoryCount: existing.inventoryCount, allowInstantBook: existing.allowInstantBook, tags: existing.tags } : {}), faqJson: { ...previousFaq, ...payload.faqJson, ...(pricing && "serviceComponents" in previousFaq ? { serviceComponents: previousFaq.serviceComponents } : {}) }, ...(pricing ? { variantsJson: existing.variantsJson ?? undefined, addonsJson: existing.addonsJson ?? undefined } : {}) } });
+    await tx.offering.update({ where: { id: parsed.id }, data: { ...payload, ...(pricing ? { durationMinutes: existing.durationMinutes, turnaroundDays: existing.turnaroundDays, inventoryCount: existing.inventoryCount, allowInstantBook: existing.allowInstantBook, tags: existing.tags } : {}), faqJson: { ...previousFaq, ...payload.faqJson, ...(pricing && "serviceComponents" in previousFaq ? { serviceComponents: previousFaq.serviceComponents } : {}) }, ...(pricing ? { variantsJson: existing.variantsJson ?? undefined, addonsJson: existing.addonsJson ?? undefined } : {}) } });
   } else {
-    const offering = await db.offering.create({ data: payload });
+    const offering = await tx.offering.create({ data: payload });
     offeringId = offering.id;
   }
 
@@ -1094,19 +1096,23 @@ export async function upsertOfferingAction(formData: FormData) {
     throw new Error("Offering could not be saved");
   }
 
-  await db.offeringCategory.deleteMany({ where: { offeringId } });
-  await db.offeringCategory.createMany({
+  await tx.offeringCategory.deleteMany({ where: { offeringId } });
+  await tx.offeringCategory.createMany({
     data: uniqueCategoryIds.map((categoryId) => ({ offeringId, categoryId })),
     skipDuplicates: true
   });
 
-  await db.offeringEventCategory.deleteMany({ where: { offeringId } });
+  await tx.offeringEventCategory.deleteMany({ where: { offeringId } });
   if (uniqueEventCategoryIds.length > 0) {
-    await db.offeringEventCategory.createMany({
+    await tx.offeringEventCategory.createMany({
       data: uniqueEventCategoryIds.map((categoryId) => ({ offeringId, categoryId })),
       skipDuplicates: true
     });
   }
+
+  if(pricing)await saveServicePresetsForService(tx,vendor.id,pricing);
+  return offeringId;
+  });
 
   const minPrice = await db.offering.findFirst({
     where: { vendorId: vendor.id, active: true, messageForPricing: false, basePriceCents: { not: null } },

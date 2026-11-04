@@ -1,5 +1,6 @@
 "use client";
 
+import {savePreviewServicePresets} from "@/lib/service-presets";
 import { PricingButton } from "./service-pricing-fields";
 
 import { useEffect, useState } from "react";
@@ -34,7 +35,7 @@ export function PricingPreview() {
   const valid = servicePricingSchema.safeParse(service);
   function savePreview() {
     if (!valid.success) { setNotice("Complete the required service fields before saving."); return; }
-    try { localStorage.setItem(storageKey, JSON.stringify({ service, selection, promotions, history, quoteLines, quoteSelection })); setNotice("Saved in this browser only. Production is unchanged."); } catch { setNotice("Browser storage is unavailable. Keep this tab open to retain your preview."); }
+    try { savePreviewServicePresets(service); localStorage.setItem(storageKey, JSON.stringify({ service, selection, promotions, history, quoteLines, quoteSelection })); setNotice("Saved in this browser only. Production is unchanged."); } catch { setNotice("Browser storage is unavailable. Keep this tab open to retain your preview."); }
   }
   function changeService(next: ServicePricing) {
     if (next.base.type !== service.base.type) setSelection(initialSelection(next));
