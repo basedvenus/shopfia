@@ -9,7 +9,8 @@ export function SectionBackgroundControls({template,section,label,onChange,mode=
  const sources=JSON.stringify([logo,...photos].filter(Boolean).slice(0,5));
  useEffect(()=>{let cancelled=false;Promise.all((JSON.parse(sources) as string[]).map(src=>new Promise<{src:string;colors:string[]}>(resolve=>{const image=new Image();image.crossOrigin='anonymous';image.onload=()=>{try{const canvas=document.createElement('canvas');canvas.width=24;canvas.height=24;const ctx=canvas.getContext('2d')!;ctx.drawImage(image,0,0,24,24);const pixels=ctx.getImageData(0,0,24,24).data;const counts=new Map<string,number>();for(let i=0;i<pixels.length;i+=4){if(pixels[i+3]<200)continue;const color='#'+[pixels[i],pixels[i+1],pixels[i+2]].map(v=>Math.min(255,Math.round(v/32)*32).toString(16).padStart(2,'0')).join('');counts.set(color,(counts.get(color)??0)+1);}resolve({src,colors:[...counts].sort((a,b)=>b[1]-a[1]).slice(0,6).map(([color])=>color)});}catch{resolve({src,colors:[]});}};image.onerror=()=>resolve({src,colors:[]});image.src=src;}))).then(values=>{if(!cancelled)setImageColors(values);});return()=>{cancelled=true;};},[sources]);
  const selectedText=useSelectedTextColor();
- const design=getSectionDesign(template,section);
+ const design=section === "page-background" ? template.backgroundDesign ?? {background:template.colors.background,ink:template.colors.ink,pattern:"solid" as const} : getSectionDesign(template,section);
+ useEffect(()=>setColorTarget("background"),[section]);
  const [colorTarget,setColorTarget]=useState<"background"|"ink">("background");
  const templatePalette=Array.from(new Set(Object.values((STOREFRONT_TEMPLATES.find(item=>item.id===template.id)??template).colors)));
  const palette=Array.from(new Set([...templatePalette,...Object.values(template.colors)]));
@@ -20,10 +21,10 @@ export function SectionBackgroundControls({template,section,label,onChange,mode=
  function swatch(color:string){return <button type="button" key={color} title={color} aria-label={`Set ${textMode?'text':colorTarget==='ink'?'text':'background'} color to ${color}`} aria-pressed={(textMode?selectedText.color:design[colorTarget])===color} onClick={()=>chooseColor(color)} style={{background:color}} className="aspect-square w-full rounded-full border border-stone-300 aria-pressed:ring-2 aria-pressed:ring-[#d96996] aria-pressed:ring-offset-2"/>;}
  function swatches(title:string,colors:string[]){return <div className="mt-5"><h4 className="mb-3 text-sm font-semibold">{title}</h4><div className="grid grid-cols-7 gap-2">{colors.map(swatch)}</div></div>;}
  function sourceRow(src:string,colors:string[],alt:string){return <div key={src} className="grid grid-cols-6 items-center gap-2"><img src={src} alt={alt} className="aspect-square w-full rounded-xl object-cover"/>{colors.slice(0,5).map(swatch)}</div>;}
- function update(patch:Partial<SectionDesign>){onChange({...template,sectionDesigns:{...template.sectionDesigns,[section]:{...design,...patch}}});}
+ function update(patch:Partial<SectionDesign>){if(section === "page-background"){onChange({...template,backgroundDesign:{...design,...patch}});return;}onChange({...template,sectionDesigns:{...template.sectionDesigns,[section]:{...design,...patch}}});}
  return <section data-background-settings className="mb-4 rounded-2xl border border-[#eadbd7] bg-[#fffaf8] p-4">
  <div className="mobile-quick-colors" aria-label="Quick colors">{palette.map(swatch)}</div>
- <h3 className="mb-4 text-sm font-semibold">{mode==='colors'?'Color':'Patterns'}</h3>
+ <h3 className="mb-4 text-sm font-semibold">{label} · {mode==='colors'?'Color':'Patterns'}</h3>
  {mode==='colors' && <>
  {textMode?<ColorPicker label="Text color" value={selectedText.color??"#000000"} onChange={chooseColor}/>:<div className="grid grid-cols-2 gap-4">{([['background','Background'],['ink','Text color']] as const).map(([key,title])=><div key={key} onPointerDownCapture={()=>setColorTarget(key)} onFocusCapture={()=>setColorTarget(key)}><ColorPicker label={title} value={design[key]??"#ffffff"} onChange={value=>update({[key]:value})}/></div>)}</div>}
  {swatches("Colors in this design",palette)}

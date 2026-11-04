@@ -15,6 +15,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { auth } from "@/auth";
+import { SessionKeepAlive } from "@/components/account/session-keep-alive";
 import { ProfileProvider } from "@/components/account/profile-provider";
 import { RequiredProfileGate } from "@/components/account/required-profile-gate";
 import { SiteNav } from "@/components/layout/site-nav";
@@ -181,6 +182,7 @@ export default async function RootLayout({
           Skip to main content
         </a>
         <ProfileProvider initialProfile={initialProfile}>
+          <SessionKeepAlive signedIn={Boolean(initialProfile?.id)} />
           <SiteNav />
           <main id="main-content" className="container py-6 pb-28 md:pb-6">
             <RequiredProfileGate />
