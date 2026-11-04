@@ -1,5 +1,7 @@
 "use client";
 
+import {useServicePresetLibrary,ServicePresetChoices} from "./service-preset-library";
+import {copyServicePreset} from "@/lib/service-presets";
 import {createContext,useContext,useId,type ReactNode} from "react";
 import type {ServiceFormIssue} from "@/lib/service-form-validation";
 const Issues=createContext<ServiceFormIssue[]>([]);
@@ -35,7 +37,8 @@ export function newBase(type: BasePricing["type"]): BasePricing {
   }
 }
 
-export function ServicePricingFields({ value, onChange, issues=[] }: { value: ServicePricing; onChange: (value: ServicePricing) => void; issues?:ServiceFormIssue[] }) {
+export function ServicePricingFields({ value, onChange, issues=[], businessId, previewOnly=false }: { businessId?:string; previewOnly?:boolean; value: ServicePricing; onChange: (value: ServicePricing) => void; issues?:ServiceFormIssue[] }) {
+  const library=useServicePresetLibrary(businessId,previewOnly);
   const b = value.base;
   const set = (patch: Partial<ServicePricing>) => onChange({ ...value, ...patch });
   const base = (patch: object) => set({ base: { ...b, ...patch } as BasePricing });
@@ -60,12 +63,14 @@ export function ServicePricingFields({ value, onChange, issues=[] }: { value: Se
       {b.type === "custom" && <><Money label="Minimum booking amount (optional)" value={b.minimum} optional onChange={minimum => base({ minimum })} /><Field label="Information needed to quote" hint="One question per line."><textarea value={b.questions.join("\n")} placeholder="What do you need to know about the request?" onChange={e => base({ questions: e.target.value.split("\n") })} /></Field></>}
       <p className="sp-note">{b.type === "hour" ? "Your hourly rate × minimum hours gives customers the lowest booking price." : b.type === "person" ? "Your price per person × minimum guest count gives customers the lowest booking price." : b.type === "item" ? "Your price per item × minimum quantity gives customers the lowest order price." : b.type === "package" ? "Each package price should cover everything in that package. Add-ons cost more." : b.type === "custom" ? "Customers send their details first. You then provide a quote for their request." : "This price covers everything listed in ‘What’s included.’ Add-ons cost more."}</p>
     </section>
-    <section className="sp-card"><h2>Option sections</h2><p className="sp-note">Organize included options into separate sections, such as Flavors, Drink menu, Colors, Styles, or Package choices. Name each section your way. Use add-ons below for options that cost extra.</p>
+    {library.notice&&<p role="status" className="sp-note">{library.notice}</p>}
+    <section className="sp-card"><h2>Option sections</h2><p className="sp-note">Organize included options into separate sections, such as Flavors, Drink menu, Colors, Styles, Packages, or Themes. Name each section your way. Use add-ons below for options that cost extra.</p>
+      <ServicePresetChoices kind="options" items={library.items} busy={library.busy} onRemove={library.remove} onApply={item=>{const copy=copyServicePreset(item);if(copy.kind==="options" && (value.menus??[]).length<12)set({menus:[...(value.menus??[]),copy.payload]});}}/>
       {(value.menus ?? []).map((menu, index) => {
         const update = (patch: Partial<typeof menu>) => set({ menus: value.menus!.map(item => item.id === menu.id ? { ...item, ...patch } : item) });
         return <details className="sp-disclosure" data-pricing-group={`menus.${index}`} key={menu.id} open><summary>{menu.name || `Option section ${index + 1}`}</summary><Group.Provider value={`menus.${index}`}><div className="sp-stack">
-          <Field label="Section title" hint="This heading appears above the choices customers see."><input value={menu.name} placeholder="e.g. Flavors, Drink menu, Colors or Styles" onChange={e => update({ name: e.target.value })} /></Field>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Suggested section titles">{["Flavors", "Drink menu", "Colors", "Styles", "Package choices"].map(title => <PricingButton key={title} type="button" onClick={() => update({ name: title })}>{title}</PricingButton>)}</div>
+          <Field label="Section title" hint="This heading appears above the choices customers see."><input value={menu.name} placeholder="e.g. Flavors, Themes, Colors or Styles" onChange={e => update({ name: e.target.value })} /></Field>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Suggested section titles">{["Flavors", "Drink menu", "Colors", "Styles", "Packages", "Themes"].map(title => <PricingButton key={title} type="button" onClick={() => update({ name: title })}>{title}</PricingButton>)}</div>
           <Field label="Short introduction (optional)" hint="Add a note about the whole section, such as ‘Choose two flavors per dozen.’ List the actual options below."><input value={menu.description ?? ""} placeholder="e.g. Choose two flavors per dozen" onChange={e => update({ description: e.target.value })} /></Field>
           <fieldset className="sp-field" data-field-label="Choices" data-invalid={issues.some(issue => issue.label === "Choices" && issue.group === `menus.${index}`)}><legend>Choices <span className="sp-required" aria-label="required">*</span></legend><p className="sp-note">Give each option its own row. For example: Chocolate, Vanilla, and Banana each get a separate row.</p>
             {(menu.options.length ? menu.options : [""]).map((option, optionIndex) => <div key={optionIndex} className="flex items-center gap-2"><input aria-label={`Choice ${optionIndex + 1} for ${menu.name || `section ${index + 1}`}`} value={option} maxLength={200} placeholder={`Choice ${optionIndex + 1}`} onChange={e => { const options = menu.options.length ? [...menu.options] : [""]; options[optionIndex] = e.target.value; update({ options }); }} /><PricingButton type="button" aria-label={`Remove choice ${optionIndex + 1} from ${menu.name || `section ${index + 1}`}`} onClick={() => update({ options: menu.options.filter((_, i) => i !== optionIndex) })}>Remove</PricingButton></div>)}
@@ -74,18 +79,20 @@ export function ServicePricingFields({ value, onChange, issues=[] }: { value: Se
           </fieldset>
           <Field label="Can customers select these options?" hint="Choose whether this section is for browsing or for selections in the service request."><select value={menu.selection} onChange={e => update({ selection: e.target.value as typeof menu.selection, required: e.target.value === "display" ? false : menu.required })}><option value="display">Show the list only — no selection</option><option value="single">Let customers choose one</option><option value="multiple">Let customers choose more than one</option></select></Field>
           {menu.selection !== "display" && <label className="sp-check"><input type="checkbox" checked={menu.required} onChange={e => update({ required: e.target.checked })} />Require a choice when requesting this service</label>}
+          <PricingButton type="button" disabled={library.busy} onClick={()=>library.save({kind:"options",payload:menu})}>Save section for reuse</PricingButton>
           <PricingButton type="button" className="sp-link" onClick={() => set({ menus: value.menus!.filter(item => item.id !== menu.id) })}>Remove section</PricingButton>
         </div></Group.Provider></details>;
       })}<PricingButton type="button" onClick={() => set({ menus: [...(value.menus ?? []), { id: crypto.randomUUID(), name: "", options: [""], selection: "display", required: false }] })}>+ Add option section</PricingButton>
     </section>
     <section className="sp-card sp-addons"><h2>Add-ons</h2><p className="sp-note">Customers choose these. Delivery and other location-dependent charges should be clearly named.</p>
+      <ServicePresetChoices kind="addon" items={library.items} busy={library.busy} onRemove={library.remove} onApply={item=>{const copy=copyServicePreset(item);if(copy.kind==="addon" && value.extras.length<40)set({extras:[...value.extras,copy.payload]});}}/>
       {value.extras.map((extra, index) => {
         const update = (patch: object) => set({ extras: value.extras.map(e => e.id === extra.id ? { ...e, ...patch } : e) });
         return <details className="sp-disclosure" data-pricing-group={`extras.${index}`} key={extra.id} open={extra.id.startsWith("draft-")}><summary>{extra.name || `Add-on ${index + 1}`}<small>{extraTypes[extra.type]}</small></summary><Group.Provider value={`extras.${index}`}><div className="sp-stack"><div className="sp-fields"><Field label="Add-on name"><input value={extra.name} placeholder="Type add-on name here" onChange={e => update({ name: e.target.value })} /></Field><Field label="Add-on description"><input value={extra.description} placeholder="Describe this add-on" onChange={e => update({ description: e.target.value })} /></Field></div><div className="sp-fields"><Field label="Add-on pricing type"><select value={extra.type} onChange={e => update({ type: e.target.value })}>{Object.entries(extraTypes).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></Field>{extra.type !== "quoted" && <Money label="Add-on price" value={extra.rate} onChange={rate => update({ rate })} />}</div>
           {extra.type === "hour" && <label className="sp-check"><input type="checkbox" checked={extra.separateHours} onChange={e => update({ separateHours: e.target.checked })} />Customer selects separate hours</label>}
           {(extra.type === "person" || (extra.type === "hour" && !extra.separateHours)) && <p className="sp-note">Uses the request’s {extra.type === "person" ? "guest count" : "hours"}. Customers only enter it once.</p>}
           {!["flat", "quoted"].includes(extra.type) && <details className="sp-disclosure"><summary>Quantity limits</summary><div className="sp-fields"><NumberField label="Add-on minimum" value={extra.minimum} step={extra.type === "hour" ? 0.5 : 1} min={extra.type === "hour" ? 0.5 : 1} onChange={minimum => update({ minimum })} /><NumberField label="Add-on maximum (optional)" value={extra.maximum} onChange={maximum => update({ maximum })} /><NumberField label="Add-on quantity increment" value={extra.increment} step={extra.type === "hour" ? 0.5 : 1} min={extra.type === "hour" ? 0.5 : 1} onChange={increment => update({ increment })} /></div></details>}
-          <label className="sp-check"><input type="checkbox" checked={extra.locationRequired} onChange={e => update({ locationRequired: e.target.checked })} />Requires event location</label><PricingButton type="button" className="sp-link" onClick={() => set({ extras: value.extras.filter(e => e.id !== extra.id) })}>Remove add-on</PricingButton>
+          <label className="sp-check"><input type="checkbox" checked={extra.locationRequired} onChange={e => update({ locationRequired: e.target.checked })} />Requires event location</label><PricingButton type="button" disabled={library.busy} onClick={()=>library.save({kind:"addon",payload:extra})}>Save add-on for reuse</PricingButton><PricingButton type="button" className="sp-link" onClick={() => set({ extras: value.extras.filter(e => e.id !== extra.id) })}>Remove add-on</PricingButton>
         </div></Group.Provider></details>;
       })}<PricingButton type="button" onClick={() => set({ extras: [...value.extras, { id: `draft-${crypto.randomUUID()}`, name: "", description: "", type: "flat", rate: 0, minimum: 1, increment: 1, separateHours: false, locationRequired: false }] })}>+ Add add-on</PricingButton>
     </section>

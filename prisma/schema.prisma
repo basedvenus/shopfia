@@ -338,6 +338,7 @@ model Shop {
 }
 
 model VendorProfile {
+  servicePresets ServicePreset[]
   id                        String                @id @default(cuid())
   userId                    String?               @unique
   slug                      String                @unique
@@ -1235,4 +1236,15 @@ model VendorCommunitySubmission {
   user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([vendorId])
   @@index([userId])
+}
+
+model ServicePreset {
+  id String @id @default(cuid())
+  businessId String
+  business VendorProfile @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  kind String
+  name String
+  payload Json
+  createdAt DateTime @default(now())
+  @@index([businessId, createdAt])
 }
