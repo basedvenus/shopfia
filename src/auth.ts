@@ -1,4 +1,7 @@
 import NextAuth from "next-auth";
+import {cookies} from "next/headers";
+import {LANGUAGE_COOKIE,normalizeLanguage} from "@/lib/language";
+import {persistUserLanguage} from "@/lib/language-preference";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Nodemailer from "next-auth/providers/nodemailer";
@@ -157,6 +160,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   events: {
     async createUser({ user }) {
+      try {const language=normalizeLanguage((await cookies()).get(LANGUAGE_COOKIE)?.value);if(user.id && language==="es")await persistUserLanguage(user.id,language);}catch(error){console.error("ShopFia initial language save failed",error);}
       if (user.email) {
         await sendWelcomeEmail(user.email).catch((error) => {
           console.error("ShopFia welcome email failed", error);

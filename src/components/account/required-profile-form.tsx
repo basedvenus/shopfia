@@ -1,5 +1,6 @@
 "use client";
 
+import {LanguagePreferenceField} from "@/components/language/language-preference";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AtSign, Camera, Sparkles } from "lucide-react";
@@ -63,6 +64,7 @@ export function RequiredProfileForm({
       className="grid gap-5"
     >
       <input type="hidden" name="profileId" value={profileId} />
+      <LanguagePreferenceField/>
       <div className="grid gap-4 sm:grid-cols-[150px_1fr] sm:items-start">
         <div className="grid justify-items-start gap-2">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-[#9b6b65]">

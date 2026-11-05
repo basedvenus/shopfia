@@ -1,5 +1,6 @@
 "use client";
 
+import {useLanguage} from "@/components/language/language-provider";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -20,6 +21,7 @@ type AccountMenuProps = {
 };
 
 export function AccountMenu({ initials, signOutAction }: AccountMenuProps) {
+  const {t}=useLanguage();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { profile } = useProfile();
@@ -105,7 +107,7 @@ export function AccountMenu({ initials, signOutAction }: AccountMenuProps) {
                   role="menuitem"
                 >
                   <Icon className="h-4 w-4" />
-                  {item.label}
+                  {t(item.label)}
                 </Link>
               );
             })}
@@ -113,7 +115,7 @@ export function AccountMenu({ initials, signOutAction }: AccountMenuProps) {
           <form action={signOutAction} className="border-t border-border/70 pt-2">
             <button className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted">
               <LogOut className="h-4 w-4" />
-              Logout
+              {t("Sign out")}
             </button>
           </form>
         </div>

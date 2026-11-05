@@ -1,5 +1,8 @@
 "use client";
 
+import {LanguagePreferenceField} from "@/components/language/language-preference";
+import {useLanguage} from "@/components/language/language-provider";
+import {updatePreferredLanguageAction} from "@/app/actions/language";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
@@ -14,6 +17,8 @@ type SignInPanelProps = {
 };
 
 export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnabled }: SignInPanelProps) {
+  const {language,t}=useLanguage();
+  const [preferredLanguage,setPreferredLanguage]=useState(language);
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [showRecovery, setShowRecovery] = useState(false);
   const [email, setEmail] = useState("");
@@ -35,7 +40,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
             setShowRecovery(false);
           }}
         >
-          Sign in
+          {t("Sign in")}
         </button>
         <button
           type="button"
@@ -48,7 +53,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
             setShowRecovery(false);
           }}
         >
-          Create account
+          {t("Create account")}
         </button>
       </div>
       <div className="rounded-3xl bg-[#fff8f5] px-4 py-3 text-sm leading-6 text-muted-foreground">
@@ -66,6 +71,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
               const formData = new FormData();
               formData.set("email", email);
               formData.set("password", password);
+              formData.set("preferredLanguage",preferredLanguage);
               const result = await createPasswordAccountAction(formData);
 
               if (!result.ok) {
@@ -97,11 +103,12 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
         }}
         className="space-y-2"
       >
+        {mode==="sign-up" && <LanguagePreferenceField value={preferredLanguage} onChange={setPreferredLanguage}/>}
         <Input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
+          placeholder={t("Email")}
           autoComplete="email"
           required
         />
@@ -109,19 +116,19 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
+          placeholder={t("Password")}
           autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
           minLength={8}
           required
         />
         <Button type="submit" className="w-full" disabled={pending}>
-          {pending
+          {t(pending
             ? mode === "sign-up"
               ? "Creating..."
               : "Signing in..."
             : mode === "sign-up"
               ? "Continue"
-              : "Sign in"}
+              : "Sign in")}
         </Button>
       </form>
       {googleEnabled ? (
@@ -130,11 +137,12 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
           variant="secondary"
           className="w-full"
           disabled={pending}
-          onClick={() => {
+          onClick={async () => {
+            if(mode==="sign-up"){const result=await updatePreferredLanguageAction(preferredLanguage);if(!result.ok){setMessage(result.error??"Please try again.");return;}}
             signIn("google", { callbackUrl });
           }}
         >
-          Sign in with Google
+          {t("Sign in with Google")}
         </Button>
       ) : null}
       {mode === "sign-in" ? (
@@ -146,7 +154,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
             className="text-sm font-medium text-[#9b6b65] underline-offset-4 hover:underline"
             onClick={() => { setShowRecovery((current) => !current); setMessage(null); }}
           >
-            Forgot password?
+            {t("Forgot password?")}
           </button>
           {showRecovery ? (
             <div id="sign-in-recovery" className="space-y-3 rounded-2xl border p-4">
@@ -164,7 +172,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
                   });
                 }}>
                   <p className="text-sm text-muted-foreground">We’ll email you a magic link to sign in without your password.</p>
-                  <Input type="email" aria-label="Recovery email" placeholder="Email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+                  <Input type="email" aria-label="Recovery email" placeholder={t("Email")} autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
                   <Button type="submit" variant="secondary" className="w-full" disabled={pending}>Send magic link</Button>
                 </form>
               ) : null}
