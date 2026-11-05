@@ -1,7 +1,8 @@
 "use client";
+import { TextSpacingControl } from "./text-spacing-control";
 import {createContext,useContext,useState,useRef,useEffect,type FormEvent,type ReactNode} from 'react';
 import {createPortal} from "react-dom";
-import {AlignLeft,AlignCenter,AlignRight,List,ArrowLeftRight,Minus,Plus,X} from 'lucide-react';
+import {AlignLeft,AlignCenter,AlignRight,List,Minus,Plus,X} from 'lucide-react';
 import {ColorPicker,useTemplatePalette} from './color-picker';
 import {STOREFRONT_TEMPLATES} from '@/lib/storefront-template-library';
 import {textKey,textStyleCss,type StorefrontTextStyle} from '@/lib/storefront-text-style';
@@ -51,7 +52,7 @@ export function TextFormatting({styles,onChange,children,onOpenFonts,onOpenColor
  {([{label:'Bold',text:'B',active:style.fontWeight===700,patch:{fontWeight:style.fontWeight===700?400:700}},{label:'Italic',text:'I',active:style.fontStyle==='italic',patch:{fontStyle:style.fontStyle==='italic'?'normal':'italic'}},{label:'Underline',text:'U',active:style.textDecoration==='underline',patch:{textDecoration:style.textDecoration==='underline'?'none':'underline'}}] as const).map(item=><button type="button" key={item.label} aria-label={item.label} aria-pressed={item.active} onClick={()=>update(item.patch)} className={control} style={{fontSize:23,fontFamily:item.label==='Italic'?'Georgia, serif':undefined,fontWeight:item.label==='Bold'?700:400,fontStyle:item.label==='Italic'?'italic':'normal',textDecoration:item.label==='Underline'?'underline':'none',textUnderlineOffset:4}}>{item.text}</button>)}
  <button type="button" aria-label={`Text alignment: ${style.textAlign??'left'}. Change alignment`} className={control} onClick={()=>update({textAlign:style.textAlign==='left'||!style.textAlign?'center':style.textAlign==='center'?'right':'left'})}><Alignment size={22}/></button>
  <button type="button" aria-label="Bullet points" className={control} onClick={()=>{const lines=selected.value.split('\n'),remove=lines.every(line=>line.startsWith('• '));const value=lines.map(line=>remove?line.slice(2):'• '+line.replace(/^• /,'')).join('\n');selected.change(value);setSelected({...selected,value});}}><List size={22}/></button>
- <details className="relative"><summary aria-label="Text spacing" className={`${control} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}><ArrowLeftRight size={21}/></summary><div className="absolute right-0 z-50 w-56 rounded-2xl border bg-white p-4 shadow-lg"><label className="grid gap-2 text-xs">Letter spacing<input type="range" min="-2" max="12" step=".5" value={style.letterSpacing??0} onChange={e=>update({letterSpacing:+e.target.value})}/></label><label className="mt-4 grid gap-2 text-xs">Line spacing<input type="range" min=".8" max="2.5" step=".1" value={style.lineHeight??1.4} onChange={e=>update({lineHeight:+e.target.value})}/></label></div></details>
+ <TextSpacingControl style={style} onChange={update} controlClass={control}/>
  <button type="button" aria-label="Close text toolbar" onClick={()=>{setSelected(null);setColorOpen(false);}} className={control}><X size={15}/></button></div>;
  return <Context.Provider value={{selectedText:selected?{id:key,role:roleFor(key),request:fontRequest}:undefined,textColor:style.color??selected?.color,setTextColor:color=>update({color}),applyRole:(role,patch,all)=>{
  const next={...styles,[`role-${role}`]:{...styles[`role-${role}`],...patch}};
