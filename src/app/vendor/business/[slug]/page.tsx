@@ -1,6 +1,5 @@
 import { BusinessLocationSettings } from "@/components/vendor/business-location-settings";
 import Link from "next/link";
-import { DeleteBusiness } from "@/components/vendor/delete-business";
 import { redirect } from "next/navigation";
 import { AlertCircle, CheckCircle2, ChevronDown, Clock3, Edit3, Eye, MessageSquare, PackagePlus, Settings, ShieldCheck, ShoppingBag, Store, Upload, Wand2 } from "lucide-react";
 import { auth } from "@/auth";
@@ -127,7 +126,7 @@ export default async function BusinessDashboardPage({
 
   const publicUrl = storefrontUrl(business.slug);
   const publicPath = storefrontPath(business.slug);
-  const { activeServices, completedBookings, openRequests, activeBookings, revenueCents: revenue } = await getVendorDashboardStats(business.id);
+  const { activeServices, openRequests, activeBookings, revenueCents: revenue } = await getVendorDashboardStats(business.id);
 
   return (
     <div className="space-y-6 pb-10">
@@ -180,10 +179,10 @@ export default async function BusinessDashboardPage({
       </nav>
 
       <section id="home" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile label="Active bookings" value={String(activeBookings)} />
-        <StatTile label="Open requests" value={String(openRequests)} />
-        <StatTile label="Completed bookings" value={String(completedBookings)} />
-        <StatTile label="Revenue · Year to date" value={formatCurrency(revenue)} />
+        <StatTile label="Services" value={String(activeServices)} />
+        <StatTile label="Open Requests" value={String(openRequests)} />
+        <StatTile label="Active Bookings" value={String(activeBookings)} />
+        <StatTile label="Revenue" value={formatCurrency(revenue)} />
       </section>
 
       <section id="storefront" className="scroll-mt-24">
@@ -347,7 +346,6 @@ export default async function BusinessDashboardPage({
               ) : null}
             </div>
           </div>
-          <DeleteBusiness businessId={business.id} name={business.name} />
         </Panel>
       </section>
     </div>
