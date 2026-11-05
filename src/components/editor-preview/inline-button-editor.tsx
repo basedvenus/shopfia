@@ -5,7 +5,7 @@ export function InlineButtonEditor({onChange}:{onChange:(text:string)=>void}) {
  const [target,setTarget]=useState<HTMLElement|null>(null);
  const [value,setValue]=useState("");
  const input=useRef<HTMLInputElement>(null);
- useEffect(()=>{const click=(event:MouseEvent)=>{const element=event.target as HTMLElement;const button=element.closest<HTMLElement>('.editor-canvas [data-storefront-button]');if(button){setValue(button.innerText.trim());setTarget(button);}};document.addEventListener('click',click,true);return()=>document.removeEventListener('click',click,true);},[]);
+ useEffect(()=>{const click=(event:MouseEvent)=>{if(window.matchMedia("(max-width: 767px)").matches)return;const element=event.target as HTMLElement;const button=element.closest<HTMLElement>('.editor-canvas [data-storefront-button]');if(button){setValue(button.innerText.trim());setTarget(button);}};document.addEventListener('click',click,true);return()=>document.removeEventListener('click',click,true);},[]);
  useEffect(()=>{if(target){input.current?.focus();input.current?.select();}},[target]);
  if(!target)return null;
  const rect=target.getBoundingClientRect();const style=getComputedStyle(target);

@@ -15,7 +15,7 @@ export function serviceFormIssues(service: ServicePricing, categories: string[],
       label = ({ name: "Add-on name", description: "Add-on description", rate: "Add-on price", minimum: "Add-on minimum", maximum: "Add-on maximum (optional)", increment: "Add-on quantity increment" } as Record<string, string>)[field] ?? "Quantity limits";
     } else if (path[0] === "menus" && typeof path[1] === "number") {
       group = `menus.${path[1]}`; prefix = `${service.menus?.[path[1]]?.name || `Option section ${path[1] + 1}`}: `;
-      label = field === "name" ? "Section title" : field === "description" ? "Short introduction (optional)" : "Choices";
+      label = field === "name" ? "Section title" : field === "description" ? "Short introduction (optional)" : field === "maxChoices" ? "Maximum selections (optional)" : "Choices";
     } else if (path[1] === "packages" && typeof path[2] === "number") {
       group = `packages.${path[2]}`; prefix = `Package ${path[2] + 1}: `;
       label = ({ name: "Package name", price: "Package price", inclusions: "Exact inclusions", coverage: "Quantity or coverage included" } as Record<string, string>)[field] ?? "Package name";
