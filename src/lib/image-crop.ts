@@ -7,6 +7,7 @@ export type ImageCrop = {
   brightness?: number;
   saturation?: number;
   aspectRatio?: number;
+  frameWidth?: number;
 };
 
 export const DEFAULT_IMAGE_CROP: ImageCrop = {
@@ -30,6 +31,7 @@ export function normalizeImageCrop(value: unknown): ImageCrop {
     zoom: clampNumber(record.zoom, MIN_IMAGE_ZOOM, MAX_IMAGE_ZOOM, DEFAULT_IMAGE_CROP.zoom),
     brightness: clampNumber(record.brightness ?? 1, 0.5, 1.5, 1),
     saturation: clampNumber(record.saturation ?? 1, 0, 2, 1),
+    ...(record.frameWidth != null ? { frameWidth: clampNumber(record.frameWidth, 20, 100, 100) } : {}),
     ...(record.aspectRatio != null ? { aspectRatio: clampNumber(record.aspectRatio, 0.1, 10, 4 / 3) } : {})
   };
 }

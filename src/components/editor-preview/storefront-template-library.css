@@ -266,3 +266,6 @@
 .template-photo-credits a { text-decoration:underline; }
 .template-surface[data-template=reference-18] .template-storefront-nav { background:#a72c7f; color:#fff; }
 .template-surface[data-template=reference-18] .template-storefront-nav > span { background:transparent!important; color:inherit!important; }
+
+/* User-resized cover frames override template banner heights. */
+.template-surface[data-template] .depth-hero[data-reference] .depth-scene[data-crop-ratio] {height:auto!important;min-height:0!important;max-width:100%;margin-left:0!important;margin-right:0!important;flex-shrink:0;}

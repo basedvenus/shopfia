@@ -57,3 +57,18 @@ describe("save feedback", () => {
     expect(issues[0]).toMatchObject({ label: "Choices", group: "menus.0" });
   });
 });
+
+describe("menu selection limits",()=>{
+ const capped={...withMenu,menus:[{...withMenu.menus![0],selection:"multiple" as const,options:["Vanilla","Chocolate","Banana","Lemon"],maxChoices:3}]};
+ it("allows up to the cap and rejects extra choices in the estimate",()=>{
+  expect(estimateService(capped,{...initialSelection(capped),menus:{flavors:["Vanilla","Chocolate","Banana"]}}).errors).toEqual([]);
+  expect(estimateService(capped,{...initialSelection(capped),menus:{flavors:["Vanilla","Chocolate","Banana","Lemon"]}}).errors).toContain("Choose no more than 3 options for Flavors.");
+ });
+ it("rejects zero, fractional, and impossible limits",()=>{
+  for(const maxChoices of [0,1.5,5])expect(servicePricingSchema.safeParse({...capped,menus:[{...capped.menus[0],maxChoices}]}).success).toBe(false);
+ });
+ it("keeps existing multiple-choice menus unlimited when no cap was saved",()=>{
+  const uncapped={...capped,menus:[{...capped.menus[0],maxChoices:undefined}]};
+  expect(estimateService(uncapped,{...initialSelection(uncapped),menus:{flavors:uncapped.menus[0].options}}).errors).toEqual([]);
+ });
+});

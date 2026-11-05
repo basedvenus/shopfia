@@ -1,16 +1,17 @@
 "use client";
 
-import {TextRoleSize,useRoleFormatting} from "./text-formatting";
+import {TextRoleSize,useRoleFormatting,useSelectedTextRole} from "./text-formatting";
 import { useEffect, useRef, useState } from "react";
 import { STOREFRONT_TEMPLATES, type StorefrontTemplate } from "@/lib/editor-preview/storefront-template-library";
 import { STOREFRONT_FONT_STYLES } from "@/lib/businesses";
 
 export function HeroTypographyControls({ allowUpload=false, bodyFamily, onBody, subheadingFamily, onSubheading, value, onStyle, onCustomFont, onPairing, templateFonts, template, onTemplateFont }: { allowUpload?:boolean;bodyFamily?:string;onBody?:(family:string)=>void;subheadingFamily?:string; onSubheading?:(family:string)=>void; value: string; onStyle: (value: string) => void; onCustomFont: (family: string | null) => void; onPairing?: (template: StorefrontTemplate)=>void; templateFonts?: string; template?: StorefrontTemplate | null; onTemplateFont?: (patch: Partial<StorefrontTemplate>)=>void }) {
-  const [fontPanel,setFontPanel]=useState<"heading"|"subheading"|"body"|"upload"|null>(null);
+  const selectedText=useSelectedTextRole();
+  const [fontPanel,setFontPanel]=useState<"heading"|"subheading"|"body"|"upload"|null>(selectedText?.role??null);
+  useEffect(()=>{if(selectedText)setFontPanel(selectedText.role);},[selectedText?.id,selectedText?.role,selectedText?.request]);
   const applyRole=useRoleFormatting();
   const [allRoles,setAllRoles]=useState<Record<string,boolean>>({});
   const container=useRef<HTMLElement>(null);
-  useEffect(()=>{const outside=(event:PointerEvent)=>{if(!container.current?.contains(event.target as Node))setFontPanel(null);};document.addEventListener('pointerdown',outside,true);return()=>document.removeEventListener('pointerdown',outside,true);},[]);
   const loadedFont = useRef<FontFace | null>(null);
   const request = useRef(0);
   const [message, setMessage] = useState("");

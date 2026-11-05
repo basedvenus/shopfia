@@ -10,8 +10,9 @@ export const menuSchema = z.object({
   id: text, name: z.string().trim().min(1).max(120),
   description: z.string().max(500).optional(),
   options: z.array(z.string().trim().max(200)).max(60).transform(values => values.filter(Boolean)).pipe(z.array(z.string().min(1)).min(1).max(50)),
-  selection: z.enum(["display", "single", "multiple"]), required: z.boolean()
+  selection: z.enum(["display", "single", "multiple"]), required: z.boolean(), maxChoices: z.number().int().min(1).max(50).optional()
 }).superRefine((menu, ctx) => {
+  if(menu.selection === "multiple" && menu.maxChoices !== undefined && menu.maxChoices > menu.options.length) ctx.addIssue({code:"custom",path:["maxChoices"],message:"The selection limit cannot exceed the number of choices."});
   if (new Set(menu.options.map(option => option.toLowerCase())).size !== menu.options.length) ctx.addIssue({ code: "custom", path: ["options"], message: "List each menu choice only once." });
 });
 const baseSchema = z.discriminatedUnion("type", [
@@ -101,6 +102,7 @@ export function estimateService(input: ServicePricing, selection: Selection) {
     if (choices.some(choice => !menu.options.includes(choice)) || new Set(choices).size !== choices.length || (menu.selection === "single" && choices.length > 1) || (menu.selection === "display" && choices.length > 0)) {
       errors.push(`Choose valid options for ${menu.name}.`); continue;
     }
+    if(menu.selection === "multiple" && menu.maxChoices !== undefined && choices.length > menu.maxChoices)errors.push(`Choose no more than ${menu.maxChoices} options for ${menu.name}.`);
     if (menu.selection !== "display" && menu.required && !choices.length) errors.push(`Choose ${menu.selection === "single" ? "one option" : "at least one option"} for ${menu.name}.`);
     if (choices.length) menuNotes.push(`${menu.name}: ${choices.join(", ")}`);
   }
