@@ -83,3 +83,15 @@ export function cropImageRect(imageWidth:number,imageHeight:number,frameWidth:nu
 export function fitImageZoom(imageWidth:number,imageHeight:number,frameWidth:number,frameHeight:number) {
   return Math.min(frameWidth/imageWidth,frameHeight/imageHeight)/Math.max(frameWidth/imageWidth,frameHeight/imageHeight);
 }
+
+/** Corner grips scale the frame along its diagonal; edge grips reshape one axis. */
+export function resizeImageFrame(width:number,height:number,frameWidth:number,dx:number,dy:number,sx:number,sy:number) {
+  if(sx && sy) {
+    const requested=1+(dx*sx*width+dy*sy*height)/(width*width+height*height);
+    const scale=Math.max(Math.max(20/frameWidth,40/width,40/height),Math.min(100/frameWidth,requested));
+    return {aspectRatio:width/height,frameWidth:frameWidth*scale};
+  }
+  const nextWidth=Math.max(width*20/frameWidth,Math.min(width*100/frameWidth,Math.max(40,width+dx*sx)));
+  const nextHeight=Math.max(40,height+dy*sy);
+  return {aspectRatio:nextWidth/nextHeight,frameWidth:frameWidth*nextWidth/width};
+}
