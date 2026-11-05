@@ -222,6 +222,7 @@ model User {
   id                     String            @id @default(cuid())
   name                   String?
   email                  String?           @unique
+  preferredLanguage      String            @default("en") @db.VarChar(2)
   emailVerified          DateTime?
   passwordHash           String?
   image                  String?
@@ -339,6 +340,7 @@ model Shop {
 
 model VendorProfile {
   servicePresets ServicePreset[]
+
   id                        String                @id @default(cuid())
   userId                    String?               @unique
   slug                      String                @unique

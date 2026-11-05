@@ -1,5 +1,6 @@
 "use client";
 
+import {useLanguage} from "@/components/language/language-provider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
@@ -49,6 +50,7 @@ export function SiteNavClient({
   signOutAction: () => Promise<void>;
   unreadMessagesCount?: number;
 }) {
+  const {t}=useLanguage();
   const { profile } = useProfile();
   const pathname = usePathname();
   const signedIn = Boolean(profile?.id);
@@ -80,7 +82,7 @@ export function SiteNavClient({
                   className="relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d8b9ae]"
                 >
                   <Icon className="h-4 w-4" />
-                  {item.label}
+                  {t(item.label)}
                   {item.href === "/messages" && unreadMessagesCount > 0 ? (
                     <span className="ml-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-[#e3a7a7] px-1.5 py-0.5 text-[11px] font-bold text-white">
                       {unreadMessagesCount}
@@ -103,7 +105,7 @@ export function SiteNavClient({
                   </Button>
                 </Link>
                 <Link href="/account">
-                  <Button size="sm">Sign in</Button>
+                  <Button size="sm">{t("Sign in")}</Button>
                 </Link>
               </>
             )}
@@ -139,7 +141,7 @@ export function SiteNavClient({
                   ) : null}
                   <Icon className="h-[19px] w-[19px]" />
                 </span>
-                <span>{item.label}</span>
+                <span>{t(item.label)}</span>
               </Link>
             );
           })}

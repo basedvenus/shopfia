@@ -1,5 +1,6 @@
 "use client";
 
+import {LanguagePreferenceSettings} from "@/components/language/language-preference";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -145,7 +146,8 @@ export function AccountProfileEditor({
           {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
         </form>
 
-        <div className="grid gap-3 rounded-[1.5rem] bg-muted/60 p-4 text-sm text-muted-foreground">
+        <div className="grid content-start gap-3 rounded-[1.5rem] bg-muted/60 p-4 text-sm text-muted-foreground">
+          <LanguagePreferenceSettings/>
           <div className="flex items-center gap-2 font-semibold text-foreground">
             <Sparkles className="h-4 w-4 text-primary" />
             Profile goals

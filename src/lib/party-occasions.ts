@@ -1,9 +1,10 @@
-export const PARTY_OCCASIONS = ["Baby Shower", "Gender Reveal", "Kids’ Birthday", "Birthday Celebration", "Just Because", "Celebration of Life", "Holiday Event", "Wedding", "Graduation", "Corporate Event", "Sports Party"];
+export const PARTY_OCCASIONS = ["Baby Shower", "Gender Reveal", "Kids’ Birthday", "Birthday Celebration", "Pet Party", "Just Because", "Celebration of Life", "Holiday Event", "Wedding", "Graduation", "Corporate Event", "Sports Party"];
 
 export function inferPartyOccasion(tags: string[], title: string) {
   const existing = PARTY_OCCASIONS.find((name) => tags.some((tag) => occasionTag(tag) === occasionTag(name)));
   if (existing) return existing;
   const text = [...tags, title].join(" ").toLowerCase();
+  if (/\b(pet|dog|puppy|cat|kitten)\b.*\b(birthday|party|celebration)\b|\bbarkday\b|\bgotcha day\b|fiesta.*mascota|cumplea.*mascota/.test(text)) return "Pet Party";
   if (/baby.?shower/.test(text)) return "Baby Shower";
   if (/gender.?reveal/.test(text)) return "Gender Reveal";
   if (/kid.*birthday|child.*birthday/.test(text)) return "Kids’ Birthday";
@@ -80,6 +81,7 @@ export function partySearchTags(query: string) {
   const text = query.toLowerCase();
   const matches: string[] = [];
   for (const category of PARTY_OCCASIONS) if (text.includes(category.toLowerCase())) matches.push(occasionTag(category));
+  if (/\b(pet|dog|puppy|cat|kitten)\b.*\b(birthday|party|parties)\b|\bbarkday\b|\bgotcha day\b|fiesta.*mascota|cumplea.*mascota/.test(text)) matches.push(occasionTag("Pet Party"));
   if (text.includes("adult birthday")) matches.push(occasionTag("Birthday Celebration"));
   for (const name of ["Spring", "Summer", "Fall", "Winter"]) if (new RegExp(`\\b${name.toLowerCase()}\\b`).test(text)) matches.push(occasionTag(name));
   for (const [prefix, names] of [["holiday", PARTY_HOLIDAYS], ["graduation", GRADUATION_LEVELS], ["audience", PARTY_AUDIENCES]] as const) for (const name of names) if (name !== "Other" && name !== "Not specified" && text.includes(name.toLowerCase())) matches.push(`${prefix}${occasionTag(name)}`);

@@ -3,6 +3,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock("@/app/actions/password-reset", () => ({ requestPasswordResetAction: mocks.request }));
+vi.mock("@/app/actions/language", () => ({ updatePreferredLanguageAction: vi.fn() }));
 vi.mock("@/app/actions/auth", () => ({ createPasswordAccountAction: vi.fn() }));
 vi.mock("next-auth/react", () => ({ signIn: vi.fn() }));
 vi.mock("next/link", () => ({ default: (props: React.ComponentProps<"a">) => React.createElement("a", props) }));

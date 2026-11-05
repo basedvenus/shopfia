@@ -1,4 +1,6 @@
 "use server";
+import {validLanguage} from "@/lib/language";
+import {persistUserLanguage,writeLanguageCookie} from "@/lib/language-preference";
 import { classificationTags, validatePartyClassificationForm } from "@/lib/party-occasions";
 import { getVendorSocialProfile } from "@/lib/vendor-social";
 import { getPartifulInvite } from "@/lib/partiful";
@@ -74,13 +76,13 @@ export async function createPasswordAccountAction(formData: FormData) {
   }
 
   const passwordHash = await hash(parsed.data.password, 12);
-
-  await db.user.create({
-    data: {
-      email,
-      passwordHash
-    }
+  const languageInput=formData.get("preferredLanguage")??"en";
+  if(!validLanguage(languageInput))return {ok:false,error:"Choose English or Español."};
+  await db.$transaction(async tx=>{
+    const user=await tx.user.create({data:{email,passwordHash}});
+    await tx.$executeRaw`UPDATE "User" SET "preferredLanguage" = ${languageInput} WHERE "id" = ${user.id}`;
   });
+  await writeLanguageCookie(languageInput);
 
   await sendWelcomeEmail(email);
 
@@ -127,6 +129,12 @@ export async function completeRequiredProfileAction(formData: FormData) {
     });
     if (!existingUser) {
       return { ok: false, error: "Your profile could not be loaded. Sign in again with your existing login." };
+    }
+
+    if(formData.has("preferredLanguage")) {
+      const language=formData.get("preferredLanguage");
+      if(!validLanguage(language))return {ok:false,error:"Choose English or Español."};
+      await persistUserLanguage(session.user.id,language);
     }
 
     // A stale onboarding tab must never rename an existing profile. Profile edits
