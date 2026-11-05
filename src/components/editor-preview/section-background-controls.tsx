@@ -3,8 +3,9 @@ import {useEffect,useState} from "react";
 import { useSelectedTextColor } from "./text-formatting";
 import { ColorPicker } from "./color-picker";
 import { STOREFRONT_TEMPLATES, type SectionDesign, type StorefrontTemplate } from "@/lib/editor-preview/storefront-template-library";
-import { getSectionDesign, SECTION_PATTERNS } from "@/lib/editor-preview/template-section-design";
+import { getSectionDesign, sectionDesignStyle, SECTION_PATTERNS } from "@/lib/editor-preview/template-section-design";
 export function SectionBackgroundControls({template,section,label,onChange,mode="colors",logo,photos=[],textMode=false}:{textMode?:boolean;logo?:string;photos?:string[];mode?:"colors"|"patterns";template:StorefrontTemplate;section:string;label:string;onChange:(template:StorefrontTemplate)=>void}) {
+ const [patternOpen,setPatternOpen]=useState(false);
  const [imageColors,setImageColors]=useState<{src:string;colors:string[]}[]>([]);
  const sources=JSON.stringify([logo,...photos].filter(Boolean).slice(0,5));
  useEffect(()=>{let cancelled=false;Promise.all((JSON.parse(sources) as string[]).map(src=>new Promise<{src:string;colors:string[]}>(resolve=>{const image=new Image();image.crossOrigin='anonymous';image.onload=()=>{try{const canvas=document.createElement('canvas');canvas.width=24;canvas.height=24;const ctx=canvas.getContext('2d')!;ctx.drawImage(image,0,0,24,24);const pixels=ctx.getImageData(0,0,24,24).data;const counts=new Map<string,number>();for(let i=0;i<pixels.length;i+=4){if(pixels[i+3]<200)continue;const color='#'+[pixels[i],pixels[i+1],pixels[i+2]].map(v=>Math.min(255,Math.round(v/32)*32).toString(16).padStart(2,'0')).join('');counts.set(color,(counts.get(color)??0)+1);}resolve({src,colors:[...counts].sort((a,b)=>b[1]-a[1]).slice(0,6).map(([color])=>color)});}catch{resolve({src,colors:[]});}};image.onerror=()=>resolve({src,colors:[]});image.src=src;}))).then(values=>{if(!cancelled)setImageColors(values);});return()=>{cancelled=true;};},[sources]);
@@ -24,17 +25,18 @@ export function SectionBackgroundControls({template,section,label,onChange,mode=
  function update(patch:Partial<SectionDesign>){if(section === "page-background"){onChange({...template,backgroundDesign:{...design,...patch}});return;}onChange({...template,sectionDesigns:{...template.sectionDesigns,[section]:{...design,...patch}}});}
  return <section data-background-settings className="mb-4 rounded-2xl border border-[#eadbd7] bg-[#fffaf8] p-4">
  <div className="mobile-quick-colors" aria-label="Quick colors">{palette.map(swatch)}</div>
- <h3 className="mb-4 text-sm font-semibold">{textMode?"Selected text":label} · {mode==='colors'?'Color':'Patterns'}</h3>
- {mode==='colors' && <>
- {textMode?<ColorPicker label="Text color" value={selectedText.color??"#000000"} onChange={chooseColor}/>:<div className="grid grid-cols-2 gap-4">{([['background','Background'],['ink','Text color']] as const).map(([key,title])=><div key={key} onPointerDownCapture={()=>setColorTarget(key)} onFocusCapture={()=>setColorTarget(key)}><ColorPicker label={title} value={design[key]??"#ffffff"} onChange={value=>update({[key]:value})}/></div>)}</div>}
+ <h3 className="mb-4 text-sm font-semibold">{textMode?"Selected text":label} · Color</h3>
+ <>
+ {textMode?<ColorPicker label="Text color" value={selectedText.color??"#000000"} onChange={chooseColor}/>:<div className="grid grid-cols-3 gap-3">{([['background','Background'],['ink','Text color']] as const).map(([key,title])=><div key={key} onPointerDownCapture={()=>{setColorTarget(key);setPatternOpen(false);}} onFocusCapture={()=>setColorTarget(key)}><ColorPicker label={title} value={design[key]??"#ffffff"} onChange={value=>update({[key]:value})}/></div>)}<div><p className="mb-1 text-xs">Pattern</p><button type="button" aria-label="Choose background pattern" aria-expanded={patternOpen} onClick={()=>setPatternOpen(value=>!value)} className="flex h-10 w-full items-center justify-between rounded-xl border border-[#eadbd7] bg-white px-2"><span className="h-7 w-7 rounded-full border" style={sectionDesignStyle({...design,patternColor:design.patternColor??design.ink})}/><span aria-hidden="true">⌄</span></button></div></div>}
+ {!patternOpen && <>
  {swatches("Colors in this design",palette)}
  <p className="mt-2 text-xs text-stone-500">Includes your template palette</p>
  {logo&&brandColors.length>0&&<div className="mt-5"><h4 className="mb-3 text-sm font-semibold">Brand colors</h4>{sourceRow(logo,brandColors,"Brand logo")}</div>}
  {photoRows.length>0&&<div className="mt-5"><h4 className="mb-3 text-sm font-semibold">Photo colors</h4><div className="grid gap-3">{photoRows.map(item=>sourceRow(item.src,item.colors,"Photo color source"))}</div></div>}
  {swatches("Default solid colors",solids)}
  </>}
- {mode==='patterns' && <><ColorPicker label="Pattern color" value={design.patternColor??"#ffffff"} onChange={patternColor=>update({patternColor})}/>
- <label className="mt-4 grid gap-2 text-xs">Pattern opacity · {Math.round((design.patternOpacity??1)*100)}%<input type="range" min="0" max="100" value={(design.patternOpacity??1)*100} onChange={e=>update({patternOpacity:+e.target.value/100})}/></label><p className="mb-2 mt-5 text-xs font-semibold">Pattern</p><div className="grid grid-cols-2 gap-2">{SECTION_PATTERNS.map(pattern=><button type="button" key={pattern} aria-pressed={design.pattern===pattern} onClick={()=>update({pattern})} className="rounded-xl border border-[#eadbd7] p-2 text-xs capitalize hover:bg-stone-100 aria-pressed:bg-stone-200">{pattern}</button>)}</div>
- </>}
+ </>
+ {!textMode && (patternOpen || mode==='patterns') && <div className="mt-5" aria-label="Background patterns"><div className="grid grid-cols-4 gap-3">{SECTION_PATTERNS.map(pattern=><button type="button" key={pattern} aria-label={`Set background pattern to ${pattern}`} aria-pressed={design.pattern===pattern} onClick={()=>update({pattern,patternColor:design.patternColor??design.ink})} className="grid justify-items-center gap-1 text-xs capitalize"><span className="h-11 w-11 rounded-full border border-stone-300 aria-pressed:ring-2" style={{...sectionDesignStyle({...design,pattern,patternColor:design.patternColor??design.ink}),...(design.pattern===pattern?{outline:'2px solid #d96996',outlineOffset:2}:{})}}/>{pattern==='solid'?'None':pattern}</button>)}</div><div className="mt-5"><ColorPicker label="Pattern color" value={design.patternColor??design.ink} onChange={patternColor=>update({patternColor})}/></div><label className="mt-4 grid gap-2 text-xs">Pattern opacity · {Math.round((design.patternOpacity??1)*100)}%<input type="range" min="0" max="100" value={(design.patternOpacity??1)*100} onChange={e=>update({patternOpacity:+e.target.value/100})}/></label></div>}
+
  </section>;
 }

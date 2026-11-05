@@ -9,7 +9,7 @@ export function BackgroundSelectionToolbar({onOpen}:{onOpen:(section:string)=>vo
   const click=(event:PointerEvent)=>{
    const el=event.target as HTMLElement;
    if(el.closest('[data-background-toolbar],.editor-inspector'))return;
-   if(el.closest('button,a,input,textarea,[data-inline-photo],[data-storefront-text]')){setTarget(null);return;}
+   if(el.closest('button,a,input,textarea,[data-inline-photo],[data-storefront-text],[data-sticker]')){setTarget(null);return;}
    setTarget(backgroundSelection(el)?.element??null);
   };
   document.addEventListener('pointerdown',click);

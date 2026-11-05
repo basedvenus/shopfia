@@ -7,6 +7,8 @@ const families = new Set(STOREFRONT_TEMPLATES.flatMap(t => [t.headingFamily, t.b
 const family = z.string().max(250).refine(value => families.has(value), "Choose a font from the library.");
 const section = z.object({ buttonColor:color.optional(),buttonInk:color.optional(),buttonShape:z.enum(["pill","block"]).optional(), patternOpacity:z.number().min(0).max(1).optional(), background: color, ink: color, pattern: z.enum(["solid","clouds","stripes","grid","dots","checker","waves"]), patternColor: color.optional(), overlayColor: color.optional(), overlayOpacity: z.number().min(0).max(.8).optional() });
 const template = z.object({
+  stickers:z.array(z.object({id:z.string().min(1).max(80),kind:z.enum(["ribbon","botanical","cake","balloons","bouquet","sparkle","citrus"]),x:z.number().min(0).max(100),y:z.number().min(0).max(100),size:z.number().min(3).max(50)})).max(30).optional(),
+  illustrationHidden:z.boolean().optional(),illustrationSize:z.number().min(24).max(480).optional(),illustrationX:z.number().min(-1000).max(1000).optional(),illustrationY:z.number().min(-1000).max(3000).optional(),
   buttonColor: color.optional(),
   button:z.enum(["pill","block","outline","offset","ticket"]).optional(),
   buttonText:z.string().trim().min(1).max(60).optional(),
