@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Loader2, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { PlaceDetails, PlaceSuggestion } from "@/lib/places";
@@ -29,6 +29,10 @@ type PlaceAutocompleteInputProps = {
   placeholder?: string;
   required?: boolean;
   syncAddressFields?: boolean;
+  searchType?: "cities" | "regions";
+  requireSelection?: boolean;
+  onPlaceSelect?: (place: PlaceDetails) => void;
+  omitHiddenFields?: boolean;
 };
 
 const defaultHiddenFieldNames = {
@@ -52,8 +56,14 @@ export function PlaceAutocompleteInput({
   label,
   placeholder = "Search vendors, venues, or locations",
   required,
-  syncAddressFields = false
+  syncAddressFields = false,
+  searchType,
+  requireSelection = false,
+  onPlaceSelect,
+  omitHiddenFields = false
 }: PlaceAutocompleteInputProps) {
+  const listId = useId();
+  const [activeIndex, setActiveIndex] = useState(0);
   const hiddenFieldNames = { ...defaultHiddenFieldNames, ...fieldNames };
   const initialValue = defaultValue ?? defaultPlace?.formattedAddress ?? "";
   const [inputValue, setInputValue] = useState(initialValue);
@@ -105,7 +115,7 @@ export function PlaceAutocompleteInput({
       setErrorMessage(null);
       const requestTimeout = window.setTimeout(() => controller.abort(), 5500);
       try {
-        const response = await fetch(`/api/places/autocomplete?input=${encodeURIComponent(query)}`, {
+        const response = await fetch(`/api/places/autocomplete?input=${encodeURIComponent(query)}${searchType ? `&type=${searchType}` : ""}`, {
           signal: controller.signal
         });
         const data = (await response.json()) as { error?: string; suggestions?: PlaceSuggestion[] };
@@ -139,10 +149,10 @@ export function PlaceAutocompleteInput({
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [inputValue, selectedPlace?.formattedAddress]);
+  }, [inputValue, selectedPlace?.formattedAddress, searchType]);
 
   useEffect(() => {
-    if (!syncAddressFields) return;
+    if (!syncAddressFields || searchType === "cities") return;
     const form = containerRef.current?.closest("form");
     const onManualAddress = (event: Event) => {
       const target = event.target;
@@ -156,7 +166,7 @@ export function PlaceAutocompleteInput({
     };
     form?.addEventListener("input", onManualAddress);
     return () => form?.removeEventListener("input", onManualAddress);
-  }, [syncAddressFields]);
+  }, [syncAddressFields, searchType]);
 
   async function selectSuggestion(suggestion: PlaceSuggestion) {
     const isCurrentRequest = detailsRequestGuard.current.start();
@@ -188,6 +198,7 @@ export function PlaceAutocompleteInput({
         setSelectedPlace(place);
         setInputValue(place.formattedAddress);
         setErrorMessage(null);
+        onPlaceSelect?.(place);
       } else {
         setSelectedPlace(null);
         setErrorMessage("That location could not be selected.");
@@ -219,7 +230,11 @@ export function PlaceAutocompleteInput({
           name={fieldNames.input}
           value={inputValue}
           required={required}
+          ref={(element) => { element?.setCustomValidity(requireSelection && inputValue.trim() && !selectedPlace ? "Select a location from the suggestions." : ""); }}
           aria-label={label ?? placeholder}
+          role="combobox"
+          aria-controls={isOpen ? listId : undefined}
+          aria-activedescendant={isOpen && suggestions[activeIndex] ? `${listId}-${activeIndex}` : undefined}
           aria-autocomplete="list"
           aria-expanded={isOpen}
           autoComplete="off"
@@ -229,9 +244,20 @@ export function PlaceAutocompleteInput({
             const nextValue = event.target.value;
             detailsRequestGuard.current.invalidate();
             setIsLoading(false);
+            setActiveIndex(0);
             setInputValue(nextValue);
             setSelectedPlace(null);
             setIsOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setIsOpen(false);
+            if (suggestions.length && ["ArrowDown", "ArrowUp"].includes(event.key)) {
+              event.preventDefault(); setIsOpen(true);
+              setActiveIndex(current => (current + (event.key === "ArrowDown" ? 1 : -1) + suggestions.length) % suggestions.length);
+            }
+            if (event.key === "Enter" && isOpen && suggestions[activeIndex]) {
+              event.preventDefault(); void selectSuggestion(suggestions[activeIndex]);
+            }
           }}
           onFocus={() => {
             if (suggestions.length > 0) setIsOpen(true);
@@ -242,9 +268,13 @@ export function PlaceAutocompleteInput({
         ) : null}
         {isOpen && (suggestions.length > 0 || errorMessage) ? (
           <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-50 overflow-hidden rounded-[1.2rem] border bg-white shadow-soft">
-            {suggestions.map((suggestion) => (
+            <div id={listId} role="listbox">
+            {suggestions.map((suggestion, index) => (
               <button
                 key={suggestion.placeId}
+                id={`${listId}-${index}`}
+                role="option"
+                aria-selected={index === activeIndex}
                 type="button"
                 onClick={() => void selectSuggestion(suggestion)}
                 className="flex w-full gap-3 px-4 py-3 text-left transition hover:bg-primary/5"
@@ -260,6 +290,8 @@ export function PlaceAutocompleteInput({
                 </span>
               </button>
             ))}
+            </div>
+            <p className="px-4 py-2 text-xs text-muted-foreground">Powered by Google</p>
             {errorMessage ? (
               <div className="px-4 py-3 text-sm leading-5 text-muted-foreground">
                 {errorMessage}
@@ -269,6 +301,7 @@ export function PlaceAutocompleteInput({
         ) : null}
       </div>
       {helperText ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{helperText}</p> : null}
+      {!omitHiddenFields && <>
       <input type="hidden" name={hiddenFieldNames.formattedAddress} value={selectedPlace?.formattedAddress ?? ""} />
       <input type="hidden" name={hiddenFieldNames.city} value={selectedPlace?.city ?? ""} />
       <input type="hidden" name={hiddenFieldNames.state} value={selectedPlace?.state ?? ""} />
@@ -277,6 +310,7 @@ export function PlaceAutocompleteInput({
       <input type="hidden" name={hiddenFieldNames.lng} value={selectedPlace?.lng ?? ""} />
       <input type="hidden" name={hiddenFieldNames.placeId} value={selectedPlace?.placeId ?? ""} />
       <input type="hidden" name={hiddenFieldNames.label} value={selectedPlace?.formattedAddress ?? inputValue} />
+      </>}
     </div>
   );
 }

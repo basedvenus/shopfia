@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { FieldShell, SubmitButton } from "@/components/ui/validated-form";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
-import { OfferingSetupForm } from "@/components/vendor/offering-setup-form";
 import { businessManagerWhere } from "@/lib/businesses";
 import { notFound } from "next/navigation";
 import { ServiceAreaPicker } from "@/components/vendor/service-area-picker";
@@ -30,9 +29,8 @@ export default async function VendorOnboardingPage({
     ? resolvedSearchParams.storefrontName.trim().slice(0, 80)
     : undefined;
   const editingBusinessSlug = resolvedSearchParams?.newBusiness ? null : resolvedSearchParams?.business;
-  const [categories, eventCategories, existingVendor] = await Promise.all([
+  const [categories, existingVendor] = await Promise.all([
     db.category.findMany({ where: { audience: CategoryAudience.VENDOR }, orderBy: { name: "asc" } }),
-    db.category.findMany({ where: { audience: CategoryAudience.BUYER }, orderBy: { name: "asc" } }),
     db.vendorProfile.findFirst({
       where: editingBusinessSlug
         ? {
@@ -76,7 +74,6 @@ export default async function VendorOnboardingPage({
   ]);
   if (editingBusinessSlug && !existingVendor) notFound();
   const sortedCategories = sortVendorCategories(categories);
-  const sortedEventCategories = sortEventCategories(eventCategories);
   const businessMediaUploadEndpoint = existingVendor ? `/api/vendor/business/${existingVendor.id}/media` : undefined;
   const businessLogoUploadEndpoint = businessMediaUploadEndpoint ? `${businessMediaUploadEndpoint}?target=logo` : undefined;
   const businessCoverUploadEndpoint = businessMediaUploadEndpoint ? `${businessMediaUploadEndpoint}?target=cover` : undefined;
@@ -91,52 +88,13 @@ export default async function VendorOnboardingPage({
           Build your beautiful ShopFia storefront.
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Add the visual identity, social links, service areas, and first service customers need to understand your style.
+          Add your business details, photos, and service areas. You can add services after saving.
         </p>
-      </div>
-
-      <div className="grid gap-3 rounded-[1.5rem] border border-primary/15 bg-white/85 p-4 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#a85f5e]">
-            Setup progress
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <a
-              href="#profile"
-              className="rounded-[8px] border border-primary/20 bg-[#fbf3f0] px-3 py-2 text-sm font-medium text-foreground transition hover:border-primary/35"
-            >
-              1. Business storefront
-              <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                Identity, photos, location, service areas, and categories.
-              </span>
-            </a>
-            <a
-              href="#services"
-              className="rounded-[8px] border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-primary/25"
-            >
-              2. First offering
-              <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                Add a shoppable service once your profile is saved.
-              </span>
-            </a>
-          </div>
-        </div>
-        <a
-          href="#profile-save"
-          className="inline-flex h-10 items-center justify-center rounded-full border border-[#E6B0AE]/70 bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-4 text-sm font-medium text-primary-foreground shadow-[0_10px_24px_rgba(230,176,174,0.22)] transition hover:border-[#DFA3A2]/80 hover:bg-[#DFA3A2] hover:bg-none"
-        >
-          Jump to save
-        </a>
       </div>
 
       <Card id="profile">
         <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>1. Business Storefront</CardTitle>
-            <a href="#services" className="text-sm font-medium text-primary hover:underline">
-              Next: first offering
-            </a>
-          </div>
+          <CardTitle>Business storefront</CardTitle>
         </CardHeader>
         <CardContent>
           {resolvedSearchParams?.profileError ? (
@@ -149,6 +107,7 @@ export default async function VendorOnboardingPage({
             className="grid gap-4 md:grid-cols-2"
             errorIntro="Your business storefront is almost there. Fix the highlighted field and save again."
           >
+            <input type="hidden" name="preserveAvailability" value="1" />
             {existingVendor ? <input type="hidden" name="businessId" value={existingVendor.id} /> : null}
             {resolvedSearchParams?.newBusiness ? <input type="hidden" name="newBusiness" value="1" /> : null}
             <div>
@@ -179,7 +138,7 @@ export default async function VendorOnboardingPage({
             >
               <Input
                 name="name"
-                placeholder="Solano Flora & Table"
+                placeholder="Enter your storefront name"
                 defaultValue={existingVendor?.name ?? initialStorefrontName}
                 data-required-label="Storefront name"
                 required
@@ -192,7 +151,7 @@ export default async function VendorOnboardingPage({
             >
               <Input
                 name="username"
-                placeholder="solanoflora"
+                placeholder="Enter your storefront handle"
                 defaultValue={existingVendor?.username ?? existingVendor?.slug ?? ""}
                 data-required-label="Storefront handle"
                 required
@@ -210,10 +169,13 @@ export default async function VendorOnboardingPage({
             <div className="md:col-span-2">
               <PlaceAutocompleteInput
                 syncAddressFields
-                label="Business Location"
-                helperText="Choose a city, venue, neighborhood, or address so hosts can discover you nearby."
-                placeholder="Fairfield, CA or Solano County Event Center"
-                defaultValue={existingVendor?.formattedAddress ?? ""}
+                required
+                requireSelection
+                searchType="cities"
+                label="City"
+                helperText="Start typing and select your business city from the suggestions."
+                placeholder="Search for your city"
+                defaultValue={existingVendor?.formattedAddress ?? [existingVendor?.city, existingVendor?.state].filter(Boolean).join(", ")}
                 defaultPlace={{
                   formattedAddress: existingVendor?.formattedAddress ?? undefined,
                   city: existingVendor?.city,
@@ -235,20 +197,11 @@ export default async function VendorOnboardingPage({
                 }}
               />
             </div>
-            <FieldShell label="City" required helperText="Enter the main city your business serves.">
-              <Input
-                name="city"
-                placeholder="Fairfield"
-                defaultValue={existingVendor?.city}
-                data-required-label="City"
-                required
-              />
-            </FieldShell>
             <FieldShell label="State" optional>
-              <Input name="state" placeholder="CA" defaultValue={existingVendor?.state ?? ""} />
+              <Input name="state" readOnly placeholder="Filled from your city" defaultValue={existingVendor?.state ?? ""} />
             </FieldShell>
             <FieldShell label="Zip Code" optional>
-              <Input name="zipCode" placeholder="94533" defaultValue={existingVendor?.zipCode ?? ""} />
+              <Input name="zipCode" placeholder="ZIP code" defaultValue={existingVendor?.zipCode ?? ""} />
             </FieldShell>
             <div className="md:col-span-2">
               <FieldShell label="Business Description" optional helperText="A few warm details help hosts understand your style and specialties.">
@@ -266,7 +219,7 @@ export default async function VendorOnboardingPage({
                 </span>
                 <Input
                   name="slug"
-                  placeholder="solano-flora"
+                  placeholder="your-storefront"
                   defaultValue={existingVendor?.slug ?? ""}
                   className="border-0 focus-visible:ring-0"
                   data-required-label="Storefront URL"
@@ -285,16 +238,6 @@ export default async function VendorOnboardingPage({
                   defaultValue={existingVendor?.serviceRadiusMiles ?? 25}
                 />
               </FieldShell>
-            </div>
-            <div className="flex items-end">
-              <label className="flex min-h-11 w-full items-center gap-2 rounded-2xl border bg-white px-3 py-3 text-sm">
-                <input
-                  type="checkbox"
-                  name="weekendAvailable"
-                  defaultChecked={existingVendor?.weekendAvailable ?? true}
-                />
-                Available for weekend parties
-              </label>
             </div>
             <div className="md:col-span-2">
               <ServiceAreaPicker defaultValue={existingVendor?.serviceAreaNotes} />
@@ -331,7 +274,7 @@ export default async function VendorOnboardingPage({
                 <div>
                   <p className="text-sm font-semibold">Profile details complete?</p>
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Save this business before moving on to your first offering.
+                    Save your business to continue to your dashboard.
                   </p>
                 </div>
                 <SubmitButton type="submit" pendingText="Saving business...">
@@ -343,43 +286,6 @@ export default async function VendorOnboardingPage({
         </CardContent>
       </Card>
 
-      <Card id="services">
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>2. Add First Offering</CardTitle>
-            <a href="#profile" className="text-sm font-medium text-primary hover:underline">
-              Previous: business storefront
-            </a>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {resolvedSearchParams?.offeringError ? (
-            <div className="mb-4 rounded-[1.2rem] border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {resolvedSearchParams.offeringError}
-            </div>
-          ) : null}
-          {existingVendor ? (
-            <OfferingSetupForm
-              businessId={existingVendor.id}
-              categories={sortedCategories.map((category) => ({
-                id: category.id,
-                name: displayCategoryName(category.name)
-              }))}
-              eventCategories={sortedEventCategories.map((category) => ({
-                id: category.id,
-                name: category.name
-              }))}
-            />
-          ) : (
-            <div className="rounded-[1.5rem] border bg-[#fbf7f5] p-5">
-              <h3 className="font-semibold">Save your business first.</h3>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Once this business is tied to your account, you will land in its private dashboard and can add offerings from there.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -404,25 +310,3 @@ function sortVendorCategories<T extends { name: string }>(categories: T[]) {
   });
 }
 
-const eventCategoryOrder = [
-  "Baby Shower",
-  "Birthday Party",
-  "Wedding",
-  "Corporate Event",
-  "Holiday Party",
-  "Graduation Party"
-];
-
-function sortEventCategories<T extends { name: string }>(categories: T[]) {
-  return categories.filter((category) => eventCategoryOrder.includes(category.name)).sort((left, right) => {
-    const leftIndex = eventCategoryOrder.indexOf(left.name);
-    const rightIndex = eventCategoryOrder.indexOf(right.name);
-
-    if (leftIndex !== -1 || rightIndex !== -1) {
-      return (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex) -
-        (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex);
-    }
-
-    return left.name.localeCompare(right.name);
-  });
-}
