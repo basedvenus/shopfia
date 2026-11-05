@@ -6,7 +6,7 @@ import { authProviderConfig } from "@/lib/auth/provider-config";
 export async function deliverPartyNotificationEmails(eventId?: string, userId?: string) {
   if (!authProviderConfig.emailEnabled) return;
   const pending = await db.notification.findMany({
-    where: { ...(eventId ? { eventId } : {}), ...(userId ? { userId } : {}), emailSentAt: null, user: { partyEmailNotifications: true, email: { not: null } } },
+    where: { ...(eventId ? { eventId } : {}), ...(userId ? { userId } : {}), emailSentAt: null, kind: { startsWith: "PARTY_" }, user: { partyEmailNotifications: true, email: { not: null } } },
     select: { id: true, title: true, href: true, user: { select: { email: true } } },
     orderBy: { createdAt: "asc" }, take: 30
   });
