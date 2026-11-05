@@ -11,6 +11,7 @@ import { PartyCollaborationStatus, type Prisma } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { notifyAccount } from "@/lib/services/account-notifications";
 import { sendWelcomeEmail } from "@/lib/email";
 import { parseImageCrop, type ImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
@@ -1081,12 +1082,13 @@ export async function toggleFollowAction(formData: FormData) {
   if (existing) {
     await db.follow.delete({ where: { id: existing.id } });
   } else {
-    await db.follow.create({
+    const follow = await db.follow.create({
       data: {
         followerId: session.user.id,
         followingId
       }
     });
+    await notifyAccount({userId:followingId,kind:"NEW_FOLLOWER",title:`${session.user.name || "Someone"} started following you.`,href:session.user.username ? `/profiles/${encodeURIComponent(session.user.username)}` : "/notifications",dedupeKey:`follow:${follow.id}`});
   }
 
   revalidatePath("/account");
@@ -1115,10 +1117,11 @@ export async function followPartyVendorAction(vendorId: string) {
   const vendor = await db.vendorProfile.findUnique({ where: { id: vendorId }, select: { userId: true, status: true, slug: true } });
   if (!vendor?.userId || vendor.status === "UNCLAIMED") return { ok: false, error: "This vendor hasn’t claimed their profile yet." };
   if (vendor.userId === session.user.id) return { ok: false, error: "This is your own vendor profile." };
-  await db.follow.upsert({
+  const follow = await db.follow.upsert({
     where: { followerId_followingId: { followerId: session.user.id, followingId: vendor.userId } },
     create: { followerId: session.user.id, followingId: vendor.userId }, update: {}
   });
+  await notifyAccount({userId:vendor.userId,kind:"NEW_FOLLOWER",title:`${session.user.name || "Someone"} started following you.`,href:session.user.username ? `/profiles/${encodeURIComponent(session.user.username)}` : "/notifications",dedupeKey:`follow:${follow.id}`});
   revalidatePath("/parties");
   revalidatePath("/account");
   revalidatePath("/explore");

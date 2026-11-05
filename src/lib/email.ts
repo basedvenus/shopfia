@@ -251,3 +251,14 @@ export async function sendPartyNotificationEmail({ to, title, path }: { to: stri
     html: shell({ title: "Your party update", preview: escapeHtml(title), body: `<p>${escapeHtml(title)}</p><p>${button("View on ShopFia", href)}</p><p><a href="${preferences}">Manage notification preferences</a></p>` })
   });
 }
+
+export async function sendAccountNotificationEmail({to,title,path,kind}: {to:string;title:string;path:string;kind:"NEW_FOLLOWER" | "SERVICE_REQUEST"}) {
+  const href = new URL(path.startsWith("/") && !path.startsWith("//") ? path : "/notifications", getBaseUrl()).href;
+  const heading = kind === "SERVICE_REQUEST" ? "New service request" : "You have a new follower";
+  return sendEmail({
+    to,
+    subject: `${heading} on ShopFia`,
+    text: `${title}\n\nView on ShopFia: ${href}\n\nThis is an automated notification. Please do not reply to this email.`,
+    html: shell({title:heading,preview:escapeHtml(title),body:`<p>${escapeHtml(title)}</p><p>${button(kind === "SERVICE_REQUEST" ? "View service request" : "View on ShopFia",href)}</p><p style="font-size:12px;color:#8a6a67;">This is an automated notification. Please do not reply to this email.</p>`})
+  });
+}

@@ -57,7 +57,7 @@ export default async function NotificationsPage() {
       {notifications.length ? notifications.map((notification) => <article key={notification.id} className={`rounded-2xl border p-4 ${notification.readAt ? "bg-white" : "border-primary/25 bg-primary/5"}`}>
         <Link href={notification.kind === "PARTY_INVITATION" ? "/notifications#party-invitations" : notification.href} className="font-medium underline-offset-4 hover:underline">{notification.title}</Link>
         <p className="mt-2 text-xs text-muted-foreground">{notification.createdAt.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric" })}{!notification.readAt ? " · Unread" : ""}</p>
-      </article>) : <p className="rounded-3xl border bg-white p-6 text-sm text-muted-foreground">You’re all caught up. Party invitations and updates will appear here.</p>}
+      </article>) : <p className="rounded-3xl border bg-white p-6 text-sm text-muted-foreground">You’re all caught up. Service requests, new followers, and party updates will appear here.</p>}
     </section>
   </div>;
 }

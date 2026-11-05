@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { auth } from "@/auth";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
-import { sendNewInquiryEmail } from "@/lib/email";
+import { notifyAccount } from "@/lib/services/account-notifications";
 import { securityLog } from "@/lib/security/audit-log";
 import { checkServerActionRateLimit } from "@/lib/security/request";
 import { ensureQuoteRequestForInquiry } from "@/lib/services/inquiry-quote-requests";
@@ -84,7 +84,6 @@ export async function createPublicInquiryAction(formData: FormData) {
     return { success: false, error: "Vendor not found." };
   }
   const vendorUserId = vendor.userId ?? vendor.managers[0]?.userId ?? null;
-  const vendorEmail = vendor.user?.email ?? vendor.managers[0]?.user.email ?? null;
   if (!vendorUserId) {
     return {
       success: false,
@@ -282,18 +281,13 @@ export async function createPublicInquiryAction(formData: FormData) {
     revalidatePath(`/offering/${offeringId}`);
   }
 
-  if (vendorEmail) {
-    await sendNewInquiryEmail({
-      budgetCents: parsed.budgetDollars != null ? Math.round(parsed.budgetDollars * 100) : null,
-      buyerName: parsed.name,
-      eventDate: parsed.eventDate ? new Date(parsed.eventDate) : null,
-      eventLocation: parsed.locationCity && parsed.locationState
-        ? `${parsed.locationCity}, ${parsed.locationState}`
-        : parsed.eventLocation,
-      inquiryUrl: `${getBaseUrl()}/messages?conversationId=${result.conversationId}`,
-      to: vendorEmail
-    });
-  }
+  await notifyAccount({
+    userId: vendorUserId,
+    kind: "SERVICE_REQUEST",
+    title: `${parsed.name} requested ${listingTitle || "a service"} from ${vendor.name}.`,
+    href: `/messages?conversationId=${result.conversationId}`,
+    dedupeKey: `service-request:${result.inquiryId}`
+  });
 
   return {
     success: true,
@@ -301,15 +295,6 @@ export async function createPublicInquiryAction(formData: FormData) {
     inquiryId: result.inquiryId,
     quoteRequestId: result.quoteRequestId
   };
-}
-
-function getBaseUrl() {
-  const configured =
-    process.env.NEXTAUTH_URL?.trim() ||
-    process.env.AUTH_URL?.trim() ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
-
-  return configured || "http://localhost:3000";
 }
 
 function optionalFormValue(value: FormDataEntryValue | null) {
