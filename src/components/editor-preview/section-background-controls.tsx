@@ -24,7 +24,7 @@ export function SectionBackgroundControls({template,section,label,onChange,mode=
  function update(patch:Partial<SectionDesign>){if(section === "page-background"){onChange({...template,backgroundDesign:{...design,...patch}});return;}onChange({...template,sectionDesigns:{...template.sectionDesigns,[section]:{...design,...patch}}});}
  return <section data-background-settings className="mb-4 rounded-2xl border border-[#eadbd7] bg-[#fffaf8] p-4">
  <div className="mobile-quick-colors" aria-label="Quick colors">{palette.map(swatch)}</div>
- <h3 className="mb-4 text-sm font-semibold">{label} · {mode==='colors'?'Color':'Patterns'}</h3>
+ <h3 className="mb-4 text-sm font-semibold">{textMode?"Selected text":label} · {mode==='colors'?'Color':'Patterns'}</h3>
  {mode==='colors' && <>
  {textMode?<ColorPicker label="Text color" value={selectedText.color??"#000000"} onChange={chooseColor}/>:<div className="grid grid-cols-2 gap-4">{([['background','Background'],['ink','Text color']] as const).map(([key,title])=><div key={key} onPointerDownCapture={()=>setColorTarget(key)} onFocusCapture={()=>setColorTarget(key)}><ColorPicker label={title} value={design[key]??"#ffffff"} onChange={value=>update({[key]:value})}/></div>)}</div>}
  {swatches("Colors in this design",palette)}
