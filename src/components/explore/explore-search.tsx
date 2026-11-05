@@ -67,6 +67,7 @@ export function ExploreSearch({
           />
         </div>
         <PlaceAutocompleteInput
+            requireSelection
           defaultValue={filters.locationLabel ?? filters.city ?? filters.zip ?? ""}
           defaultPlace={{
             formattedAddress: filters.locationLabel ?? filters.city ?? filters.zip,

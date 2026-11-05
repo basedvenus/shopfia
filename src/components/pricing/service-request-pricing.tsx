@@ -1,5 +1,6 @@
 "use client";
 
+import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import type { ReactNode } from "react";
 import { PricingButton } from "./service-pricing-fields";
 
@@ -27,7 +28,7 @@ export function ServiceRequestPricing({ service, selection, onChange, promotions
         {menu.selection === "single" ? <Field label={menu.name}><select value={selection.menus?.[menu.id]?.[0] ?? ""} onChange={e => set({ menus: { ...selection.menus, [menu.id]: e.target.value ? [e.target.value] : [] } })}><option value="">Select an option</option>{menu.options.map(option => <option key={option} value={option}>{option}</option>)}</select></Field> : menu.options.map(option => <label className="sp-check" key={option}><input type="checkbox" disabled={menu.maxChoices!==undefined && (selection.menus?.[menu.id]??[]).length>=menu.maxChoices && !(selection.menus?.[menu.id]??[]).includes(option)} checked={(selection.menus?.[menu.id] ?? []).includes(option)} onChange={e => { const choices = selection.menus?.[menu.id] ?? []; if(e.target.checked && menu.maxChoices!==undefined && choices.length>=menu.maxChoices)return; set({ menus: { ...selection.menus, [menu.id]: e.target.checked ? [...choices, option] : choices.filter(choice => choice !== option) } }); }} />{option}</label>)}
       </>}
     </section>)}
-    <div className="sp-fields"><Field label="Event date"><input type="date" value={selection.eventDate} onChange={e => set({ eventDate: e.target.value })} /></Field><Field label="Event location"><input value={selection.location} placeholder="Type event location here" onChange={e => set({ location: e.target.value })} /></Field></div>
+    <div className="sp-fields"><Field label="Event date"><input type="date" value={selection.eventDate} onChange={e => set({ eventDate: e.target.value })} /></Field><Field label="Event location"><PlaceAutocompleteInput placeholder="Search and select an event location" defaultValue={selection.location} fieldNames={{input:"pricingEventLocation"}} omitHiddenFields requireSelection onPlaceSelect={place=>set({location:place.formattedAddress})}/></Field></div>
     {service.extras.length > 0 && <><h3>Customize your order</h3>{service.extras.map(extra => {
       const checked = selection.extras[extra.id] !== undefined;
       const independent = extra.type === "item" || (extra.type === "hour" && extra.separateHours);

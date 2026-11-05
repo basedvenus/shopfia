@@ -143,6 +143,7 @@ export function ListingInquiryForm({
 
         <Field label="Event Location" required>
           <PlaceAutocompleteInput
+            requireSelection
             fieldNames={{
               input: "eventLocation",
               formattedAddress: "locationFormattedAddress",

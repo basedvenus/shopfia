@@ -94,7 +94,7 @@ export function PlaceAutocompleteInput({
 
   useEffect(() => {
     const query = inputValue.trim();
-    if (query.length < 2) {
+    if (query.length < 1) {
       setSuggestions([]);
       setErrorMessage(null);
       setIsLoading(false);

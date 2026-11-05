@@ -1,4 +1,6 @@
+import { BusinessLocationSettings } from "@/components/vendor/business-location-settings";
 import Link from "next/link";
+import { DeleteBusiness } from "@/components/vendor/delete-business";
 import { redirect } from "next/navigation";
 import { AlertCircle, CheckCircle2, ChevronDown, Clock3, Edit3, Eye, MessageSquare, PackagePlus, Settings, ShieldCheck, ShoppingBag, Store, Upload, Wand2 } from "lucide-react";
 import { auth } from "@/auth";
@@ -40,6 +42,10 @@ export default async function BusinessDashboardPage({
       availabilityNotes: true,
       bio: true,
       city: true,
+      formattedAddress: true,
+      googlePlaceId: true,
+      locationLat: true,
+      locationLng: true,
       coverPhoto: true,
       instagramUrl: true,
       logoCrop: true,
@@ -121,7 +127,7 @@ export default async function BusinessDashboardPage({
 
   const publicUrl = storefrontUrl(business.slug);
   const publicPath = storefrontPath(business.slug);
-  const { activeServices, openRequests, activeBookings, revenueCents: revenue } = await getVendorDashboardStats(business.id);
+  const { activeServices, completedBookings, openRequests, activeBookings, revenueCents: revenue } = await getVendorDashboardStats(business.id);
 
   return (
     <div className="space-y-6 pb-10">
@@ -145,12 +151,6 @@ export default async function BusinessDashboardPage({
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <Link href={`/vendor/business/${business.slug}/storefront`}>
-                <Wand2 className="h-4 w-4" />
-                Edit Storefront
-              </Link>
-            </Button>
             <Button asChild variant="secondary">
               <Link href={publicPath}>
                 <Eye className="h-4 w-4" />
@@ -180,10 +180,10 @@ export default async function BusinessDashboardPage({
       </nav>
 
       <section id="home" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile label="Services" value={String(activeServices)} />
-        <StatTile label="Open Requests" value={String(openRequests)} />
-        <StatTile label="Active Bookings" value={String(activeBookings)} />
-        <StatTile label="Revenue" value={formatCurrency(revenue)} />
+        <StatTile label="Active bookings" value={String(activeBookings)} />
+        <StatTile label="Open requests" value={String(openRequests)} />
+        <StatTile label="Completed bookings" value={String(completedBookings)} />
+        <StatTile label="Revenue · Year to date" value={formatCurrency(revenue)} />
       </section>
 
       <section id="storefront" className="scroll-mt-24">
@@ -193,6 +193,12 @@ export default async function BusinessDashboardPage({
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             Edit the page customers see: content, design, sections, portfolio, service area, and inquiry flow.
           </p>
+            <Button asChild className="mt-4">
+              <Link href={`/vendor/business/${business.slug}/storefront`}>
+                <Wand2 className="h-4 w-4" />
+                Edit Storefront
+              </Link>
+            </Button>
         </Panel>
       </section>
 
@@ -284,11 +290,11 @@ export default async function BusinessDashboardPage({
       <section id="settings" className="scroll-mt-24">
         <Panel>
           <SectionKicker icon={<Settings className="h-4 w-4" />} label="Settings" />
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="mt-4 grid items-start gap-4 lg:grid-cols-2">
             <div className="rounded-[1rem] border border-[#eadbd8] bg-[#fbf7f5] p-4">
               <h3 className="font-semibold">Business details</h3>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{formatLocation(business.city, business.state)} · {business.serviceRadiusMiles} mile service radius</p>
-              <Button asChild variant="secondary" className="mt-4"><Link href={`/vendor/business/${business.slug}/storefront`}>Edit Storefront</Link></Button>
+              <BusinessLocationSettings business={business} />
             </div>
             <div className="rounded-[1rem] border border-[#eadbd8] bg-[#fbf7f5] p-4">
               <h3 className="font-semibold">Payments</h3>
@@ -341,6 +347,7 @@ export default async function BusinessDashboardPage({
               ) : null}
             </div>
           </div>
+          <DeleteBusiness businessId={business.id} name={business.name} />
         </Panel>
       </section>
     </div>

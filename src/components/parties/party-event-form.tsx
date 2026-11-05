@@ -403,6 +403,7 @@ export function PartyEventForm({ currentUserId, composer = false, initialParty, 
           </div>
         ) : (
       <PlaceAutocompleteInput
+            requireSelection
         defaultValue={initialParty?.formattedAddress ?? initialParty?.location ?? ""}
         defaultPlace={{
           formattedAddress: initialParty?.formattedAddress ?? initialParty?.location ?? undefined,
