@@ -1,4 +1,5 @@
 "use client";
+import { CityPicker } from "@/components/location/city-picker";
 import { InlineCoverCrop } from "./inline-cover-crop";
 
 import {ServiceBuilderPopup} from "./service-builder-popup";
@@ -1675,20 +1676,7 @@ function StorefrontPreview({
             )}
             {activeSection === "hero" ? (
               <div className="mt-1 grid gap-2 sm:grid-cols-2">
-                <InlineTextInput
-                  ariaLabel="City"
-                  className={`text-sm ${theme.mutedClass}`}
-                  onChange={(value) => update("city", value)}
-                  placeholder="Type location here"
-                  value={form.city}
-                />
-                <InlineTextInput
-                  ariaLabel="State"
-                  className={`text-sm ${theme.mutedClass}`}
-                  onChange={(value) => update("state", value)}
-                  placeholder="Type state here"
-                  value={form.state}
-                />
+                <CityPicker city={form.city} state={form.state} onChange={(city,state)=>{update("city",city);update("state",state);}}/>
               </div>
             ) : (
               <div className={`text-sm ${theme.mutedClass}`}>@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>

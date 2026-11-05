@@ -17,6 +17,7 @@ export type PlaceDetails = {
   lng: number;
   name?: string;
   types: string[];
+  viewport?: {low:{latitude:number;longitude:number};high:{latitude:number;longitude:number}};
   source: "google";
 };
 
@@ -56,6 +57,7 @@ export function normalizeGoogleDetails(result: GooglePlaceDetailsResult): PlaceD
     lat: result.location.latitude,
     lng: result.location.longitude,
     name: result.displayName?.text,
+    ...(result.viewport ? {viewport:result.viewport} : {}),
     types: result.types ?? [],
     source: "google"
   };
@@ -102,6 +104,7 @@ type GoogleAddressComponent = {
 };
 
 type GooglePlaceDetailsResult = {
+  viewport?: {low:{latitude:number;longitude:number};high:{latitude:number;longitude:number}};
   addressComponents?: GoogleAddressComponent[];
   displayName?: {
     text: string;

@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const input = (url.searchParams.get("input") ?? url.searchParams.get("q") ?? "").trim();
 
-  if (input.length < 2) {
+  if (input.length < 1) {
     return NextResponse.json({ suggestions: [], source: "google" });
   }
 
@@ -52,7 +52,6 @@ export async function GET(request: Request) {
         body: JSON.stringify({
           input,
           ...(url.searchParams.get("type") === "cities" ? { includedPrimaryTypes: ["(cities)"] } : url.searchParams.get("type") === "regions" ? { includedPrimaryTypes: ["(regions)"] } : {}),
-          includedRegionCodes: ["us"],
           includeQueryPredictions: false,
           languageCode: "en"
         }),

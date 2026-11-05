@@ -40,6 +40,7 @@ export async function GET(request: Request) {
             "id",
             "formattedAddress",
             "location",
+            "viewport",
             "addressComponents",
             "displayName",
             "types"

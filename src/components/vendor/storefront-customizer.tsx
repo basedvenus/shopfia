@@ -1,5 +1,6 @@
 "use client";
 
+import { CityPicker } from "@/components/location/city-picker";
 import { VendorSocialFeeds } from "@/components/vendor/vendor-social-feeds";
 
 import Link from "next/link";
@@ -986,8 +987,7 @@ function SectionEditor({
         <details className="rounded-xl border p-3"><summary>Business details</summary><div className="mt-4 space-y-4">
         <Field label="Storefront name"><Input placeholder="Type storefront name here" value={form.name} onChange={(event) => update("name", event.target.value)} /></Field>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Business location"><Input placeholder="Type location here" value={form.city} onChange={(event) => update("city", event.target.value)} /></Field>
-          <Field label="State"><Input placeholder="Type state here" value={form.state} onChange={(event) => update("state", event.target.value)} /></Field>
+          <CityPicker city={form.city} state={form.state} onChange={(city,state)=>{update("city",city);update("state",state);}}/>
         </div>
         <Field label="Business description"><Textarea placeholder="Describe your business here" value={form.bio} onChange={(event) => update("bio", event.target.value)} /></Field>
         </div></details>
@@ -1567,20 +1567,7 @@ function StorefrontPreview({
             )}
             {activeSection === "hero" ? (
               <div className="mt-1 grid gap-2 sm:grid-cols-2">
-                <InlineTextInput
-                  ariaLabel="City"
-                  className={`text-sm ${theme.mutedClass}`}
-                  onChange={(value) => update("city", value)}
-                  placeholder="Type location here"
-                  value={form.city}
-                />
-                <InlineTextInput
-                  ariaLabel="State"
-                  className={`text-sm ${theme.mutedClass}`}
-                  onChange={(value) => update("state", value)}
-                  placeholder="Type state here"
-                  value={form.state}
-                />
+                <CityPicker city={form.city} state={form.state} onChange={(city,state)=>{update("city",city);update("state",state);}}/>
               </div>
             ) : (
               <div className={`text-sm ${theme.mutedClass}`}>@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>

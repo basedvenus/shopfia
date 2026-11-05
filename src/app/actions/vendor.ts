@@ -593,6 +593,7 @@ export async function updateStorefrontCustomizationAction(formData: FormData) {
       name: parsed.name,
       city: parsed.city,
       state: parsed.state || null,
+      ...((vendor.city !== parsed.city || (vendor.state ?? "") !== (parsed.state ?? "")) ? {formattedAddress:null,googlePlaceId:null,locationLat:null,locationLng:null} : {}),
       bio: parsed.bio || null,
       logoCrop: parsed.logoCrop ?? Prisma.JsonNull,
       logoUrl: parsed.logoUrl || null,
