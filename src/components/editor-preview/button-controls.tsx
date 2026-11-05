@@ -18,6 +18,8 @@ export function ButtonControls({template,section,onChange}:{template:StorefrontT
  }
  return <section data-button-settings className="rounded-2xl border bg-[#fffaf8] p-4">
   <h3 className="mb-4 font-semibold">Buttons</h3>
+  <label className="grid gap-2 text-sm font-medium">Button label<input aria-label="Button label" className="w-full rounded-xl border bg-white px-3 py-2 text-base font-normal" maxLength={60} value={template.buttonText??"Request a quote"} placeholder="e.g. Request a quote" onChange={event=>onChange({...template,buttonText:event.target.value})}/></label>
+  <p className="mt-2 text-xs text-stone-500">The text customers see on your booking buttons.</p>
   <div className="mt-4 grid grid-cols-2 gap-3"><ColorPicker label="Button color" value={color} onChange={buttonColor=>update({buttonColor})}/><ColorPicker label="Button text color" value={ink} onChange={buttonInk=>update({buttonInk})}/></div>
   <label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={allColors} onChange={e=>{setAllColors(e.target.checked);if(e.target.checked)update({buttonColor:color,buttonInk:ink},true);}}/>Change All</label>
   <p className="mb-2 mt-5 text-sm font-medium">Button shape</p>
