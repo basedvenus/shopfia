@@ -3,6 +3,8 @@ import references from "./storefront-reference-templates.json";
 export type SectionDesign = { buttonColor?:string; buttonInk?:string; buttonShape?:"pill"|"block"; patternOpacity?:number; background: string; ink: string; pattern: "solid" | "clouds" | "stripes" | "grid" | "dots" | "checker" | "waves"; patternColor?: string; overlayColor?: string; overlayOpacity?: number };
 
 export type StorefrontTemplate = {
+  stickers?: import("@/lib/storefront-stickers").StorefrontSticker[];
+  illustrationHidden?:boolean; illustrationSize?:number; illustrationX?:number; illustrationY?:number;
   buttonColor?: string;
   buttonText?: string;
   id: string; name: string; photoLayout?: "quartet";

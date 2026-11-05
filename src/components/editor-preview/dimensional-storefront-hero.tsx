@@ -3,7 +3,7 @@ import { InlineCoverCrop } from "./inline-cover-crop";
 import { ProductSpin } from "./product-spin";
 import { ProductSpotlight } from "./product-spotlight";
 import { InlineStorefrontText } from "./inline-storefront-text";
-import { TemplateIllustration } from "./template-illustration";
+import { TemplateSticker } from "./storefront-stickers";
 
 import type { StorefrontTemplate } from "@/lib/editor-preview/storefront-template-library";
 import { sectionDesignStyle } from "@/lib/editor-preview/template-section-design";
@@ -41,12 +41,12 @@ export function DimensionalStorefrontHero({ onCoverRemove, onCoverCropChange, co
   const playing = depth !== "flat";
   const effectsButton = useRef<HTMLButtonElement>(null);
   const [effectsOpen, setEffectsOpen] = useState(false);
-  const headlineContent = (template?.id === "reference-02" ? <span className="reference-inline-title"><span>{(headline || name).split(" ").slice(0,1).join(" ")}</span>{" "}<TemplateIllustration kind={template.illustration || "ribbon"} className="reference-title-art"/><span>{(headline || name).split(" ").slice(1).join(" ")}</span></span> : <TemplateHeading text={headline || name || "Your storefront"} treatment={template?.headingTreatment} accentFamily={template?.accentHeadingFamily}/>);
+  const headlineContent = (template?.id === "reference-02" ? <span className="reference-inline-title"><span>{(headline || name).split(" ").slice(0,1).join(" ")}</span>{" "}<TemplateSticker template={template} kind={template.illustration || "ribbon"} className="reference-title-art"/><span>{(headline || name).split(" ").slice(1).join(" ")}</span></span> : <TemplateHeading text={headline || name || "Your storefront"} treatment={template?.headingTreatment} accentFamily={template?.accentHeadingFamily}/>);
   return (
     <><div ref={rootRef} className={`depth-hero ${mobile ? "depth-mobile" : ""}`} data-preview-playing={playing} data-depth={depth} data-presentation={presentation} data-reference={template?.id} style={{...(effectOnly?{display:"block"}:{}),"--scene-color":sceneColor,...sectionDesignStyle(template?.sectionDesigns?.hero),...(template?.sectionDesigns?.hero ? {"--template-heroInk":template.sectionDesigns.hero.ink} : {})} as CSSProperties}>
 
       {!effectOnly && <div className="depth-copy">
-        {template?.illustration && template.id !== "reference-02" && <TemplateIllustration kind={template.illustration} className="mb-3 h-20 w-20"/>}
+        {template?.illustration && template.id !== "reference-02" && <TemplateSticker template={template} kind={template.illustration} className="mb-3 h-20 w-20"/>}
         {location ? <p className="depth-location">{location}</p> : null}
         <h2 style={headingStyle}>{onHeadlineChange ? <InlineStorefrontText label="Headline" value={headline} placeholder="Type headline here" onChange={onHeadlineChange}>{headlineContent}</InlineStorefrontText> : <span data-storefront-text="headline">{headlineContent}</span>}</h2>
         {onDescriptionChange ? <p className="depth-description"><InlineStorefrontText label={descriptionLabel} value={description} placeholder="Type tagline here" onChange={onDescriptionChange}/></p> : description ? <p className="depth-description" data-storefront-text="description">{description}</p> : null}
