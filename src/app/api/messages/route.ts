@@ -1,3 +1,4 @@
+import { notifyBusinessSms } from "@/lib/services/business-sms";
 import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import { auth } from "@/auth";
@@ -186,6 +187,10 @@ export async function POST(request: Request) {
     where: { id: conversationId },
     data: { lastMessageAt: now }
   });
+
+  if (conversation.buyerId === session.user.id) {
+    await notifyBusinessSms(conversation.vendorId, `message:${message.id}`);
+  }
 
   const recipient =
     conversation.buyerId === session.user.id ? conversation.vendor : conversation.buyer;

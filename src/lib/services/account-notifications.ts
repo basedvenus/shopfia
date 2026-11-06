@@ -1,3 +1,4 @@
+import { notifyBusinessSms } from "@/lib/services/business-sms";
 import { db } from "@/lib/db";
 import { sendAccountNotificationEmail } from "@/lib/email";
 import { getUserProfileImage } from "@/lib/profile-image";
@@ -12,6 +13,7 @@ export async function notifyAccount({userId, kind, title, href, dedupeKey, reque
       where: {dedupeKey}, update: {}, create: {userId,kind,title,href,dedupeKey},
       select: {id:true,emailSentAt:true,user:{select:{email:true}}}
     });
+    if (kind === "SERVICE_REQUEST") await notifyBusinessSms(userId, dedupeKey);
     if(notification.emailSentAt || !notification.user.email) return;
     let identities = {};
     if (kind === "SERVICE_REQUEST" && requesterId && businessId) {

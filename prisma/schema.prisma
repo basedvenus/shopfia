@@ -219,6 +219,8 @@ enum PartyContributionKind {
 }
 
 model User {
+  phoneVerification PhoneVerificationProfile?
+  businessSmsDeliveries BusinessSmsDelivery[]
   id                     String            @id @default(cuid())
   name                   String?
   email                  String?           @unique
@@ -1250,4 +1252,31 @@ model ServicePreset {
   createdAt DateTime @default(now())
   @@index([businessId, createdAt])
   @@unique([businessId, kind, name])
+}
+
+model PhoneVerificationProfile {
+  businessSmsEnabled Boolean @default(false)
+  businessSmsConsentAt DateTime?
+  userId String @id
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone String?
+  verifiedAt DateTime?
+  pendingPhone String?
+  pendingSid String?
+  pendingExpiresAt DateTime?
+  lastSentAt DateTime?
+  sendWindowStart DateTime?
+  sendCount Int @default(0)
+  checkCount Int @default(0)
+  requestId String?
+}
+
+model BusinessSmsDelivery {
+  eventKey String
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status String
+  providerSid String?
+  createdAt DateTime @default(now())
+  @@id([eventKey, userId])
 }

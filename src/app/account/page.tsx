@@ -228,6 +228,11 @@ export default async function AccountPage({
         />
       </section>
 
+      <section className="rounded-3xl border bg-white/90 p-5">
+        <h2 className="text-xl font-semibold">Profile settings</h2>
+        <Link href="/account/notifications" className="mt-2 inline-block text-sm font-medium text-primary underline underline-offset-4">Notification preferences</Link>
+      </section>
+
       <section className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
         {dashboardItems.map((item) => {
           const Icon = item.icon;

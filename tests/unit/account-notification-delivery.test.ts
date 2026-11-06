@@ -1,5 +1,6 @@
 import {beforeEach,expect,it,vi} from 'vitest';
 const mocks=vi.hoisted(()=>({upsert:vi.fn(),updateMany:vi.fn(),send:vi.fn()}));
+vi.mock('@/lib/services/business-sms',()=>({notifyBusinessSms:vi.fn()}));
 vi.mock('@/lib/db',()=>({db:{notification:{upsert:mocks.upsert,updateMany:mocks.updateMany}}}));
 vi.mock('@/lib/email',()=>({sendAccountNotificationEmail:mocks.send}));
 vi.mock('@/lib/security/audit-log',()=>({securityLog:vi.fn()}));

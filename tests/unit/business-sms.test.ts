@@ -1,0 +1,11 @@
+import {afterEach,beforeEach,expect,it,vi} from 'vitest';
+vi.mock('server-only',()=>({}));
+const mocks=vi.hoisted(()=>({query:vi.fn(),execute:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{$queryRaw:mocks.query,$executeRaw:mocks.execute}}));
+import {notifyBusinessSms} from '@/lib/services/business-sms';
+beforeEach(()=>{vi.resetAllMocks();vi.stubEnv('TWILIO_ACCOUNT_SID','ACtest');vi.stubEnv('TWILIO_MESSAGING_SERVICE_SID','MGtest');vi.stubEnv('TWILIO_MESSAGING_API_KEY_SID','SKtest');vi.stubEnv('TWILIO_MESSAGING_API_KEY_SECRET','secret');});
+afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();});
+it('does not call the provider when delivery is not configured',async()=>{vi.stubEnv('TWILIO_MESSAGING_SERVICE_SID','');const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);await notifyBusinessSms('u1','message:1');expect(mocks.query).not.toHaveBeenCalled();expect(fetcher).not.toHaveBeenCalled();});
+it('sends nothing for an opted-out or unverified recipient',async()=>{mocks.query.mockResolvedValue([]);const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);await notifyBusinessSms('u1','message:1');expect(fetcher).not.toHaveBeenCalled();const sql=mocks.query.mock.calls[0][0].join('');expect(sql).toContain('"businessSmsEnabled" = TRUE');expect(sql).toContain('"verifiedAt" IS NOT NULL');expect(sql).toContain('"businessSmsConsentAt" IS NOT NULL');});
+it('does not resend duplicate message events',async()=>{mocks.query.mockResolvedValueOnce([{phone:'+14155550123'}]).mockResolvedValueOnce([]);const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);await notifyBusinessSms('u1','message:1');expect(fetcher).not.toHaveBeenCalled();});
+it('sends a branded alert and records provider acceptance',async()=>{mocks.query.mockResolvedValueOnce([{phone:'+14155550123'}]).mockResolvedValueOnce([{eventKey:'message:1'}]);const fetcher=vi.fn().mockResolvedValue({ok:true,json:async()=>({sid:'SMtest'})});vi.stubGlobal('fetch',fetcher);await notifyBusinessSms('u1','message:1');const [url,request]=fetcher.mock.calls[0];expect(url).toContain('/Accounts/ACtest/Messages.json');expect(request.body.get('MessagingServiceSid')).toBe('MGtest');expect(request.body.get('Body')).toContain('Shopfia:');expect(request.body.get('Body')).toContain('STOP');expect(mocks.execute.mock.calls[0]).toContain('accepted');});
