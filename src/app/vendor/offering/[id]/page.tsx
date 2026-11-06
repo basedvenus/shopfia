@@ -1,3 +1,4 @@
+import {normalizeImageCrop} from "@/lib/image-crop";
 import { VENDOR_CATEGORY_NAMES } from "@/lib/vendor-categories";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -172,18 +173,7 @@ function getServiceComponents(value: unknown): ServiceComponent[] {
 }
 
 function getImageCrops(value: unknown) {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => {
-      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
-      const record = item as Record<string, unknown>;
-      const x = Number(record.x);
-      const y = Number(record.y);
-      const zoom = Number(record.zoom);
-      if (![x, y, zoom].every(Number.isFinite)) return null;
-      return { x, y, zoom };
-    })
-    .filter((crop): crop is { x: number; y: number; zoom: number } => Boolean(crop));
+  return Array.isArray(value)?value.map(normalizeImageCrop):[];
 }
 
 const categoryOrder: string[] = [...VENDOR_CATEGORY_NAMES];

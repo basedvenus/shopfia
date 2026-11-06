@@ -1,3 +1,4 @@
+import {ServicePhotos} from "@/components/vendor/service-photos";
 import { PublishedAboutGallery } from "@/components/vendor/published-about-gallery";
 import { VendorSocialFeeds } from "@/components/vendor/vendor-social-feeds";
 import { hasStorefrontDesign, readStorefrontDesign } from "@/lib/storefront-design";
@@ -304,8 +305,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           </div>
         </div>
       ) : null}
-      <header className="overflow-hidden rounded-[1rem] border bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]" style={{...theme.headerShellStyle,order:sectionPriority("hero")}}>
-        <div className="flex items-center justify-between gap-3 border-b px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]" style={theme.platformBarStyle}>
+      <header data-platform-profile className="overflow-hidden rounded-[1rem] border bg-white shadow-[0_16px_50px_rgba(47,38,38,0.10)]" style={{order:-1}}>
+        <div className="flex items-center justify-between gap-3 border-b px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{background:"#fffaf8",color:"#746a65"}}>
           <span style={{color:"hsl(2 53% 79%)"}}>ShopFia Storefront</span>
           <span className="hidden sm:inline">{isUnclaimed ? "Community-tagged · Unclaimed business" : "Verified identity, saved services, quotes, and bookings"}</span>
         </div>
@@ -331,7 +332,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 data-storefront-text="name" className="text-xl font-semibold tracking-tight md:text-2xl" style={theme.headingStyle}>{vendor.name}</h1>
+              <h1 className="platform-business-name text-xl font-semibold tracking-tight md:text-2xl">{vendor.name}</h1>
               {trustStatus.tone === "verified" || vendor.verified ? (
                 <Badge variant="accent" className="gap-1 rounded-full" style={theme.badgeStyle}>
                   <BadgeCheck className="h-3.5 w-3.5" />
@@ -351,14 +352,13 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 </span>
               ) : null}
             </div>
-            <div className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm ${theme.profileMetricClass}`}>
+            <div className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm platform-profile-metrics`}>
               <span className="inline-flex items-center gap-1.5">
                 <Star className="h-4 w-4 fill-current text-amber-500" />
                 {verifiedReviewCount > 0 ? `${verifiedAverageRating.toFixed(1)} (${verifiedReviewCount})` : "No reviews yet"}
               </span>
               <span>{completedOrderCount} completed ShopFia event{completedOrderCount === 1 ? "" : "s"}</span>
               <span>{followerCount} follower{followerCount === 1 ? "" : "s"}</span>
-              <span>{savedVendorCount} save{savedVendorCount === 1 ? "" : "s"}</span>
             </div>
           </div>
 
@@ -366,23 +366,23 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
             {session?.user?.id && vendor.user && session.user.id !== vendor.user.id ? (
               <form action={toggleFollow}>
                 <input type="hidden" name="followingId" value={vendor.user.id} />
-                <Button type="submit" variant={isFollowingVendor ? "secondary" : "default"} size="sm" className="min-w-[108px]" style={isFollowingVendor ? undefined : theme.ctaStyle}>
+                <Button type="submit" variant={isFollowingVendor ? "secondary" : "default"} size="sm" className="min-w-[108px]" style={isFollowingVendor ? undefined : {background:"#b77980",color:"#fff"}}>
                   {isFollowingVendor ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}
                   {isFollowingVendor ? "Following" : "Follow"}
                 </Button>
               </form>
             ) : !session?.user?.id && vendor.user ? (
-              <Button asChild size="sm" className="min-w-[108px]" style={theme.ctaStyle}>
+              <Button asChild size="sm" className="min-w-[108px]" style={{background:"#b77980",color:"#fff"}}>
                 <Link href={`/account?redirectTo=${encodeURIComponent(`/${vendor.slug}`)}`}>
                   <UserPlus className="h-4 w-4" />
                   Follow
                 </Link>
               </Button>
             ) : null}
-            <CopyStorefrontLinkButton label="Share" url={publicStorefrontUrl} className="h-9 px-3" style={theme.secondaryButtonStyle} />
-            <FavoriteToggle targetType="vendor" targetId={vendor.id} isSaved={isSavedVendor} variant="pill" label={isSavedVendor ? "Saved" : "Save"} style={theme.secondaryButtonStyle} />
+            <CopyStorefrontLinkButton label="Share" url={publicStorefrontUrl} className="h-9 px-3" style={{background:"#fff",color:"#332e2b",borderColor:"#eadbd7"}} />
+            <FavoriteToggle targetType="vendor" targetId={vendor.id} isSaved={isSavedVendor} variant="pill" label={isSavedVendor ? "Saved" : "Save"} style={{background:"#fff",color:"#332e2b",borderColor:"#eadbd7"}} />
             {!isUnclaimed ? (
-              <Button asChild size="sm" style={theme.ctaStyle}>
+              <Button asChild size="sm" style={{background:"#b77980",color:"#fff"}}>
                 <a href="#inquiry">
                   <Send className="h-4 w-4" />
                   Get a quote
@@ -394,8 +394,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <StorefrontNavigation
           visibleSections={sectionOrder.filter(section=>section!=="effects" || design.depth!=="flat")}
           sectionLabels={sectionLabels}
-          style={theme.navStyle}
-          activeItemStyle={theme.activeNavItemStyle}
+          style={{background:"#fff",color:"#746a65"}}
+          activeItemStyle={{background:"#f8ece9",color:"#332e2b"}}
         />
       </header>
 
@@ -954,6 +954,7 @@ function ServiceListingGrid({
     id: string;
     messageForPricing: boolean;
     photos: string[];
+    photoCrops?: unknown;
     title: string;
   }>;
   savedOfferingIds: Set<string>;
@@ -964,23 +965,11 @@ function ServiceListingGrid({
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {offerings.map((offering) => {
-        const photo = offering.photos[0] ?? null;
 
         return (
           <article key={offering.id} className={`group relative overflow-hidden shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
             <Link href={`/offering/${offering.id}`} className="block">
-              <div className="relative aspect-[4/3] bg-muted">
-                {photo ? (
-                  <Image
-                    src={photo}
-                    alt={offering.title}
-                    fill
-                    className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                  />
-                ) : (
-                  <NeutralVendorPlaceholder label={offering.category.name} />
-                )}
-              </div>
+              <ServicePhotos photos={offering.photos} crops={offering.photoCrops} title={offering.title}/>
               <div className="grid gap-3 p-4">
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline" className="rounded-full" style={theme.outlineBadgeStyle}>

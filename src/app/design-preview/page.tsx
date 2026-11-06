@@ -10,6 +10,8 @@ export default async function EditorReview({ searchParams }: { searchParams?: Pr
   const business = await db.vendorProfile.findFirst({
     where: session.user.role === "ADMIN" ? { slug: "moonmatcha" } : { slug: "moonmatcha", OR: [{ userId: session.user.id }, { managers: { some: { userId: session.user.id } } }] },
     select: {
+      user: { select: { _count: { select: { followers: true } } } },
+      _count: { select: { orders: { where: { status: { in: ["paid", "in_progress", "completed"] }, paymentSucceededAt: { not: null } } } } },
       averageRating: true,
       reviewCount: true,
       availabilityNotes: true,
@@ -62,6 +64,7 @@ export default async function EditorReview({ searchParams }: { searchParams?: Pr
           id: true,
           messageForPricing: true,
           photos: true,
+          photoCrops: true,
           title: true,
           turnaroundDays: true
         }

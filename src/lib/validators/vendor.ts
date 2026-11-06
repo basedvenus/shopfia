@@ -164,7 +164,7 @@ export const offeringSchema = z.object({
   categoryIds: z.array(databaseIdSchema).min(1, "Choose at least one category.").max(8, "Choose up to 8 categories."),
   eventCategoryIds: z.array(z.string().min(1)).max(12, "Choose up to 12 event types.").default([]),
   tags: z.array(z.string().min(1).max(30, "Keep tags short and sweet.")).max(12, "Use up to 12 tags.").default([]),
-  photos: z.array(imageValueSchema).max(10, "Add up to 10 photos.").default([]),
+  photos: z.array(imageValueSchema).default([]),
   serviceComponents: z.array(serviceComponentSchema).max(32, "Add up to 32 reusable components.").default([]),
   packages: z.array(pricedOptionSchema).max(8, "Add up to 8 packages.").default([]),
   addons: z.array(pricedOptionSchema).max(12, "Add up to 12 add-ons.").default([]),

@@ -1,4 +1,6 @@
 "use client";
+import {ChoiceModeSelect} from "@/components/vendor/choice-mode-select";
+import {ChoiceLimitStepper} from "@/components/vendor/choice-limit-stepper";
 
 import {useServicePresetLibrary,ServicePresetChoices} from "./service-preset-library";
 import {copyServicePreset} from "@/lib/service-presets";
@@ -67,7 +69,7 @@ export function ServicePricingFields({ value, onChange, issues=[], businessId, p
     <section className="sp-card"><h2>Options and menus</h2><p className="sp-note">Organize included options into separate sections, such as Flavors, Drink menu, Colors, Styles, Packages, or Themes. Name each section your way. Sections are saved for reuse when you save this service. Use add-ons below for options that cost extra.</p>
       <ServicePresetChoices kind="options" items={library.items} busy={library.busy} onRemove={library.remove} onApply={item=>{const copy=copyServicePreset(item);if(copy.kind==="options" && (value.menus??[]).length<12)set({menus:[...(value.menus??[]),copy.payload]});}}/>
       {(value.menus ?? []).map((menu, index) => {
-        const update = (patch: Partial<typeof menu>) => set({ menus: value.menus!.map(item => item.id === menu.id ? { ...item, ...patch } : item) });
+        const update = (patch: Partial<typeof menu>) => { const next={...menu,...patch};const count=next.options.filter(option=>option.trim()).length;if(next.selection==="multiple")next.maxChoices=count?Math.max(1,Math.min(next.maxChoices??count,count)):undefined;set({ menus: value.menus!.map(item => item.id === menu.id ? next : item) }); };
         return <details className="sp-disclosure" data-pricing-group={`menus.${index}`} key={menu.id} open><summary>{menu.name || `Option section ${index + 1}`}</summary><Group.Provider value={`menus.${index}`}><div className="sp-stack">
           <Field label="Section title" hint="This heading appears above the choices customers see."><input value={menu.name} placeholder="e.g. Flavors, Themes, Colors or Styles" onChange={e => update({ name: e.target.value })} /></Field>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Suggested section titles">{["Flavors", "Drink menu", "Colors", "Styles", "Packages", "Themes"].map(title => <PricingButton key={title} type="button" onClick={() => update({ name: title })}>{title}</PricingButton>)}</div>
@@ -77,8 +79,8 @@ export function ServicePricingFields({ value, onChange, issues=[], businessId, p
             <PricingButton type="button" disabled={menu.options.length >= 50} onClick={() => update({ options: [...(menu.options.length ? menu.options : [""]), ""] })}>+ Add choice</PricingButton>
             {issues.filter(issue => issue.label === "Choices" && issue.group === `menus.${index}`).map(issue => <small key={issue.message} role="alert" className="sp-field-error">{issue.message}</small>)}
           </fieldset>
-          <Field label="Can customers select these options?" hint="Choose whether this section is for browsing or for selections in the service request."><select value={menu.selection} onChange={e => update({ selection: e.target.value as typeof menu.selection, required: e.target.value === "display" ? false : menu.required })}><option value="display">Show the list only — no selection</option><option value="single">Let customers choose one</option><option value="multiple">Let customers choose more than one</option></select></Field>
-          {menu.selection === "multiple" && <Field label="Maximum selections (optional)" hint="For example, enter 3 to let customers choose up to three. Leave blank for no limit."><input type="number" min={1} max={menu.options.filter(option=>option.trim()).length||1} step={1} value={menu.maxChoices??""} onChange={event=>update({maxChoices:event.target.value===""?undefined:Number(event.target.value)})}/></Field>}
+          <Field label="How many options can customers choose?" hint="Choose whether this section is for browsing or for selections in the service request."><ChoiceModeSelect value={menu.selection} onChange={selection=>update({selection,required:selection==="display"?false:menu.required,maxChoices:selection==="multiple"?Math.min(2,menu.options.filter(option=>option.trim()).length)||undefined:undefined})}/></Field>
+          {menu.selection === "multiple" && <Field label="Maximum choices" hint={`Customers can choose up to this many of the ${menu.options.filter(option=>option.trim()).length} available options.`}><ChoiceLimitStepper value={menu.maxChoices??menu.options.filter(option=>option.trim()).length} max={menu.options.filter(option=>option.trim()).length} onChange={maxChoices=>update({maxChoices})}/></Field>}
           {menu.selection !== "display" && <label className="sp-check"><input type="checkbox" checked={menu.required} onChange={e => update({ required: e.target.checked })} />Require a choice when requesting this service</label>}
           <PricingButton type="button" className="sp-link" onClick={() => set({ menus: value.menus!.filter(item => item.id !== menu.id) })}>Remove section</PricingButton>
         </div></Group.Provider></details>;
