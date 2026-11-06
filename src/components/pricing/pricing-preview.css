@@ -74,3 +74,7 @@
 .sp-addons .sp-field>span,.sp-addons .sp-check {font-size:12px;}
 .sp-addons input:not([type=checkbox]),.sp-addons select,.sp-addons .sp-money {min-height:36px;font-size:13px;}
 .sp-addons input:not([type=checkbox]),.sp-addons select {padding:7px 10px;}
+
+.sp-workspace.sp-live-form{background:transparent;}
+
+.sp-workspace fieldset.sp-field>legend{font-size:13px;font-weight:500;}

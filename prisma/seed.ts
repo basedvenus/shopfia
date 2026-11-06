@@ -13,6 +13,7 @@ const prisma = new PrismaClient();
 
 const categories = [
   ...VENDOR_CATEGORIES.map((category) => ({ ...category, audience: CategoryAudience.VENDOR })),
+  { name: "Pet Party", iconName: "paw-print", audience: CategoryAudience.BUYER },
   { name: "Birthday Party", iconName: "cake-slice", audience: CategoryAudience.BUYER },
   { name: "Baby Shower", iconName: "baby", audience: CategoryAudience.BUYER },
   { name: "Wedding", iconName: "heart", audience: CategoryAudience.BUYER },

@@ -272,3 +272,13 @@
 
 /* User-resized cover frames override template banner heights. */
 .template-surface[data-template] .depth-hero[data-reference] .depth-scene[data-crop-ratio] {height:auto!important;min-height:0!important;max-width:100%;margin-left:0!important;margin-right:0!important;flex-shrink:0;}
+
+/* The ShopFia identity header is platform UI, independent of storefront themes. */
+[data-platform-profile]{background:#fff!important;color:#332e2b!important;font-family:Arial,sans-serif!important;}
+[data-platform-profile] .platform-business-name{color:#332e2b!important;font-family:Arial,sans-serif!important;font-style:normal!important;font-weight:700!important;letter-spacing:-.025em!important;}
+[data-platform-profile] .text-muted-foreground,[data-platform-profile] .platform-profile-meta{color:#746a65!important;}
+[data-platform-profile] .platform-profile-metrics{color:#514943!important;font:400 13px/1.5 Arial,sans-serif!important;}
+
+/* Keep decorative dot dividers complete and evenly inset at both ends. */
+.template-surface[data-frame=wave] [data-testid^=preview-section-]:not([data-testid=preview-section-hero]):not([data-testid=preview-section-effects]){position:relative;border-top:0;margin-inline:0;}
+.template-surface[data-frame=wave] [data-testid^=preview-section-]:not([data-testid=preview-section-hero]):not([data-testid=preview-section-effects])::before{content:"";position:absolute;top:0;left:12px;right:12px;height:14px;pointer-events:none;background-image:radial-gradient(circle at center,var(--template-secondary) 6px,transparent 6.5px);background-size:28px 14px;background-repeat:space no-repeat;background-position:center;}

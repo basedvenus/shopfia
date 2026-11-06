@@ -260,7 +260,7 @@ function parseEditorServices(value: string | undefined): StorefrontEditorService
       id: typeof item.id === "string" && z.string().cuid().safeParse(item.id).success ? item.id : undefined,
       messageForPricing: Boolean(item.messageForPricing),
       photos: Array.isArray(item.photos)
-        ? item.photos.filter((photo): photo is string => typeof photo === "string" && photo.trim().length > 0).slice(0, 10)
+        ? item.photos.filter((photo): photo is string => typeof photo === "string" && photo.trim().length > 0)
         : [],
       title: typeof item.title === "string" ? item.title.trim().slice(0, 120) : "",
       turnaroundDays: typeof item.turnaroundDays === "number" ? Math.max(0, Math.round(item.turnaroundDays)) : null
@@ -956,6 +956,7 @@ async function saveVendorProfile(formData: FormData): Promise<never> {
   revalidatePath("/vendor/dashboard");
   revalidatePath(`/vendor/dashboard/${vendor.slug}`);
   revalidatePath(`/vendor/business/${vendor.slug}`);
+  revalidatePath(`/vendor/business/${vendor.slug}`);
   revalidatePath(`/vendor/profile/${vendor.slug}`);
   revalidatePath(storefrontPath(vendor.slug));
   redirect(`/vendor/business/${vendor.slug}`);
@@ -1045,7 +1046,8 @@ export async function upsertOfferingAction(formData: FormData) {
   }
   const offeringCategory = offeringCategories.find((category) => category.id === primaryCategoryId) ?? offeringCategories[0];
 
-  const uniqueEventCategoryIds = [...new Set(parsed.eventCategoryIds)];
+  const petPartySelected=parsed.eventCategoryIds.includes("shopfia-event-pet-party");
+  const uniqueEventCategoryIds = [...new Set(parsed.eventCategoryIds.filter(id=>id!=="shopfia-event-pet-party"))];
   const validEventCategoryCount = uniqueEventCategoryIds.length
     ? await db.category.count({
         where: { id: { in: uniqueEventCategoryIds }, audience: CategoryAudience.BUYER }
@@ -1103,6 +1105,7 @@ export async function upsertOfferingAction(formData: FormData) {
     skipDuplicates: true
   });
 
+  if(petPartySelected){const pet=await tx.category.upsert({where:{name:"Pet Party"},create:{name:"Pet Party",iconName:"paw-print",audience:CategoryAudience.BUYER},update:{}});if(!uniqueEventCategoryIds.includes(pet.id))uniqueEventCategoryIds.push(pet.id);}
   await tx.offeringEventCategory.deleteMany({ where: { offeringId } });
   if (uniqueEventCategoryIds.length > 0) {
     await tx.offeringEventCategory.createMany({
@@ -1147,6 +1150,7 @@ export async function upsertOfferingAction(formData: FormData) {
 
   revalidatePath("/vendor/dashboard");
   revalidatePath(`/vendor/dashboard/${vendor.slug}`);
+  revalidatePath(`/vendor/business/${vendor.slug}`);
   revalidatePath(`/vendor/offering/${offeringId}`);
   revalidatePath(`/vendor/profile/${vendor.slug}`);
   revalidatePath(storefrontPath(vendor.slug));
@@ -1155,7 +1159,7 @@ export async function upsertOfferingAction(formData: FormData) {
   revalidatePath("/explore");
   revalidatePath("/categories");
   if(formData.get("stayInStorefront")==="1") return;
-  redirect("/vendor/dashboard#services");
+  redirect(`/vendor/business/${vendor.slug}#services`);
 }
 
 export async function submitBusinessVerificationDocumentAction(formData: FormData) {
@@ -1212,6 +1216,7 @@ export async function submitBusinessVerificationDocumentAction(formData: FormDat
   });
 
   revalidatePath(`/vendor/dashboard/${vendor.slug}`);
+  revalidatePath(`/vendor/business/${vendor.slug}`);
   revalidatePath(storefrontPath(vendor.slug));
 }
 
@@ -1257,6 +1262,7 @@ export async function updateSellerMarketplaceSettingsAction(formData: FormData) 
 
   revalidatePath("/vendor/dashboard");
   revalidatePath(`/vendor/dashboard/${vendor.slug}`);
+  revalidatePath(`/vendor/business/${vendor.slug}`);
 }
 
 const communityVendorSocialSchema = z.object({

@@ -11,3 +11,10 @@
 .storefront-layout-section .storefront-section-natural {display:flex!important;flex-direction:column;gap:24px;}
 
 .published-storefront .storefront-layout-section .storefront-section-natural > section#effects{padding:0;border:0;background:transparent;box-shadow:none;}
+
+/* Mobile storefronts use the screen width, independent of desktop frame sizing. */
+@media(max-width:680px){
+ .published-storefront{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;border-radius:0!important;}
+ .published-storefront .storefront-section-grid>.storefront-section-row{grid-template-columns:minmax(0,1fr)!important;}
+ .published-storefront .storefront-section-grid>.storefront-section-row>.storefront-layout-section{width:100%!important;max-width:100%!important;margin-left:0!important;}
+}

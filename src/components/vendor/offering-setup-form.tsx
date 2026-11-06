@@ -1,10 +1,11 @@
 "use client";
+import {ServiceCategoryPicker,eventTypeOptions} from "./service-category-picker";
 
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { Check, Plus, Sparkles, X } from "lucide-react";
 import { upsertOfferingAction } from "@/app/actions/vendor";
 import { Button } from "@/components/ui/button";
-import { ImageUploadField } from "@/components/ui/image-upload-field";
+import { ServicePhotoGrid } from "@/components/vendor/service-photo-grid";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldShell, SubmitButton, ValidatedForm } from "@/components/ui/validated-form";
@@ -93,11 +94,7 @@ export function LegacyOfferingSetupForm({
     offering?.components?.length ? offering.components : []
   );
   const generatedSlug = useMemo(() => slugify(title), [title]);
-  const selectedCategoryIds = offering?.categoryIds?.length
-    ? offering.categoryIds
-    : offering?.categoryId
-      ? [offering.categoryId]
-      : [];
+  const [selectedCategoryIds,setSelectedCategoryIds]=useState<string[]>(offering?.categoryIds?.length?offering.categoryIds:offering?.categoryId?[offering.categoryId]:[]);
 
   return (
     <ValidatedForm
@@ -150,78 +147,8 @@ export function LegacyOfferingSetupForm({
             />
           </FieldShell>
 
-          <div className="rounded-[1.4rem] border bg-white p-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">
-                Service categories <span className="text-primary">*</span>
-              </label>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Choose every category this belongs in. This helps your offering appear in the right discovery feeds.
-              </p>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2" data-required-label="Service Categories">
-              {categories.map((category) => (
-                <label
-                  key={category.id}
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border bg-[#fbf7f5] px-3 py-2 text-sm transition hover:border-primary/45"
-                >
-                  <input
-                    type="checkbox"
-                    name="categoryIds"
-                    value={category.id}
-                    defaultChecked={selectedCategoryIds.includes(category.id)}
-                  />
-                  {category.name}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[1.4rem] border bg-white p-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Event types</label>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Leave this on All events unless the service only fits specific celebration types.
-              </p>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <label
-                className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-sm transition hover:border-primary/45 ${
-                  selectedEventCategoryIds.length === 0 ? "border-primary/35 bg-primary/10 text-primary" : "bg-[#fbf7f5]"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="eventTypeMode"
-                  value="all"
-                  checked={selectedEventCategoryIds.length === 0}
-                  onChange={() => setSelectedEventCategoryIds([])}
-                />
-                All events
-              </label>
-              {eventCategories.map((category) => (
-                <label
-                  key={category.id}
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border bg-[#fbf7f5] px-3 py-2 text-sm transition hover:border-primary/45"
-                >
-                  <input
-                    type="checkbox"
-                    name="eventCategoryIds"
-                    value={category.id}
-                    checked={selectedEventCategoryIds.includes(category.id)}
-                    onChange={(event) =>
-                      setSelectedEventCategoryIds((current) =>
-                        event.target.checked
-                          ? [...current, category.id]
-                          : current.filter((categoryId) => categoryId !== category.id)
-                      )
-                    }
-                  />
-                  {category.name}
-                </label>
-              ))}
-            </div>
-          </div>
+          <ServiceCategoryPicker label="Service categories" name="categoryIds" options={categories} selected={selectedCategoryIds} onChange={setSelectedCategoryIds} required/>
+          <ServiceCategoryPicker label="Event types" name="eventCategoryIds" options={eventTypeOptions(eventCategories)} selected={selectedEventCategoryIds} onChange={setSelectedEventCategoryIds}/>
 
           <FieldShell label="Description" required helperText="Tell hosts what is included, your style, and what makes this offering special.">
             <Textarea
@@ -236,22 +163,7 @@ export function LegacyOfferingSetupForm({
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <ImageUploadField
-          name="photos"
-          label="Cover photo (Optional)"
-          defaultValue={offering?.photos[0]}
-          defaultCrop={offering?.photoCrops?.[0]}
-          helperText="Use a real example or styled image that represents this offering."
-        />
-        <ImageUploadField
-          name="photos"
-          label="Detail photo (Optional)"
-          defaultValue={offering?.photos[1]}
-          defaultCrop={offering?.photoCrops?.[1]}
-          helperText="Optional closeup, setup shot, or inspiration image."
-        />
-      </section>
+      <ServicePhotoGrid businessId={businessId} photos={offering?.photos} crops={offering?.photoCrops}/>
 
       <section className="rounded-[1.5rem] border border-border/80 bg-white p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

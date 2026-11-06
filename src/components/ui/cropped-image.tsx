@@ -43,7 +43,8 @@ export function CroppedImage({
       onError={onError}
       className={className}
       style={{
-        ...imageCropToCss(crop)
+        ...imageCropToCss(crop),
+        ...(frameFit === "contain" ? {objectFit: "contain" as const} : {})
       }}
     />
   );

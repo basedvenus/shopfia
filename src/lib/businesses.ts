@@ -210,7 +210,7 @@ export const STOREFRONT_SECTION_LABELS: Record<(typeof APPROVED_STOREFRONT_SECTI
   socials: "Socials"
 };
 
-export const REQUIRED_STOREFRONT_SECTIONS = ["hero", "final-quote"] as const;
+export const REQUIRED_STOREFRONT_SECTIONS: readonly string[] = [];
 
 export function sanitizeStorefrontSectionLabels(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};

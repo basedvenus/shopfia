@@ -102,3 +102,6 @@
  .storefront-section-row[data-paired=true] .depth-hero{margin:0!important;width:100%!important;}
  .storefront-section-row[data-paired=true] .depth-scene{margin:0!important;width:100%!important;}
 }
+
+.storefront-section-grid[data-mobile=true]>.storefront-section-row{grid-template-columns:minmax(0,1fr)!important;}
+.storefront-section-grid[data-mobile=true]>.storefront-section-row>.storefront-section-frame{width:100%!important;margin-left:0!important;}

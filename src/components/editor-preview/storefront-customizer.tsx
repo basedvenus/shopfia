@@ -1,4 +1,5 @@
 "use client";
+import {ServicePhotos} from "@/components/vendor/service-photos";
 import { StickerEditor, StickerLayer, StickersPanel } from "./storefront-stickers";
 import { CityPicker } from "@/components/location/city-picker";
 import { InlineCoverCrop } from "./inline-cover-crop";
@@ -88,6 +89,7 @@ type EditorService = {
   isNew?: boolean;
   messageForPricing: boolean;
   photos: string[];
+  photoCrops?: unknown;
   title: string;
   turnaroundDays: number | null;
 };
@@ -98,6 +100,8 @@ type BookingInfo = { deposit: string; leadTime: string; process: string };
 type EditorTool = "content" | "services" | "gallery" | "design";
 
 type CustomizerBusiness = {
+  user?: { _count: { followers: number } } | null;
+  _count?: { orders: number };
   averageRating: number;
   reviewCount: number;
   availabilityNotes: string | null;
@@ -119,6 +123,7 @@ type CustomizerBusiness = {
     id: string;
     messageForPricing: boolean;
     photos: string[];
+    photoCrops?: unknown;
     title: string;
     turnaroundDays: number | null;
   }>;
@@ -643,7 +648,7 @@ export function StorefrontCustomizer({
         requestAnimationFrame(()=>templatePreviewRef.current?.scrollIntoView({block:"start",behavior:"auto"}));
       }} /> : null}
       {serviceBuilderUrl && <ServiceBuilderPopup businessId={business.id} previewOnly={previewOnly} onClose={()=>setServiceBuilderUrl(null)} onSaved={services=>{setForm(current=>({...current,services:[...current.services,...services.filter(service=>!current.services.some(existing=>existing.id===service.id))]}));markDirty();}}/>}
-      {organizerOpen && <SectionOrganizer order={visibleSections.filter(id=>id!=="effects"||heroDepth!=="flat")} layout={form.sectionLayout} label={sectionLabel} onClose={()=>setOrganizerOpen(false)} onRename={(id,value)=>update("sectionLabels",{...form.sectionLabels,[id]:value.trim() || undefined})} onChange={(order,layout)=>{setForm(current=>({...current,sectionOrder:[...order,...current.sectionOrder.filter(id=>!order.includes(id))],sectionLayout:layout}));markDirty();}}/>}
+      {organizerOpen && <SectionOrganizer order={form.sectionOrder.filter(id=>id!=="reviews"&&(id!=="effects"||heroDepth!=="flat"))} hiddenSections={form.hiddenSections} onToggle={toggleSection} layout={form.sectionLayout} label={sectionLabel} onClose={()=>setOrganizerOpen(false)} onRename={(id,value)=>update("sectionLabels",{...form.sectionLabels,[id]:value.trim() || undefined})} onChange={(order,layout)=>{setForm(current=>({...current,sectionOrder:[...order,...current.sectionOrder.filter(id=>!order.includes(id))],sectionLayout:layout}));markDirty();}}/>}
       {modernEditor && studioOpen && <Storefront3DStudio modelsEndpoint={previewOnly ? undefined : mediaUploadEndpoint.replace(/\/media(?:\?.*)?$/, "/models")} uploadEndpoint={previewOnly ? undefined : mediaUploadEndpoint} initialModel={effectModel} initialImage={effectImage} initialPresentation={effectPresentation} initialWord={effectWord} invitation={studioInvitation} name={form.name} logo={form.logoUrl} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount,image,presentation,word,model)=>{setEffectModel(model);setEffectImage(image);setEffectPresentation(presentation);setEffectWord(word);studioInvited.current=true;setHeroDepth(depth);setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`3D Effect applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
       <input type="hidden" name="businessId" value={business.id} />
       <input type="hidden" name="businessSlug" value={business.slug} />
@@ -1014,6 +1019,7 @@ function createInitialState(business: CustomizerBusiness, previewOnly = false): 
       id: offering.id,
       messageForPricing: offering.messageForPricing,
       photos: offering.photos,
+      photoCrops: offering.photoCrops,
       title: offering.title,
       turnaroundDays: offering.turnaroundDays
     })),
@@ -1038,7 +1044,7 @@ function createInitialState(business: CustomizerBusiness, previewOnly = false): 
     coverPhotoCrop: normalizeImageCrop(draft?.coverPhotoCrop ?? business.coverPhotoCrop ?? DEFAULT_IMAGE_CROP),
     faqs: draft?.faqs ?? (previewOnly && !business.storefrontFaqJson ? [] : readFaqs(business.storefrontFaqJson)),
     fontStyle: draft?.fontStyle ?? business.storefrontFontStyle,
-    hiddenSections: sanitizeHiddenStorefrontSections(draft?.hiddenSections ?? business.storefrontHiddenSections).filter(section=>section!=="all-services" && section!=="portfolio"),
+    hiddenSections: sanitizeHiddenStorefrontSections(draft?.hiddenSections ?? business.storefrontHiddenSections),
     imageShape: draft?.imageShape ?? business.storefrontImageShape,
     instagramFeedEnabled: Boolean(draft?.instagramFeedEnabled ?? business.storefrontInstagramFeedEnabled),
     instagramFeedUrl: draft?.instagramFeedUrl ?? business.storefrontInstagramFeedUrl ?? business.instagramUrl ?? "",
@@ -1635,9 +1641,7 @@ function StorefrontPreview({
     update("faqs", form.faqs.map((faq) => (faq.id === id ? { ...faq, ...patch } : faq)));
   };
   const photos = form.photoUrls.filter(Boolean);
-  const profile = (
-      <section style={{order:form.sectionOrder.indexOf("hero")}} data-testid="preview-section-hero" onClickCapture={event => {if(!(event.target as Element).closest("[data-sticker]"))setActiveSection("hero");}} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
-        <div className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground" style={{...theme.platformBarStyle,color:"hsl(2 53% 79%)"}}>ShopFia Storefront</div>
+  const platformProfile = (<div data-platform-profile onClick={event=>event.stopPropagation()}><div className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground" style={{...theme.platformBarStyle,color:"hsl(2 53% 79%)"}}>ShopFia Storefront</div>
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           <div className="shrink-0">
             {form.logoUrl ? (
@@ -1665,27 +1669,20 @@ function StorefrontPreview({
             ) : null}
           </div>
           <div className="min-w-0 flex-1">
-            {activeSection === "hero" ? (
-              <InlineTextInput
-                ariaLabel="Business name"
-                className="text-lg font-semibold"
-                onChange={(value) => update("name", value)}
-                style={theme.headingStyle}
-                value={form.name}
-              />
-            ) : (
-              <div className="text-lg font-semibold" style={theme.headingStyle}><InlineStorefrontText label="Storefront name" value={form.name} placeholder="Type storefront name here" onChange={value=>update("name",value)}/></div>
-            )}
+            <div className="platform-business-name text-lg font-semibold">{form.name}</div>
             {activeSection === "hero" ? (
               <div className="mt-1 grid gap-2 sm:grid-cols-2">
                 <CityPicker city={form.city} state={form.state} onChange={(city,state)=>{update("city",city);update("state",state);}}/>
               </div>
             ) : (
-              <div className={`text-sm ${theme.mutedClass}`}>@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
+              <div className="platform-profile-meta text-sm">@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
             )}
-            <span className="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold" style={theme.badgeStyle}>Follow</span>
+            <div className="platform-profile-metrics mt-2 flex flex-wrap gap-x-3 gap-y-1"><span>{business.reviewCount ? `${business.averageRating.toFixed(1)} · ${business.reviewCount} reviews` : "No reviews yet"}</span><span>{business._count?.orders ?? 0} completed ShopFia events</span><span>{business.user?._count.followers ?? 0} followers</span></div><span className="mt-2 inline-flex rounded-full bg-[#b77980] px-3 py-1 text-xs font-semibold text-white">Follow</span>
           </div>
         </div>
+        </div>);
+  const profile = (
+      <section style={{order:form.sectionOrder.indexOf("hero")}} data-testid="preview-section-hero" onClickCapture={event => {if(!(event.target as Element).closest("[data-sticker]"))setActiveSection("hero");}} className={previewButtonClass(activeSection === "hero", "block w-full text-left")}>
         {heroDepth ? <DimensionalStorefrontHero onCoverRemove={()=>update("coverPhoto","")} onCoverCropChange={value=>update("coverPhotoCrop",value)} coverEditor={<ImageUploadField editMenu name="inlineCover" label="Upload cover image" value={form.coverPhoto} valueCrop={form.coverPhotoCrop} onChangePreview={value=>update("coverPhoto",value)} onCropChange={crop=>update("coverPhotoCrop",crop)} uploadEndpoint={coverUploadEndpoint} />} effectModel={effectModel} effectImage={effectImage} presentation={effectPresentation} backgroundWord={effectWord} onHeadlineChange={(value)=>update("aboutHeading",value)} onDescriptionChange={(value)=>update(form.tagline ? "tagline" : form.bio ? "bio" : "tagline",value)} descriptionLabel={form.tagline || !form.bio ? "Tagline" : "Business description"} previewReplay={effectReplay} template={template ?? undefined} key={`${heroDepth}-${heroMount}-${heroEdge}-${heroBackground}-${effectReplay}`} mount={heroMount} edgeColor={heroEdge} sceneColor={heroBackground} onDepthChange={onHeroDepthChange ?? (() => {})} name={form.name} headline={form.aboutHeading || form.name} description={form.tagline || form.bio} location={[form.city, form.state].filter(Boolean).join(", ")} image={form.coverPhoto || ""} crop={form.coverPhotoCrop} secondaryImage={photos.find((photo) => photo !== form.coverPhoto && photo !== form.logoUrl)} logo={form.logoUrl} depth="flat" mobile={isMobile} headingStyle={heroCustomFont ? { ...theme.headingStyle, fontFamily: heroCustomFont } : theme.headingStyle} onBook={() => setActiveSection("final-quote")} /> : <PreviewHeroTemplate
           active={activeSection === "hero"}
           activeServices={activeServices}
@@ -1864,6 +1861,7 @@ function StorefrontPreview({
       <StickerLayer template={template}/>
 
       <div className="contents">
+        {platformProfile}
         <StorefrontSectionCanvas items={sectionItems} order={form.sectionOrder} layout={form.sectionLayout} mobile={isMobile} onChange={(order,layout)=>{update("sectionOrder",order);update("sectionLayout",layout);}}/>
 
       </div>
@@ -2200,9 +2198,9 @@ function ServiceGrid({
     <div className="template-service-grid grid gap-3 md:grid-cols-3">
       {services.map((service) => (
         <div key={service.id} className={`template-service-card overflow-hidden shadow-sm ${theme.cardClass} ${theme.imageRadius} ${service.active ? "" : "opacity-60"}`}>
-          {service.photos[0] ? <img src={service.photos[0]} alt="" className="aspect-[4/3] w-full object-cover" /> : <div className="grid aspect-[4/3] place-items-center bg-[#f8ece9]"><ImagePlus className="h-6 w-6 text-primary" /></div>}
+          <Link href={`/vendor/offering/${service.id}`} target="_blank" rel="noopener" aria-label={`Edit ${service.title}`} onClick={event=>event.stopPropagation()}><ServicePhotos photos={service.photos} crops={service.photoCrops} title={service.title}/></Link>
           <div className="p-3">
-            <div className="line-clamp-1 font-semibold" style={theme.headingStyle}>{service.title}</div>
+            <Link href={`/vendor/offering/${service.id}`} target="_blank" rel="noopener" onClick={event=>event.stopPropagation()} className="block font-semibold hover:underline" style={theme.headingStyle}>{service.title}</Link>
             <p className={`mt-1 line-clamp-2 text-sm ${theme.mutedClass}`}>{service.description}</p>
             <div className="mt-2 flex items-center justify-between text-sm">
               <span style={theme.accentTextStyle}>{service.messageForPricing || service.basePriceCents == null ? "Custom quote" : `From ${formatCurrency(service.basePriceCents)}`}</span>
