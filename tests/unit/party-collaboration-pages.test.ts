@@ -176,7 +176,7 @@ describe("visible owner deletion controls", () => {
     expect(elements(page).some((node) => node.type === DeletePartyButton)).toBe(false);
   });
   it("shows a labeled Delete option on the owner's party tiles", async () => {
-    const page = await MyPartiesPage();
+    const page = await MyPartiesPage({});
     expect(elements(page).find((node) => node.type === DeletePartyButton)?.props).toMatchObject({ eventId: "party", compact: true });
   });
 });
@@ -184,7 +184,7 @@ describe("visible owner deletion controls", () => {
 describe("private Notifications invitation inbox", () => {
   it("shows pending invitations only on Notifications, outside the upload form", async () => {
     mocks.auth.mockResolvedValue({ user: { id: "recipient" } });
-    const composer = await MyPartiesPage();
+    const composer = await MyPartiesPage({});
     expect(elements(composer).filter((node) => node.type === PartyInvitationResponse)).toHaveLength(0);
     expect(mocks.db.partyCollaborator.findMany).not.toHaveBeenCalledWith(expect.objectContaining({ where: { userId: "recipient", status: "PENDING" } }));
     const page = await NotificationsPage();
@@ -199,7 +199,7 @@ describe("private Notifications invitation inbox", () => {
   });
 
   it("keeps the owner's parties and editor links without exposing others' invitation responses", async () => {
-    const page = await MyPartiesPage();
+    const page = await MyPartiesPage({});
     const nodes = elements(page);
     expect(mocks.db.partyEvent.findMany.mock.calls[0][0].where).toEqual({ userId: "owner" });
     expect(nodes.some((node) => node.props.href === "/events/test-party?edit=1")).toBe(true);
@@ -211,7 +211,7 @@ describe("private Notifications invitation inbox", () => {
 
   it("gives an accepted recipient a Leave control only for their own non-owned collaboration", async () => {
     mocks.auth.mockResolvedValue({ user: { id: "accepted" } });
-    const page = await MyPartiesPage();
+    const page = await MyPartiesPage({});
     const responses = elements(page).filter((node) => node.type === PartyInvitationResponse);
     expect(responses.map((node) => node.props)).toEqual([{ collaborationId: "accepted-cohost", mode: "accepted" }]);
     expect(mocks.db.partyCollaborator.findMany).toHaveBeenCalledWith({
@@ -224,7 +224,7 @@ describe("private Notifications invitation inbox", () => {
 
   it("does not keep withdrawn or declined invitations in the accepted-host section", async () => {
     mocks.auth.mockResolvedValue({ user: { id: "recipient" } });
-    const page = await MyPartiesPage();
+    const page = await MyPartiesPage({});
     const responses = elements(page).filter((node) => node.type === PartyInvitationResponse);
     expect(responses.some((node) => node.props.mode === "accepted")).toBe(false);
     expect(responses).toHaveLength(0);
@@ -232,9 +232,37 @@ describe("private Notifications invitation inbox", () => {
 
   it("does not read any invitation or owned-event data for anonymous visitors", async () => {
     mocks.auth.mockResolvedValue(null);
-    const page = await MyPartiesPage();
+    const page = await MyPartiesPage({});
     expect(mocks.db.partyCollaborator.findMany).not.toHaveBeenCalled();
     expect(mocks.db.partyEvent.findMany).not.toHaveBeenCalled();
     expect(elements(page).filter((node) => node.type === PartyInvitationResponse)).toHaveLength(0);
+  });
+});
+
+describe("My Parties landing page", () => {
+  it("opens the party list without the new-party form", async () => {
+    const page = await MyPartiesPage({});
+    const nodes = elements(page);
+    expect(nodes.some((node) => node.type === PartyEventForm)).toBe(false);
+    expect(nodes.some((node) => node.type === "h1" && node.props.children === "My Parties")).toBe(true);
+    expect(nodes.some((node) => node.props.href === "/events/test-party?edit=1")).toBe(true);
+    expect(nodes.some((node) => node.props.href === "/my-parties?create=1")).toBe(true);
+    expect(mocks.db.vendorProfile.findMany).not.toHaveBeenCalled();
+    expect(mocks.db.user.findMany).not.toHaveBeenCalled();
+  });
+
+  it("opens the composer when Add a party is selected", async () => {
+    const page = await MyPartiesPage({ searchParams: Promise.resolve({ create: "1" }) });
+    const nodes = elements(page);
+    expect(nodes.some((node) => node.type === PartyEventForm)).toBe(true);
+    expect(nodes.some((node) => node.props.href === "/my-parties")).toBe(true);
+  });
+
+  it("shows an empty state when the user has no parties", async () => {
+    mocks.db.partyEvent.findMany.mockResolvedValue([]);
+    mocks.db.partyCollaborator.findMany.mockResolvedValue([]);
+    const nodes = elements(await MyPartiesPage({}));
+    expect(nodes.some((node) => node.type === "h2" && node.props.children === "No parties yet")).toBe(true);
+    expect(nodes.some((node) => node.type === PartyEventForm)).toBe(false);
   });
 });

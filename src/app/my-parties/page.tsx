@@ -1,5 +1,6 @@
 import { DeletePartyButton } from "@/components/parties/delete-party-button";
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 import { Camera, MapPin, Pencil, Sparkles } from "lucide-react";
 import { PartyEventForm } from "@/components/parties/party-event-form";
 import { PartyInvitationResponse } from "@/components/parties/party-invitation-response";
@@ -10,7 +11,12 @@ import { publicVendorWhere } from "@/lib/public-marketplace";
 
 export const dynamic = "force-dynamic";
 
-export default async function MyPartiesPage() {
+export default async function MyPartiesPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ create?: string }>;
+}) {
+  const showComposer = (await searchParams)?.create === "1";
   const [{ auth }, { db }] = await Promise.all([import("@/auth"), import("@/lib/db")]);
   const session = await auth().catch((error) => {
     console.error("ShopFia my parties auth failed", error);
@@ -32,19 +38,19 @@ export default async function MyPartiesPage() {
       },
       orderBy: { createdAt: "desc" }
     }),
-    db.vendorProfile.findMany({
+    showComposer ? db.vendorProfile.findMany({
       where: publicVendorWhere(),
       select: { id: true, name: true, username: true, city: true, state: true, logoUrl: true, status: true, instagramUrl: true, tiktokUrl: true, website: true },
       orderBy: { name: "asc" }
-    }),
-    db.user.findMany({
+    }) : Promise.resolve([]),
+    showComposer ? db.user.findMany({
       where: {
         OR: [{ username: { not: null } }, { id: session.user.id }]
       },
       select: { id: true, image: true, name: true, username: true },
       orderBy: [{ name: "asc" }, { username: "asc" }],
       take: 100
-    }),
+    }) : Promise.resolve([]),
     db.partyCollaborator.findMany({
       where: {
         userId: session.user.id,
@@ -63,40 +69,25 @@ export default async function MyPartiesPage() {
 
   return (
     <div className="space-y-10">
-      <section className="min-w-0 rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-soft sm:p-8 lg:p-10">
-        <header className="mb-8 flex flex-wrap items-start justify-between gap-4 border-b pb-6">
+      <section className={showComposer ? "min-w-0 rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-soft sm:p-8 lg:p-10" : "min-w-0"}>
+        <header className={`flex flex-wrap items-center justify-between gap-4 ${showComposer ? "mb-8 border-b pb-6" : ""}`}>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Share your party</h1>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">Your celebration, your story. Start with the photos that made it special.</p>
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{showComposer ? "Share your party" : "My Parties"}</h1>
+            {showComposer ? <p className="mt-2 text-sm leading-6 text-muted-foreground">Your celebration, your story. Start with the photos that made it special.</p> : null}
           </div>
-          <Link href="/parties" className="inline-flex h-11 items-center rounded-full border px-5 text-sm font-medium transition hover:bg-muted">Back to parties</Link>
+          <Link href={showComposer ? "/my-parties" : "/my-parties?create=1"} className={buttonVariants({ variant: showComposer ? "secondary" : "default", size: "lg" })}>{showComposer ? "Back to My Parties" : "Add a party"}</Link>
         </header>
-        <PartyEventForm key="new-party" composer currentUserId={session.user.id} users={users} vendors={vendors} />
+        {showComposer ? <PartyEventForm key="new-party" composer currentUserId={session.user.id} users={users} vendors={vendors} /> : null}
       </section>
-      {hostedParties.length > 0 ? (
-        <section className="space-y-4 rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-soft">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight">Parties you’re part of</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Leaving removes the party from your profile and your public attribution.</p>
-          </div>
-          {hostedParties.map((collaboration) => (
-            <article key={collaboration.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4">
-              <div>
-                <Link href={`/events/${collaboration.event.slug}`} className="font-semibold underline-offset-4 hover:underline">
-                  {collaboration.event.title}
-                </Link>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {collaboration.role === "MAIN_HOST" ? "Main host" : collaboration.role === "GUEST" ? "Guest" : "Co-host"}
-                </p>
-              </div>
-              <PartyInvitationResponse collaborationId={collaboration.id} mode="accepted" />
-            </article>
-          ))}
+      {!showComposer && events.length === 0 && hostedParties.length === 0 ? (
+        <section className="rounded-[2rem] border border-white/80 bg-white/90 p-8 text-center shadow-soft">
+          <h2 className="text-xl font-semibold">No parties yet</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Your parties will appear here once you add one or accept a party invitation.</p>
+          <Link href="/my-parties?create=1" className={buttonVariants({ size: "lg", className: "mt-5" })}>Add your first party</Link>
         </section>
       ) : null}
       {events.length > 0 ? (
-        <section className="space-y-5">
-          <h2 className="text-2xl font-semibold tracking-tight">Your published parties</h2>
+        <section aria-label="Your parties" className="space-y-5">
             <div className="grid auto-rows-[180px] grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
               {events.map((event, index) => {
                 const { crop, image } = getEventImage(event);
@@ -144,6 +135,27 @@ export default async function MyPartiesPage() {
               })}
             </div>
 
+        </section>
+      ) : null}
+      {hostedParties.length > 0 ? (
+        <section className="space-y-4 rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-soft">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Parties you’re part of</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Parties you’ve joined as a host, co-host, or guest.</p>
+          </div>
+          {hostedParties.map((collaboration) => (
+            <article key={collaboration.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4">
+              <div>
+                <Link href={`/events/${collaboration.event.slug}`} className="font-semibold underline-offset-4 hover:underline">
+                  {collaboration.event.title}
+                </Link>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {collaboration.role === "MAIN_HOST" ? "Main host" : collaboration.role === "GUEST" ? "Guest" : "Co-host"}
+                </p>
+              </div>
+              <PartyInvitationResponse collaborationId={collaboration.id} mode="accepted" />
+            </article>
+          ))}
         </section>
       ) : null}
     </div>
