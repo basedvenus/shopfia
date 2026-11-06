@@ -175,7 +175,7 @@ export default function Page() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/parties">
-              <Button size="lg" variant="secondary" className="h-12 rounded-[8px] border-border bg-white px-8 text-foreground shadow-sm transition hover:bg-muted">
+              <Button size="lg" className="h-12 rounded-[8px] px-8 shadow-sm hover:shadow-sm">
                 Explore Real Parties
                 <ArrowRight className="h-4 w-4" />
               </Button>
