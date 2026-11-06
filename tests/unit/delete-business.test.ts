@@ -1,0 +1,11 @@
+import { beforeEach, expect, it, vi } from "vitest";
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), find: vi.fn(), remove: vi.fn(), listings: vi.fn() }));
+vi.mock("@/auth", () => ({ auth: mocks.auth }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/lib/db", () => ({ db: { $transaction: async (fn: any) => fn({ vendorProfile: { findFirst: mocks.find, delete: mocks.remove }, listing: { updateMany: mocks.listings } }) } }));
+import { deleteBusinessAction } from "@/app/actions/delete-business";
+beforeEach(() => { vi.clearAllMocks(); mocks.auth.mockResolvedValue({ user: { id: "owner" } }); mocks.find.mockResolvedValue({ name: "Test", slug: "test", _count: { orders: 0 } }); });
+it("requires ownership", async () => { mocks.find.mockResolvedValue(null); expect((await deleteBusinessAction("id", "Test")).error).toMatch(/owner/); expect(mocks.remove).not.toHaveBeenCalled(); });
+it("requires exact confirmation", async () => { expect((await deleteBusinessAction("id", "wrong")).error).toMatch(/exactly/); expect(mocks.remove).not.toHaveBeenCalled(); });
+it("preserves customer records", async () => { mocks.find.mockResolvedValue({ name: "Test", _count: { orders: 1 } }); expect((await deleteBusinessAction("id", "Test")).error).toMatch(/preserving/); expect(mocks.remove).not.toHaveBeenCalled(); });
+it("deactivates listings and deletes an eligible business", async () => { expect(await deleteBusinessAction("id", "Test")).toEqual({ success: true }); expect(mocks.listings).toHaveBeenCalled(); expect(mocks.remove).toHaveBeenCalledWith({ where: { id: "id" } }); });

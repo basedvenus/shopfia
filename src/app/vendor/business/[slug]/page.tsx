@@ -1,3 +1,4 @@
+import { DeleteBusiness } from "@/components/vendor/delete-business";
 import { BusinessLocationSettings } from "@/components/vendor/business-location-settings";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -346,6 +347,7 @@ export default async function BusinessDashboardPage({
               ) : null}
             </div>
           </div>
+          <DeleteBusiness businessId={business.id} name={business.name} />
         </Panel>
       </section>
     </div>
@@ -542,3 +544,4 @@ function formatDate(date: Date) {
     year: "numeric"
   }).format(date);
 }
+
