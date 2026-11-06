@@ -16,8 +16,16 @@ export function getPartifulArtwork(html: string): string | null {
     if (attributes.property?.toLowerCase() !== "og:image") continue;
     try {
       const image = new URL((attributes.content ?? "").replace(/&amp;/g, "&").replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code))));
-      if (image.protocol !== "https:" || image.hostname !== "partiful.imgix.net" || image.port || image.username || image.password || !image.pathname.startsWith("/user/")) return null;
-      return image.href;
+      if (image.protocol !== "https:" || image.port || image.username || image.password) return null;
+      if (image.hostname === "partiful.imgix.net" && image.pathname.startsWith("/user/")) return image.href;
+      // Partiful also supports Giphy invitation artwork. Keep the allowlist
+      // limited to its media CDN and image paths; discard tracking parameters.
+      if (/^media[0-9]*\.giphy\.com$/.test(image.hostname) && /^\/media\/[a-zA-Z0-9_-]+\/giphy\.(gif|webp)$/.test(image.pathname)) {
+        image.search = "";
+        image.hash = "";
+        return image.href;
+      }
+      return null;
     } catch { return null; }
   }
   return null;

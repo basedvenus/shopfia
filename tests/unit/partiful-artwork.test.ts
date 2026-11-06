@@ -18,6 +18,19 @@ describe("artwork-only Partiful previews", () => {
     expect(getPartifulArtwork(html)).toBe(poster);
     expect(getPartifulArtwork('<meta property="og:image" content="https://localhost/private.png">')).toBeNull();
   });
+  it("accepts Giphy invitation GIFs without their tracking parameters", () => {
+    const html = '<meta property="og:image" content="https://media2.giphy.com/media/l44QzsOLXxcrigdgI/giphy.gif?cid=tracking&amp;ct=g">';
+    expect(getPartifulArtwork(html)).toBe("https://media2.giphy.com/media/l44QzsOLXxcrigdgI/giphy.gif");
+    for (const url of ["https://media2.giphy.com.evil.test/media/id/giphy.gif", "https://media2.giphy.com/private", "https://giphy.com/media/id/giphy.gif"]) expect(getPartifulArtwork(`<meta property="og:image" content="${url}">`)).toBeNull();
+  });
+  it("preserves the GIF bytes and content type for animated artwork", async () => {
+    const gif = new TextEncoder().encode("GIF89a-animation-frames");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response('<meta property="og:image" content="https://media2.giphy.com/media/id/giphy.gif">')).mockResolvedValueOnce(new Response(gif, {headers: {"Content-Type": "image/gif"}})));
+    const response = await GET(new Request(`https://shopfia.app/api/partiful-artwork?url=${encodeURIComponent(invite)}`));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("image/gif");
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(gif);
+  });
   it("returns only image bytes, without forwarding cookies or invitation details", async () => {
     const fetcher = vi.fn().mockResolvedValueOnce(new Response(`<meta property="og:description" content="Private address"><meta property="og:image" content="${poster}">`)).mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3]), { headers: { "Content-Type": "image/png" } }));
     vi.stubGlobal("fetch", fetcher);
