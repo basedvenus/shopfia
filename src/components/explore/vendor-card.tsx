@@ -10,6 +10,7 @@ import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { storefrontPath } from "@/lib/businesses";
 import { normalizeImageCrop } from "@/lib/image-crop";
 import { getProfileBadge } from "@/lib/profile-badges";
+import { getVendorCardImage } from "@/lib/vendor-card-image";
 import { formatCurrency } from "@/lib/utils";
 import { getVendorTrustStatus } from "@/lib/vendor-status";
 
@@ -24,6 +25,7 @@ type VendorCardProps = {
     logoCrop?: unknown;
     logoUrl?: string | null;
     photos: string[];
+    taggedPartyPhotos?: { id: string; updatedAt: Date | string; crop: unknown }[];
     status: string;
     verified: boolean;
     averageRating: number;
@@ -43,8 +45,8 @@ type VendorCardProps = {
 };
 
 export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendor }: VendorCardProps) {
-  const serviceImage = vendor.offerings.flatMap((offering) => offering.photos ?? [])[0] ?? null;
-  const image = serviceImage ?? vendor.coverPhoto ?? vendor.photos[0] ?? null;
+  const cardImage = getVendorCardImage(vendor);
+  const image = cardImage?.src;
   const trustStatus = getVendorTrustStatus(vendor);
   const profileBadge = vendor.user
     ? getProfileBadge(vendor.user, originalMemberCutoff, {
@@ -63,7 +65,7 @@ export function VendorCard({ isSaved = false, originalMemberCutoff = null, vendo
       <Link href={storefrontPath(vendor.slug)} className="absolute inset-0 z-10" aria-label={`View ${vendor.name}`} />
       <div className="relative aspect-[4/5] sm:aspect-[4/3]">
         {image ? (
-          <Image src={image} alt={vendor.name} fill className="object-cover" />
+          cardImage?.partyCrop ? <CroppedImage src={image} alt={vendor.name} crop={cardImage.partyCrop} frameFit="contain" className="absolute inset-0 h-full w-full object-cover" /> : <Image src={image} alt={vendor.name} fill className="object-cover" />
         ) : (
           <div className="absolute inset-0 grid place-items-center bg-[#f8ece9] px-5 text-center text-sm font-medium text-muted-foreground">
             {vendor.categories[0]?.category.name ?? "ShopFia vendor"}

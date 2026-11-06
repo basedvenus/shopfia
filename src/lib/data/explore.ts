@@ -591,6 +591,12 @@ export async function getExploreData(input: Record<string, string | string[] | u
         logoUrl: true,
         name: true,
         photos: true,
+        taggedPartyPhotos: {
+          where: { eventId: { not: null }, OR: [{ contribution: null }, { contribution: { status: "APPROVED" } }] },
+          select: { id: true, updatedAt: true, crop: true },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          take: 1
+        },
         reviewCount: true,
         serviceRadiusMiles: true,
         slug: true,
