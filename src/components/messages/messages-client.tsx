@@ -476,7 +476,7 @@ function ConversationThread({
             <button
               type="button"
               onClick={() => openQuoteBuilder()}
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[1rem] bg-[#D7E5D0] px-3 text-xs font-bold text-[#fffaf6] shadow-[0_10px_22px_rgba(110,130,104,0.18)] transition hover:bg-[#C4D6BC]"
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[1rem] bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-3 text-xs font-bold text-[#fffaf6] shadow-[0_10px_22px_rgba(230,176,174,0.28)] transition hover:bg-[#DFA3A2] hover:bg-none"
             >
               <ReceiptText className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Build Quote</span>
@@ -565,7 +565,7 @@ function ConversationThread({
               size="sm"
               onClick={() => void sendMessage()}
               disabled={!body.trim() || isSending}
-              className="shrink-0"
+              className="shrink-0 border-[#a55b60] bg-none bg-[#a55b60] font-semibold text-white hover:border-[#8d494f] hover:bg-[#8d494f] disabled:border-[#d7b3b4] disabled:bg-[#ead4d3] disabled:text-[#70464b] disabled:opacity-100"
             >
               <Send className="h-4 w-4" />
               Send
@@ -645,6 +645,7 @@ export function ConversationItems({
                 ? conversation.buyer.image
                 : conversation.vendorProfile.logoUrl ?? conversation.vendorProfile.coverPhoto
             }
+            businessLogo={message.senderId !== conversation.buyerId}
             isMine={message.senderId === currentUserId}
             label={message.senderId === conversation.buyerId ? conversation.buyer.name ?? "Buyer" : conversation.vendorProfile.name}
           />
@@ -757,7 +758,7 @@ function InquiryBriefCard({
           <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#9b6b65]">
             Event Brief Attached
           </span>
-          <span className="mt-0.5 block truncate text-sm font-bold text-[#2f2626]">{title}</span>
+          <span style={{fontFamily: 'var(--font-shopfia-sans), "Instrument Sans", Inter, ui-sans-serif, system-ui, sans-serif'}} className="mt-0.5 block truncate text-sm font-bold text-[#2f2626]">{title}</span>
           <span className="mt-0.5 block truncate text-xs text-muted-foreground">
             {compactMeta.join(" • ")}
           </span>
@@ -844,7 +845,7 @@ function FullInquiryBrief({
             {formatMessageDate(createdAt)}
           </span>
         </div>
-        <h3 className="mt-2 font-serif text-2xl leading-tight tracking-tight text-[#2f2626] md:text-3xl">
+        <h3 style={{fontFamily: 'var(--font-shopfia-sans), "Instrument Sans", Inter, ui-sans-serif, system-ui, sans-serif'}} className="mt-2 font-semibold text-2xl leading-tight tracking-tight text-[#2f2626] md:text-3xl">
           {title}
         </h3>
       </div>
@@ -1042,7 +1043,7 @@ function QuoteWorkflowCard({
               <button
                 type="button"
                 onClick={() => onReviewQuote(quoteRequest)}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(230,176,174,0.28)] transition hover:bg-[#DFA3A2] hover:bg-none"
               >
                 View Booking Details
                 <ChevronRight className="h-3.5 w-3.5" />
@@ -1061,7 +1062,7 @@ function QuoteWorkflowCard({
             <button
               type="button"
               onClick={() => onReviewQuote(quoteRequest)}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(230,176,174,0.28)] transition hover:bg-[#DFA3A2] hover:bg-none"
             >
               Review Quote
               <ChevronRight className="h-3.5 w-3.5" />
@@ -1070,7 +1071,7 @@ function QuoteWorkflowCard({
             <button
               type="button"
               onClick={() => onBuildQuote(null)}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(230,176,174,0.28)] transition hover:bg-[#DFA3A2] hover:bg-none"
             >
               Build Quote
               <ChevronRight className="h-3.5 w-3.5" />
@@ -1396,7 +1397,7 @@ function QuoteReviewModal({
             <button
               type="button"
               onClick={returnToConversation}
-              className="rounded-full border border-[#aec8a8] bg-[linear-gradient(135deg,#b8d3ae,#8fb384)] px-4 py-2 text-sm font-extrabold text-[#fffaf6] shadow-[0_12px_26px_rgba(87,119,78,0.20)] transition hover:-translate-y-0.5 sm:col-start-2"
+              className="rounded-full border border-[#E6B0AE]/70 bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-4 py-2 text-sm font-extrabold text-[#fffaf6] shadow-[0_12px_26px_rgba(87,119,78,0.20)] transition hover:-translate-y-0.5 sm:col-start-2"
             >
               Back to Conversation
             </button>
@@ -1414,7 +1415,7 @@ function QuoteReviewModal({
                 type="button"
                 onClick={() => void acceptQuote()}
                 disabled={isAccepting || isRequestingChanges}
-                className="rounded-full border border-[#aec8a8] bg-[linear-gradient(135deg,#b8d3ae,#8fb384)] px-4 py-2 text-sm font-extrabold text-[#fffaf6] shadow-[0_12px_26px_rgba(87,119,78,0.24)] transition hover:-translate-y-0.5 hover:border-[#98b78f] hover:bg-[linear-gradient(135deg,#a9c99d,#7fa672)] disabled:translate-y-0 disabled:border-[#d7e5d0] disabled:bg-[#d7e5d0] disabled:opacity-60"
+                className="rounded-full border border-[#E6B0AE]/70 bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-4 py-2 text-sm font-extrabold text-[#fffaf6] shadow-[0_12px_26px_rgba(230,176,174,0.28)] transition hover:-translate-y-0.5 hover:border-[#DFA3A2] hover:bg-[#DFA3A2] hover:bg-none disabled:translate-y-0 disabled:border-[#E6B0AE] disabled:bg-[#EAB8B3] disabled:opacity-60"
               >
                 {isAccepting ? "Preparing Payment..." : "Accept & Continue to Payment"}
               </button>
@@ -1459,7 +1460,7 @@ function BuildQuotePromptCard({ onBuildQuote }: { onBuildQuote: (quoteRequest?: 
         <button
           type="button"
           onClick={() => onBuildQuote(null)}
-          className="shrink-0 rounded-full bg-[#D7E5D0] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(110,130,104,0.16)] transition hover:bg-[#C4D6BC]"
+          className="shrink-0 rounded-full bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(230,176,174,0.28)] transition hover:bg-[#DFA3A2] hover:bg-none"
         >
           Build Quote
         </button>
@@ -1720,7 +1721,7 @@ function LegacyQuoteBuilderModal({
             type="button"
             onClick={() => void sendQuote()}
             disabled={isSending || totalCents <= 0}
-            className="rounded-full bg-[#D7E5D0] px-4 py-2 text-sm font-bold text-[#fffaf6] shadow-[0_10px_22px_rgba(110,130,104,0.18)] transition hover:bg-[#C4D6BC] disabled:opacity-50"
+            className="rounded-full bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-4 py-2 text-sm font-bold text-[#fffaf6] shadow-[0_10px_22px_rgba(230,176,174,0.28)] transition hover:bg-[#DFA3A2] hover:bg-none disabled:opacity-50"
           >
             {isSending ? "Sending..." : isRevision ? "Resend Proposal" : "Send Quote"}
           </button>
@@ -1780,17 +1781,19 @@ function ChatBubble({
   createdAt,
   image,
   isMine,
-  label
+  label,
+  businessLogo = false
 }: {
   body: string;
   createdAt: string;
   image?: string | null;
   isMine: boolean;
   label: string;
+  businessLogo?: boolean;
 }) {
   return (
     <div className={`flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"}`}>
-      {!isMine ? <IdentityAvatar image={image} label={label} size="sm" /> : null}
+      {!isMine ? <IdentityAvatar image={image} label={label} size="sm" businessLogo={businessLogo} /> : null}
       <div
         className={`max-w-[76%] rounded-[1.15rem] border px-3 py-2 text-sm shadow-sm md:max-w-[64%] ${
           isMine ? "border-[#e7cfc8] bg-[#fff5f2]" : "border-white/80 bg-white"
@@ -1801,7 +1804,7 @@ function ChatBubble({
         </div>
         <div className="whitespace-pre-wrap leading-6 text-[#3d3331]">{body}</div>
       </div>
-      {isMine ? <IdentityAvatar image={image} label={label} size="sm" /> : null}
+      {isMine ? <IdentityAvatar image={image} label={label} size="sm" businessLogo={businessLogo} /> : null}
     </div>
   );
 }
@@ -1809,14 +1812,18 @@ function ChatBubble({
 function IdentityAvatar({
   image,
   label,
-  size
+  size,
+  businessLogo = false
 }: {
   image?: string | null;
   label: string;
   size: "sm" | "inbox" | "md" | "lg";
+  businessLogo?: boolean;
 }) {
   const initials = getInitials(label);
-  const savedImage = getSafeProfileImage(image);
+  const savedImage = businessLogo && /^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(image ?? "")
+    ? image
+    : getSafeProfileImage(image);
   const dimensions =
     size === "lg"
       ? "h-12 w-12 text-base"
@@ -1829,7 +1836,7 @@ function IdentityAvatar({
   return (
     <div className={`${dimensions} relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-[linear-gradient(135deg,#f4cfca,#f9e8dd,#e4efe8)] font-serif font-semibold text-[#8a5c58] shadow-sm ring-2 ring-white`}>
       {savedImage ? (
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${savedImage})` }} />
+        <div role="img" aria-label={`${label} logo`} className={`absolute inset-0 bg-center bg-no-repeat ${businessLogo ? "bg-white bg-contain" : "bg-cover"}`} style={{ backgroundImage: `url(${savedImage})` }} />
       ) : (
         initials
       )}
