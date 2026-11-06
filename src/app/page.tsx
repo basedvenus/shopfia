@@ -104,9 +104,9 @@ const categoryCards = [
 
 const featuredParties = [
   ...landingPartyExamples.map((party, index) => ({
-    title: index === 1 ? "Birthday Displays" : party.title,
-    meta: index === 1 ? "Details for a birthday celebration" : party.theme,
-    image: index === 1 ? "/landing/birthday-displays.webp" : party.coverImageUrl,
+    title: index === 0 ? "Desserts" : index === 1 ? "Birthday Displays" : party.title,
+    meta: index === 0 ? "Sweet details for your celebration" : index === 1 ? "Details for a birthday celebration" : party.theme,
+    image: index === 0 ? "/landing/featured-desserts.webp" : index === 1 ? "/landing/birthday-displays.webp" : party.coverImageUrl,
     href: party.href
   })),
   {
