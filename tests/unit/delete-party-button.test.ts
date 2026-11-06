@@ -16,7 +16,7 @@ beforeEach(() => vi.resetAllMocks());
 describe("party deletion confirmation", () => {
   it("opens a confirmation without deleting, and Cancel leaves the party untouched", () => {
     mount();
-    act(() => button("Delete party").props.onClick());
+    act(() => view.root.findByProps({ "aria-label": "Delete party: Birthday party" }).props.onClick());
     expect(mocks.remove).not.toHaveBeenCalled();
     expect(button("Cancel")).toBeDefined();
     act(() => button("Cancel").props.onClick());
@@ -28,7 +28,7 @@ describe("party deletion confirmation", () => {
     let finish!: (result: { ok: boolean }) => void;
     mocks.remove.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
     mount();
-    act(() => button("Delete party").props.onClick());
+    act(() => view.root.findByProps({ "aria-label": "Delete party: Birthday party" }).props.onClick());
     const confirm = view.root.findAllByType("button").filter((node) => node.children.includes("Delete party")).slice(-1)[0]!;
     act(() => { confirm.props.onClick(); confirm.props.onClick(); });
     expect(mocks.remove).toHaveBeenCalledOnce();
@@ -42,7 +42,7 @@ describe("party deletion confirmation", () => {
   it("keeps the confirmation open and shows a failure without redirecting", async () => {
     mocks.remove.mockResolvedValue({ ok: false, error: "Please try again." });
     mount();
-    act(() => button("Delete party").props.onClick());
+    act(() => view.root.findByProps({ "aria-label": "Delete party: Birthday party" }).props.onClick());
     await act(async () => { view.root.findAllByType("button").filter((node) => node.children.includes("Delete party")).slice(-1)[0]!.props.onClick(); });
     expect(view.root.findByProps({ role: "alert" }).children).toContain("Please try again.");
     expect(button("Cancel")).toBeDefined();

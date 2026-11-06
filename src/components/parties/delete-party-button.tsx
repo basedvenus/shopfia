@@ -7,7 +7,7 @@ import { Loader2, Trash2 } from "lucide-react";
 import { deletePartyEventAction } from "@/app/actions/party-events";
 import { Button } from "@/components/ui/button";
 
-export function DeletePartyButton({ eventId, title, compact = false }: { eventId: string; title: string; compact?: boolean }) {
+export function DeletePartyButton({ eventId, title }: { eventId: string; title: string; compact?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -35,7 +35,7 @@ export function DeletePartyButton({ eventId, title, compact = false }: { eventId
   }
 
   return <Dialog.Root open={open} onOpenChange={(next) => { if (!pending) { setOpen(next); setError(null); } }}>
-    <Dialog.Trigger asChild><Button type="button" size="sm" variant="secondary" aria-label={`Delete party: ${title}`} className="border-destructive/25 bg-white text-destructive hover:bg-red-50" onClick={() => { setError(null); setOpen(true); }}><Trash2 className="h-4 w-4" />{compact ? "Delete" : "Delete party"}</Button></Dialog.Trigger>
+    <Dialog.Trigger asChild><Button type="button" size="icon" variant="secondary" aria-label={`Delete party: ${title}`} title="Delete party" className="h-9 w-9 shrink-0 rounded-full border-gray-200 bg-white/90 text-gray-500 shadow-sm hover:bg-gray-100 hover:text-gray-700" onClick={() => { setError(null); setOpen(true); }}><Trash2 aria-hidden="true" className="h-4 w-4" /></Button></Dialog.Trigger>
     {open ? <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm" />
       <Dialog.Content className="fixed left-1/2 top-1/2 z-[91] max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 space-y-4 overflow-y-auto rounded-3xl border bg-white p-6 shadow-xl outline-none" onOpenAutoFocus={(event) => { event.preventDefault(); cancelRef.current?.focus(); }}>

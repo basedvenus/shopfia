@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { getPartyInvitation } from "@/lib/party-invitation";
 import { getPartifulInvite } from "@/lib/partiful";
 
 export function PartifulArtwork({ url }: { url?: string | null }) {
+  const invitation = getPartyInvitation(url);
+  if (invitation?.provider === "luma") return <section aria-label="Invitation" className="rounded-3xl border bg-white p-4"><h2 className="mb-3 text-lg font-semibold">Invitation</h2><a href={invitation.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary underline">View invitation on Luma</a></section>;
   const invite = getPartifulInvite(url);
   return invite ? <Artwork key={invite} invite={invite} /> : null;
 }

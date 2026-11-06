@@ -3,7 +3,7 @@ import {validLanguage} from "@/lib/language";
 import {persistUserLanguage,writeLanguageCookie} from "@/lib/language-preference";
 import { classificationTags, validatePartyClassificationForm } from "@/lib/party-occasions";
 import { getVendorSocialProfile } from "@/lib/vendor-social";
-import { getPartifulInvite } from "@/lib/partiful";
+import { getPartyInvitation } from "@/lib/party-invitation";
 import { collectPartyVendorRatings, persistPartyVendorRatings } from "@/lib/party-vendor-ratings";
 
 import { createHash } from "crypto";
@@ -386,7 +386,7 @@ const partyEventFieldsSchema = z.object({
     const date = new Date(`${day}T00:00:00.000Z`);
     return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === day;
   }, "Choose a valid event date.").optional().or(z.literal("")),
-  partyfulUrl: z.string().trim().max(2048).refine((value) => !value || Boolean(getPartifulInvite(value)), "Enter a valid Partiful invite link.").optional(),
+  partyfulUrl: z.string().trim().max(2048).refine((value) => !value || Boolean(getPartyInvitation(value)), "Enter a valid Partiful or Luma event link.").optional(),
   location: z.string().trim().max(240, "Location is a little too long.").optional().or(z.literal("")),
   formattedAddress: z.string().trim().max(240, "Location is a little too long.").optional().or(z.literal("")),
   city: z.string().trim().max(80, "City is a little too long.").optional().or(z.literal("")),
@@ -486,7 +486,7 @@ export async function createPartyEventAction(formData: FormData) {
         pinterestUrl,
         appleMusicUrl,
         eventDate: parsed.data.eventDate ? new Date(`${parsed.data.eventDate.length === 7 ? parsed.data.eventDate + "-01" : parsed.data.eventDate}T00:00:00.000Z`) : null,
-        partyfulUrl: getPartifulInvite(parsed.data.partyfulUrl),
+        partyfulUrl: getPartyInvitation(parsed.data.partyfulUrl)?.url ?? null,
         location: parsed.data.formattedAddress || parsed.data.location || null,
         formattedAddress: parsed.data.formattedAddress || null,
         city: parsed.data.city || null,
@@ -654,7 +654,7 @@ export async function updatePartyEventAction(formData: FormData) {
         pinterestUrl,
         appleMusicUrl,
         eventDate: parsed.data.eventDate ? new Date(`${parsed.data.eventDate.length === 7 ? parsed.data.eventDate + "-01" : parsed.data.eventDate}T00:00:00.000Z`) : null,
-        partyfulUrl: getPartifulInvite(parsed.data.partyfulUrl),
+        partyfulUrl: getPartyInvitation(parsed.data.partyfulUrl)?.url ?? null,
         location: parsed.data.formattedAddress || parsed.data.location || null,
         formattedAddress: parsed.data.formattedAddress || null,
         city: parsed.data.city || null,

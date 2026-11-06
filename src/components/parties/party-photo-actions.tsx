@@ -37,7 +37,7 @@ export function PartyPhotoActions({ photo, index, count, isEditing, onClose, onR
         </div> : null}
         <div className="grid grid-cols-2 gap-3">
           <Button type="button" className="h-12" onClick={onEdit}><SlidersHorizontal className="h-4 w-4" />Edit photo</Button>
-          <Button type="button" variant="secondary" className="h-12 border border-destructive/20 text-destructive" onClick={onDelete}><Trash2 className="h-4 w-4" />Delete photo</Button>
+          <Button type="button" variant="secondary" size="icon" aria-label="Delete photo" title="Delete photo" className="h-9 w-9 shrink-0 rounded-full border-gray-200 bg-white/90 text-gray-500 shadow-sm hover:bg-gray-100 hover:text-gray-700" onClick={onDelete}><Trash2 aria-hidden="true" className="h-4 w-4" /></Button>
         </div>
         {children}
         <Button type="button" className="h-12 w-full shrink-0" onClick={onClose}>Done editing photo & tags</Button>
