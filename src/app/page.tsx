@@ -175,7 +175,16 @@ export default function Page() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/parties">
-              <Button size="lg" className="h-12 rounded-[8px] px-8 shadow-sm hover:shadow-sm">
+              <Button
+                size="lg"
+                className="h-12 rounded-[8px] px-8 shadow-sm hover:shadow-sm"
+                style={{
+                  background: "linear-gradient(90deg, #E3A7A7 0%, #EAB8B3 100%)",
+                  color: "#ffffff",
+                  borderColor: "#E6B0AE",
+                  boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)"
+                }}
+              >
                 Explore Real Parties
                 <ArrowRight className="h-4 w-4" />
               </Button>
