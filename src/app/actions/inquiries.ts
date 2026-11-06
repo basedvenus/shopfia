@@ -286,6 +286,8 @@ export async function createPublicInquiryAction(formData: FormData) {
     kind: "SERVICE_REQUEST",
     title: `${parsed.name} requested ${listingTitle || "a service"} from ${vendor.name}.`,
     href: `/messages?conversationId=${result.conversationId}`,
+    requesterId: session.user.id,
+    businessId: vendor.id,
     dedupeKey: `service-request:${result.inquiryId}`
   });
 

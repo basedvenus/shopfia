@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { createTransport } from "nodemailer";
 import { authProviderConfig } from "@/lib/auth/provider-config";
 import { securityLog } from "@/lib/security/audit-log";
@@ -27,7 +29,7 @@ function getTransport() {
 }
 
 function button(label: string, href: string) {
-  return `<a href="${href}" style="display:inline-block;border-radius:999px;background:#E3A7A7;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;">${label}</a>`;
+  return `<a class="email-button" href="${href}" style="display:inline-block;border-radius:999px;background:#e3a7a7;background-image:linear-gradient(90deg,#e3a7a7,#eab8b3);color:#ffffff;text-decoration:none;font-weight:700;padding:12px 20px;">${label}</a>`;
 }
 
 function escapeHtml(value: string) {
@@ -39,23 +41,68 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
-function shell({ body, preview, title }: { body: string; preview: string; title: string }) {
+export type EmailIdentity = { name: string; image?: string | null };
+type EmailAttachment = { filename: string; content: Buffer; contentType: string; cid: string };
+
+function identityImage(identity: EmailIdentity, cid: string, attachments: EmailAttachment[]) {
+  const image = identity.image?.trim();
+  const embedded = image?.match(/^data:image\/(png|jpe?g|webp|gif);base64,([a-z0-9+/=\s]+)$/i);
+  let src: string | null = null;
+  if (embedded) {
+    attachments.push({filename: `${cid}.${embedded[1]}`,content:Buffer.from(embedded[2], "base64"),contentType:`image/${embedded[1]}`,cid});
+    src = `cid:${cid}`;
+  } else if (image) {
+    try {
+      const url = new URL(image, getBaseUrl());
+      if (["https:", "http:"].includes(url.protocol)) src = url.href;
+    } catch { /* Use initials for an invalid image. */ }
+  }
+  const style = "display:inline-block;width:100px;height:100px;border:4px solid #ffffff;border-radius:50%;vertical-align:middle;background:#fff8f5;object-fit:cover;";
+  return src ? `<img class="email-avatar" src="${escapeHtml(src)}" width="100" height="100" alt="${escapeHtml(identity.name)}" style="${style}" />`
+    : `<span class="email-avatar" role="img" aria-label="${escapeHtml(identity.name)}" style="${style}text-align:center;line-height:100px;color:#586b7b;font-size:24px;font-weight:700;">${escapeHtml(identity.name.split(/\s+/).map(part=>part[0]).slice(0,2).join(""))}</span>`;
+}
+
+function shell({ body, preview, title, identities = "" }: { body: string; preview: string; title: string; identities?: string }) {
   return `<!doctype html>
-<html>
-  <body style="margin:0;background:#fff8f5;color:#2f2626;font-family:Inter,Arial,sans-serif;">
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <style>
+      @font-face { font-family:"Instrument Sans"; font-style:normal; font-weight:400 700; src:url("https://www.shopfia.app/email/instrument-sans.woff2") format("woff2"); }
+      :root { color-scheme:light only; supported-color-schemes:light; }
+      .email-page { background-color:#fff8f5 !important; color:#2f2626 !important; }
+      .email-card { background-color:#ffffff !important; }
+      .email-content { background-color:#fce1e4 !important; color:#4f4141 !important; }
+      .email-header { background-color:#ffffff !important; color:#2f2626 !important; }
+      .email-title { color:#586b7b !important; }
+      .email-button { background-color:#e3a7a7 !important; color:#ffffff !important; }
+      @media screen and (max-width:480px) {
+        .email-header, .email-content { padding:24px 20px !important; }
+        .email-title { font-size:28px !important; }
+        .email-avatar { width:62px !important; height:62px !important; }
+        .email-identities { width:124px !important; }
+        .email-logo { width:200px !important; }
+      }
+    </style>
+  </head>
+  <body class="email-page" style="margin:0;background:#fff8f5;color:#2f2626;font-family:Inter,Arial,sans-serif;">
     <div style="display:none;max-height:0;overflow:hidden;">${preview}</div>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fff8f5;padding:28px 14px;">
+    <table class="email-page" role="presentation" width="100%" cellspacing="0" cellpadding="0" bgcolor="#fff8f5" style="background:#fff8f5;padding:28px 14px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;border-radius:28px;background:#ffffff;border:1px solid #f1d8d2;overflow:hidden;">
+          <table class="email-card" role="presentation" width="100%" cellspacing="0" cellpadding="0" bgcolor="#ffffff" style="max-width:660px;border-radius:28px;background:#ffffff;border:1px solid #f1d8d2;overflow:hidden;">
             <tr>
-              <td style="background:linear-gradient(135deg,#f4cfca,#fff8f5,#f9e0c7);padding:34px 30px 22px;">
-                <p style="margin:0 0 8px;color:#9b6b65;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">ShopFia</p>
-                <h1 style="margin:0;color:#2f2626;font-family:Georgia,serif;font-size:34px;line-height:1.08;">${title}</h1>
+              <td class="email-header" bgcolor="#ffffff" style="background:#ffffff;color:#2f2626;padding:30px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td style="vertical-align:middle;">
+                <img class="email-logo" src="cid:shopfia-logo" width="300" alt="Shopfia" style="display:block;width:300px;max-width:100%;height:auto;margin:0 0 32px;border:0;" />
+                <h1 class="email-title" style="margin:0;color:#586b7b;font-family:'Instrument Sans',Arial,Helvetica,sans-serif;font-size:38px;font-weight:700;letter-spacing:-1.2px;line-height:1.1;">${escapeHtml(title)}</h1>
+                </td>${identities ? `<td class="email-identities" width="190" align="right" style="width:190px;vertical-align:middle;white-space:nowrap;">${identities}</td>` : ""}</tr></table>
               </td>
             </tr>
             <tr>
-              <td style="padding:28px 30px 34px;font-size:16px;line-height:1.65;color:#4f4141;">
+              <td class="email-content" bgcolor="#fce1e4" style="background:#fce1e4;background-image:linear-gradient(135deg,#fcdee3 0%,#fff4ef 100%);padding:28px 30px 34px;font-size:16px;line-height:1.65;color:#4f4141;">
                 ${body}
               </td>
             </tr>
@@ -71,8 +118,10 @@ async function sendEmail({
   html,
   subject,
   text,
-  to
+  to,
+  attachments = []
 }: {
+  attachments?: EmailAttachment[];
   html: string;
   subject: string;
   text: string;
@@ -86,7 +135,16 @@ async function sendEmail({
 
   try {
     await transport.sendMail({
-      from: authProviderConfig.email.from,
+      from: {
+        name: "Shopfia 🧁",
+        address: authProviderConfig.email.from.match(/<([^<>]+)>/)?.[1]?.trim() ?? authProviderConfig.email.from.trim()
+      },
+      attachments: [{
+        filename: "shopfia-logo.png",
+        content: await readFile(join(process.cwd(), "public", "logo.png")),
+        contentType: "image/png",
+        cid: "shopfia-logo"
+      }, ...attachments],
       html,
       subject,
       text,
@@ -107,10 +165,10 @@ async function sendEmail({
 export async function sendWelcomeEmail(to: string) {
   const href = `${getBaseUrl()}/explore`;
   const html = shell({
-    title: "Welcome to ShopFia",
+    title: "Welcome to Shopfia",
     preview: "Discover local artisans, explore real celebrations, and connect with creatives.",
     body: `
-      <p style="margin:0 0 18px;">ShopFia is a place to discover local artisans, explore real celebrations, and connect with the creatives behind unforgettable events.</p>
+      <p style="margin:0 0 18px;">Shopfia is a place to discover local artisans, explore real celebrations, and connect with the creatives behind unforgettable events.</p>
       <p style="margin:0 0 22px;">Whether you're planning a birthday, baby shower, dinner party, wedding, or just collecting inspiration, we're excited to have you here.</p>
       <p style="margin:0 0 24px;">Create your first party, tag the vendors who made it special, save inspiration, and explore local creatives in your area.</p>
       <p style="margin:0 0 24px;">${button("Start Exploring", href)}</p>
@@ -120,9 +178,9 @@ export async function sendWelcomeEmail(to: string) {
 
   return sendEmail({
     html,
-    subject: "Welcome to ShopFia ✨",
+    subject: "Welcome to Shopfia ✨",
     text:
-      "Welcome to ShopFia.\n\nShopFia is a place to discover local artisans, explore real celebrations, and connect with the creatives behind unforgettable events.\n\nCreate your first party, tag vendors, save inspiration, and explore local creatives in your area.\n\nStart Exploring: " +
+      "Welcome to Shopfia.\n\nShopfia is a place to discover local artisans, explore real celebrations, and connect with the creatives behind unforgettable events.\n\nCreate your first party, tag vendors, save inspiration, and explore local creatives in your area.\n\nStart Exploring: " +
       href +
       "\n\nWe can't wait to see what you create.",
     to
@@ -132,9 +190,9 @@ export async function sendWelcomeEmail(to: string) {
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   const html = shell({
     title: "Reset your password",
-    preview: "Create a new ShopFia password. This link expires soon.",
+    preview: "Create a new Shopfia password. This link expires soon.",
     body: `
-      <p style="margin:0 0 18px;">We received a request to reset your ShopFia password.</p>
+      <p style="margin:0 0 18px;">We received a request to reset your Shopfia password.</p>
       <p style="margin:0 0 24px;">Use the button below to create a new password. This link expires in one hour.</p>
       <p style="margin:0 0 24px;">${button("Create New Password", resetUrl)}</p>
       <p style="margin:0;color:#8a6a67;">If you didn't request this, you can safely ignore this email.</p>
@@ -143,8 +201,8 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
 
   return sendEmail({
     html,
-    subject: "Reset your ShopFia password",
-    text: `Create a new ShopFia password with this link. It expires in one hour:\n\n${resetUrl}\n\nIf you didn't request this, you can ignore this email.`,
+    subject: "Reset your Shopfia password",
+    text: `Create a new Shopfia password with this link. It expires in one hour:\n\n${resetUrl}\n\nIf you didn't request this, you can ignore this email.`,
     to
   });
 }
@@ -183,12 +241,12 @@ export async function sendNewInquiryEmail({
   const locationText = eventLocation ? ` in ${eventLocation}` : "";
 
   const html = shell({
-    title: "New inquiry on ShopFia",
+    title: "New inquiry on Shopfia",
     preview: `${buyerName} sent you a new inquiry for ${dateText}${locationText}.`,
     body: `
       <p style="margin:0 0 18px;">${buyerName} sent you a new event inquiry for ${dateText}${locationText}.</p>
       ${budgetText ? `<p style="margin:0 0 20px;"><strong>Budget:</strong> ${budgetText}</p>` : ""}
-      <p style="margin:0 0 24px;">Open the conversation to review the event brief, inspiration, and reply through your ShopFia storefront.</p>
+      <p style="margin:0 0 24px;">Open the conversation to review the event brief, inspiration, and reply through your Shopfia storefront.</p>
       <p style="margin:0 0 24px;">${button("View Inquiry", inquiryUrl)}</p>
       <p style="margin:0;color:#8a6a67;">A beautiful lead is waiting for you.</p>
     `
@@ -196,7 +254,7 @@ export async function sendNewInquiryEmail({
 
   return sendEmail({
     html,
-    subject: "New inquiry on ShopFia ✨",
+    subject: "New inquiry on Shopfia ✨",
     text: `${buyerName} sent you a new inquiry for ${dateText}${locationText}.\n${budgetText ? `\nBudget: ${budgetText}\n` : ""}\nView Inquiry: ${inquiryUrl}`,
     to
   });
@@ -221,12 +279,12 @@ export async function sendNewMessageEmail({
   const safePreview = escapeHtml(preview);
   const safeSenderName = escapeHtml(senderName);
   const html = shell({
-    title: "New ShopFia message",
+    title: "New Shopfia message",
     preview: `${senderName} replied about ${contextTitle}.`,
     body: `
       <p style="margin:0 0 18px;"><strong>${safeSenderName}</strong> sent you a new message about <strong>${safeContextTitle}</strong>.</p>
       <div style="margin:0 0 24px;border-radius:20px;background:#fff8f5;border:1px solid #f1d8d2;padding:16px 18px;color:#4f4141;">${safePreview}</div>
-      <p style="margin:0 0 24px;">Open the conversation to keep planning through ShopFia.</p>
+      <p style="margin:0 0 24px;">Open the conversation to keep planning through Shopfia.</p>
       <p style="margin:0 0 24px;">${button("View Message", conversationUrl)}</p>
       <p style="margin:0;color:#8a6a67;">A thoughtful reply keeps the celebration moving.</p>
     `
@@ -234,7 +292,7 @@ export async function sendNewMessageEmail({
 
   return sendEmail({
     html,
-    subject: "New message on ShopFia ✨",
+    subject: "New message on Shopfia ✨",
     text: `${senderName} sent you a new message about ${contextTitle}.\n\n${preview}\n\nView Message: ${conversationUrl}`,
     to
   });
@@ -247,18 +305,21 @@ export async function sendPartyNotificationEmail({ to, title, path }: { to: stri
   return sendEmail({
     to,
     subject: title,
-    text: `${title}\n\nView on ShopFia: ${href}\n\nManage notification preferences: ${preferences}`,
-    html: shell({ title: "Your party update", preview: escapeHtml(title), body: `<p>${escapeHtml(title)}</p><p>${button("View on ShopFia", href)}</p><p><a href="${preferences}">Manage notification preferences</a></p>` })
+    text: `${title}\n\nView on Shopfia: ${href}\n\nManage notification preferences: ${preferences}`,
+    html: shell({ title: "Your party update", preview: escapeHtml(title), body: `<p>${escapeHtml(title)}</p><p>${button("View on Shopfia", href)}</p><p><a href="${preferences}">Manage notification preferences</a></p>` })
   });
 }
 
-export async function sendAccountNotificationEmail({to,title,path,kind}: {to:string;title:string;path:string;kind:"NEW_FOLLOWER" | "SERVICE_REQUEST"}) {
+export async function sendAccountNotificationEmail({to,title,path,kind,requester,business}: {to:string;title:string;path:string;kind:"NEW_FOLLOWER" | "SERVICE_REQUEST";requester?:EmailIdentity;business?:EmailIdentity}) {
   const href = new URL(path.startsWith("/") && !path.startsWith("//") ? path : "/notifications", getBaseUrl()).href;
-  const heading = kind === "SERVICE_REQUEST" ? "New service request" : "You have a new follower";
+  const heading = kind === "SERVICE_REQUEST" ? "New Party Request" : "You have a new follower";
+  const attachments: EmailAttachment[] = [];
+  const identities = requester && business ? `${identityImage(requester,"requester-avatar",attachments)}<span style="display:inline-block;margin-left:-28px;position:relative;">${identityImage(business,"business-avatar",attachments)}</span>` : "";
   return sendEmail({
     to,
-    subject: `${heading} on ShopFia`,
-    text: `${title}\n\nView on ShopFia: ${href}\n\nThis is an automated notification. Please do not reply to this email.`,
-    html: shell({title:heading,preview:escapeHtml(title),body:`<p>${escapeHtml(title)}</p><p>${button(kind === "SERVICE_REQUEST" ? "View service request" : "View on ShopFia",href)}</p><p style="font-size:12px;color:#8a6a67;">This is an automated notification. Please do not reply to this email.</p>`})
+    attachments,
+    subject: `${heading} on Shopfia 🧁`,
+    text: `${title}\n\nView on Shopfia: ${href}\n\nThis is an automated notification. Please do not reply to this email.`,
+    html: shell({title:heading,identities,preview:escapeHtml(title),body:`<p>${escapeHtml(title)}</p><p>${button(kind === "SERVICE_REQUEST" ? "View party request" : "View on Shopfia",href)}</p><p style="font-size:12px;color:#8a6a67;">This is an automated notification. Please do not reply to this email.</p>`})
   });
 }
