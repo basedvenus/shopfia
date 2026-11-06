@@ -6,7 +6,6 @@ import {
   BadgeCheck,
   Bookmark,
   CalendarHeart,
-  Camera,
   CakeSlice,
   Flower2,
   GlassWater,
@@ -18,94 +17,102 @@ import {
 import { Button } from "@/components/ui/button";
 import { partyInspirationExamples } from "@/lib/party-inspiration";
 
+const landingPartyExamples = partyInspirationExamples.map((party, index) =>
+  index === 0
+    ? {
+        ...party,
+        title: "Candy Boards",
+        theme: "A sweet spring celebration",
+        coverImageUrl: "/landing/pastel-easter-treats.webp",
+        href: "/parties"
+      }
+    : {
+        ...party,
+        title: "Custom Cookies",
+        theme: "Decorated cookies",
+        coverImageUrl: "/landing/custom-cookies.webp",
+        href: "/parties"
+      }
+);
+
 const partyImages = [
-  ...partyInspirationExamples.map((party, index) => ({
+  ...landingPartyExamples.map((party, index) => ({
     title: party.title,
     image: party.coverImageUrl,
-    href: `/events/${party.slug}`,
+    href: party.href,
     detail: party.theme,
-    className: index === 0 ? "md:col-span-2 md:row-span-2" : ""
+    className: index === 0 ? "md:col-span-2 md:row-span-3" : ""
   })),
   {
-    title: "Blush Garden Tables",
-    image:
-      "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1100&q=80",
+    title: "Florals",
+    image: "/landing/floral-arrangements.webp",
     href: "/parties",
-    detail: "Decor, florals, and rental inspiration",
+    detail: "Blush roses in bloom",
     className: ""
   },
   {
-    title: "Candlelit Dessert Moment",
-    image:
-      "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1100&q=80",
+    title: "Beach Birthdays",
+    image: "/landing/beach-birthdays.webp",
     href: "/parties",
-    detail: "Save the look for your next celebration",
-    className: "md:col-span-2"
+    detail: "Celebrations by the sea",
+    className: "col-span-2 row-span-2"
   }
 ];
 
 const categoryCards = [
   {
     name: "Cakes",
-    image:
-      "https://images.unsplash.com/photo-1535141192574-5d4897c12636?auto=format&fit=crop&w=900&q=80",
+    image: "/landing/cakes-category-close.webp",
     icon: CakeSlice
   },
   {
     name: "Balloons",
-    image:
-      "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=900&q=80",
+    image: "/landing/balloons-category.webp",
     icon: PartyPopper
   },
   {
     name: "Florals",
-    image:
-      "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=900&q=80",
+    image: "/landing/florals-category.webp",
     icon: Flower2
   },
   {
     name: "Decor",
-    image:
-      "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=900&q=80",
+    image: "/landing/decor-category.webp",
     icon: Sparkles
   },
   {
     name: "Cookies",
-    image: "/demo/vacaville-cookie-tulips.png",
+    image: "/landing/cookies-category.webp",
     icon: Heart
   },
   {
     name: "Rentals",
-    image:
-      "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80",
+    image: "/landing/rentals-dessert-cart.webp",
     icon: CalendarHeart
   },
   {
-    name: "Photography",
-    image:
-      "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=900&q=80",
-    icon: Camera
+    name: "Desserts",
+    image: "/landing/desserts-category.webp",
+    icon: CakeSlice
   },
   {
-    name: "Bartending",
-    image:
-      "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=900&q=80",
+    name: "Drinks",
+    image: "/landing/drinks-category.webp",
     icon: GlassWater
   }
 ];
 
 const featuredParties = [
-  ...partyInspirationExamples.map((party) => ({
-    title: party.title,
-    meta: party.theme,
-    image: party.coverImageUrl,
-    href: `/events/${party.slug}`
+  ...landingPartyExamples.map((party, index) => ({
+    title: index === 1 ? "Birthday Displays" : party.title,
+    meta: index === 1 ? "Details for a birthday celebration" : party.theme,
+    image: index === 1 ? "/landing/birthday-displays.webp" : party.coverImageUrl,
+    href: party.href
   })),
   {
-    title: "Backyard Floral Dinner",
-    meta: "Garden party · rentals, stems, place settings",
-    image:
-      "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1000&q=80",
+    title: "Backdrops",
+    meta: "Backdrops for your celebration",
+    image: "/landing/backdrops.webp",
     href: "/parties"
   }
 ];
@@ -217,40 +224,38 @@ export default function Page() {
                     : "(min-width: 1024px) 18vw, 50vw"
                 }
                 className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                style={{ objectPosition: party.title === "Beach Birthdays" ? "center 55%" : "center" }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
               <div className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-foreground opacity-0 transition group-hover:opacity-100">
                 <ArrowUpRight className="h-4 w-4" />
               </div>
               <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-                <p className="mb-1 text-xs text-white/90">Inspiration example</p>
                 <h2 className="text-lg font-semibold leading-tight">{party.title}</h2>
-                <p className="mt-1 text-xs leading-5 text-white/90">{party.detail}</p>
               </div>
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="px-5 py-4 text-center md:px-10 md:py-6">
-        <div aria-hidden="true" className="mx-auto mb-6 h-px w-12 bg-[#a85f5e]/35" />
-        <h2 className="mx-auto max-w-3xl text-3xl font-medium leading-[1.2] tracking-tight text-foreground md:text-4xl">
-          Everything for a{" "}
-          <span
-            className="font-normal italic text-[#a85f5e]"
-            style={{
-              fontFamily: 'var(--font-shopfia-serif), Canela, "Editorial New", "Iowan Old Style", Georgia, serif'
-            }}
-          >
-            lovely celebration.
-          </span>
+      <section
+        className="!mt-6 bg-white px-5 pb-6 pt-12 text-center md:px-10"
+        style={{ boxShadow: "0 0 0 100vmax white", clipPath: "inset(0 -100vmax)" }}
+      >
+        <h2
+          className="mx-auto flex max-w-6xl flex-wrap items-baseline justify-center gap-x-4 gap-y-2 text-5xl font-bold uppercase leading-none tracking-wide md:gap-x-6 md:text-6xl lg:text-7xl"
+          style={{ fontFamily: '"DIN Condensed", "Arial Narrow", Impact, sans-serif' }}
+        >
+          <span className="text-[#f4bfc2]">FESTIVITIES.</span>
+          <span className="text-[#f0b4a8]">INSPIRATION.</span>
+          <span className="text-[#f7caaa]">ARTISANS.</span>
         </h2>
-        <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-muted-foreground md:text-base">
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
           Discover the inspiration, the details, and the people who bring it all to life.
         </p>
       </section>
 
-      <section className="space-y-6">
+      <section className="!mt-8 space-y-6">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
@@ -339,7 +344,6 @@ export default function Page() {
                 />
               </div>
               <div className="p-4">
-                <p className="mb-1 text-xs text-muted-foreground">Inspiration example</p>
                 <h3 className="font-semibold leading-tight">{party.title}</h3>
                 <p className="mt-2 text-xs leading-5 text-muted-foreground">
                   {party.meta}
