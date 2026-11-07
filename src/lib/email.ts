@@ -265,20 +265,27 @@ export async function sendNewMessageEmail({
   conversationUrl,
   messagePreview,
   senderName,
-  to
+  to,
+  requester,
+  business
 }: {
   contextTitle: string;
   conversationUrl: string;
   messagePreview: string;
   senderName: string;
   to: string;
+  requester?: EmailIdentity;
+  business?: EmailIdentity;
 }) {
   const preview =
     messagePreview.length > 140 ? `${messagePreview.slice(0, 137).trim()}...` : messagePreview;
   const safeContextTitle = escapeHtml(contextTitle);
   const safePreview = escapeHtml(preview);
   const safeSenderName = escapeHtml(senderName);
+  const attachments: EmailAttachment[] = [];
+  const identities = requester && business ? `${identityImage(requester,"requester-avatar",attachments)}<span style="display:inline-block;margin-left:-28px;position:relative;">${identityImage(business,"business-avatar",attachments)}</span>` : "";
   const html = shell({
+    identities,
     title: "New Shopfia message",
     preview: `${senderName} replied about ${contextTitle}.`,
     body: `
@@ -291,6 +298,7 @@ export async function sendNewMessageEmail({
   });
 
   return sendEmail({
+    attachments,
     html,
     subject: "New message on Shopfia ✨",
     text: `${senderName} sent you a new message about ${contextTitle}.\n\n${preview}\n\nView Message: ${conversationUrl}`,

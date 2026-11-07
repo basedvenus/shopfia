@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { db } from "@/lib/db";
 import { sendNewMessageEmail } from "@/lib/email";
+import { getUserProfileImage } from "@/lib/profile-image";
 import { getMessagesPayload } from "@/lib/messages/query";
 import { getPagedMessagesPayload, InvalidMessageCursorError, type MessagePage } from "@/lib/messages/paged-query";
 import { enforceRequestRateLimit } from "@/lib/security/request";
@@ -146,9 +147,9 @@ export async function POST(request: Request) {
   const conversation = await db.conversation.findUnique({
     where: { id: conversationId },
     include: {
-      buyer: { select: { email: true, id: true, name: true, username: true } },
+      buyer: { select: { email: true, id: true, name: true, username: true, image: true, avatar: { select: { updatedAt: true, data: true, contentType: true } } } },
       vendor: { select: { email: true, id: true, name: true, username: true } },
-      vendorProfile: { select: { name: true, slug: true } },
+      vendorProfile: { select: { name: true, slug: true, logoUrl: true } },
       listing: { select: { title: true } },
       offering: { select: { title: true } }
     }
@@ -207,6 +208,8 @@ export async function POST(request: Request) {
       contextTitle,
       messagePreview: parsed.data.body,
       senderName,
+      requester: { name: conversation.buyer.name ?? conversation.buyer.username ?? "Guest", image: conversation.buyer.avatar ? `data:${conversation.buyer.avatar.contentType};base64,${Buffer.from(conversation.buyer.avatar.data).toString("base64")}` : getUserProfileImage(conversation.buyer) },
+      business: { name: conversation.vendorProfile.name, image: conversation.vendorProfile.logoUrl },
       to: recipient.email
     });
   }
