@@ -14,8 +14,9 @@ const defaultPreferences: Preferences = {
   sound: false
 };
 
-export function NotificationPreferences({ compact = false }: { compact?: boolean }) {
+export function NotificationPreferences({ compact = false, pushOnly = false }: { compact?: boolean; pushOnly?: boolean }) {
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
+  const [loaded, setLoaded] = useState(false);
   const [browserStatus, setBrowserStatus] = useState<string>("Browser alerts are off.");
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export function NotificationPreferences({ compact = false }: { compact?: boolean
       }
     }
 
+    setLoaded(true);
     if ("Notification" in window) {
       setBrowserStatus(
         Notification.permission === "granted"
@@ -38,8 +40,8 @@ export function NotificationPreferences({ compact = false }: { compact?: boolean
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(storageKey, JSON.stringify(preferences));
-  }, [preferences]);
+    if (loaded) window.localStorage.setItem(storageKey, JSON.stringify(preferences));
+  }, [preferences, loaded]);
 
   const rows = useMemo(
     () => [
@@ -76,6 +78,9 @@ export function NotificationPreferences({ compact = false }: { compact?: boolean
   );
 
   async function togglePreference(key: PreferenceKey) {
+    if (key === "browser" && !preferences.browser && !("Notification" in window)) {
+      setBrowserStatus("Push notifications are unavailable in this browser."); return;
+    }
     if (key === "browser" && !preferences.browser && "Notification" in window) {
       const permission = await Notification.requestPermission();
       setBrowserStatus(
@@ -97,13 +102,13 @@ export function NotificationPreferences({ compact = false }: { compact?: boolean
     <div className={`rounded-[1.25rem] border border-white/80 bg-white/86 shadow-sm ${compact ? "p-3" : "p-5"}`}>
       <div className="flex items-center gap-2 font-semibold text-[#2f2626]">
         <Bell className="h-4 w-4 text-[#c5837f]" />
-        {compact ? "Notifications" : "Notification preferences"}
+        {pushOnly ? "Push notifications" : compact ? "Notifications" : "Notification preferences"}
       </div>
       <p className={`${compact ? "mt-1 text-xs leading-5" : "mt-2 text-sm leading-6"} text-muted-foreground`}>
-        Choose how ShopFia should nudge you when a new inquiry or reply arrives.
+        Choose alerts for new inquiries and replies.
       </p>
       <div className={`${compact ? "mt-3 grid-cols-2 gap-1.5" : "mt-4 gap-3"} grid`}>
-        {rows.map((row) => {
+        {rows.filter((row) => !pushOnly || row.key === "browser" || row.key === "sound").map((row) => {
           const Icon = row.icon;
           const enabled = preferences[row.key];
           return (
@@ -113,6 +118,8 @@ export function NotificationPreferences({ compact = false }: { compact?: boolean
               onClick={() => void togglePreference(row.key)}
               aria-label={row.label}
               title={row.label}
+              role="switch"
+              aria-checked={enabled}
               className={`flex border text-left transition hover:bg-white ${
                 compact
                   ? `min-w-0 items-center justify-between gap-1.5 rounded-full px-2.5 py-2 ${

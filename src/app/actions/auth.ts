@@ -1,4 +1,5 @@
 "use server";
+import { canChangeUsername } from "@/lib/username-change";
 import {validLanguage} from "@/lib/language";
 import {persistUserLanguage,writeLanguageCookie} from "@/lib/language-preference";
 import { classificationTags, validatePartyClassificationForm } from "@/lib/party-occasions";
@@ -14,7 +15,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { notifyAccount } from "@/lib/services/account-notifications";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendWelcomeEmail, sendPasswordChangedEmail } from "@/lib/email";
 import { parseImageCrop, type ImageCrop } from "@/lib/image-crop";
 import { partyPhotoUrl } from "@/lib/party-photo-url";
 import { securityLog } from "@/lib/security/audit-log";
@@ -188,7 +189,7 @@ export async function completeRequiredProfileAction(formData: FormData) {
     return { ok: true, profile, nextPath: destination.nextPath };
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
-      return { ok: false, error: "That username is already taken. Try another one." };
+      return { ok: false, error: "That username is already taken or temporarily reserved. Try another one." };
     }
     console.error("ShopFia required profile save failed", error);
     return { ok: false, error: "Your profile could not be saved right now. Please try again." };
@@ -246,11 +247,14 @@ export async function resetPasswordAction(formData: FormData) {
     })
   ]);
 
+  await sendPasswordChangedEmail(email).catch(() => undefined);
   securityLog("password_reset_completed", { email });
   return { ok: true, message: "Password updated. You can sign in with your new password." };
 }
 
 const profileSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required.").max(80).optional(),
+  lastName: z.string().trim().min(1, "Last name is required.").max(80).optional(),
   name: z.string().trim().min(1, "Display name is required.").max(80, "Name is a little too long."),
   username: z
     .string()
@@ -284,6 +288,8 @@ export async function updateAccountProfileAction(formData: FormData) {
   }
 
   const parsed = profileSchema.safeParse({
+    firstName: formData.has("firstName") ? formData.get("firstName") : undefined,
+    lastName: formData.has("lastName") ? formData.get("lastName") : undefined,
     name: formData.get("name") || undefined,
     username: formData.get("username"),
     bio: formData.get("bio") || undefined,
@@ -305,17 +311,28 @@ export async function updateAccountProfileAction(formData: FormData) {
   }
 
   try {
-    const updatedUser = await db.user.update({
-      where: { id: session.user.id },
+    const updatedUser = await db.$transaction(async (tx) => {
+      const existing = await tx.user.findUnique({where:{id:session.user.id},select:{username:true,usernameChangedAt:true}});
+      if (!existing) throw new Error("PROFILE_MISSING");
+      const now = new Date();
+      const usernameChanged = existing.username !== parsed.data.username;
+      if (usernameChanged && !canChangeUsername(existing.usernameChangedAt, now)) throw new Error("USERNAME_COOLDOWN");
+      const updated = await tx.user.updateMany({
+        where:{id:session.user.id, username:existing.username, usernameChangedAt:existing.usernameChangedAt},
       data: {
+        ...(parsed.data.firstName !== undefined ? {firstName: parsed.data.firstName} : {}),
+        ...(parsed.data.lastName !== undefined ? {lastName: parsed.data.lastName || null} : {}),
         name: parsed.data.name || null,
         username: parsed.data.username,
+        ...(usernameChanged ? { usernameChangedAt: now } : {}),
         bio: parsed.data.bio || null,
         instagramUrl: getVendorSocialProfile(parsed.data.instagramUrl, "instagram")?.url ?? null,
         tiktokUrl: getVendorSocialProfile(parsed.data.tiktokUrl, "tiktok")?.url ?? null,
         imageCrop: parseImageCrop(formData.get("imageCrop")) ?? undefined
       },
-      select: userProfileSelect
+      });
+      if (!updated.count) throw new Error("PROFILE_CONFLICT");
+      return tx.user.findUniqueOrThrow({where:{id:session.user.id},select:userProfileSelect});
     });
 
     const profile = serializeUserProfile(updatedUser);
@@ -325,8 +342,10 @@ export async function updateAccountProfileAction(formData: FormData) {
     revalidatePath("/parties");
     revalidatePath("/");
     return { ok: true, profile };
-  } catch {
-    return { ok: false, error: "That handle is already taken." };
+  } catch (error) {
+    if (error instanceof Error && error.message === "USERNAME_COOLDOWN") return {ok:false,error:"You can change your username once every 30 days. You can still edit your first name and bio."};
+    if (error instanceof Error && error.message === "PROFILE_CONFLICT") return {ok:false,error:"Your profile changed in another window. Reload and try again."};
+    return { ok: false, error: "Could not save your profile. That username may be taken or temporarily reserved." };
   }
 }
 

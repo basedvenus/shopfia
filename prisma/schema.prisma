@@ -218,7 +218,20 @@ enum PartyContributionKind {
   PLAYLIST
 }
 
+model UsernameReservation {
+  username String @id
+  userId String
+  expiresAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
 model User {
+  usernameReservations UsernameReservation[]
+  firstName String?
+  lastName String?
+  usernameChangedAt DateTime?
   phoneVerification PhoneVerificationProfile?
   businessSmsDeliveries BusinessSmsDelivery[]
   id                     String            @id @default(cuid())

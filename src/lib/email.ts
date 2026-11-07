@@ -331,3 +331,13 @@ export async function sendAccountNotificationEmail({to,title,path,kind,requester
     html: shell({title:heading,identities,preview:escapeHtml(title),body:`<p>${escapeHtml(title)}</p><p>${button(kind === "SERVICE_REQUEST" ? "View party request" : "View on Shopfia",href)}</p><p style="font-size:12px;color:#8a6a67;">This is an automated notification. Please do not reply to this email.</p>`})
   });
 }
+
+export async function sendPasswordChangedEmail(to: string) {
+  const recoveryUrl = new URL("/account/forgot-password", getBaseUrl()).href;
+  return sendEmail({
+    to,
+    subject: "Your Shopfia password was changed",
+    text: `Your Shopfia password was just changed. If you made this change, no action is needed. If this wasn't you, reset your password immediately: ${recoveryUrl}`,
+    html: shell({title:"Your password was changed", preview:"Your Shopfia password was just changed.", body:`<p>Your Shopfia password was just changed.</p><p>If you made this change, no action is needed.</p><p>If this wasn't you, reset your password immediately to secure your account.</p>${button("Reset password", recoveryUrl)}`})
+  });
+}

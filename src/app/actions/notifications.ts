@@ -14,9 +14,9 @@ export async function markNotificationsReadAction() {
 
 export async function updatePartyNotificationPreferenceAction(form: FormData) {
   const session = await auth();
-  if (!session?.user?.id) return;
+  if (!session?.user?.id) throw new Error("Sign in to update preferences.");
   const limited = await checkServerActionRateLimit([{ key: `notification-preference:${session.user.id}`, limit: 12, intervalMs: 60_000 }]);
-  if (!limited.ok) return;
+  if (!limited.ok) throw new Error("Please wait before updating preferences again.");
   const email = form.get("email") === "on";
   await db.user.update({ where: { id: session.user.id }, data: { partyEmailNotifications: email } });
   if (email) await deliverPartyNotificationEmails(undefined, session.user.id).catch(() => undefined);

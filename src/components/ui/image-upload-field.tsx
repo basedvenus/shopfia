@@ -64,6 +64,27 @@ export function ImageUploadField({
 }: ImageUploadFieldProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const uploadInput = useRef<HTMLInputElement>(null);
+  const menuContainer = useRef<HTMLDivElement>(null);
+  const menuTrigger = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function dismissOutside(event: PointerEvent) {
+      if (event.target instanceof Node && !menuContainer.current?.contains(event.target)) setMenuOpen(false);
+    }
+    function dismissOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuTrigger.current?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", dismissOutside);
+    document.addEventListener("keydown", dismissOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside);
+      document.removeEventListener("keydown", dismissOnEscape);
+    };
+  }, [menuOpen]);
   const [internalValue, setInternalValue] = useState(defaultValue ?? "");
   const [liveCrop, setLiveCrop] = useState<ImageCrop>(() => normalizeImageCrop(valueCrop ?? defaultCrop));
   const [uploadPreviewValue, setUploadPreviewValue] = useState<string | null>(null);
@@ -252,7 +273,7 @@ export function ImageUploadField({
   return (
     <div className="grid gap-2">
       <label className="text-sm font-medium">{label}</label>
-      <div className={editMenu ? "relative w-fit" : "relative"}>
+      <div ref={menuContainer} className={editMenu ? "relative w-fit" : "relative"}>
       <label
         className={`group relative grid cursor-pointer place-items-center overflow-hidden border border-dashed border-border bg-white/80 text-center text-sm text-muted-foreground transition hover:border-primary ${
           isRound ? "h-32 w-32 rounded-full" : "min-h-[150px] rounded-[1.5rem]"
@@ -273,10 +294,11 @@ export function ImageUploadField({
         <input ref={uploadInput} type="file" accept={SUPPORTED_IMAGE_TYPES.join(",")} className="sr-only" onChange={handleFile} />
       </label>
       {previewValue && onCropChange && !editMenu ? <button type="button" className="mt-2 rounded-full border px-3 py-2 text-sm" onClick={()=>{setPendingFile(null);setPendingPreview(previewValue);setEditorOpen(true);}}>Adjust image</button> : null}
-      {editMenu ? <button type="button" aria-label={`Adjust ${label.toLowerCase()}`} title="Adjust image" onClick={() => setMenuOpen((open) => !open)} className="absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full border bg-white shadow-sm"><Pencil className="h-4 w-4" /></button> : null}
+      {editMenu ? <button ref={menuTrigger} type="button" aria-expanded={menuOpen} aria-label={`Adjust ${label.toLowerCase()}`} title="Adjust image" onClick={() => setMenuOpen((open) => !open)} className="absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full border bg-white shadow-sm"><Pencil className="h-4 w-4" /></button> : null}
       {editMenu && menuOpen ? <div className="absolute left-0 top-full z-20 mt-2 min-w-48 rounded-2xl border bg-white p-2 shadow-lg">
         {previewValue ? <button type="button" className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted" onClick={() => { setPendingFile(null); setPendingPreview(previewValue); setEditorOpen(true); setMenuOpen(false); }}>Adjust picture</button> : null}
         <button type="button" className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted" onClick={() => { setMenuOpen(false); uploadInput.current?.click(); }}>Change picture</button>
+        <p className="px-3 py-2 text-xs text-muted-foreground">{SUPPORTED_IMAGE_FORMAT_LABEL}. Max size: {formatBytes(MAX_IMAGE_SIZE_BYTES)}.</p>
       </div> : null}
       </div>
       <input type="hidden" name={name} value={value} />
@@ -285,9 +307,9 @@ export function ImageUploadField({
       {previewValue && failedPreview === previewValue ? (
         <p className="text-xs text-muted-foreground">Photo preview is unavailable. Your saved photo has not been changed.</p>
       ) : null}
-      <p className="text-xs text-muted-foreground">
+      {!editMenu || editorOpen || pendingFile ? <p className="text-xs text-muted-foreground">
         Supported formats: {SUPPORTED_IMAGE_FORMAT_LABEL}. Max size: {formatBytes(MAX_IMAGE_SIZE_BYTES)}.
-      </p>
+      </p> : null}
       {message ? <p role={messageKind === "success" ? "status" : "alert"} className={`flex items-center gap-1.5 text-xs ${messageKind === "success" ? "text-green-700" : "text-destructive"}`}>
         {messageKind === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" /> : null}{message}
       </p> : null}

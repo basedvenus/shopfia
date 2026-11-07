@@ -1,15 +1,12 @@
+import { ChangePasswordForm } from "@/components/account/change-password-form";
+import { AccountNotificationSettings } from "@/components/account/account-notification-settings";
 import Link from "next/link";
-import { CalendarHeart, Heart, MessageCircle, PackageCheck, PenLine, Store } from "lucide-react";
-import { createReviewAction } from "@/app/actions/reviews";
 import { AccountRecovery } from "@/components/account/account-recovery";
 import { AccountProfileEditor } from "@/components/account/account-profile-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { SignInPanel } from "@/components/account/sign-in-panel";
 import { authProviderConfig } from "@/lib/auth/provider-config";
-import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -52,62 +49,7 @@ export default async function AccountPage({
   let accountData: Awaited<ReturnType<typeof loadAccountData>>;
 
   async function loadAccountData() {
-    return Promise.all([
-      db.user.findUnique({
-        where: { id: userId },
-        select: {
-          name: true,
-          email: true,
-          image: true,
-          imageCrop: true,
-          username: true,
-          bio: true,
-          instagramUrl: true,
-          partyfulUrl: true,
-          tiktokUrl: true,
-          vendorProfile: { select: { id: true } }
-        }
-      }),
-      db.order.findMany({
-        where: { buyerId: userId },
-        select: {
-          id: true,
-          amountCents: true,
-          paymentSucceededAt: true,
-          status: true,
-          vendorProfile: { select: { name: true } },
-          review: { select: { id: true } }
-        },
-        orderBy: { createdAt: "desc" }
-      }),
-      db.quoteRequest.findMany({
-        where: { buyerId: userId },
-        select: {
-          id: true,
-          eventLocation: true,
-          status: true,
-          vendor: { select: { name: true } },
-          quote: {
-            select: {
-              id: true,
-              amountCents: true,
-              expiresAt: true,
-              status: true
-            }
-          }
-        },
-        orderBy: { createdAt: "desc" }
-      }),
-      db.favorite.count({ where: { buyerId: userId } }),
-      db.conversation.count({
-        where: {
-          OR: [
-            { buyerId: userId },
-            { vendorId: userId }
-          ]
-        }
-      })
-    ]);
+    return db.user.findUnique({ where: { id: userId }, select: { name: true, username: true, firstName: true, lastName: true } });
   }
 
   try {
@@ -147,7 +89,7 @@ export default async function AccountPage({
     );
   }
 
-  const [accountUser, orders, quoteRequests, favoriteCount, conversationCount] = accountData;
+  const accountUser = accountData;
   if (!accountUser) {
     return (
       <section className="mx-auto grid max-w-xl gap-4 rounded-3xl border bg-white p-6">
@@ -158,8 +100,6 @@ export default async function AccountPage({
       </section>
     );
   }
-  const hasVendorBusinesses = Boolean(accountUser.vendorProfile);
-
   const displayName = accountUser?.name || session.user.name || "ShopFia Member";
   const handle = accountUser?.username ? `@${accountUser.username}` : "Username not set";
   const initials = displayName
@@ -168,55 +108,13 @@ export default async function AccountPage({
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
-  const dashboardItems = [
-    {
-      label: "Quotes",
-      value: quoteRequests.length,
-      href: "#quotes",
-      icon: PenLine,
-      detail: "Requests and vendor responses"
-    },
-    {
-      label: "Orders",
-      value: orders.length,
-      href: "#orders",
-      icon: PackageCheck,
-      detail: "Bookings and review prompts"
-    },
-    {
-      label: "Vendor Tools",
-      value: "Studio",
-      href: "/vendor/dashboard",
-      icon: Store,
-      detail: "Business profile, services, and payouts"
-    },
-    {
-      label: "Favorites",
-      value: favoriteCount,
-      href: "/favorites",
-      icon: Heart,
-      detail: "Saved Solano vendors"
-    },
-    {
-      label: "Messages",
-      value: conversationCount,
-      href: "/messages",
-      icon: MessageCircle,
-      detail: "Conversations and quotes"
-    },
-    {
-      label: "My Parties",
-      value: "Gallery",
-      href: "/my-parties",
-      icon: CalendarHeart,
-      detail: "Events, moodboards, and inspiration"
-    }
-  ];
 
   return (
     <div className="space-y-8">
       <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-soft">
         <AccountProfileEditor
+          firstName={accountUser.firstName}
+          lastName={accountUser.lastName}
           displayName={displayName}
           handle={handle}
           initials={initials}
@@ -228,123 +126,9 @@ export default async function AccountPage({
         />
       </section>
 
-      <section className="rounded-3xl border bg-white/90 p-5">
-        <h2 className="text-xl font-semibold">Profile settings</h2>
-        <Link href="/account/notifications" className="mt-2 inline-block text-sm font-medium text-primary underline underline-offset-4">Notification preferences</Link>
-      </section>
+      <AccountNotificationSettings />
+      <ChangePasswordForm />
 
-      <section className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
-        {dashboardItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link key={item.label} href={item.href} className="rounded-[1.5rem] border border-white/70 bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft">
-              <Icon className="h-5 w-5 text-primary" />
-              <div className="mt-4 text-2xl font-semibold">{item.value}</div>
-              <div className="mt-1 font-medium">{item.label}</div>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
-            </Link>
-          );
-        })}
-      </section>
-
-      <section id="quotes" className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle>Your Quote Requests</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {quoteRequests.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No quote requests yet.</p>
-            ) : (
-              quoteRequests.map((qr) => (
-                <div key={qr.id} className="rounded-2xl border p-3 text-sm">
-                  <div className="font-medium">{qr.vendor.name}</div>
-                  <div className="text-muted-foreground">{qr.eventLocation}</div>
-                  <div className="text-muted-foreground">Status: {qr.status}</div>
-                  {qr.quote && (
-                    <div className="mt-2 space-y-2">
-                      <div className="text-foreground">
-                        Quote: {formatCurrency(qr.quote.amountCents)} (expires {new Date(qr.quote.expiresAt).toLocaleDateString()})
-                      </div>
-                      {qr.quote.status === "SENT" && (
-                        <form action="/api/messages/quotes/accept" method="post" className="flex flex-wrap items-center gap-2">
-                          <input type="hidden" name="quoteId" value={qr.quote.id} />
-                          <select name="payMode" className="h-9 rounded-xl border bg-white px-2 text-sm">
-                            <option value="deposit">Pay deposit</option>
-                            <option value="full">Pay full</option>
-                          </select>
-                          <Button type="submit" size="sm">Accept & create payment</Button>
-                        </form>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card id="orders">
-          <CardHeader><CardTitle>Your Orders</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            {orders.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No orders yet.</p>
-            ) : (
-              orders.map((order) => (
-                <div key={order.id} className="space-y-2 rounded-2xl border p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{order.vendorProfile.name}</div>
-                      <div className="text-xs text-muted-foreground">{order.status}</div>
-                    </div>
-                    <div className="text-sm font-medium">{formatCurrency(order.amountCents)}</div>
-                  </div>
-                  {order.status === "completed" && order.paymentSucceededAt ? (
-                    <form action={createReviewAction} className="grid gap-2 rounded-xl bg-muted/40 p-3">
-                      <input type="hidden" name="orderId" value={order.id} />
-                      <div className="text-sm font-medium">Leave a review</div>
-                      <div className="text-xs text-muted-foreground">
-                        Reviews are only collected for bookings made through ShopFia.
-                      </div>
-                      <Input name="rating" type="number" min={1} max={5} placeholder="Rating (1-5)" required />
-                      <Textarea name="body" placeholder="Leave a review" className="min-h-[80px]" />
-                      <Button type="submit" size="sm">{order.review ? "Update review" : "Submit review"}</Button>
-                    </form>
-                  ) : null}
-                  {order.status === "completed" && !order.paymentSucceededAt ? (
-                    <div className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">
-                      Reviews unlock only after payment is successfully processed through ShopFia.
-                    </div>
-                  ) : null}
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="rounded-3xl border bg-white/70 p-4">
-        <h2 className="font-semibold">Vendor tools</h2>
-        <p className="text-sm text-muted-foreground">
-          {hasVendorBusinesses ? "Manage your business storefronts, requests, services, and payouts." : "Create a vendor storefront to sell services or goods."}
-        </p>
-        <div className="mt-3 flex gap-2">
-          {hasVendorBusinesses ? null : <Link href="/onboarding?newBusiness=1"><Button>Become a vendor</Button></Link>}
-          <Link href="/vendor/dashboard"><Button variant={hasVendorBusinesses ? "default" : "secondary"}>{hasVendorBusinesses ? "Manage storefront" : "Vendor dashboard"}</Button></Link>
-        </div>
-      </section>
-
-      <section className="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-soft">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">My Parties</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Parties, tagged vendors, and visual inspiration now live on their own dedicated page.
-            </p>
-          </div>
-          <Link href="/my-parties">
-            <Button>Open My Parties</Button>
-          </Link>
-        </div>
-      </section>
     </div>
   );
 }
