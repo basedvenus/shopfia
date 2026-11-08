@@ -9,8 +9,7 @@ import {
   Heart,
   LayoutGrid,
   MapPinned,
-  MessagesSquare,
-  User
+  MessagesSquare
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { AccountMenu } from "@/components/layout/account-menu";
@@ -97,17 +96,9 @@ export function SiteNavClient({
             {signedIn ? (
               <AccountMenu initials={initials} signOutAction={signOutAction} />
             ) : (
-              <>
-                <Link href="/account" className="hidden md:inline-flex">
-                  <Button variant="secondary" size="sm">
-                    <User className="h-4 w-4" />
-                    Account
-                  </Button>
-                </Link>
-                <Link href="/account">
-                  <Button size="sm">{t("Sign in")}</Button>
-                </Link>
-              </>
+              <Link href="/account">
+                <Button size="sm">{t("Sign in")}</Button>
+              </Link>
             )}
           </div>
         </div>

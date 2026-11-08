@@ -6,7 +6,7 @@ import {normalizeLanguage,type Language} from '@/lib/language';
 import {useLanguage} from './language-provider';
 export function LanguagePreferenceField({value,onChange}:{value?:Language;onChange?:(value:Language)=>void}){
  const {language,t}=useLanguage();
- return <label className="grid gap-2 text-sm font-medium">{t('Preferred language')} / Idioma<select name="preferredLanguage" aria-label="Preferred language / Idioma" value={value} defaultValue={value?undefined:language} onChange={event=>onChange?.(normalizeLanguage(event.target.value))} className="h-11 w-full rounded-xl border bg-white px-3"><option value="en">English</option><option value="es">Español</option></select><span className="text-xs font-normal text-muted-foreground">{t('Choose the language you prefer. You can change it anytime in Settings.')}</span></label>;
+ return <label className="grid gap-2 text-sm font-medium">Preferred language / Idioma preferido<select name="preferredLanguage" aria-label="Preferred language / Idioma preferido" value={value} defaultValue={value?undefined:language} onChange={event=>onChange?.(normalizeLanguage(event.target.value))} className="h-10 w-full rounded-2xl border bg-white px-3 py-2 text-sm font-normal outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-primary"><option value="en">English</option><option value="es">Español</option></select><span className="text-xs font-normal text-muted-foreground">{t('Choose the language you prefer. You can change it anytime in Settings.')}</span></label>;
 }
 export function LanguagePreferenceSettings(){
  const {language,t}=useLanguage();
@@ -25,7 +25,7 @@ export function LanguagePreferenceSettings(){
  return <div>
   <label className="flex items-center justify-between gap-3 py-2 text-sm font-medium">
    {t('Preferred language')}
-   <select name="preferredLanguage" aria-label="Preferred language / Idioma" value={selected} disabled={pending} onChange={event=>void saveLanguage(normalizeLanguage(event.target.value))} className="h-9 rounded-lg border bg-white px-3 text-sm disabled:opacity-60">
+   <select name="preferredLanguage" aria-label="Preferred language / Idioma preferido" value={selected} disabled={pending} onChange={event=>void saveLanguage(normalizeLanguage(event.target.value))} className="h-9 rounded-lg border bg-white px-3 text-sm disabled:opacity-60">
     <option value="en">English</option><option value="es">Español</option>
    </select>
   </label>

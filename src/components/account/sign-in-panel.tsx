@@ -56,11 +56,11 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
           {t("Create account")}
         </button>
       </div>
-      <div className="rounded-3xl bg-[#fff8f5] px-4 py-3 text-sm leading-6 text-muted-foreground">
-        {mode === "sign-up"
-          ? "Step 1 of 3: create your login. Next, you will choose your public @username and display name."
-          : "Sign in to favorite vendors, message creatives, save inspiration, and create party galleries."}
-      </div>
+      {mode === "sign-in" ? (
+        <div className="rounded-3xl bg-[#fff8f5] px-4 py-3 text-sm leading-6 text-muted-foreground">
+          Sign in to favorite vendors, message creatives, save inspiration, and create party galleries.
+        </div>
+      ) : null}
       <form
         onSubmit={(e) => {
           e.preventDefault();
