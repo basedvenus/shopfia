@@ -30,12 +30,14 @@ import { deliverPartyNotificationEmails } from "@/lib/services/party-notificatio
 import { persistPartyCollaborators } from "@/lib/services/party-collaboration";
 
 const signUpSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required.").max(80, "First name is a little too long."),
   email: z.string().trim().email("Enter a valid email address.").max(255, "Email is a little too long."),
   password: z.string().min(8, "Password must be at least 8 characters.")
 });
 
 export async function createPasswordAccountAction(formData: FormData) {
   const parsed = signUpSchema.safeParse({
+    firstName: formData.get("firstName"),
     email: formData.get("email"),
     password: formData.get("password")
   });
@@ -44,6 +46,7 @@ export async function createPasswordAccountAction(formData: FormData) {
     return {
       ok: false,
       error: friendlyValidationMessage(parsed.error.issues, {
+        firstName: "First name",
         email: "Email",
         password: "Password"
       }, "Check your account details.")
@@ -80,7 +83,7 @@ export async function createPasswordAccountAction(formData: FormData) {
   const languageInput=formData.get("preferredLanguage")??"en";
   if(!validLanguage(languageInput))return {ok:false,error:"Choose English or Español."};
   await db.$transaction(async tx=>{
-    const user=await tx.user.create({data:{email,passwordHash}});
+    const user=await tx.user.create({data:{email,passwordHash,firstName:parsed.data.firstName}});
     await tx.$executeRaw`UPDATE "User" SET "preferredLanguage" = ${languageInput} WHERE "id" = ${user.id}`;
   });
   await writeLanguageCookie(languageInput);

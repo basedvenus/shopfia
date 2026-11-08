@@ -9,9 +9,9 @@ import { sendPhoneCodeAction, confirmPhoneCodeAction } from "@/app/actions/phone
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function PhoneVerificationForm({ verifiedPhone, configured }: {verifiedPhone: string | null; configured: boolean}) {
+export function PhoneVerificationForm({ verifiedPhone, configured, onboarding = false }: {verifiedPhone: string | null; configured: boolean; onboarding?: boolean}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(onboarding && configured);
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("US");
   const dialCode = ({US:"+1",CA:"+1",GB:"+44",AU:"+61",NZ:"+64"} as Record<string,string>)[country];
@@ -71,7 +71,7 @@ export function PhoneVerificationForm({ verifiedPhone, configured }: {verifiedPh
             try {
               const result = await confirmPhoneCodeAction(form);
               if (!result.ok) setError(result.error ?? "Please try again.");
-              else { setSent(false); setOpen(false); setPhone(""); setMessage("Your mobile number is verified."); router.refresh(); }
+              else { setSent(false); setOpen(false); setPhone(""); setMessage("Your mobile number is verified."); if (onboarding) router.replace("/account/verify-phone"); router.refresh(); }
             } catch { setError("Could not verify your number. Please try again."); }
             finally { setPending(false); }
           }}>

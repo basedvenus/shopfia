@@ -22,6 +22,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [showRecovery, setShowRecovery] = useState(false);
   const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -70,6 +71,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
             if (mode === "sign-up") {
               const formData = new FormData();
               formData.set("email", email);
+              formData.set("firstName", firstName);
               formData.set("password", password);
               formData.set("preferredLanguage",preferredLanguage);
               const result = await createPasswordAccountAction(formData);
@@ -83,7 +85,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
             const result = await signIn("credentials", {
               email,
               password,
-              callbackUrl: mode === "sign-up" ? "/account/setup" : callbackUrl,
+              callbackUrl: mode === "sign-up" ? "/account/verify-phone" : callbackUrl,
               redirect: false
             });
 
@@ -98,12 +100,26 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
               return;
             }
 
-            window.location.href = mode === "sign-up" ? "/account/setup" : callbackUrl;
+            window.location.href = mode === "sign-up" ? "/account/verify-phone" : callbackUrl;
           });
         }}
         className="space-y-2"
       >
         {mode==="sign-up" && <LanguagePreferenceField value={preferredLanguage} onChange={setPreferredLanguage}/>}
+        {mode === "sign-up" ? (
+          <label className="grid gap-2 text-sm font-medium">
+            <span>First name <span className="text-red-600" aria-hidden="true">*</span></span>
+            <Input
+              name="firstName"
+              autoComplete="given-name"
+              placeholder="First name"
+              value={firstName}
+              onChange={(event) => setFirstName(event.target.value)}
+              maxLength={80}
+              required
+            />
+          </label>
+        ) : null}
         <Input
           type="email"
           value={email}
@@ -139,7 +155,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
           disabled={pending}
           onClick={async () => {
             if(mode==="sign-up"){const result=await updatePreferredLanguageAction(preferredLanguage);if(!result.ok){setMessage(result.error??"Please try again.");return;}}
-            signIn("google", { callbackUrl });
+            signIn("google", { callbackUrl: mode === "sign-up" ? "/account/verify-phone" : callbackUrl });
           }}
         >
           {t("Sign in with Google")}
