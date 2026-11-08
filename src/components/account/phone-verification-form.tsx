@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ShieldCheck, Smartphone, X } from "lucide-react";
+import { ChevronDown, ShieldCheck, Smartphone, X } from "lucide-react";
 import { sendPhoneCodeAction, confirmPhoneCodeAction } from "@/app/actions/phone-verification";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,9 +57,9 @@ export function PhoneVerificationForm({ verifiedPhone, configured }: {verifiedPh
               <p className="text-sm leading-6 text-muted-foreground">We’ll send a code to confirm it belongs to you.</p>
               <div className="grid grid-cols-[112px_minmax(0,1fr)] gap-3">
                 <label className="sr-only" htmlFor="verification-phone-country">Country code</label>
-                <select id="verification-phone-country" value={country} onChange={event => setCountry(event.target.value)} disabled={pending} className="h-12 min-w-0 rounded-xl border border-border bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                <div className="relative min-w-0"><select id="verification-phone-country" value={country} onChange={event => setCountry(event.target.value)} disabled={pending} className="h-12 w-full min-w-0 appearance-none rounded-xl border border-border bg-white pl-3 pr-9 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                   <option value="US">🇺🇸 +1</option><option value="CA">🇨🇦 +1</option><option value="GB">🇬🇧 +44</option><option value="AU">🇦🇺 +61</option><option value="NZ">🇳🇿 +64</option>
-                </select>
+                </select><ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /></div>
                 <Input id="verification-mobile-number" name="phone" type="tel" inputMode="tel" autoComplete="tel-national" placeholder={country === "US" || country === "CA" ? "(555) 555-5555" : "Mobile number"} value={phone} onChange={event => setPhone(event.target.value)} required disabled={pending} autoFocus className="h-12 rounded-xl text-base" />
               </div>
               <p className="text-xs leading-5 text-muted-foreground">For another country, enter the full number starting with +.</p>
