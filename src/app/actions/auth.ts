@@ -144,11 +144,8 @@ export async function completeRequiredProfileAction(formData: FormData) {
     // A stale onboarding tab must never rename an existing profile. Profile edits
     // belong in account settings; this action only fills missing identity fields.
     if (existingUser.username && existingUser.name) {
-      return { ok: true, profile: serializeUserProfile(existingUser), nextPath: "/account" };
+      return { ok: true, profile: serializeUserProfile(existingUser), nextPath: "/account/setup/vendor" };
     }
-
-    const destination = getAccountSetupDestination(formData);
-    if (!destination.ok) return destination;
 
     const parsed = requiredOnboardingProfileSchema.partial().safeParse({
       ...(existingUser.name ? {} : { name: formData.get("name") }),
@@ -189,7 +186,7 @@ export async function completeRequiredProfileAction(formData: FormData) {
     revalidatePath("/", "layout");
     revalidatePath("/account");
     revalidatePath(`/profiles/${profile.username}`);
-    return { ok: true, profile, nextPath: destination.nextPath };
+    return { ok: true, profile, nextPath: "/account/setup/vendor" };
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       return { ok: false, error: "That username is already taken or temporarily reserved. Try another one." };
@@ -1158,4 +1155,12 @@ export async function followPartyVendorAction(vendorId: string) {
   revalidatePath(`/vendor/profile/${vendor.slug}`);
   revalidatePath(`/${vendor.slug}`);
   return { ok: true };
+}
+
+export async function chooseVendorSetupAction(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false as const, error: "Please sign in again." };
+  const user = await db.user.findUnique({where: {id: session.user.id}, select: {name: true, username: true}});
+  if (!user?.name?.trim() || !user.username?.trim()) return {ok: false as const, error: "Choose your username and display name first."};
+  return getAccountSetupDestination(formData);
 }

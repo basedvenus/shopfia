@@ -32,6 +32,7 @@ type PlaceAutocompleteInputProps = {
   searchType?: "cities" | "regions";
   requireSelection?: boolean;
   onPlaceSelect?: (place: PlaceDetails) => void;
+  onInputChange?: (value: string) => void;
   omitHiddenFields?: boolean;
 };
 
@@ -60,6 +61,7 @@ export function PlaceAutocompleteInput({
   searchType,
   requireSelection = false,
   onPlaceSelect,
+  onInputChange,
   omitHiddenFields = false
 }: PlaceAutocompleteInputProps) {
   const listId = useId();
@@ -246,6 +248,7 @@ export function PlaceAutocompleteInput({
             setIsLoading(false);
             setActiveIndex(0);
             setInputValue(nextValue);
+            onInputChange?.(nextValue);
             setSelectedPlace(null);
             setIsOpen(true);
           }}

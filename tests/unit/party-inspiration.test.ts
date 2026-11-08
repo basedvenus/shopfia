@@ -160,7 +160,7 @@ describe("truthful party inspiration and credits", () => {
   });
 
   it("does not substitute unrelated examples for an empty search", async () => {
-    const page = await PartiesPage({ searchParams: { q: "nonexistent theme" } });
+    const page = await PartiesPage({ searchParams: Promise.resolve({ q: "nonexistent theme" }) });
     expect(text(page)).toContain("No published parties match your search");
     expect(text(page)).not.toContain("Citrus Garden Brunch");
   });
@@ -178,7 +178,7 @@ describe("truthful party inspiration and credits", () => {
     mocks.auth.mockResolvedValue({ user: { id: "viewer" } });
     mocks.db.follow.findMany.mockResolvedValue([{ followingId: "host-real" }]);
     mocks.db.partyEvent.findMany.mockResolvedValue([publishedParty()]);
-    const page = await PartiesPage({ searchParams: { feed: "following" } });
+    const page = await PartiesPage({ searchParams: Promise.resolve({ feed: "following" }) });
     expect(text(page)).toContain("Actual Party");
     expect(mocks.db.partyEvent.findMany).toHaveBeenCalledWith(expect.objectContaining({
       take: 60,
@@ -208,7 +208,7 @@ describe("truthful party inspiration and credits", () => {
   it("keeps an empty Following feed empty instead of returning everyone’s posts", async () => {
     mocks.auth.mockResolvedValue({ user: { id: "viewer" } });
     mocks.db.partyEvent.findMany.mockResolvedValue([publishedParty()]);
-    const page = await PartiesPage({ searchParams: { feed: "following" } });
+    const page = await PartiesPage({ searchParams: Promise.resolve({ feed: "following" }) });
     expect(text(page)).toContain("0 published parties");
     expect(text(page)).toContain("No parties from the people you follow yet");
     expect(text(page)).not.toContain("Actual Party");

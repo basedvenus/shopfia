@@ -1,3 +1,4 @@
+import { readStorefrontDesign } from "@/lib/storefront-design";
 import { StorefrontPublishedDialog } from "@/components/vendor/storefront-published-dialog";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -101,6 +102,7 @@ export default async function StorefrontCustomizerPage({
     <>
     <StorefrontPublishedDialog published={resolvedSearchParams.published === "1"} businessId={business.id} publicUrl={storefrontUrl(business.slug)} />
     <StorefrontCustomizer
+      initialTemplateLibraryOpen={!readStorefrontDesign(business.storefrontBookingJson, business.storefrontDraftJson).template}
       business={{
         ...business,
         storefrontSectionOrder: sanitizeStorefrontSections(business.storefrontSectionOrder)

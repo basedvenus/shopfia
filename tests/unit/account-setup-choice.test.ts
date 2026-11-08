@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { getAccountSetupDestination } from "@/lib/account-setup";
 import { getSafeProfileImage, getUserProfileImage } from "@/lib/profile-image";
 import { publicUserProfile } from "@/lib/public-user-profile";
-function form(isVendor?: string, storefrontName?: string) {
+function form(isVendor?: string, storefrontName?: string, storefrontUsername = "venus-aura") {
  const data = new FormData();
+ data.set("storefrontUsername", storefrontUsername);
  if (isVendor !== undefined) data.set("isVendor", isVendor);
  if (storefrontName !== undefined) data.set("storefrontName", storefrontName);
  return data;
@@ -20,6 +21,7 @@ describe("personal profile and storefront choice", () => {
   expect(url.pathname).toBe("/onboarding");
   expect(url.searchParams.get("newBusiness")).toBe("1");
   expect(url.searchParams.get("storefrontName")).toBe("Venus & Aura");
+  expect(url.searchParams.get("storefrontUsername")).toBe("venus-aura");
  });
  it("requires an explicit Yes/No choice", () => {
   expect(getAccountSetupDestination(form())).toMatchObject({ ok: false });
@@ -49,4 +51,9 @@ describe("user-selected profile photos only", () => {
   expect(getUserProfileImage(record)).toBe("/api/users/user_1/avatar?v=1000");
   expect(record.image).toContain("googleusercontent.com");
  });
+});
+
+it("requires a valid business username for the vendor path", () => {
+ expect(getAccountSetupDestination(form("yes", "My business", ""))).toMatchObject({ok:false});
+ expect(getAccountSetupDestination(form("yes", "My business", "bad/username"))).toMatchObject({ok:false});
 });

@@ -32,6 +32,7 @@ type ImageUploadFieldProps = {
   defaultCrop?: ImageCrop | null;
   defaultValue?: string | null;
   helperText?: string;
+  hideFormatDetailsUntilInteraction?: boolean;
   onChangePreview?: (value: string) => void;
   onCropChange?: (crop: ImageCrop) => void;
   onUploadComplete?: (result: UploadResult) => void;
@@ -52,6 +53,7 @@ export function ImageUploadField({
   label,
   defaultValue,
   helperText,
+  hideFormatDetailsUntilInteraction = false,
   onChangePreview,
   onCropChange,
   onUploadComplete,
@@ -63,6 +65,7 @@ export function ImageUploadField({
   valueCrop
 }: ImageUploadFieldProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [uploadInteracted, setUploadInteracted] = useState(false);
   const uploadInput = useRef<HTMLInputElement>(null);
   const menuContainer = useRef<HTMLDivElement>(null);
   const menuTrigger = useRef<HTMLButtonElement>(null);
@@ -291,7 +294,7 @@ export function ImageUploadField({
         {!editMenu ? <span className="relative z-10 rounded-full bg-white/90 px-3 py-1.5 shadow-sm">
           {previewValue ? changeLabel : uploadLabel}
         </span> : null}
-        <input ref={uploadInput} type="file" accept={SUPPORTED_IMAGE_TYPES.join(",")} className="sr-only" onChange={handleFile} />
+        <input onClick={() => setUploadInteracted(true)} ref={uploadInput} type="file" accept={SUPPORTED_IMAGE_TYPES.join(",")} className="sr-only" onChange={handleFile} />
       </label>
       {previewValue && onCropChange && !editMenu ? <button type="button" className="mt-2 rounded-full border px-3 py-2 text-sm" onClick={()=>{setPendingFile(null);setPendingPreview(previewValue);setEditorOpen(true);}}>Adjust image</button> : null}
       {editMenu ? <button ref={menuTrigger} type="button" aria-expanded={menuOpen} aria-label={`Adjust ${label.toLowerCase()}`} title="Adjust image" onClick={() => setMenuOpen((open) => !open)} className="absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full border bg-white shadow-sm"><Pencil className="h-4 w-4" /></button> : null}
@@ -307,7 +310,7 @@ export function ImageUploadField({
       {previewValue && failedPreview === previewValue ? (
         <p className="text-xs text-muted-foreground">Photo preview is unavailable. Your saved photo has not been changed.</p>
       ) : null}
-      {!editMenu || editorOpen || pendingFile ? <p className="text-xs text-muted-foreground">
+      {((!editMenu && (!hideFormatDetailsUntilInteraction || uploadInteracted)) || editorOpen || pendingFile) ? <p className="text-xs text-muted-foreground">
         Supported formats: {SUPPORTED_IMAGE_FORMAT_LABEL}. Max size: {formatBytes(MAX_IMAGE_SIZE_BYTES)}.
       </p> : null}
       {message ? <p role={messageKind === "success" ? "status" : "alert"} className={`flex items-center gap-1.5 text-xs ${messageKind === "success" ? "text-green-700" : "text-destructive"}`}>

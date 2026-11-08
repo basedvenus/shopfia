@@ -26,9 +26,9 @@ type FeedTab = (typeof feedTabs)[number];
 export default async function PartiesPage({
   searchParams
 }: {
-  searchParams?: Promise<{ feed?: string; friend?: string; q?: string; county?: string }> | { feed?: string; friend?: string; q?: string; county?: string };
+  searchParams?: Promise<{ feed?: string; friend?: string; q?: string; county?: string }>;
 }) {
-  const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
+  const resolvedSearchParams = (await searchParams) ?? {};
   const [session, originalMemberCutoff] = await Promise.all([
     auth().catch((error) => {
       console.error("ShopFia parties auth failed", error);

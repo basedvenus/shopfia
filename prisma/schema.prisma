@@ -354,6 +354,7 @@ model Shop {
 }
 
 model VendorProfile {
+  identityChange VendorIdentityChange?
   servicePresets ServicePreset[]
 
   id                        String                @id @default(cuid())
@@ -1292,4 +1293,10 @@ model BusinessSmsDelivery {
   providerSid String?
   createdAt DateTime @default(now())
   @@id([eventKey, userId])
+}
+
+model VendorIdentityChange {
+  vendorId String @id
+  changedAt DateTime @default(now())
+  vendor VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 }

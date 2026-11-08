@@ -4,20 +4,18 @@ import { CategoryAudience, UserRole } from "@prisma/client";
 import { upsertVendorProfileAction } from "@/app/actions/vendor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { FieldShell, SubmitButton } from "@/components/ui/validated-form";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
-import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
+import { OnboardingServiceAreas } from "@/components/vendor/onboarding-service-areas";
 import { businessManagerWhere } from "@/lib/businesses";
 import { notFound } from "next/navigation";
-import { ServiceAreaPicker } from "@/components/vendor/service-area-picker";
 
 export const dynamic = "force-dynamic";
 
 export default async function VendorOnboardingPage({
   searchParams
 }: {
-  searchParams?: Promise<{ business?: string; newBusiness?: string; offeringError?: string; profileError?: string; storefrontName?: string | string[] }>;
+  searchParams?: Promise<{ business?: string; newBusiness?: string; offeringError?: string; profileError?: string; storefrontUsername?: string; storefrontName?: string | string[] }>;
 }) {
   const [{ requireRole }, { db }] = await Promise.all([
     import("@/lib/auth/guards"),
@@ -28,6 +26,7 @@ export default async function VendorOnboardingPage({
   const initialStorefrontName = resolvedSearchParams?.newBusiness && typeof resolvedSearchParams.storefrontName === "string"
     ? resolvedSearchParams.storefrontName.trim().slice(0, 80)
     : undefined;
+  const initialStorefrontUsername = resolvedSearchParams?.newBusiness ? resolvedSearchParams.storefrontUsername : undefined;
   const editingBusinessSlug = resolvedSearchParams?.newBusiness ? null : resolvedSearchParams?.business;
   const [categories, existingVendor] = await Promise.all([
     db.category.findMany({ where: { audience: CategoryAudience.VENDOR }, orderBy: { name: "asc" } }),
@@ -108,6 +107,7 @@ export default async function VendorOnboardingPage({
             errorIntro="Your business storefront is almost there. Fix the highlighted field and save again."
           >
             <input type="hidden" name="preserveAvailability" value="1" />
+            <input type="hidden" name="availabilityNotes" value={existingVendor?.availabilityNotes ?? ""} />
             {existingVendor ? <input type="hidden" name="businessId" value={existingVendor.id} /> : null}
             {resolvedSearchParams?.newBusiness ? <input type="hidden" name="newBusiness" value="1" /> : null}
             <div>
@@ -132,28 +132,28 @@ export default async function VendorOnboardingPage({
               />
             </div>
             <FieldShell
-              label="Storefront name"
+              label="Business name"
               required
               helperText="Your public business name. This is separate from your personal display name."
             >
               <Input
                 name="name"
-                placeholder="Enter your storefront name"
+                placeholder="Your business name"
                 defaultValue={existingVendor?.name ?? initialStorefrontName}
-                data-required-label="Storefront name"
+                data-required-label="Business name"
                 required
               />
             </FieldShell>
             <FieldShell
-              label="Storefront handle"
+              label="Business username"
               required
-              helperText="Your business's own @handle for tags, separate from your personal @username. Set its web address below."
+              helperText="Your business username, separate from your personal username."
             >
               <Input
                 name="username"
-                placeholder="Enter your storefront handle"
-                defaultValue={existingVendor?.username ?? existingVendor?.slug ?? ""}
-                data-required-label="Storefront handle"
+                placeholder="Your business username"
+                defaultValue={existingVendor?.username ?? existingVendor?.slug ?? initialStorefrontUsername ?? ""}
+                data-required-label="Business username"
                 required
               />
             </FieldShell>
@@ -166,43 +166,7 @@ export default async function VendorOnboardingPage({
             <FieldShell label="Website" optional>
               <Input name="website" type="url" placeholder="https://yourbusiness.com" defaultValue={existingVendor?.website ?? ""} />
             </FieldShell>
-            <div className="md:col-span-2">
-              <PlaceAutocompleteInput
-                syncAddressFields
-                required
-                requireSelection
-                searchType="cities"
-                label="City"
-                helperText="Start typing and select your business city from the suggestions."
-                placeholder="Search for your city"
-                defaultValue={existingVendor?.formattedAddress ?? [existingVendor?.city, existingVendor?.state].filter(Boolean).join(", ")}
-                defaultPlace={{
-                  formattedAddress: existingVendor?.formattedAddress ?? undefined,
-                  city: existingVendor?.city,
-                  state: existingVendor?.state ?? undefined,
-                  zipCode: existingVendor?.zipCode ?? undefined,
-                  lat: existingVendor?.locationLat ?? undefined,
-                  lng: existingVendor?.locationLng ?? undefined,
-                  placeId: existingVendor?.googlePlaceId ?? undefined
-                }}
-                fieldNames={{
-                  input: "formattedAddress",
-                  formattedAddress: "formattedAddress",
-                  city: "locationCity",
-                  state: "locationState",
-                  zipCode: "locationZipCode",
-                  lat: "locationLat",
-                  lng: "locationLng",
-                  placeId: "googlePlaceId"
-                }}
-              />
-            </div>
-            <FieldShell label="State" optional>
-              <Input name="state" readOnly placeholder="Filled from your city" defaultValue={existingVendor?.state ?? ""} />
-            </FieldShell>
-            <FieldShell label="Zip Code" optional>
-              <Input name="zipCode" placeholder="ZIP code" defaultValue={existingVendor?.zipCode ?? ""} />
-            </FieldShell>
+            <OnboardingServiceAreas business={existingVendor} />
             <div className="md:col-span-2">
               <FieldShell label="Business Description" optional helperText="A few warm details help hosts understand your style and specialties.">
                 <BusinessDescription defaultValue={existingVendor?.bio ?? ""} />
@@ -220,38 +184,13 @@ export default async function VendorOnboardingPage({
                 <Input
                   name="slug"
                   placeholder="your-storefront"
-                  defaultValue={existingVendor?.slug ?? ""}
+                  defaultValue={existingVendor?.slug ?? initialStorefrontUsername ?? ""}
                   className="border-0 focus-visible:ring-0"
                   data-required-label="Storefront URL"
                   required
                 />
               </div>
             </FieldShell>
-            <div>
-              <FieldShell label="Travel Radius" optional helperText="We default to 25 miles if you leave this as-is.">
-                <Input
-                  name="serviceRadiusMiles"
-                  type="number"
-                  min={1}
-                  max={200}
-                  placeholder="25 miles"
-                  defaultValue={existingVendor?.serviceRadiusMiles ?? 25}
-                />
-              </FieldShell>
-            </div>
-            <div className="md:col-span-2">
-              <ServiceAreaPicker defaultValue={existingVendor?.serviceAreaNotes} />
-            </div>
-            <div className="md:col-span-2">
-              <FieldShell label="Booking Notes" optional>
-                <Textarea
-                  name="availabilityNotes"
-                  placeholder="Booking availability, contact preferences, travel notes, or lead time..."
-                  defaultValue={existingVendor?.availabilityNotes ?? ""}
-                  className="min-h-[90px]"
-                />
-              </FieldShell>
-            </div>
             <div className="md:col-span-2 rounded-[1.5rem] border p-4">
               <label className="mb-1 block text-sm font-medium">Categories <span className="text-destructive">*</span></label>
               <p className="mb-3 text-xs leading-5 text-muted-foreground">

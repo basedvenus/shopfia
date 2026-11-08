@@ -107,18 +107,16 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
       >
         {mode==="sign-up" && <LanguagePreferenceField value={preferredLanguage} onChange={setPreferredLanguage}/>}
         {mode === "sign-up" ? (
-          <label className="grid gap-2 text-sm font-medium">
-            <span>First name <span className="text-red-600" aria-hidden="true">*</span></span>
-            <Input
+          <Input
               name="firstName"
+              aria-label="First name"
               autoComplete="given-name"
               placeholder="First name"
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
               maxLength={80}
               required
-            />
-          </label>
+          />
         ) : null}
         <Input
           type="email"

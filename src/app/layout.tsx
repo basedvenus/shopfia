@@ -190,8 +190,7 @@ export default async function RootLayout({
           <SessionKeepAlive signedIn={Boolean(initialProfile?.id)} />
           <SiteNav />
           <main id="main-content" className="container py-6 pb-28 md:pb-6">
-            <RequiredProfileGate />
-            {children}
+            <RequiredProfileGate>{children}</RequiredProfileGate>
           </main>
         </ProfileProvider></LanguageProvider>
       </body>

@@ -4,6 +4,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { ProfileProvider, useProfile } from "@/components/account/profile-provider";
 import { ProfileImage } from "@/components/account/profile-image";
 import { RequiredProfileGate } from "@/components/account/required-profile-gate";
+import { VendorChoiceForm } from "@/components/account/vendor-choice-form";
 import { RequiredProfileForm } from "@/components/account/required-profile-form";
 import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { CroppedImage } from "@/components/ui/cropped-image";
@@ -12,7 +13,11 @@ import type { SharedUserProfile } from "@/lib/user-profile";
 const mocks = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn(), complete: vi.fn(), path: "/explore" }));
 vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => createElement("a", props) }));
 vi.mock("next/navigation", () => ({ usePathname: () => mocks.path, useRouter: () => mocks }));
-vi.mock("@/app/actions/auth", () => ({ completeRequiredProfileAction: mocks.complete }));
+vi.mock("@/app/actions/vendor-signup",()=>({createVendorSignupAction:vi.fn()}));
+vi.mock("@/components/location/place-autocomplete-input",()=>({PlaceAutocompleteInput:()=>null}));
+vi.mock("@/app/actions/storefront-username", () => ({checkStorefrontUsernameAction: vi.fn().mockResolvedValue({available: true})}));
+vi.mock("@/app/actions/language", () => ({ updatePreferredLanguageAction: vi.fn() }));
+vi.mock("@/app/actions/auth", () => ({ completeRequiredProfileAction: mocks.complete, chooseVendorSetupAction: vi.fn() }));
 
 function profile(overrides = {}): SharedUserProfile {
   return { id: "user_1", email: "existing@example.com", name: "Existing", username: "saved", image: "/saved.jpg", imageCrop: null, role: "BUYER", bio: null, instagramUrl: null, partyfulUrl: null, tiktokUrl: null, vendorProfile: null, ...overrides };
@@ -68,41 +73,32 @@ describe("profile state reconciliation", () => {
     act(() => upload({ profile: profile({ username: null, image: "/uploaded.jpg" }) }));
     expect(current.profile).toMatchObject({ username: "completed", image: "/uploaded.jpg" });
   });
-  it.each([{ username: null }, { name: null }, { name: null, username: null }])(
-    "offers setup without redirecting incomplete profiles: %j", (missing) => {
+  it.each([{ username: null }, { name: null }, { name: null, username: null }, {name: "   "}])(
+    "requires setup before browsing with incomplete identity: %j", (missing) => {
       const original = profile(missing);
-      const root = mount(original, createElement(RequiredProfileGate));
-      expect(JSON.stringify(root.toJSON())).toContain("Your profile is missing");
-      expect(root.root.findAllByType("a").map((link) => link.props.href)).toEqual([
-        "/account/setup", "/account/setup#account-recovery"
-      ]);
+      const root = mount(original, createElement(RequiredProfileGate, null, createElement("div", null, "Browsing content")));
+      expect(JSON.stringify(root.toJSON())).toContain("Choose a username and display name");
+      expect(JSON.stringify(root.toJSON())).not.toContain("Browsing content");
+      expect(mocks.replace).toHaveBeenCalledWith("/account/setup");
       expect(current.profile).toEqual(original);
+    }
+  );
+  it.each(["/account/setup", "/account/verify-phone", "/account/reset-password", "/account/forgot-password"])(
+    "keeps onboarding and recovery accessible at %s", (path) => {
+      mocks.path = path;
+      const root = mount(profile({username: null}), createElement(RequiredProfileGate, null, createElement("div", null, "Page content")));
+      expect(JSON.stringify(root.toJSON())).toContain("Page content");
       expect(mocks.replace).not.toHaveBeenCalled();
     }
   );
-  it("keeps navigation available across tabs, Back, and a refreshed incomplete snapshot", () => {
-    const root = mount(profile({ username: null }), createElement(RequiredProfileGate));
-    for (const path of ["/account/setup", "/explore", "/messages", "/my-parties", "/account", "/explore", "/account/setup", "/explore"]) {
-      mocks.path = path;
-      refresh(root, profile({ username: null }), createElement(RequiredProfileGate));
-      expect(mocks.replace).not.toHaveBeenCalled();
-      expect(root.root.findAllByType("aside")).toHaveLength(path === "/account/setup" ? 0 : 1);
-    }
-    act(() => root.unmount());
-    const reloaded = mount(profile({ username: null }), createElement(RequiredProfileGate));
-    expect(reloaded.root.findAllByType("aside")).toHaveLength(1);
-    expect(mocks.replace).not.toHaveBeenCalled();
-  });
-  it("reconciles notices when completing setup, signing out, or switching accounts", () => {
-    const root = mount(profile({ username: null }), createElement(RequiredProfileGate));
-    act(() => current.updateProfile({ username: "completed" }, "user_1"));
-    expect(root.toJSON()).toBeNull();
-    refresh(root, null, createElement(RequiredProfileGate));
-    expect(root.toJSON()).toBeNull();
-    refresh(root, profile({ id: "user_2", name: null }), createElement(RequiredProfileGate));
-    expect(root.root.findAllByType("aside")).toHaveLength(1);
-    refresh(root, profile({ id: "user_3" }), createElement(RequiredProfileGate));
-    expect(root.toJSON()).toBeNull();
+  it("allows browsing after completion, for guests, and without a profile photo", () => {
+    const content = createElement(RequiredProfileGate, null, createElement("div", null, "Browsing content"));
+    const root = mount(profile({ username: null }), content);
+    mocks.replace.mockClear();
+    act(() => current.updateProfile({ username: "completed", image: null }, "user_1"));
+    expect(JSON.stringify(root.toJSON())).toContain("Browsing content");
+    refresh(root, null, content);
+    expect(JSON.stringify(root.toJSON())).toContain("Browsing content");
     expect(mocks.replace).not.toHaveBeenCalled();
   });
   it("does not apply an old completion response to a different signed-in account", async () => {
@@ -146,10 +142,8 @@ describe("unavailable photo presentation", () => {
 
 describe("personal and vendor setup form", () => {
   it("shows a separate storefront name only for Yes and keeps it when toggling", () => {
-    const root = mount(profile({ username: null }), createElement(RequiredProfileForm, { profileId: "user_1" }));
+    const root = mount(profile(), createElement(VendorChoiceForm));
     const inputs = () => root.root.findAllByType("input");
-    expect(inputs().find((input) => input.props.name === "name")?.props.readOnly).toBe(true);
-    expect(JSON.stringify(root.toJSON())).toContain("you can edit them later in Account settings");
     expect(inputs().filter((input) => input.props.name === "storefrontName")).toHaveLength(0);
     act(() => inputs().find((input) => input.props.name === "isVendor" && input.props.value === "yes")?.props.onChange());
     const field = inputs().find((input) => input.props.name === "storefrontName");
@@ -159,6 +153,22 @@ describe("personal and vendor setup form", () => {
     expect(inputs().filter((input) => input.props.name === "storefrontName")).toHaveLength(0);
     act(() => inputs().find((input) => input.props.name === "isVendor" && input.props.value === "yes")?.props.onChange());
     expect(inputs().find((input) => input.props.name === "storefrontName")?.props.value).toBe("Venus & Aura");
-    expect(JSON.stringify(root.toJSON())).toContain("separate storefront URL");
+    expect(JSON.stringify(root.toJSON())).toContain("once every 30 days");
   });
+});
+
+it("keeps identity setup focused on names and optional photo", () => {
+ const root = mount(profile({username:null,name:null}), createElement(RequiredProfileForm,{profileId:"user_1"}));
+ const text=JSON.stringify(root.toJSON());
+ expect(text).not.toContain("Are you a vendor?");
+ expect(text).not.toContain("Optional photo");
+ expect(text).not.toContain("Google photos are not used");
+ expect(text).not.toContain("Supported formats:");
+ expect(text).toContain("This is your personal username for messages, parties, and personal profiles.");
+ const inputs=root.root.findAllByType("input");
+ expect(inputs.find(field=>field.props.name==="name")?.props.required).toBe(true);
+ expect(inputs.find(field=>field.props.name==="username")?.props.required).toBe(true);
+ expect(inputs.find(field=>field.props.type==="file")?.props.required).toBeUndefined();
+ act(()=>inputs.find(field=>field.props.type==="file")?.props.onClick());
+ expect(JSON.stringify(root.toJSON())).toContain("Supported formats:");
 });

@@ -1,0 +1,16 @@
+import {beforeEach,expect,it,vi} from "vitest";
+const mocks=vi.hoisted(()=>({auth:vi.fn(),user:vi.fn(),count:vi.fn(),transaction:vi.fn(),find:vi.fn(),primary:vi.fn(),create:vi.fn(),query:vi.fn(),execute:vi.fn(),update:vi.fn()}));
+vi.mock("@/auth",()=>({auth:mocks.auth}));
+vi.mock("next/cache",()=>({revalidatePath:vi.fn()}));
+vi.mock("@/lib/security/request",()=>({checkServerActionRateLimit:async()=>({ok:true})}));
+vi.mock("@/lib/db",()=>({db:{user:{findUnique:mocks.user},category:{count:mocks.count},$transaction:mocks.transaction}}));
+import {createVendorSignupAction} from "@/app/actions/vendor-signup";
+function form(){const f=new FormData();for(const [k,v] of Object.entries({storefrontName:"Venus Events",storefrontUsername:"venus-events",locationCity:"Los Angeles",categoryIds:"cat-1"}))f.set(k,v);return f;}
+beforeEach(()=>{vi.resetAllMocks();mocks.auth.mockResolvedValue({user:{id:"user-1"}});mocks.user.mockResolvedValue({name:"Venus",username:"venus"});mocks.count.mockResolvedValue(1);mocks.find.mockResolvedValue(null);mocks.primary.mockResolvedValue(null);mocks.create.mockResolvedValue({id:"business-1",slug:"venus-events"});mocks.transaction.mockImplementation(async callback=>callback({$queryRaw:mocks.query,$executeRaw:mocks.execute,vendorProfile:{findFirst:mocks.find,findUnique:mocks.primary,create:mocks.create},user:{updateMany:mocks.update}}));});
+it("requires sign-in",async()=>{mocks.auth.mockResolvedValue(null);expect((await createVendorSignupAction(form())).ok).toBe(false);expect(mocks.transaction).not.toHaveBeenCalled();});
+it("requires a complete personal identity",async()=>{mocks.user.mockResolvedValue({name:null,username:"venus"});expect((await createVendorSignupAction(form())).ok).toBe(false);expect(mocks.transaction).not.toHaveBeenCalled();});
+it.each(["locationCity","categoryIds","storefrontName","storefrontUsername"])("requires %s before business creation",async key=>{const f=form();f.delete(key);expect((await createVendorSignupAction(f)).ok).toBe(false);expect(mocks.transaction).not.toHaveBeenCalled();});
+it("rejects categories outside the vendor catalog",async()=>{mocks.count.mockResolvedValue(0);expect((await createVendorSignupAction(form())).ok).toBe(false);expect(mocks.transaction).not.toHaveBeenCalled();});
+it("creates the business, ownership and cooldown before returning its link",async()=>{const result=await createVendorSignupAction(form());expect(result).toMatchObject({ok:true,slug:"venus-events"});expect(mocks.create.mock.calls[0][0].data).toMatchObject({name:"Venus Events",username:"venus-events",slug:"venus-events",city:"Los Angeles",managers:{create:{userId:"user-1",role:"OWNER"}},categories:{create:[{categoryId:"cat-1"}]}});expect(mocks.execute).toHaveBeenCalledOnce();expect(mocks.update).toHaveBeenCalledOnce();});
+it("does not take over another owner's business",async()=>{mocks.find.mockResolvedValue({id:"other",slug:"venus-events",userId:"other-user",managers:[]});expect((await createVendorSignupAction(form())).ok).toBe(false);expect(mocks.create).not.toHaveBeenCalled();});
+it("reuses an owned business on retry",async()=>{mocks.find.mockResolvedValue({id:"business-1",slug:"venus-events",userId:"user-1",managers:[]});expect((await createVendorSignupAction(form())).ok).toBe(true);expect(mocks.create).not.toHaveBeenCalled();});

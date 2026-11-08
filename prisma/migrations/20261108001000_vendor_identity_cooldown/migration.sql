@@ -1,0 +1,4 @@
+CREATE TABLE "VendorIdentityChange" (
+  "vendorId" TEXT PRIMARY KEY REFERENCES "VendorProfile"("id") ON DELETE CASCADE,
+  "changedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

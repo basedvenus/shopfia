@@ -834,6 +834,17 @@ async function saveVendorProfile(formData: FormData): Promise<never> {
   let vendor;
   try {
     vendor = await db.$transaction(async (tx) => {
+      if (targetVendor) {
+        const current = await tx.$queryRaw<Array<{slug: string; username: string | null}>>`SELECT "slug", "username" FROM "VendorProfile" WHERE "id" = ${targetVendor.id} FOR UPDATE`;
+        if (current[0] && (current[0].slug !== parsed.slug || current[0].username !== parsed.username)) {
+          const changed = await tx.$queryRaw<Array<{vendorId: string}>>`
+            INSERT INTO "VendorIdentityChange" ("vendorId", "changedAt") VALUES (${targetVendor.id}, NOW())
+            ON CONFLICT ("vendorId") DO UPDATE SET "changedAt" = NOW()
+            WHERE "VendorIdentityChange"."changedAt" <= NOW() - INTERVAL '30 days'
+            RETURNING "vendorId"`;
+          if (!changed.length) throw new VendorProfileSaveError("You can change your business username and storefront link once every 30 days. Your other business details can still be updated.");
+        }
+      }
       const savedVendor = targetVendor
         ? await tx.vendorProfile.update({
             where: { id: targetVendor.id },
@@ -897,6 +908,7 @@ async function saveVendorProfile(formData: FormData): Promise<never> {
             }
           });
 
+      if (!targetVendor) await tx.$executeRaw`INSERT INTO "VendorIdentityChange" ("vendorId", "changedAt") VALUES (${savedVendor.id}, NOW())`;
       await tx.vendorProfileManager.upsert({
         where: {
           vendorProfileId_userId: {
@@ -928,7 +940,7 @@ async function saveVendorProfile(formData: FormData): Promise<never> {
       userId: session.user.id
     });
     failVendorProfile(
-      isUniqueConstraintError(error)
+      error instanceof VendorProfileSaveError ? error.message : isUniqueConstraintError(error)
         ? "That vendor username or shop username is already taken."
         : "Your vendor profile could not be saved. Please try again.",
       profileErrorOptions
