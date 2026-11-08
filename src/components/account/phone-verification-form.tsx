@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ShieldCheck, Smartphone, X } from "lucide-react";
 import { sendPhoneCodeAction, confirmPhoneCodeAction } from "@/app/actions/phone-verification";
@@ -12,6 +13,9 @@ export function PhoneVerificationForm({ verifiedPhone, configured }: {verifiedPh
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("US");
+  const dialCode = ({US:"+1",CA:"+1",GB:"+44",AU:"+61",NZ:"+64"} as Record<string,string>)[country];
+  const fullPhone = phone.trim().startsWith("+") ? phone.trim() : `${dialCode}${country === "US" || country === "CA" ? phone : phone.replace(/^0/, "")}`;
   const [sent, setSent] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
@@ -25,7 +29,7 @@ export function PhoneVerificationForm({ verifiedPhone, configured }: {verifiedPh
 
   async function sendCode() {
     setPending(true); setError(""); setMessage("");
-    const form = new FormData(); form.set("phone", phone); form.set("consent", "on");
+    const form = new FormData(); form.set("phone", fullPhone); form.set("consent", "on");
     try {
       const result = await sendPhoneCodeAction(form);
       if (!result.ok) setError(result.error ?? "Please try again.");
@@ -42,16 +46,26 @@ export function PhoneVerificationForm({ verifiedPhone, configured }: {verifiedPh
         : configured ? <Dialog.Trigger asChild><Button type="button" className="mt-4">Verify phone number</Button></Dialog.Trigger> : null}
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/35 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[101] max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[28px] border border-rose-100 bg-white p-6 shadow-2xl sm:p-8" onEscapeKeyDown={event => { if (pending) event.preventDefault(); }} onPointerDownOutside={event => { if (pending) event.preventDefault(); }}>
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50"><Smartphone className="h-5 w-5 text-primary" /></div>
-          <Dialog.Title className="pr-8 text-2xl font-semibold tracking-tight">{sent ? "Enter your verification code" : "Verify your phone number"}</Dialog.Title>
-          <Dialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">{sent ? `Enter the six-digit code we texted to ${phone}.` : "We’ll text you a six-digit code to confirm this number belongs to you."}</Dialog.Description>
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-[101] max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[28px] border border-rose-100 bg-white p-6 shadow-2xl sm:p-10" onEscapeKeyDown={event => { if (pending) event.preventDefault(); }} onPointerDownOutside={event => { if (pending) event.preventDefault(); }}>
+          <Image src="/logo.png" alt="Shopfia" width={190} height={70} unoptimized className="mx-auto mb-6 h-auto w-44 object-contain" />
+          <Dialog.Title className="text-center text-3xl font-semibold tracking-tight">{sent ? "Enter your verification code" : "Verify your phone number"}</Dialog.Title>
+          <Dialog.Description className="mt-3 text-center text-base leading-6 text-muted-foreground">{sent ? `Enter the six-digit code we texted to ${fullPhone}.` : "We’ll text you a six-digit code to confirm this number belongs to you."}</Dialog.Description>
           <Dialog.Close asChild><button type="button" aria-label="Close phone verification" disabled={pending} className="absolute right-5 top-5 rounded-full p-2 text-muted-foreground hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"><X className="h-5 w-5" /></button></Dialog.Close>
           {!sent ? <form className="mt-5 grid gap-4" onSubmit={event => {event.preventDefault(); void sendCode();}}>
-            <label className="grid gap-2 text-sm font-medium">Mobile number<Input name="phone" type="tel" autoComplete="tel" placeholder="(555) 123-4567" value={phone} onChange={event => setPhone(event.target.value)} required disabled={pending} /></label>
-            <p className="text-xs leading-5 text-muted-foreground">US numbers can use 10 digits. For other countries, include + and the country code.</p>
-            <p className="text-xs leading-5 text-muted-foreground">By choosing “Text me a verification code,” you request a one-time Shopfia text. Message and data rates may apply.</p>
-            <Button type="submit" disabled={pending} className="w-full">{pending ? "Sending code…" : "Text me a verification code"}</Button>
+            <div className="mt-2 grid gap-3">
+              <label htmlFor="verification-mobile-number" className="text-base font-semibold">Mobile phone number <span className="text-rose-600" aria-hidden="true">*</span></label>
+              <p className="text-sm leading-6 text-muted-foreground">We’ll send a code to confirm it belongs to you.</p>
+              <div className="grid grid-cols-[112px_minmax(0,1fr)] gap-3">
+                <label className="sr-only" htmlFor="verification-phone-country">Country code</label>
+                <select id="verification-phone-country" value={country} onChange={event => setCountry(event.target.value)} disabled={pending} className="h-12 min-w-0 rounded-xl border border-border bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                  <option value="US">🇺🇸 +1</option><option value="CA">🇨🇦 +1</option><option value="GB">🇬🇧 +44</option><option value="AU">🇦🇺 +61</option><option value="NZ">🇳🇿 +64</option>
+                </select>
+                <Input id="verification-mobile-number" name="phone" type="tel" inputMode="tel" autoComplete="tel-national" placeholder={country === "US" || country === "CA" ? "(555) 555-5555" : "Mobile number"} value={phone} onChange={event => setPhone(event.target.value)} required disabled={pending} autoFocus className="h-12 rounded-xl text-base" />
+              </div>
+              <p className="text-xs leading-5 text-muted-foreground">For another country, enter the full number starting with +.</p>
+            </div>
+            <p className="text-xs leading-5 text-muted-foreground">By choosing “Continue,” you request a one-time Shopfia text. Message and data rates may apply.</p>
+            <Button type="submit" disabled={pending} className="w-full">{pending ? "Sending code…" : "Continue"}</Button>
           </form> : <form className="mt-5 grid gap-4" action={async form => {
             setPending(true); setError(""); setMessage("");
             try {
