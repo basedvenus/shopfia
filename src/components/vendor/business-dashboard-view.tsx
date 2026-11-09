@@ -26,13 +26,14 @@ export function BusinessDashboardView({business,stats,welcome=false,reviewReques
       <header className="rounded-[1.25rem] border border-white/80 bg-white p-5 shadow-[0_18px_50px_rgba(72,44,43,0.08)] sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full bg-[#f8deda] text-xl font-semibold text-primary">
+            <div className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white text-xl font-semibold text-primary">
               {business.logoUrl ? (
                 <CroppedImage
                   src={business.logoUrl}
                   alt={`${business.name} logo`}
                   crop={normalizeImageCrop(business.logoCrop)}
-                  className="absolute inset-0 h-full w-full bg-white object-cover object-center"
+                  frameFit="contain"
+                  className="absolute inset-0 h-full w-full bg-white"
                 />
               ) : initials(business.name)}
             </div>
