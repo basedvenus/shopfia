@@ -1,4 +1,5 @@
 "use client";
+import {mergeCurrentStorefrontServices as mergeDraftServices,applyStorefrontServiceVisibility as applyDraftServiceDisplay} from "@/lib/storefront-service-state";
 
 import { CityPicker } from "@/components/location/city-picker";
 import { VendorSocialFeeds } from "@/components/vendor/vendor-social-feeds";
@@ -2396,27 +2397,6 @@ function orderServices(services: EditorService[], order: string[]) {
     const bIndex = order.indexOf(b.id);
     return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
   });
-}
-
-function mergeDraftServices(draftServices: EditorService[], liveServices: EditorService[]) {
-  const liveById = new Map(liveServices.map((service) => [service.id, service]));
-  return draftServices.map((service) => {
-    const liveService = liveById.get(service.id);
-    return {
-      ...liveService,
-      ...service,
-      photos: service.photos?.length ? service.photos : liveService?.photos ?? []
-    };
-  });
-}
-
-function applyDraftServiceDisplay(services: EditorService[], hiddenOfferingIds: string[] | undefined) {
-  const hidden = new Set(hiddenOfferingIds ?? []);
-  return services.map((service) => ({
-    ...service,
-    active: !hidden.has(service.id),
-    featured: hidden.has(service.id) ? false : service.featured
-  }));
 }
 
 function dollarsToCents(value: string) {
