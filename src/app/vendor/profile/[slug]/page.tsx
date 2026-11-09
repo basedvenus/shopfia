@@ -486,11 +486,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">{sectionLabel("portfolio")}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              A browsable look at this vendor&apos;s uploaded work, styled and ordered from the storefront editor.
-            </p>
+
           </div>
-          <Badge variant="outline" style={theme.outlineBadgeStyle}>{portfolioPhotos.length + galleryImageCount} photo{portfolioPhotos.length + galleryImageCount === 1 ? "" : "s"}</Badge>
         </div>
 
             {vendor.storefrontAboutImage || design.aboutPhotos?.some(Boolean) ? <PublishedAboutGallery crops={design.aboutPhotoCrops} images={[vendor.storefrontAboutImage || "",...(design.aboutPhotos ?? [])]} layout={design.aboutPhotoLayout} name={vendor.name}/> : null}
@@ -518,11 +515,8 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">{sectionLabel("all-services")}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Click a tile to see the work, pricing anchor, and what the client booked.
-            </p>
+
           </div>
-          <Badge variant="outline" style={theme.outlineBadgeStyle}>{orderedOfferings.length} listing{orderedOfferings.length === 1 ? "" : "s"}</Badge>
         </div>
 
         {orderedOfferings.length > 0 ? (

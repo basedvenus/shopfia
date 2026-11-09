@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, ArrowUpRight } from "lucide-react";
-import type { CSSProperties } from "react";
+import {useLayoutEffect,useRef,type CSSProperties} from "react";
 import type { StorefrontTemplate } from "@/lib/editor-preview/storefront-template-library";
 import { getSectionDesign, sectionDesignStyle } from "@/lib/editor-preview/template-section-design";
 import { TemplateHeading } from "./template-heading";
@@ -14,10 +14,36 @@ function PhotoSlot({ index, photo, className = "" }: { index: number; photo?: st
 }
 
 export function TemplateMiniPreview({ template, logo, vendorName, photos, heading, body, variables }: { template: StorefrontTemplate; logo: string; vendorName: string; photos: string[]; heading: string; body: string; variables: CSSProperties }) {
+  const preview=useRef<HTMLDivElement>(null);
+  useLayoutEffect(()=>{
+    const node=preview.current;if(!node)return;
+    let active=true;
+    const fit=()=>{
+      if(!active)return;
+      node.querySelectorAll<HTMLElement>(".mini-copy h3,.mini-work h4,.mini-story h4").forEach(heading=>{
+        heading.style.removeProperty("font-size");
+        const available=heading.clientWidth;if(!available)return;
+        const context=document.createElement("canvas").getContext("2d");if(!context)return;
+        const base=parseFloat(getComputedStyle(heading).fontSize);let longest=0;
+        const walker=document.createTreeWalker(heading,NodeFilter.SHOW_TEXT);
+        while(walker.nextNode()){
+          const text=walker.currentNode,style=getComputedStyle(text.parentElement!);
+          context.font=`${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+          for(const word of (text.textContent??"").split(/\s+/)){
+            const visible=style.textTransform==="uppercase"?word.toUpperCase():word;
+            longest=Math.max(longest,context.measureText(visible).width+Math.max(0,word.length-1)*(parseFloat(style.letterSpacing)||0));
+          }
+        }
+        if(longest>available-4)heading.style.setProperty("font-size",`${base*(available-4)/longest}px`,"important");
+      });
+    };
+    fit();const observer=new ResizeObserver(fit);observer.observe(node);document.fonts.ready.then(fit);
+    return()=>{active=false;observer.disconnect();};
+  },[template.id,heading,body]);
   const first=getSectionDesign(template,"hero");
   const second=getSectionDesign(template,"about");
 
-  return <div className="template-mini" aria-label="Sample typography and photo layout" style={{...variables,...sectionDesignStyle(template.backgroundDesign),fontFamily:body}} data-layout={template.composition} data-photo-layout={template.photoLayout} data-frame={template.frame} data-button={template.button} data-mask={template.imageMask} data-reference={template.source.number}>
+  return <div ref={preview} className="template-mini" aria-label="Sample typography and photo layout" style={{...variables,...sectionDesignStyle(template.backgroundDesign),fontFamily:body}} data-layout={template.composition} data-photo-layout={template.photoLayout} data-frame={template.frame} data-button={template.button} data-mask={template.imageMask} data-reference={template.source.number}>
     <div className="mini-platform-shell"><div className="mini-platform-nav"><img src="/logo.png" alt="ShopFia"/><span>Explore</span><span>Parties</span><span>Categories</span><span className="mini-account">Account</span></div></div>
     <div className="mini-paper">
       <div className="mini-nav"><div className="mini-logo">{logo ? <img src={logo} alt="" loading="lazy"/> : <span>Logo</span>}</div><div className="mini-vendor-details"><strong>{vendorName || "Your business"}</strong><span>Vendor storefront</span><b>Follow</b></div></div>

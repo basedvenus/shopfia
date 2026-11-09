@@ -58,3 +58,17 @@ describe('horizontal section resizing',()=>{
   expect(restored.order).toEqual(original);
   expect(sectionRows(restored.order,restored.layout)).toEqual([['hero'],['effects'],['photos']]);
  });
+
+
+import {resizeSectionCorner} from '@/lib/storefront-section-layout';
+describe('paired section corner resizing',()=>{
+ it.each(['top-left','top-right','bottom-left','bottom-right'] as const)('grows the left section from %s and keeps both within the row',(corner)=>{
+  const dx=corner.endsWith('left')?-40:40,dy=corner.startsWith('top')?-40:40;
+  const next=resizeSectionCorner({effects:{width:40},gallery:{width:60,beside:'effects'}},['effects','gallery'],'effects',corner,320,320,800,dx,dy);
+  expect(next.effects.width).toBe(45);expect(next.effects.height).toBe(360);expect(next.gallery.width).toBe(55);expect(next.gallery.beside).toBe('effects');
+ });
+ it('grows the right section and reduces its neighbor',()=>{
+  const next=resizeSectionCorner({gallery:{width:60},effects:{width:40,beside:'gallery'}},['gallery','effects'],'effects','bottom-right',320,320,800,40,40);
+  expect(next.effects.width).toBe(45);expect(next.effects.height).toBe(360);expect(next.gallery.width).toBe(55);
+ });
+});

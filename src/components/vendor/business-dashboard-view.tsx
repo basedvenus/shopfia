@@ -1,3 +1,4 @@
+import {BusinessWaiverManager} from "./business-waiver-manager";
 import { StorefrontEditorStart } from "@/components/vendor/storefront-editor-start";
 import { DeleteBusiness } from "@/components/vendor/delete-business";
 import { BusinessLocationSettings } from "@/components/vendor/business-location-settings";
@@ -63,8 +64,8 @@ export function BusinessDashboardView({business,stats,welcome=false,reviewReques
       </header>
 
       <nav className="sticky top-[88px] z-10 flex gap-2 overflow-x-auto rounded-full border border-border/70 bg-white/90 p-2 shadow-[0_14px_36px_rgba(72,44,43,0.08)] backdrop-blur">
-        {["Home", "Storefront", "Services", "Inquiries", "Bookings", "Settings"].map((item) => (
-          <a key={item} href={`#${item.toLowerCase()}`} className="whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-[#f8ece9] hover:text-foreground">
+        {["Home", "Storefront", "Services", "Inquiries", "Bookings", "Waivers", "Settings"].map((item) => (
+          <a key={item} href={`#${item==="Waivers"?"business-waivers":item.toLowerCase()}`} className="whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-[#f8ece9] hover:text-foreground">
             {item}
           </a>
         ))}
@@ -173,6 +174,7 @@ export function BusinessDashboardView({business,stats,welcome=false,reviewReques
         </Panel>
       </section>
 
+      <BusinessWaiverManager businessId={business.id}/>
       <section id="settings" className="scroll-mt-24">
         <Panel>
           <SectionKicker icon={<Settings className="h-4 w-4" />} label="Settings" />

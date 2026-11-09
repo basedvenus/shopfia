@@ -72,5 +72,5 @@ export default async function EditorReview({ searchParams }: { searchParams?: Pr
     }
   });
   if (!business) notFound();
-  return <StorefrontCustomizer previewOnly initialTemplateLibraryOpen={query?.templates === "1"} business={{ ...business, id: "preview-only" }} publicUrl="https://www.shopfia.app/moonmatcha" />;
+  return <StorefrontCustomizer previewOnly initialTemplateLibraryOpen={query?.templates === "1"} business={{ ...business, id: "preview-only", sourceId:business.id }} publicUrl="https://www.shopfia.app/moonmatcha" />;
 }

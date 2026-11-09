@@ -5,6 +5,7 @@ vi.mock("@/lib/db", () => ({ db: { partyEvent: { updateMany: mocks.update } } })
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("@/lib/security/request", () => ({ checkServerActionRateLimit: mocks.rate }));
 vi.mock("@/lib/email", () => ({ sendWelcomeEmail: vi.fn() }));
+vi.mock("@/lib/services/account-notifications", () => ({ notifyAccount: vi.fn() }));
 import { updatePartyCoverCropAction } from "@/app/actions/auth";
 beforeEach(() => { vi.clearAllMocks(); mocks.auth.mockResolvedValue({ user: { id: "owner" } }); mocks.rate.mockResolvedValue({ ok: true }); mocks.update.mockResolvedValue({ count: 1 }); });
 describe("independent party cover crop", () => {

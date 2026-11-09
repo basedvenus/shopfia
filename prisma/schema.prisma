@@ -1268,6 +1268,46 @@ model ServicePreset {
   @@unique([businessId, kind, name])
 }
 
+// Immutable uploaded waiver versions. Archiving does not remove signed records.
+model BusinessWaiver {
+  id String @id @default(cuid())
+  vendorId String
+  title String
+  fileName String
+  data Bytes
+  sha256 String
+  uploadedById String
+  archived Boolean @default(false)
+  createdAt DateTime @default(now())
+  assignments WaiverAssignment[]
+  signatures WaiverSignature[]
+  @@index([vendorId, archived])
+}
+model WaiverAssignment {
+  id String @id @default(cuid())
+  waiverId String
+  offeringId String
+  packageId String @default("")
+  waiver BusinessWaiver @relation(fields:[waiverId], references:[id], onDelete:Restrict)
+  @@unique([waiverId,offeringId,packageId])
+  @@index([offeringId])
+}
+model WaiverSignature {
+  id String @id @default(cuid())
+  waiverId String
+  quoteId String
+  buyerId String
+  signerName String
+  consentText String
+  documentHash String
+  quoteHash String
+  signedAt DateTime @default(now())
+  userAgent String
+  waiver BusinessWaiver @relation(fields:[waiverId], references:[id], onDelete:Restrict)
+  @@unique([waiverId,quoteId,buyerId,quoteHash])
+  @@index([quoteId,buyerId])
+}
+
 model PhoneVerificationProfile {
   businessSmsEnabled Boolean @default(false)
   businessSmsConsentAt DateTime?

@@ -8,7 +8,7 @@ import {updateBusinessLocationAction} from "@/app/actions/business-location";
 import {Button} from "@/components/ui/button";
 import type {PlaceDetails} from "@/lib/places";
 type Business={id:string;city:string;state:string|null;formattedAddress:string|null;googlePlaceId:string|null;locationLat:number|null;locationLng:number|null;serviceRadiusMiles:number;serviceAreaNotes:string|null};
-export function BusinessLocationSettings({business}:{business:Business}) {
+export function BusinessLocationSettings({business,onSaved,previewOnly=false}:{business:Business;onSaved?:(business:Business)=>void;previewOnly?:boolean}) {
  const router=useRouter();
  const [place,setPlace]=useState<Partial<PlaceDetails>>({city:business.city,state:business.state??'',formattedAddress:business.formattedAddress||[business.city,business.state].filter(Boolean).join(', '),placeId:business.googlePlaceId??'',lat:business.locationLat??undefined,lng:business.locationLng??undefined});
  const [areas,setAreas]=useState<PlaceDetails[]>([]);
@@ -18,8 +18,9 @@ export function BusinessLocationSettings({business}:{business:Business}) {
   event.preventDefault();if(pending)return;
   const form=new FormData(event.currentTarget);setPending(true);setError('');setMessage('');
   try {
-   const result=await updateBusinessLocationAction({businessId:business.id,city:place.city??'',state:place.state??'',formattedAddress:place.formattedAddress??'',googlePlaceId:place.placeId??'',lat:place.lat??null,lng:place.lng??null,radius,serviceAreaNotes:String(form.get('serviceAreaNotes')??'')});
-   if(result.ok){setMessage('Business details saved. Your live storefront is updated.');router.refresh();}else setError(result.error??'Your changes could not be saved.');
+   const location={...business,city:place.city??'',state:place.state??'',formattedAddress:place.formattedAddress??'',googlePlaceId:place.placeId??'',locationLat:place.lat??null,locationLng:place.lng??null,serviceRadiusMiles:radius,serviceAreaNotes:String(form.get('serviceAreaNotes')??'')};
+   const result=previewOnly?{ok:true}:await updateBusinessLocationAction({businessId:business.id,city:location.city,state:location.state??'',formattedAddress:location.formattedAddress??'',googlePlaceId:location.googlePlaceId??'',lat:location.locationLat,lng:location.locationLng,radius,serviceAreaNotes:location.serviceAreaNotes??''});
+   if(result.ok){onSaved?.(location);setMessage(previewOnly?'Preview updated. Your live storefront has not changed.':'Business details saved. Your live storefront is updated.');if(!previewOnly)router.refresh();}else setError(result.error??'Your changes could not be saved.');
   }catch{setError('Your changes could not be saved. Please try again.');}finally{setPending(false);}
  }
  return <form onSubmit={save} className="mt-4 space-y-4">

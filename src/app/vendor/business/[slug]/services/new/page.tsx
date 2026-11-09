@@ -22,7 +22,7 @@ export default async function NewBusinessServicePage({ params }: { params: Promi
         slug,
         ...businessManagerWhere(session.user.id, session.user.role)
       },
-      select: { id: true, name: true, slug: true }
+      select: { id: true, name: true, slug: true, categories: {select:{categoryId:true}} }
     }),
     db.category.findMany({ where: { audience: CategoryAudience.VENDOR }, orderBy: { name: "asc" } }),
     db.category.findMany({ where: { audience: CategoryAudience.BUYER }, orderBy: { name: "asc" } })
@@ -52,6 +52,7 @@ export default async function NewBusinessServicePage({ params }: { params: Promi
 
           <OfferingSetupForm
             businessId={business.id}
+            defaultCategoryIds={business.categories.map(category=>category.categoryId)}
             categories={categories.map((category) => ({ id: category.id, name: displayCategoryName(category.name) }))}
             eventCategories={eventCategories.map((category) => ({ id: category.id, name: category.name }))}
           />

@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => {
     }
   };
   return {
+    buyerQuoteWaivers:vi.fn(async():Promise<{pending:{id:string}[]}>=>({pending:[]})),
     calculateOrderFees: vi.fn(async () => ({ totalFeesCents: 625 })),
     db,
     ensureSellerAccountForVendorProfile: vi.fn(async () => ({
@@ -44,6 +45,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+vi.mock("@/lib/services/waivers",()=>({buyerQuoteWaivers:mocks.buyerQuoteWaivers}));
 vi.mock("@/lib/db", () => ({ db: mocks.db }));
 vi.mock("@/lib/stripe", () => ({ getStripeServer: () => mocks.stripe }));
 vi.mock("@/lib/services/marketplace-fees", () => ({
@@ -80,6 +82,7 @@ const quote = {
 
 describe("quote checkout preparation", () => {
   beforeEach(() => {
+  mocks.buyerQuoteWaivers.mockResolvedValue({pending:[]});
     vi.clearAllMocks();
     mocks.db.quote.findUnique.mockResolvedValue(quote);
     mocks.db.order.findFirst.mockResolvedValue(null);
@@ -290,3 +293,5 @@ describe("quote checkout preparation", () => {
     expect(mocks.stripe.checkout.sessions.create).not.toHaveBeenCalled();
   });
 });
+
+it("requires signing before any payment session or order is created",async()=>{mocks.db.quote.findUnique.mockResolvedValue(quote);mocks.buyerQuoteWaivers.mockResolvedValue({pending:[{id:"waiver1"}]});mocks.stripe.checkout.sessions.create.mockClear();mocks.db.order.create.mockClear();const result=await prepareQuoteCheckout({buyerId:"buyer_1",origin:"https://www.shopfia.app",payMode:"deposit",quoteId:"quote_1"});expect(result.checkoutUrl).toBe("https://www.shopfia.app/waivers/sign/quote_1?payMode=deposit");expect(result).toMatchObject({waiverRequired:true,orderId:null});expect(mocks.stripe.checkout.sessions.create).not.toHaveBeenCalled();expect(mocks.db.order.create).not.toHaveBeenCalled();});

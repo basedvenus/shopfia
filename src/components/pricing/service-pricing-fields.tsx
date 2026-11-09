@@ -45,11 +45,11 @@ export function ServicePricingFields({ value, onChange, issues=[], businessId, p
   const set = (patch: Partial<ServicePricing>) => onChange({ ...value, ...patch });
   const base = (patch: object) => set({ base: { ...b, ...patch } as BasePricing });
   return <Issues.Provider value={issues}><div className="sp-stack">
-    <section className="sp-card">
+    <section id="service-basics" className="sp-card scroll-mt-28">
       <p className="sp-eyebrow">Base offering</p><h2>How do you charge for this service?</h2>
       <div className="sp-type-grid">{Object.entries(pricingTypes).map(([type, label]) => <PricingButton type="button" aria-pressed={b.type === type} key={type} onClick={() => { if (b.type !== type) set({ base: newBase(type as BasePricing["type"]) }); }}>{label}</PricingButton>)}</div>
       <Field label="Service name"><input value={value.name} placeholder="Type service name here" onChange={e => set({ name: e.target.value })} /></Field>
-      <Field label="Description" hint="At least 20 characters."><textarea value={value.description} placeholder="Describe your service here" onChange={e => set({ description: e.target.value })} /></Field>
+      <Field label="Description" hint="Describe the service itself (at least 20 characters). Add flavors or customer choices in Options and menus, and separately priced extras in Add-ons below."><textarea value={value.description} placeholder="Describe your service here" onChange={e => set({ description: e.target.value })} /></Field>
       <Field label="What’s included"><textarea value={value.inclusions} placeholder="List what every booking includes" onChange={e => set({ inclusions: e.target.value })} /></Field>
       <div className="sp-fields">
         {"rate" in b && <Money label={b.type === "fixed" ? "Price per booking" : b.type === "hour" ? "Hourly rate" : b.type === "person" ? "Price per person" : "Price per item"} value={b.rate} onChange={rate => base({ rate })} />}
@@ -66,7 +66,7 @@ export function ServicePricingFields({ value, onChange, issues=[], businessId, p
       <p className="sp-note">{b.type === "hour" ? "Your hourly rate × minimum hours gives customers the lowest booking price." : b.type === "person" ? "Your price per person × minimum guest count gives customers the lowest booking price." : b.type === "item" ? "Your price per item × minimum quantity gives customers the lowest order price." : b.type === "package" ? "Each package price should cover everything in that package. Add-ons cost more." : b.type === "custom" ? "Customers send their details first. You then provide a quote for their request." : "This price covers everything listed in ‘What’s included.’ Add-ons cost more."}</p>
     </section>
     {library.notice&&<p role="status" className="sp-note">{library.notice}</p>}
-    <section className="sp-card"><h2>Options and menus</h2><p className="sp-note">Organize included options into separate sections, such as Flavors, Drink menu, Colors, Styles, Packages, or Themes. Name each section your way. Sections are saved for reuse when you save this service. Use add-ons below for options that cost extra.</p>
+    <section id="service-options" className="sp-card scroll-mt-28"><h2>Options and menus</h2><p className="sp-note">Organize included options into separate sections, such as Flavors, Drink menu, Colors, Styles, Packages, or Themes. Name each section your way. Sections are saved for reuse when you save this service. Use add-ons below for options that cost extra.</p>
       <ServicePresetChoices kind="options" items={library.items} busy={library.busy} onRemove={library.remove} onApply={item=>{const copy=copyServicePreset(item);if(copy.kind==="options" && (value.menus??[]).length<12)set({menus:[...(value.menus??[]),copy.payload]});}}/>
       {(value.menus ?? []).map((menu, index) => {
         const update = (patch: Partial<typeof menu>) => { const next={...menu,...patch};const count=next.options.filter(option=>option.trim()).length;if(next.selection==="multiple")next.maxChoices=count?Math.max(1,Math.min(next.maxChoices??count,count)):undefined;set({ menus: value.menus!.map(item => item.id === menu.id ? next : item) }); };
@@ -86,7 +86,7 @@ export function ServicePricingFields({ value, onChange, issues=[], businessId, p
         </div></Group.Provider></details>;
       })}<PricingButton type="button" onClick={() => set({ menus: [...(value.menus ?? []), { id: crypto.randomUUID(), name: "", options: [""], selection: "display", required: false }] })}>+ Add option section</PricingButton>
     </section>
-    <section className="sp-card sp-addons"><h2>Add-ons</h2><p className="sp-note">Named add-ons are saved for reuse when you save this service, including their prices and settings. Delivery and other location-dependent charges should be clearly named.</p>
+    <section id="service-addons" className="sp-card sp-addons scroll-mt-28"><h2>Add-ons</h2><p className="sp-note">Named add-ons are saved for reuse when you save this service, including their prices and settings. Delivery and other location-dependent charges should be clearly named.</p>
       <ServicePresetChoices kind="addon" items={library.items} busy={library.busy} onRemove={library.remove} onApply={item=>{const copy=copyServicePreset(item);if(copy.kind==="addon" && value.extras.length<40)set({extras:[...value.extras,copy.payload]});}}/>
       {value.extras.map((extra, index) => {
         const update = (patch: object) => set({ extras: value.extras.map(e => e.id === extra.id ? { ...e, ...patch } : e) });

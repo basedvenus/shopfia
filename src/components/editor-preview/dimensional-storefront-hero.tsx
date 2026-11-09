@@ -13,7 +13,7 @@ import { StorefrontBrandSculpture, type LogoMount } from "@/components/editor-pr
 import { ImageCropEditor } from "@/components/ui/image-crop-editor";
 import { CroppedImage } from "@/components/ui/cropped-image";
 import type { ImageCrop } from "@/lib/image-crop";
-import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import "./dimensional-storefront-hero.css";
 
 export type HeroDepth = "flat" | "layered" | "floating";
@@ -35,6 +35,27 @@ export function DimensionalStorefrontHero({ onCoverRemove, onCoverCropChange, co
   image: string; crop: ImageCrop; secondaryImage?: string; logo: string;
   depth: HeroDepth; mobile: boolean; headingStyle: CSSProperties; onBook: () => void; onDepthChange: (value: HeroDepth) => void; mount: LogoMount; edgeColor: string; sceneColor: string;
 }) {
+  const headlineRef=useRef<HTMLHeadingElement>(null);
+  useLayoutEffect(()=>{
+    const heading=headlineRef.current;if(!heading)return;
+    const nodes=[heading,...heading.querySelectorAll<HTMLElement>('[data-storefront-text="headline"]')];
+    const properties=["font-size","max-width","overflow-wrap","word-break"];
+    const original=nodes.map(node=>properties.map(prop=>[prop,node.style.getPropertyValue(prop),node.style.getPropertyPriority(prop)]));
+    const restore=()=>nodes.forEach((node,i)=>original[i].forEach(([prop,value,priority])=>value?node.style.setProperty(prop,value,priority):node.style.removeProperty(prop)));
+    let active=true,lastWidth=-1;
+    function fit(force=false){
+      if(!active)return;const width=heading!.parentElement?.clientWidth??0;if(!width||(!force&&width===lastWidth))return;lastWidth=width;restore();
+      const target=nodes[nodes.length-1],css=getComputedStyle(target),desired=parseFloat(css.fontSize),canvas=document.createElement("canvas"),context=canvas.getContext("2d");if(!context)return;
+      context.font=`${css.fontStyle} ${css.fontWeight} ${desired}px ${css.fontFamily}`;
+      const spacing=parseFloat(css.letterSpacing)||0;
+      const longest=Math.max(...(headline||name||"Your storefront").split(/\s+/).filter(Boolean).map(word=>context.measureText(css.textTransform==="uppercase"?word.toUpperCase():css.textTransform==="lowercase"?word.toLowerCase():word).width+Math.max(0,word.length-1)*spacing));
+      const available=Math.min(heading!.clientWidth||width,width);
+      const size=Math.min(desired,desired*Math.max(0,available-4)/Math.max(1,longest));
+      nodes.forEach(node=>{node.style.setProperty("font-size",`${size}px`,"important");node.style.setProperty("max-width","100%","important");node.style.setProperty("overflow-wrap","normal","important");node.style.setProperty("word-break","normal","important");});
+    }
+    fit(true);const observer=new ResizeObserver(()=>fit());observer.observe(heading.parentElement!);document.fonts.ready.then(()=>fit(true));
+    return()=>{active=false;observer.disconnect();restore();};
+  },[mobile,headline,name,JSON.stringify(headingStyle),template?.headingFamily,template?.accentHeadingFamily]);
   const [cropOpen,setCropOpen]=useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const coverDialog = useRef<HTMLDialogElement>(null);
@@ -43,16 +64,16 @@ export function DimensionalStorefrontHero({ onCoverRemove, onCoverCropChange, co
   const [effectsOpen, setEffectsOpen] = useState(false);
   const headlineContent = (template?.id === "reference-02" ? <span className="reference-inline-title"><span>{(headline || name).split(" ").slice(0,1).join(" ")}</span>{" "}<TemplateSticker template={template} kind={template.illustration || "ribbon"} className="reference-title-art"/><span>{(headline || name).split(" ").slice(1).join(" ")}</span></span> : <TemplateHeading text={headline || name || "Your storefront"} treatment={template?.headingTreatment} accentFamily={template?.accentHeadingFamily}/>);
   return (
-    <><div ref={rootRef} className={`depth-hero ${mobile ? "depth-mobile" : ""}`} data-preview-playing={playing} data-depth={depth} data-presentation={presentation} data-reference={template?.id} style={{...(effectOnly?{display:"block"}:{}),"--scene-color":sceneColor,...sectionDesignStyle(template?.sectionDesigns?.hero),...(template?.sectionDesigns?.hero ? {"--template-heroInk":template.sectionDesigns.hero.ink} : {})} as CSSProperties}>
+    <><div ref={rootRef} className={`depth-hero ${mobile ? "depth-mobile" : ""}`} data-preview-playing={playing} data-depth={depth} data-presentation={presentation} data-effect-only={effectOnly ? "true" : undefined} data-reference={effectOnly ? undefined : template?.id} style={{...(effectOnly?{display:"block"}:{}),"--scene-color":sceneColor,...(!effectOnly ? sectionDesignStyle(template?.sectionDesigns?.hero) : {}),...(template?.sectionDesigns?.hero ? {"--template-heroInk":template.sectionDesigns.hero.ink} : {})} as CSSProperties}>
 
       {!effectOnly && <div className="depth-copy">
         {template?.illustration && template.id !== "reference-02" && <TemplateSticker template={template} kind={template.illustration} className="mb-3 h-20 w-20"/>}
         {location ? <p className="depth-location">{location}</p> : null}
-        <h2 style={headingStyle}>{onHeadlineChange ? <InlineStorefrontText label="Headline" value={headline} placeholder="Type headline here" onChange={onHeadlineChange}>{headlineContent}</InlineStorefrontText> : <span data-storefront-text="headline">{headlineContent}</span>}</h2>
+        <h2 ref={headlineRef} style={headingStyle}>{onHeadlineChange ? <InlineStorefrontText label="Headline" value={headline} placeholder="Type headline here" onChange={onHeadlineChange}>{headlineContent}</InlineStorefrontText> : <span data-storefront-text="headline">{headlineContent}</span>}</h2>
         {onDescriptionChange ? <p className="depth-description"><InlineStorefrontText label={descriptionLabel} value={description} placeholder="Type tagline here" onChange={onDescriptionChange}/></p> : description ? <p className="depth-description" data-storefront-text="description">{description}</p> : null}
         <button type="button" data-storefront-button style={{...(template?.buttonColor?{background:`var(--section-button-color, ${template.buttonColor})`,color:`var(--section-button-ink, ${template.colors.accentInk})`}:{}),borderRadius:`var(--section-button-radius, ${template?.button==="pill"?"999px":"0px"})`}} className="depth-book" onClick={(event) => { event.stopPropagation(); onBook(); }}>{template?.buttonText || "Request a quote"} <ArrowUpRight size={17} aria-hidden="true" /></button>
       </div>}
-      <div className="depth-scene" data-profile-frame={!effectOnly ? "true" : undefined} data-crop-ratio={!effectOnly ? crop.aspectRatio || undefined : undefined} style={!effectOnly ? {background:template?.sectionDesigns?.["profile-frame"]?.background, aspectRatio:crop.aspectRatio || undefined, width:crop.frameWidth?`${crop.frameWidth}%`:undefined, justifySelf:crop.frameWidth?"center":undefined} : undefined} data-playing={playing}>
+      <div className="depth-scene" data-profile-frame={!effectOnly ? "true" : undefined} data-crop-ratio={!effectOnly ? crop.aspectRatio || undefined : undefined} style={!effectOnly ? {background:template?.sectionDesigns?.["profile-frame"]?.background, height:crop.aspectRatio?"auto":undefined,minHeight:crop.aspectRatio?0:undefined,aspectRatio:crop.aspectRatio || undefined, width:crop.frameWidth?`${crop.frameWidth}%`:undefined, justifySelf:crop.frameWidth?"center":undefined} : undefined} data-playing={playing}>
         <div className="depth-regular-cover" >{image && onCoverCropChange ? <InlineCoverCrop src={image} alt={`${name || "Storefront"} cover`} crop={crop} onChange={onCoverCropChange} onReplace={()=>coverDialog.current?.showModal()} onRemove={onCoverRemove}/> : image ? <CroppedImage src={image} frameFit="cover" crop={crop} alt={`${name || "Storefront"} cover`} loading="eager" className="h-full w-full object-cover" /> : <span className="depth-empty">{coverEditor ? "" : "Add a cover image"}</span>}
           {coverEditor && !(image && onCoverCropChange) && <button type="button" aria-label={image ? "Edit cover image" : "Upload cover image"} onDoubleClick={event=>{event.stopPropagation();if(image&&onCoverCropChange)setCropOpen(true);}} onClick={event=>{event.stopPropagation();if(image&&onCoverCropChange)setCropOpen(true);else coverDialog.current?.showModal();}} className="group absolute inset-0 z-10 flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-primary">
             <span className={`inline-flex items-center gap-2 rounded-full border border-[#eadbd8] bg-white px-4 py-2 text-sm text-[#675f59] shadow-sm ${image ? "opacity-90 group-hover:opacity-100" : ""}`}>{image ? <Pencil size={17}/> : <Upload size={17}/>} {image ? "Edit cover image" : "Upload cover image"}</span>

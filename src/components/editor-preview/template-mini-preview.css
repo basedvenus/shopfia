@@ -215,3 +215,6 @@
 .template-mini[data-reference="18"] .mini-feature { display:none; }
 .template-mini[data-reference="18"] .mini-copy h3 { font-size:72px; }
 .template-mini[data-reference="18"] .mini-subtitle { font-size:12px; }
+
+.template-mini .mini-copy h3 { overflow-wrap:normal; word-break:normal; hyphens:none; }
+.template-mini .mini-copy { overflow:hidden; }
