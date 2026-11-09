@@ -1,4 +1,5 @@
-import { normalizeImageCrop, imageCropToCss, type ImageCrop } from "@/lib/image-crop";
+import { CropGeometryImage } from "./crop-geometry-image";
+import { normalizeImageCrop, type ImageCrop } from "@/lib/image-crop";
 import type { ReactEventHandler } from "react";
 
 type CroppedImageProps = {
@@ -30,22 +31,9 @@ export function CroppedImage({
     // Contain shows the whole saved frame; cover fills banners without exposing excluded pixels.
     return <span className={className} style={{ display: "block", overflow: "hidden", position: /(?:^|\s)absolute(?:\s|$)/.test(className ?? "") ? "absolute" : "relative", containerType: "size" }}>
       <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", overflow: "hidden", width: `${fit}(100cqw, calc(100cqh * ${ratio}))`, height: `${fit}(100cqh, calc(100cqw / ${ratio}))` }}>
-        <img src={src} alt={alt} decoding={decoding} loading={loading} onError={onError} className="absolute inset-0 h-full w-full object-cover" style={imageCropToCss(normalized)} />
+        <CropGeometryImage src={src} alt={alt} decoding={decoding} loading={loading} onError={onError} crop={normalized}/>
       </span>
     </span>;
   }
-  return (
-    <img
-      src={src}
-      alt={alt}
-      decoding={decoding}
-      loading={loading}
-      onError={onError}
-      className={className}
-      style={{
-        ...imageCropToCss(crop),
-        ...(frameFit === "contain" ? {objectFit: "contain" as const} : {})
-      }}
-    />
-  );
+  return <span className={className} style={{display:"block",overflow:"hidden",position:/(?:^|\s)absolute(?:\s|$)/.test(className??"")?"absolute":"relative"}}><CropGeometryImage src={src} alt={alt} decoding={decoding} loading={loading} onError={onError} crop={normalized} contain={frameFit==="contain"}/></span>;
 }

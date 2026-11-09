@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       checkoutSessionId: result.checkoutSessionId,
       checkoutUrl: result.checkoutUrl,
       orderId: result.orderId,
+      waiverRequired:"waiverRequired" in result&&result.waiverRequired,
       ok: true
     });
   } catch (error) {

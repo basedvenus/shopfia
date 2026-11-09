@@ -1229,9 +1229,9 @@ function QuoteReviewModal({
     setIsAccepting(false);
 
     const result = (await response.json().catch(() => null)) as
-      | { checkoutUrl?: string; error?: string; orderId?: string }
+      | { checkoutUrl?: string; error?: string; orderId?: string; waiverRequired?:boolean }
       | null;
-    if (!response.ok || !result?.orderId || !result.checkoutUrl) {
+    if (!response.ok || (!result?.orderId&&!result?.waiverRequired) || !result?.checkoutUrl) {
       setError(result?.error ?? "Could not prepare payment yet.");
       return;
     }

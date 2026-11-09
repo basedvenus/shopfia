@@ -28,3 +28,5 @@ describe("published storefront design", () => {
   expect(readStorefrontDesign({deposit:"Existing text"})).toEqual(DEFAULT_STOREFRONT_DESIGN);
  });
 });
+
+it("preserves fitted portrait photos, frame sizes, and 3D effects together",()=>{const design={...DEFAULT_STOREFRONT_DESIGN,depth:"floating" as const,aboutPhotoCrops:{"/photo.jpg":{x:50,y:50,zoom:.4,aspectRatio:.67,frameWidth:75}}};const parsed=storefrontDesignSchema.parse(design);expect(readStorefrontDesign(bookingWithDesign({},parsed))).toMatchObject(design);});

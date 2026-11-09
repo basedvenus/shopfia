@@ -13,20 +13,20 @@ import { ServicePricingFields, PricingButton, Field } from "./service-pricing-fi
 
 import "./pricing-preview.css";
 
-type Props = { onSaved?:()=>void; previewOnly?:boolean; businessId?: string; categories: { id: string; name: string }[]; eventCategories: { id: string; name: string }[]; offering?: ExistingOffering };
+type Props = { defaultCategoryIds?:string[]; onSaved?:()=>void; previewOnly?:boolean; businessId?: string; categories: { id: string; name: string }[]; eventCategories: { id: string; name: string }[]; offering?: ExistingOffering };
 export function LiveOfferingSetupForm(props: Props) {
   const saved = readStructuredPricing(props.offering?.pricing);
   const [convert, setConvert] = useState(false);
   if (props.offering && !saved && !convert) return <><div className="mb-6 rounded-2xl border p-5"><p className="mb-3 text-sm text-muted-foreground">This service uses your previous pricing setup. Keep it as-is, or choose a pricing type in the new builder. Nothing changes until you save.</p><PricingButton type="button" onClick={() => setConvert(true)}>Set up structured pricing</PricingButton></div><LegacyOfferingSetupForm {...props} /></>;
   return <StructuredForm {...props} initial={saved ?? { ...serviceTemplates.blank, name: props.offering?.title ?? "", description: props.offering?.description ?? "" }} />;
 }
-function StructuredForm({ initial, offering, businessId, categories, eventCategories, onSaved, previewOnly }: Props & { initial: ServicePricing }) {
+function StructuredForm({ initial, offering, businessId, categories, eventCategories, defaultCategoryIds, onSaved, previewOnly }: Props & { initial: ServicePricing }) {
   const [saveError,setSaveError]=useState<string|null>(null);
   const [service, setService] = useState(initial);
   const [template, setTemplate] = useState("");
   const [confirmed, setConfirmed] = useState(true);
   const [attempted, setAttempted] = useState(false);
-  const [categoryIds, setCategoryIds] = useState<string[]>(offering?.categoryIds ?? (offering?.categoryId ? [offering.categoryId] : []));
+  const [categoryIds, setCategoryIds] = useState<string[]>(offering?.categoryIds ?? (offering?.categoryId ? [offering.categoryId] : (defaultCategoryIds??[])));
   const [eventIds, setEventIds] = useState<string[]>(offering?.eventCategoryIds ?? []);
   const formRef = useRef<HTMLFormElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
@@ -58,12 +58,12 @@ function StructuredForm({ initial, offering, businessId, categories, eventCatego
     <input type="hidden" name="description" value={service.description} />
     <input type="hidden" name="pricingJson" value={JSON.stringify(service)} />
     <input type="hidden" name="promotionsJson" value={JSON.stringify(promotions)} />
-    <section className="sp-template-bar"><Field label="Service template"><select value={template} onChange={e => { setTemplate(e.target.value); if (!e.target.value) return; const next = structuredClone(serviceTemplates[e.target.value]); next.id = initial.id; next.extras=[]; setService(next); setConfirmed(e.target.value === "blank"); }}><option value="" disabled>Choose a template</option>{[["blank", "Start from scratch"], ["catering", "Catering"], ["cart", "Beverage cart"], ["cookies", "Cookies"], ["impersonator", "Impersonators"], ["entertainment", "Event entertainment"], ["play", "Soft play"]].map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></Field></section>
+    <nav aria-label="Service setup steps" className="rounded-2xl border border-[#eadbd7] bg-white p-4 text-sm"><p className="font-semibold">Build your service in a few steps</p><p className="mt-1 text-muted-foreground">Describe the service and what’s included, then add customer choices and any extras that cost more.</p><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2"><a href="#service-basics" className="underline">1. Details &amp; pricing</a><a href="#service-options" className="underline">2. Options &amp; menus</a><a href="#service-addons" className="underline">3. Add-ons</a><a href="#service-photos" className="underline">4. Photos</a><a href="#service-categories" className="underline">5. Categories &amp; event types</a></div></nav><section className="sp-template-bar"><Field label="Service template"><select value={template} onChange={e => { setTemplate(e.target.value); if (!e.target.value) return; const next = structuredClone(serviceTemplates[e.target.value]); next.id = initial.id; next.extras=[]; setService(next); setConfirmed(e.target.value === "blank"); }}><option value="" disabled>Choose a template</option>{[["blank", "Start from scratch"], ["catering", "Catering"], ["cart", "Beverage cart"], ["cookies", "Cookies"], ["impersonator", "Impersonators"], ["entertainment", "Event entertainment"], ["play", "Soft play"]].map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></Field></section>
     {attempted && issues.length > 0 && <div ref={errorRef} tabIndex={-1} role="alert" className="sp-card sp-save-errors"><h2>Before you save</h2><p>Finish these fields. Select a message to go directly to it.</p><ul>{issues.map((issue, i) => <li key={`${issue.group}-${issue.label}-${i}`}><button type="button" className="sp-link" onClick={() => focusIssue(issue)}>{issue.message}</button></li>)}</ul></div>}
     <p className="sp-note"><span className="sp-required">*</span> Required fields</p><ServicePricingFields businessId={businessId} previewOnly={previewOnly} value={service} onChange={setService} issues={attempted?issues:[]} />
 
-    <section className="sp-card"><ServicePhotoGrid businessId={businessId} previewOnly={previewOnly} photos={offering?.photos} crops={offering?.photoCrops}/></section>
-    <section className="sp-card"><div className="sp-stack"><ServiceCategoryPicker label="Service categories" name="categoryIds" options={categories} selected={categoryIds} onChange={setCategoryIds} required error={attempted&&!categoryIds.length?"Choose at least one service category.":undefined}/><ServiceCategoryPicker label="Event types" name="eventCategoryIds" options={eventTypeOptions(eventCategories)} selected={eventIds} onChange={setEventIds}/></div></section>
+    <section id="service-photos" className="sp-card scroll-mt-28"><ServicePhotoGrid businessId={businessId} previewOnly={previewOnly} photos={offering?.photos} crops={offering?.photoCrops}/></section>
+    <section id="service-categories" className="sp-card scroll-mt-28"><div className="sp-stack">{!offering&&defaultCategoryIds?.length?<p className="sp-note">Your business categories are selected. Add or remove categories for this service.</p>:null}<ServiceCategoryPicker label="Service categories" name="categoryIds" options={categories} selected={categoryIds} onChange={setCategoryIds} required error={attempted&&!categoryIds.length?"Choose at least one service category.":undefined}/><ServiceCategoryPicker label="Event types" name="eventCategoryIds" options={eventTypeOptions(eventCategories)} selected={eventIds} onChange={setEventIds}/></div></section>
 
     {parsed.success ? <p className="sp-note">Customers see: {priceLabel(parsed.data)}</p> : <p className="sp-note">Complete the service name, description, inclusions and pricing before saving.</p>}
 <div className="sp-save-area">    {template && template !== "blank" && <label className="sp-check" data-invalid={attempted&&!confirmed} data-field-label="Template review"><input type="checkbox" aria-required="true" aria-invalid={attempted&&!confirmed} checked={confirmed} onChange={e => setConfirmed(e.target.checked)} /><span><span className="sp-required">* </span>I have reviewed the template’s sample prices and inclusions and set them for my business.</span></label>}

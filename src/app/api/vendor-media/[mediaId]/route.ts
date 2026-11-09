@@ -28,10 +28,13 @@ export async function GET(
     return NextResponse.json({ error: "Image not found." }, { status: 404 });
   }
 
-  return new Response(new Blob([new Uint8Array(media.data)], { type: media.contentType }), {
+  const bytes=new Uint8Array(media.data);
+  let offset=0;
+  const body=media.contentType==="model/gltf-binary"?new ReadableStream<Uint8Array>({pull(controller){if(offset>=bytes.length){controller.close();return;}controller.enqueue(bytes.subarray(offset,offset+64*1024));offset+=64*1024;}}):new Blob([bytes],{type:media.contentType});
+  return new Response(body, {
     headers: {
       "Cache-Control": "public, max-age=31536000, immutable",
-      "Content-Length": String(media.size),
+      ...(media.contentType!=="model/gltf-binary"?{"Content-Length":String(media.size)}:{}),
       "Content-Type": media.contentType,
       "X-Content-Type-Options": "nosniff",
       "Last-Modified": media.updatedAt.toUTCString()

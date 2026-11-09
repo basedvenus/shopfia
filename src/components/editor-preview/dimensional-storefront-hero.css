@@ -124,3 +124,15 @@
   border-radius:0;
   box-shadow:none;
 }
+
+/* Standalone effects are artwork on the page, not another copy of the hero card. */
+.template-surface .depth-hero[data-effect-only="true"] {
+ background:transparent!important;background-image:none!important;margin:0!important;padding:0!important;
+ border:0!important;outline:0!important;box-shadow:none!important;border-radius:0!important;min-height:0!important;
+}
+.template-surface .depth-hero[data-effect-only="true"] .depth-scene {
+ background:transparent!important;background-image:none!important;box-shadow:none!important;
+ width:100%!important;height:auto!important;min-height:0!important;aspect-ratio:1;margin:0!important;transform:none!important;
+}
+.depth-hero[data-effect-only="true"] .depth-permanent-layer {background:transparent!important;background-image:none!important;}
+.depth-hero[data-effect-only="true"] :is(.depth-stage-light,.depth-floor-shadow,.depth-regular-cover) {display:none!important;}

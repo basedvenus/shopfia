@@ -310,10 +310,10 @@ export function ImageUploadField({
   return (
     <div className="grid gap-2">
       <span className={avatarAppearance || hideLabel ? "sr-only" : "text-sm font-medium"}>{label}</span>
-      <div ref={menuContainer} className={editMenu ? "group/avatar relative w-fit" : "relative"}>
+      <div ref={menuContainer} className={editMenu && (avatarAppearance || isRound) ? "group/avatar relative w-fit" : "relative w-full"}>
       <label
         className={`group relative grid cursor-pointer place-items-center overflow-hidden border border-dashed border-border bg-white/80 text-center text-sm text-muted-foreground transition hover:border-primary ${
-          avatarAppearance ? "h-24 w-24 rounded-full border-4 border-solid border-white bg-accent text-2xl font-semibold text-foreground shadow-soft focus-within:ring-2 focus-within:ring-primary" : isRound ? "h-32 w-32 rounded-full" : "min-h-[150px] rounded-[1.5rem]"
+          avatarAppearance ? "h-24 w-24 rounded-full border-4 border-solid border-white bg-accent text-2xl font-semibold text-foreground shadow-soft focus-within:ring-2 focus-within:ring-primary" : isRound ? "h-32 w-32 rounded-full" : "min-h-[150px] w-full rounded-[1.5rem]"
         }`}
       >
         {previewValue && failedPreview !== previewValue ? (
@@ -321,6 +321,7 @@ export function ImageUploadField({
             src={previewValue}
             alt={avatarAppearance?.displayName ?? ""}
             crop={crop}
+            frameFit={uploadMode === "preserve" ? "contain" : "cover"}
             className="absolute inset-0 h-full w-full object-cover object-center"
             onError={() => setFailedPreview(previewValue)}
           />

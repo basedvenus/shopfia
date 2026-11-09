@@ -56,3 +56,15 @@ export function resizeSectionWidth(layout:SectionLayout,row:string[],id:string,e
  }
  return {...layout,[id]:{...current,width:clamp(width+delta,25,100-offset),offset}};
 }
+
+/** Scale a selected section along its corner diagonal, sharing space with its neighbor. */
+export function resizeSectionCorner(layout:SectionLayout,row:string[],id:string,corner:'top-left'|'top-right'|'bottom-left'|'bottom-right',width:number,height:number,rowWidth:number,dx:number,dy:number):SectionLayout {
+ if(width<=0||height<=0||rowWidth<=0||!row.includes(id))return layout;
+ const sx=corner.endsWith('left')?-1:1,sy=corner.startsWith('top')?-1:1;
+ const scale=Math.max(.1,1+(dx*sx*width+dy*sy*height)/(width*width+height*height));
+ const delta=width*(scale-1)/rowWidth*100;
+ const before=layout[id]?.width??(row.length===2?50:100);
+ const next=resizeSectionWidth(layout,row,id,sx<0?'left':'right',row.length===2?(row[0]===id?delta:-delta):sx*delta);
+ const after=next[id]?.width??before;
+ return {...next,[id]:{...next[id],height:Math.max(120,Math.min(1200,Math.round(height*after/before)))}};
+}

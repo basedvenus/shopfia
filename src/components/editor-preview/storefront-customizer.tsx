@@ -1,4 +1,6 @@
 "use client";
+import {BrandLogoColors} from "./brand-logo-colors";
+import {StorefrontAreaEditor} from "./storefront-area-editor";
 import {ServicePhotos} from "@/components/vendor/service-photos";
 import { StickerEditor, StickerLayer, StickersPanel } from "./storefront-stickers";
 import { CityPicker } from "@/components/location/city-picker";
@@ -100,6 +102,7 @@ type BookingInfo = { deposit: string; leadTime: string; process: string };
 type EditorTool = "content" | "services" | "gallery" | "design";
 
 type CustomizerBusiness = {
+  sourceId?:string;
   user?: { _count: { followers: number } } | null;
   _count?: { orders: number };
   averageRating: number;
@@ -331,7 +334,7 @@ export function StorefrontCustomizer({
     [form.hiddenSections, form.sectionOrder, form.showInstagram, form.showTikTok]
   );
   const sectionLabel = useCallback(
-    (section: string) => section === "page-background" ? "Page background" : section==="parties" ? "Past parties" :
+    (section: string) => section === "portfolio" && (!form.sectionLabels.portfolio || form.sectionLabels.portfolio === "Photos") ? "Gallery" : section === "page-background" ? "Page background" : section==="parties" ? "Past parties" :
       form.sectionLabels[section as keyof typeof STOREFRONT_SECTION_LABELS] ??
       STOREFRONT_SECTION_LABELS[section as keyof typeof STOREFRONT_SECTION_LABELS] ??
       "Section",
@@ -468,11 +471,11 @@ export function StorefrontCustomizer({
   function selectSection(section: string) {
     setTextSelectionActive(false);
     setMobilePanelExpanded(true);
-    setDesignPanel("backgrounds");
+    setDesignPanel(section === "portfolio" ? "portfolio" : "backgrounds");
     setAdvanced(true);
     setActiveSection(section);
     setActiveTool("content");
-    // Canvas selection opens styling; content managers are explicit toolbar actions.
+    // Photos open their content controls beside the canvas; other sections open styling.
     setToolPopup(null);
     setPanelCollapsed(false);
   }
@@ -647,9 +650,9 @@ export function StorefrontCustomizer({
         setTemplateLibraryOpen(false);markDirty(false);
         requestAnimationFrame(()=>templatePreviewRef.current?.scrollIntoView({block:"start",behavior:"auto"}));
       }} /> : null}
-      {serviceBuilderUrl && <ServiceBuilderPopup businessId={business.id} previewOnly={previewOnly} onClose={()=>setServiceBuilderUrl(null)} onSaved={services=>{setForm(current=>({...current,services:[...current.services,...services.filter(service=>!current.services.some(existing=>existing.id===service.id))]}));markDirty();}}/>}
+      {serviceBuilderUrl && <ServiceBuilderPopup businessId={business.sourceId??business.id} previewOnly={previewOnly} onClose={()=>setServiceBuilderUrl(null)} onSaved={services=>{setForm(current=>({...current,services:[...current.services,...services.filter(service=>!current.services.some(existing=>existing.id===service.id))]}));markDirty();}}/>}
       {organizerOpen && <SectionOrganizer order={form.sectionOrder.filter(id=>id!=="reviews"&&(id!=="effects"||heroDepth!=="flat"))} hiddenSections={form.hiddenSections} onToggle={toggleSection} layout={form.sectionLayout} label={sectionLabel} onClose={()=>setOrganizerOpen(false)} onRename={(id,value)=>update("sectionLabels",{...form.sectionLabels,[id]:value.trim() || undefined})} onChange={(order,layout)=>{setForm(current=>({...current,sectionOrder:[...order,...current.sectionOrder.filter(id=>!order.includes(id))],sectionLayout:layout}));markDirty();}}/>}
-      {modernEditor && studioOpen && <Storefront3DStudio modelsEndpoint={previewOnly ? undefined : mediaUploadEndpoint.replace(/\/media(?:\?.*)?$/, "/models")} uploadEndpoint={previewOnly ? undefined : mediaUploadEndpoint} initialModel={effectModel} initialImage={effectImage} initialPresentation={effectPresentation} initialWord={effectWord} invitation={studioInvitation} name={form.name} logo={form.logoUrl} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount,image,presentation,word,model)=>{setEffectModel(model);setEffectImage(image);setEffectPresentation(presentation);setEffectWord(word);studioInvited.current=true;setHeroDepth(depth);setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`3D Effect applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
+      {modernEditor && studioOpen && <Storefront3DStudio modelsEndpoint={previewOnly ? undefined : mediaUploadEndpoint.replace(/\/media(?:\?.*)?$/, "/models")} uploadEndpoint={previewOnly ? undefined : mediaUploadEndpoint} initialModel={effectModel} initialImage={effectImage} initialPresentation={effectPresentation} initialWord={effectWord} invitation={studioInvitation} name={form.name} logo={form.logoUrl} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount,image,presentation,word,model)=>{setEffectModel(model);setEffectImage(image);setEffectPresentation(presentation);setEffectWord(word);studioInvited.current=true;setHeroDepth(depth);if(depth!=="flat")setForm(current=>({...current,hiddenSections:current.hiddenSections.filter(id=>id!=="effects"),sectionOrder:current.sectionOrder.includes("effects")?current.sectionOrder:[...current.sectionOrder,"effects"]}));setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`3D Effect applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
       <input type="hidden" name="businessId" value={business.id} />
       <input type="hidden" name="businessSlug" value={business.slug} />
       <input type="hidden" name="name" value={form.name} />
@@ -812,7 +815,7 @@ export function StorefrontCustomizer({
           <div className="min-w-0 bg-[#f4f0ed] p-3 sm:p-6 lg:max-h-[calc(100vh-245px)] lg:overflow-y-auto">
             <p className="mb-4 text-center text-xs text-muted-foreground">Your storefront preview · {previewMode === "mobile" ? "Mobile" : "Desktop"}</p>
             <div data-testid="guided-storefront-preview" className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
-              <StorefrontPreview activeSection="" business={business} draggedPhotoIndex={null} form={form} mediaUploadEndpoint={mediaUploadEndpoint} movePhoto={movePhoto} moveService={moveService} previewMode={previewMode} removePhoto={removePhoto} sectionLabel={sectionLabel} setActiveSection={selectSection} setDraggedPhotoIndex={setDraggedPhotoIndex} setServiceVisible={setServiceVisible} update={update} updateService={updateService} visibleSections={visibleSections} />
+              <StorefrontPreview previewOnly={previewOnly} activeSection="" business={business} draggedPhotoIndex={null} form={form} mediaUploadEndpoint={mediaUploadEndpoint} movePhoto={movePhoto} moveService={moveService} previewMode={previewMode} removePhoto={removePhoto} sectionLabel={sectionLabel} setActiveSection={selectSection} setDraggedPhotoIndex={setDraggedPhotoIndex} setServiceVisible={setServiceVisible} update={update} updateService={updateService} visibleSections={visibleSections} />
             </div>
           </div>
         </div>
@@ -891,7 +894,7 @@ export function StorefrontCustomizer({
           </div>
         </aside>}
 
-        <main onClickCapture={event=>{const target=event.target as HTMLElement;if(target.closest("[data-sticker]"))return;if(!target.closest("button, a, input, textarea, [data-storefront-text], [data-inline-photo]") && backgroundSelection(target)?.section === "page-background"){event.stopPropagation();selectSection("page-background");return;}if((event.target as HTMLElement).closest("[data-profile-frame]") && !(event.target as HTMLElement).closest("[data-inline-photo]")){event.stopPropagation();selectSection("profile-frame");return;}if((event.target as HTMLElement).closest("[data-service-card]") && !(event.target as HTMLElement).closest("[data-storefront-text], [data-storefront-button], [data-add-services]")){event.stopPropagation();selectSection("services-card");return;}if((event.target as HTMLElement).closest("[data-add-services]")){event.preventDefault();event.stopPropagation();setToolPopup("all-services");return;}if((event.target as HTMLElement).closest("[data-storefront-button]")){event.preventDefault();event.stopPropagation();setMobilePanelExpanded(true);setActiveTool("content");setDesignPanel("buttons");setActiveSection((event.target as HTMLElement).closest("[data-section-frame]")?.getAttribute("data-section-frame")??"hero");setPanelCollapsed(false);requestAnimationFrame(()=>document.querySelector('[data-button-settings]')?.scrollIntoView({block:"nearest"}));}}} className="editor-canvas min-w-0 bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
+        <main onClickCapture={event=>{const target=event.target as HTMLElement;if(target.closest("[data-sticker]"))return;if(target.closest("[data-inline-photo]")&&target.closest('[data-testid="preview-section-portfolio"]')){selectSection("portfolio");return;}if(!target.closest("button, a, input, textarea, [data-storefront-text], [data-inline-photo]") && backgroundSelection(target)?.section === "page-background"){event.stopPropagation();selectSection("page-background");return;}if((event.target as HTMLElement).closest("[data-profile-frame]") && !(event.target as HTMLElement).closest("[data-inline-photo]")){event.stopPropagation();selectSection("profile-frame");return;}if((event.target as HTMLElement).closest("[data-service-card]") && !(event.target as HTMLElement).closest("[data-storefront-text], [data-storefront-button], [data-add-services]")){event.stopPropagation();selectSection("services-card");return;}if((event.target as HTMLElement).closest("[data-add-services]")){event.preventDefault();event.stopPropagation();setToolPopup("all-services");return;}if((event.target as HTMLElement).closest("[data-storefront-button]")){event.preventDefault();event.stopPropagation();setMobilePanelExpanded(true);setActiveTool("content");setDesignPanel("buttons");setActiveSection((event.target as HTMLElement).closest("[data-section-frame]")?.getAttribute("data-section-frame")??"hero");setPanelCollapsed(false);requestAnimationFrame(()=>document.querySelector('[data-button-settings]')?.scrollIntoView({block:"nearest"}));}}} className="editor-canvas min-w-0 bg-[#efe7e3] p-2 sm:p-4 lg:max-h-[calc(100vh-190px)] lg:overflow-y-auto">
           <TextFormattingToolbar/>
           <div className="mb-3 flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>{previewOnly ? "Preview only · changes reset on refresh" : "Select a section to edit"}</span>
@@ -899,6 +902,7 @@ export function StorefrontCustomizer({
           {modernEditor && effectNotice && <div role="status" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-3 text-sm"><div><strong>{effectNotice}</strong><p className="mt-1 text-xs text-muted-foreground">{previewOnly ? "Preview only · your live storefront has not changed." : "Publish to update your live storefront."}</p></div>{heroDepth!=='flat' && <button type="button" onClick={replayEffect} className="rounded-full border px-4 py-2 text-xs">Show on page</button>}</div>}
           <div ref={templatePreviewRef} data-testid="storefront-preview-frame" style={{ scrollMarginTop: 90, containerType: "inline-size", containerName: "storefront-preview" }} className={previewMode === "mobile" ? "mx-auto max-w-[390px]" : "mx-auto max-w-6xl"}>
             <StorefrontPreview
+              previewOnly={previewOnly}
               effectModel={effectModel} effectImage={effectImage} effectPresentation={effectPresentation} effectWord={effectWord}
               template={selectedTemplate}
               heroCustomFont={heroCustomFont} heroMount={heroMount} heroEdge={heroEdge} heroBackground={heroBackground}
@@ -925,8 +929,8 @@ export function StorefrontCustomizer({
         </main>
 
         <aside ref={mobileToolsRef} data-mobile-expanded={mobilePanelExpanded} data-color-panel={designPanel === "backgrounds" || designPanel === "text-colors"} data-panel-open={!panelCollapsed && Boolean(designPanel)} className="editor-inspector min-w-0 border-t border-[#eadbd8] bg-white lg:border-l lg:border-t-0">
-<div className="editor-tool-rail" aria-label="Design tools">{[{id:'brand',label:'Brand',Icon:BadgeCheck},{id:'sections',label:'Rearrange',Icon:ArrowUpDown},{id:'templates',label:'Templates',Icon:LayoutTemplate},{id:'backgrounds',label:'Backgrounds',Icon:Paintbrush},{id:'fonts',label:'Text',Icon:Type},{id:'portfolio',label:'Gallery',Icon:Images},{id:'effects',label:'3D Effects',Icon:Box},{id:'buttons',label:'Buttons',Icon:SewingButtonIcon},{id:'stickers',label:'Stickers',Icon:CupcakeStickerIcon},{id:'all-services',label:'Services',Icon:BriefcaseBusiness},{id:'policies',label:'Policies',Icon:FileText},{id:'faq',label:'FAQ',Icon:CircleHelp},{id:'socials',label:'Social media',Icon:Share2}].map(({id,label,Icon})=><button key={id} type="button" aria-pressed={!panelCollapsed && (designPanel===id || id==="backgrounds" && designPanel==="text-colors")} onClick={()=>{setMobilePanelExpanded(true);setActiveTool("content");if(["all-services","portfolio","socials","faq","policies"].includes(id)){setToolPopup(id);return;}if(id==="templates"){setTemplateLibraryOpen(true);return;}if(id==="effects"){setStudioInvitation(false);setStudioOpen(true);return;}if(id==="sections"){setOrganizerOpen(true);return;}const panelId=id==="backgrounds"&&textSelectionActive?"text-colors":id;setPanelCollapsed(!panelCollapsed&&designPanel===panelId);setDesignPanel(panelId);}} className="editor-tool-button"><span className="editor-tool-icon"><Icon size={22}/></span><span className="text-center leading-4">{label}</span></button>)}</div><div className="editor-panel-content" hidden={panelCollapsed || !designPanel}>
-              <div className="editor-mobile-sheet-toggle"><button type="button" aria-label={mobilePanelExpanded ? "Collapse tools" : "Expand tools"} aria-expanded={mobilePanelExpanded} onClick={()=>setMobilePanelExpanded(value=>!value)}>{mobilePanelExpanded ? "⌄" : "↑"}</button></div><div className="editor-panel-heading"><strong>{({fonts:"Text",backgrounds:"Color",'text-colors':"Text color",buttons:"Buttons",brand:"Brand",stickers:"Stickers"} as Record<string,string>)[designPanel??""]??"Design"}</strong><button type="button" aria-label="Close settings panel" onClick={()=>setPanelCollapsed(true)}>›</button></div>
+<div className="editor-tool-rail" aria-label="Design tools">{[{id:'brand',label:'Brand',Icon:BadgeCheck},{id:'sections',label:'Rearrange',Icon:ArrowUpDown},{id:'templates',label:'Templates',Icon:LayoutTemplate},{id:'backgrounds',label:'Backgrounds',Icon:Paintbrush},{id:'fonts',label:'Text',Icon:Type},{id:'portfolio',label:'Gallery',Icon:Images},{id:'effects',label:'3D Effects',Icon:Box},{id:'buttons',label:'Buttons',Icon:SewingButtonIcon},{id:'stickers',label:'Stickers',Icon:CupcakeStickerIcon},{id:'all-services',label:'Services',Icon:BriefcaseBusiness},{id:'policies',label:'Policies',Icon:FileText},{id:'faq',label:'FAQ',Icon:CircleHelp},{id:'socials',label:'Social media',Icon:Share2}].map(({id,label,Icon})=><button key={id} type="button" aria-pressed={!panelCollapsed && (designPanel===id || id==="backgrounds" && designPanel==="text-colors")} onClick={()=>{setMobilePanelExpanded(true);setActiveTool("content");if(id==="portfolio"){selectSection("portfolio");return;}if(["all-services","socials","faq","policies"].includes(id)){setPanelCollapsed(false);setDesignPanel(id);setActiveSection(id);setToolPopup(id);return;}if(id==="templates"){setTemplateLibraryOpen(true);return;}if(id==="effects"){setStudioInvitation(false);setStudioOpen(true);return;}if(id==="sections"){setOrganizerOpen(true);return;}const panelId=id==="backgrounds"&&textSelectionActive?"text-colors":id;setPanelCollapsed(!panelCollapsed&&designPanel===panelId);setDesignPanel(panelId);}} className="editor-tool-button"><span className="editor-tool-icon"><Icon size={22}/></span><span className="text-center leading-4">{label}</span></button>)}</div><div className="editor-panel-content" hidden={panelCollapsed || !designPanel}>
+              <div className="editor-mobile-sheet-toggle"><button type="button" aria-label={mobilePanelExpanded ? "Collapse tools" : "Expand tools"} aria-expanded={mobilePanelExpanded} onClick={()=>setMobilePanelExpanded(value=>!value)}>{mobilePanelExpanded ? "⌄" : "↑"}</button></div><div className="editor-panel-heading"><strong>{({fonts:"Text",backgrounds:"Color",'text-colors':"Text color",buttons:"Buttons",brand:"Brand",stickers:"Stickers",portfolio:"Gallery"} as Record<string,string>)[designPanel??""]??"Design"}</strong><button type="button" aria-label="Close settings panel" onClick={()=>setPanelCollapsed(true)}>›</button></div>
               <div className="editor-panel-scroll" key={designPanel}>
 {activeTool === "content" && <><details open hidden={designPanel!=="sections"} className="mb-4 rounded-2xl border p-4"><summary>Rearrange sections</summary><div className="mt-4">              <p className="mb-3 text-xs font-normal text-muted-foreground">Drag to reorder. Select a section to edit it.</p>
               <nav aria-label="Reorder storefront sections" className="mb-5 flex flex-wrap gap-2">
@@ -966,7 +970,7 @@ export function StorefrontCustomizer({
 </>}
               {activeTool==="content" && designPanel==="stickers" && selectedTemplate && <StickersPanel template={selectedTemplate} onChange={value=>{setSelectedTemplate(value);markDirty();}}/>}
               {activeTool==="content" && designPanel==="buttons" && selectedTemplate && <ButtonControls template={selectedTemplate} section={activeSection} onChange={template=>{setSelectedTemplate(template);markDirty();}}/>}
-              {activeTool==="content" && designPanel==="brand" && <section className="mb-4 rounded-2xl border bg-[#fffaf8] p-4"><h3 className="mb-4 font-semibold">Brand</h3><ImageUploadField name="brandLogo" label="Brand logo" value={form.logoUrl} valueCrop={form.logoCrop} onChangePreview={value=>update("logoUrl",value)} onCropChange={crop=>update("logoCrop",crop)} uploadEndpoint={`${mediaUploadEndpoint}?target=logo`}/><p className="mb-3 mt-5 text-sm font-semibold">Your template palette</p><div className="grid grid-cols-2 gap-3">{selectedTemplate && Object.entries(selectedTemplate.colors).map(([key,color])=><ColorPicker key={key} label={({background:'Background',surface:'Cards',ink:'Text',muted:'Small text',accent:'Accent',accentInk:'Button text',secondary:'Details'} as Record<string,string>)[key]} value={color} onChange={value=>{setSelectedTemplate({...selectedTemplate,colors:{...selectedTemplate.colors,[key]:value}});markDirty();}}/>)}</div></section>}
+              {activeTool==="content" && designPanel==="brand" && <section className="mb-4 rounded-2xl border bg-[#fffaf8] p-4"><h3 className="mb-4 font-semibold">Brand</h3><ImageUploadField name="brandLogo" label="Brand logo" value={form.logoUrl} valueCrop={form.logoCrop} onChangePreview={value=>update("logoUrl",value)} onCropChange={crop=>update("logoCrop",crop)} uploadEndpoint={`${mediaUploadEndpoint}?target=logo`}/><BrandLogoColors logo={form.logoUrl}/></section>}
               {modernEditor && selectedTemplate && (designPanel==="backgrounds" || designPanel==="patterns" || designPanel==="text-colors") ? <SectionBackgroundControls textMode={designPanel==="text-colors"} logo={form.logoUrl} photos={form.aboutPhotos} mode={designPanel==="patterns"?"patterns":"colors"} template={selectedTemplate} section={activeSection} label={activeSection==="services-card"?"Service card":sectionLabel(activeSection)} onChange={(template)=>{setSelectedTemplate(template);markDirty();}} /> : null}
               {modernEditor ? <div hidden={activeTool !== "content" || designPanel!=="fonts"}><details className="mb-3 rounded-xl border p-3"><summary className="cursor-pointer text-sm">Selected text font</summary><SelectedTextFonts/></details><HeroTypographyControls bodyFamily={form.bodyFamily} onBody={value=>update("bodyFamily",value)} allowUpload={false} subheadingFamily={form.subheadingFamily} onSubheading={value=>update("subheadingFamily",value)} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
               {activeTool === "design" ? (
@@ -976,7 +980,7 @@ export function StorefrontCustomizer({
                 <PanelStack>
                   {["faq","policies"].includes(toolPopup??"") && <label className="flex items-center gap-3 rounded-xl border p-3 text-sm"><input type="checkbox" checked={!form.hiddenSections.includes(toolPopup!)} onChange={event=>update("hiddenSections",event.target.checked?form.hiddenSections.filter(id=>id!==toolPopup):[...form.hiddenSections,toolPopup!])}/>Show on storefront</label>}
                   <SectionEditor
-                    activeSection={toolPopup ?? (modernEditor ? "none" : panelSection)}
+                    activeSection={toolPopup ?? (modernEditor ? (designPanel === "portfolio" ? "portfolio" : "none") : panelSection)}
                     business={business}
                     collapsedFaqIds={collapsedFaqIds}
                     form={form}
@@ -1179,7 +1183,7 @@ function SectionEditor({
     const photos = form.photoUrls.filter(Boolean);
     return (
       <PanelStack>
-        <details open className="rounded-xl border p-3"><summary>Cover image</summary>
+        <details className="rounded-xl border p-3"><summary>Cover image</summary>
         <ImageUploadField
           editMenu name="editorCover"
           label="Cover image"
@@ -1583,6 +1587,7 @@ function DesignControls({
 }
 
 function StorefrontPreview({
+  previewOnly=false,
   effectReplay=0,
   template,
   heroCustomFont,
@@ -1607,6 +1612,7 @@ function StorefrontPreview({
   updateService,
   visibleSections
 }: {
+  previewOnly?:boolean;
   effectReplay?:number;
   template?: StorefrontTemplate | null;
   heroCustomFont?: string | null;
@@ -1704,7 +1710,7 @@ function StorefrontPreview({
           if (section === "effects") return Boolean(heroDepth && heroDepth !== "flat");
           if (section === "portfolio") return true;
           if (section === "faq") return form.faqs.length > 0;
-          if (section === "how-it-works") return Boolean(business.storefrontBookingJson || form.serviceAreaNotes);
+          if (section === "how-it-works") return true;
           return true;
         }).map((section) => {
           if (section === "hero") return <div key={section}>{profile}</div>;
@@ -1744,7 +1750,7 @@ function StorefrontPreview({
           if (section === "portfolio") return (
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-portfolio" theme={theme} title={sectionLabel(section)} onClick={() => setActiveSection(section)}>
               <AboutPhotoGrid crops={form.aboutPhotoCrops} onCrop={(url,crop)=>update("aboutPhotoCrops",Object.fromEntries([form.aboutImage,...form.aboutPhotos].filter(Boolean).map(image=>[image,image===url?crop:form.aboutPhotoCrops[image]??DEFAULT_IMAGE_CROP])))} uploadEndpoint={mediaUploadEndpoint.includes("preview-only") ? undefined : mediaUploadEndpoint} images={[form.aboutImage, ...form.aboutPhotos]} layout={form.aboutPhotoLayout} onLayout={value=>update("aboutPhotoLayout",value)} onImage={(index,value)=>{if(index===0) update("aboutImage",value);else {const next=[...form.aboutPhotos];next[index-1]=value;update("aboutPhotos",next);}}} />
-              {activeSection === section ? (
+              {activeSection === section && !heroDepth ? (
                 <div className="grid gap-3">
 
                   <ImageUploadField
@@ -1822,10 +1828,10 @@ function StorefrontPreview({
                 <div className="grid gap-3">
                   <InlineTextarea ariaLabel="Booking process" onChange={(value) => update("booking", { ...form.booking, process: value })} placeholder="Describe how booking works" value={form.booking.process} />
                   <InlineTextarea ariaLabel="Service area" onChange={(value) => update("serviceAreaNotes", value)} placeholder="Type service area here" value={form.serviceAreaNotes} />
-                  <PreviewRadiusMap city={[form.city, form.state].filter(Boolean).join(", ") || "Service area"} coverageAreas={coverageAreaLabels(form.serviceAreaNotes, [form.city, form.state].filter(Boolean).join(", "))} radiusMiles={business.serviceRadiusMiles} theme={theme} />
+                  <StorefrontAreaEditor businessId={business.sourceId??business.id} previewOnly={previewOnly} onChange={value=>{update("city",value.city);update("state",value.state);update("serviceAreaNotes",value.serviceAreaNotes);}}/>
                 </div>
               ) : (
-                <><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p><PreviewRadiusMap city={[form.city, form.state].filter(Boolean).join(", ") || "Service area"} coverageAreas={coverageAreaLabels(form.serviceAreaNotes, [form.city, form.state].filter(Boolean).join(", "))} radiusMiles={business.serviceRadiusMiles} theme={theme} /></>
+                <><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p><StorefrontAreaEditor businessId={business.sourceId??business.id} previewOnly={previewOnly} onChange={value=>{update("city",value.city);update("state",value.state);update("serviceAreaNotes",value.serviceAreaNotes);}}/></>
               )}
             </PreviewSection>
           );
@@ -2543,7 +2549,7 @@ export function AboutPhotoGrid({readOnly=false,uploadEndpoint,compact=false,imag
  const selected=PHOTO_LAYOUTS.find(item=>item.id===layout)??PHOTO_LAYOUTS[0];
  return <div onClick={event=>event.stopPropagation()}>
   <div style={photoGridStyle(compact ? "grid" : layout)}>
-   {Array.from({length:readOnly ? Math.min(images.length,selected.count) : selected.count},(_,index)=><div key={index} className="relative min-w-0" style={{...photoTileStyle(compact ? "grid" : layout,index),width:"100%",alignSelf:"start"}}>
+   {Array.from({length:readOnly ? Math.min(images.length,selected.count) : selected.count},(_,index)=><div key={index} className="relative min-w-0" style={{...photoTileStyle(compact ? "grid" : layout,index),aspectRatio:crops[images[index]]?.aspectRatio??photoTileStyle(compact ? "grid" : layout,index).aspectRatio,width:`${crops[images[index]]?.frameWidth??100}%`,justifySelf:"center",alignSelf:"start"}}>
     <div onDragOver={event=>{event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect="copy";setDragging(index);}} onDragLeave={()=>setDragging(null)} onDrop={event=>{event.preventDefault();event.stopPropagation();setDragging(null);loadImage(event.dataTransfer.files[0],index);}} className={`relative block h-full w-full cursor-pointer overflow-hidden border border-current/15 bg-stone-100 focus-within:ring-2 focus-within:ring-current ${dragging===index?"ring-2 ring-current":""}`} style={{backgroundColor:"color-mix(in srgb, currentColor 5%, transparent)",...(layout==="scallop" && !compact ? scallopedPhotoStyle : {})}}>
     {images[index] ? (!readOnly&&onCrop?<InlineCoverCrop src={images[index]} alt={`Gallery photo ${index+1}`} crop={crops[images[index]]??DEFAULT_IMAGE_CROP} onChange={crop=>onCrop(images[index],crop)} onReplace={()=>inputs.current[index]?.click()} onRemove={()=>{requests.current[index]=(requests.current[index]??0)+1;onImage(index,"");}}/>:<CroppedImage src={images[index]} alt={`Gallery photo ${index+1}`} crop={crops[images[index]]??DEFAULT_IMAGE_CROP} className="h-full w-full object-cover"/>) : <span onClick={()=>inputs.current[index]?.click()} className="grid h-full place-content-center justify-items-center gap-2 text-center opacity-65"><Upload className="h-5 w-5"/><span className="text-[10px] sm:text-xs">Upload image</span><span className="hidden text-[10px] sm:block">or drag & drop</span></span>}
     <input ref={element=>{inputs.current[index]=element;}} disabled={readOnly} type="file" aria-label={`Upload About photo ${index+1}`} accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={event=>{loadImage(event.target.files?.[0],index);event.target.value="";}}/>

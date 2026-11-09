@@ -1,7 +1,6 @@
 "use client";
 type Category={id:string;name:string};
-export const PET_PARTY_OPTION_ID="shopfia-event-pet-party";
-export function eventTypeOptions(options:Category[]){return options.some(option=>option.name.toLowerCase()==="pet party")?options:[...options,{id:PET_PARTY_OPTION_ID,name:"Pet Party"}];}
+export {PET_PARTY_OPTION_ID,eventTypeOptions} from "@/lib/service-event-types";
 export function ServiceCategoryPicker({label,name,options,selected,onChange,required=false,error}:{label:string;name:string;options:Category[];selected:string[];onChange:(ids:string[])=>void;required?:boolean;error?:string}){
  const chosen=options.filter(option=>selected.includes(option.id));
  const all=options.length>0&&options.every(option=>selected.includes(option.id));

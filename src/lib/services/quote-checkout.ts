@@ -1,3 +1,4 @@
+import {buyerQuoteWaivers} from "@/lib/services/waivers";
 import { OffsiteAdsTier, OrderStatus, QuoteRequestStatus, QuoteStatus } from "@prisma/client";
 import { canAcceptQuote, quotePayableAmount } from "@/lib/payments";
 import { calculateOrderFees, ensureSellerAccountForVendorProfile } from "@/lib/services/marketplace-fees";
@@ -39,6 +40,11 @@ export async function prepareQuoteCheckout({
   const structured = (quote.lineItemsJson as { structured?: { totals: { total: number; bookingPayment: number } }; superseded?: boolean } | null);
   if (structured?.structured && (structured.superseded || !canPrepareQuoteCheckout(quote) || structured.structured.totals.total !== quote.amountCents || structured.structured.totals.bookingPayment !== (quote.depositAmountCents ?? quote.amountCents))) {
     throw new Error("This quote is no longer payable. Review the current quote in your conversation.");
+  }
+  const waivers=await buyerQuoteWaivers(quoteId,buyerId);
+  if(waivers.pending.length){
+    if(!canPrepareQuoteCheckout(quote))throw new Error("Quote is not payable");
+    return {waiverRequired:true as const,checkoutSessionId:null,orderId:null,checkoutUrl:`${origin}/waivers/sign/${encodeURIComponent(quoteId)}?payMode=${payMode}`};
   }
   const existingOrder = await db.order.findFirst({
     where: {
@@ -228,7 +234,7 @@ function existingOrderAmount(
   return quotePayableAmount(quote, payMode);
 }
 
-function canPrepareQuoteCheckout(quote: { status: QuoteStatus; expiresAt: Date }) {
+export function canPrepareQuoteCheckout(quote: { status: QuoteStatus; expiresAt: Date }) {
   if (canAcceptQuote(quote)) return true;
   return quote.status === QuoteStatus.ACCEPTED && quote.expiresAt > new Date();
 }

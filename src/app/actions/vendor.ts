@@ -1,4 +1,5 @@
 "use server";
+import {SERVICE_EVENT_TYPES} from "@/lib/service-event-types";
 
 import {saveServicePresetsForService} from "@/lib/save-service-presets";
 import { servicePricingSchema, promotionSchema, minimumPrice } from "@/lib/service-pricing";
@@ -1058,8 +1059,8 @@ export async function upsertOfferingAction(formData: FormData) {
   }
   const offeringCategory = offeringCategories.find((category) => category.id === primaryCategoryId) ?? offeringCategories[0];
 
-  const petPartySelected=parsed.eventCategoryIds.includes("shopfia-event-pet-party");
-  const uniqueEventCategoryIds = [...new Set(parsed.eventCategoryIds.filter(id=>id!=="shopfia-event-pet-party"))];
+  const pendingEventTypes=SERVICE_EVENT_TYPES.filter(type=>parsed.eventCategoryIds.includes(type.id));
+  const uniqueEventCategoryIds = [...new Set(parsed.eventCategoryIds.filter(id=>!SERVICE_EVENT_TYPES.some(type=>type.id===id)))];
   const validEventCategoryCount = uniqueEventCategoryIds.length
     ? await db.category.count({
         where: { id: { in: uniqueEventCategoryIds }, audience: CategoryAudience.BUYER }
@@ -1117,7 +1118,7 @@ export async function upsertOfferingAction(formData: FormData) {
     skipDuplicates: true
   });
 
-  if(petPartySelected){const pet=await tx.category.upsert({where:{name:"Pet Party"},create:{name:"Pet Party",iconName:"paw-print",audience:CategoryAudience.BUYER},update:{}});if(!uniqueEventCategoryIds.includes(pet.id))uniqueEventCategoryIds.push(pet.id);}
+  for(const type of pendingEventTypes){const category=await tx.category.upsert({where:{name:type.name},create:{name:type.name,iconName:type.iconName,audience:CategoryAudience.BUYER},update:{}});if(!uniqueEventCategoryIds.includes(category.id))uniqueEventCategoryIds.push(category.id);}
   await tx.offeringEventCategory.deleteMany({ where: { offeringId } });
   if (uniqueEventCategoryIds.length > 0) {
     await tx.offeringEventCategory.createMany({

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {StorefrontSectionSize} from "@/components/vendor/storefront-section-size";
 import { GripVertical } from 'lucide-react';
-import { placeSection, sectionRows, rowColumns, resizeSectionWidth, type SectionLayout, type SectionPlacement } from '@/lib/storefront-section-layout';
+import { placeSection, sectionRows, rowColumns, resizeSectionWidth, resizeSectionCorner, type SectionLayout, type SectionPlacement } from '@/lib/storefront-section-layout';
 import './storefront-section-layout.css';
 
 type Item = {id:string;label:string;content:ReactNode};
@@ -65,7 +65,7 @@ export function StorefrontSectionCanvas({items,order,layout,mobile,onChange}:{it
     <StorefrontSectionSize disabled={mobile} responsive height={height?.id===id?height.value:visibleLayout[id]?.height}>{item.content}</StorefrontSectionSize>
     {target?.id===id&&<div className="section-drop-zone" data-placement={target.placement}><span>{target.placement==='left'?'Place left':target.placement==='right'?'Place right':target.placement==='above'?'Place above':'Place below'}{row.length===2 && (target.placement==='left'||target.placement==='right') && <small className="block mt-2">{byId.get(row[target.placement==='left'?1:0])?.label} moves below · 2 per row</small>}</span></div>}
     {(['left','right'] as const).filter(edge=>row.length===1||(row[0]===id?edge==='right':edge==='left')).map(edge=><SectionWidthHandle key={edge} id={id} label={item.label} edge={edge} row={row} layout={layout} onPreview={setWidthPreview} onCommit={next=>{onChange(order,next);setAnnouncement(`${item.label} width updated to ${next[id]?.width} percent.`);}}/>)}
-    {row.length===1&&(['top-left','top-right','bottom-left','bottom-right'] as const).map(corner=><SectionWidthHandle key={corner} corner={corner} id={id} label={item.label} edge={corner.endsWith('left')?'left':'right'} row={row} layout={layout} onPreview={setWidthPreview} onCommit={next=>onChange(order,next)}/>)}
+    {(['top-left','top-right','bottom-left','bottom-right'] as const).map(corner=><SectionWidthHandle key={corner} corner={corner} id={id} label={item.label} edge={corner.endsWith('left')?'left':'right'} row={row} layout={layout} onPreview={setWidthPreview} onCommit={next=>onChange(order,next)}/>)}
     {(['top','bottom'] as const).map(edge=><button key={edge} type="button" data-edge={edge} className="section-resize-handle" aria-label={`Resize ${item.label} section ${edge} height`} title="Drag to adjust height. Up/Down adjusts 20 px."
      onClick={event=>event.stopPropagation()}
      onPointerDown={event=>{if(event.button!==0)return;event.preventDefault();event.stopPropagation();const frame=event.currentTarget.closest<HTMLElement>('[data-section-frame]')!;resize.current={id,y:event.clientY,height:frame.getBoundingClientRect().height};event.currentTarget.setPointerCapture(event.pointerId);}}
@@ -80,13 +80,13 @@ export function StorefrontSectionCanvas({items,order,layout,mobile,onChange}:{it
 }
 
 function SectionWidthHandle({id,label,edge,row,layout,onPreview,onCommit,corner}:{id:string;label:string;edge:'left'|'right';corner?:'top-left'|'top-right'|'bottom-left'|'bottom-right';row:string[];layout:SectionLayout;onPreview:(layout:SectionLayout|null)=>void;onCommit:(layout:SectionLayout)=>void}) {
- const start=useRef<{x:number;y:number;height:number;pixels:number;layout:SectionLayout}|null>(null);
+ const start=useRef<{x:number;y:number;width:number;height:number;pixels:number;layout:SectionLayout}|null>(null);
  const [value,setValue]=useState<number|null>(null);
- function nextLayout(x:number,y:number){const active=start.current!;const next=resizeSectionWidth(active.layout,row,id,edge,(x-active.x)/active.pixels*100);if(corner)next[id]={...next[id],height:Math.max(120,Math.min(1200,Math.round(active.height+(y-active.y)*(corner.startsWith('top')?-1:1))))};return next;}
+ function nextLayout(x:number,y:number){const active=start.current!;if(corner)return resizeSectionCorner(active.layout,row,id,corner,active.width,active.height,active.pixels,x-active.x,y-active.y);return resizeSectionWidth(active.layout,row,id,edge,(x-active.x)/active.pixels*100);}
  function clear(){start.current=null;setValue(null);onPreview(null);}
  return <button type="button" className={corner?"section-corner-handle":"section-width-handle"} data-corner={corner} data-edge={edge} aria-label={`Resize ${label} section ${corner??edge} edge`} title={corner?"Drag diagonally to resize width and height.":"Drag left or right to adjust width. Arrow keys adjust 5%."}
   onClick={event=>event.stopPropagation()}
-  onPointerDown={event=>{if(event.button!==0)return;event.preventDefault();event.stopPropagation();const element=event.currentTarget.closest<HTMLElement>('.storefront-section-row')!;const pixels=element.getBoundingClientRect().width-(row.length===2?parseFloat(getComputedStyle(element).columnGap)||0:0);start.current={x:event.clientX,y:event.clientY,height:event.currentTarget.closest<HTMLElement>('[data-section-frame]')!.getBoundingClientRect().height,pixels,layout};event.currentTarget.setPointerCapture(event.pointerId);}}
+  onPointerDown={event=>{if(event.button!==0)return;event.preventDefault();event.stopPropagation();const element=event.currentTarget.closest<HTMLElement>('.storefront-section-row')!;const pixels=element.getBoundingClientRect().width-(row.length===2?parseFloat(getComputedStyle(element).columnGap)||0:0);start.current={x:event.clientX,y:event.clientY,width:event.currentTarget.closest<HTMLElement>('[data-section-frame]')!.getBoundingClientRect().width,height:event.currentTarget.closest<HTMLElement>('[data-section-frame]')!.getBoundingClientRect().height,pixels,layout};event.currentTarget.setPointerCapture(event.pointerId);}}
   onPointerMove={event=>{const active=start.current;if(!active)return;const next=nextLayout(event.clientX,event.clientY);onPreview(next);setValue(next[id]?.width??100);}}
   onPointerUp={event=>{const active=start.current;if(!active)return;onCommit(nextLayout(event.clientX,event.clientY));clear();}}
   onPointerCancel={clear}

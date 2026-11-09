@@ -130,13 +130,17 @@ export function StorefrontBrandSculpture({ image, name, interactive, mount, edge
       canvas.width=Math.max(1,Math.round(rect.width*dpr)); canvas.height=Math.max(1,Math.round(rect.height*dpr)); schedule();
     }); resize.observe(canvas);
     const visibility=new IntersectionObserver(([entry])=>{visible=entry.isIntersecting; if(visible) schedule(); else {cancelAnimationFrame(frame);frame=0;}}); visibility.observe(canvas);
+    let dragging:{x:number;y:number;rx:number;ry:number}|null=null;
+    const down=(event:PointerEvent)=>{if(!interactive)return;event.preventDefault();turning=false;dragging={x:event.clientX,y:event.clientY,rx:currentX,ry:currentY};canvas.setPointerCapture(event.pointerId);};
+    const up=(event:PointerEvent)=>{dragging=null;if(canvas.hasPointerCapture(event.pointerId))canvas.releasePointerCapture(event.pointerId);};
     const move=(event:PointerEvent)=>{
+      if(dragging){targetY=dragging.ry+(event.clientX-dragging.x)*.012;targetX=Math.max(-1.2,Math.min(1.2,dragging.rx+(event.clientY-dragging.y)*.008));if(!motion.matches){currentX=targetX;currentY=targetY;}schedule();return;}
       if (touchPreview || !interactive || !motion.matches || !hover.matches || turning || event.pointerType!=="mouse") return;
       const bounds=canvas.getBoundingClientRect();
       targetY=(event.clientX-bounds.left-bounds.width/2)/bounds.width*2.2;
       targetX=-(event.clientY-bounds.top-bounds.height/2)/bounds.height*.9; schedule();
     };
-    const leave=()=>{if(turning)return;targetX=-.08;targetY=0;schedule();};
+    const leave=()=>{if(turning||dragging)return;targetX=-.08;targetY=0;schedule();};
     const scroll=()=>{
       if (touchPreview || !interactive || !motion.matches || !hover.matches || !visible || turning) return;
       const rect=canvas.getBoundingClientRect();
@@ -146,15 +150,15 @@ export function StorefrontBrandSculpture({ image, name, interactive, mount, edge
     turnRef.current=(direction)=>{if(!interactive || !loaded)return;turning=true;targetX=-.08;targetY=direction===0 ? 0 : currentY+direction*Math.PI/3;if(!motion.matches){currentX=targetX;currentY=targetY;}schedule();};
     const preference=()=>{turning=false;currentX=targetX=-.08;currentY=targetY=0;schedule();};
     const contextLost=(event:Event)=>{event.preventDefault();lost=true;cancelAnimationFrame(frame);frame=0;setReady(false);};
-    canvas.addEventListener("pointermove",move); canvas.addEventListener("pointerleave",leave); canvas.addEventListener("webglcontextlost",contextLost); motion.addEventListener("change",preference); window.addEventListener("scroll",scroll,{capture:true,passive:true});
+    canvas.addEventListener("pointerdown",down);canvas.addEventListener("pointerup",up);canvas.addEventListener("pointercancel",up);canvas.addEventListener("pointermove",move); canvas.addEventListener("pointerleave",leave); canvas.addEventListener("webglcontextlost",contextLost); motion.addEventListener("change",preference); window.addEventListener("scroll",scroll,{capture:true,passive:true});
     const asset=new Image(); asset.crossOrigin="anonymous";
     asset.onload=()=>{
       if(disposed || lost) return;
       try {
         // Normalize to a square texture without stretching the vendor's logo.
         const tile=document.createElement("canvas");tile.width=tile.height=512;const ctx=tile.getContext("2d");if(!ctx)return;
-        if(mount !== "artwork") {ctx.fillStyle="#f5f0e7";ctx.fillRect(0,0,512,512);}
-        const scale=460/Math.max(asset.width,asset.height),w=asset.width*scale,h=asset.height*scale;ctx.drawImage(asset,(512-w)/2,(512-h)/2,w,h);
+        if(mount !== "artwork") {ctx.fillStyle="#ffffff";ctx.fillRect(0,0,512,512);ctx.drawImage(asset,0,0,1,1,0,0,512,512);}
+        const scale=512/Math.max(asset.width,asset.height),w=asset.width*scale,h=asset.height*scale;ctx.drawImage(asset,(512-w)/2,(512-h)/2,w,h);
         gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,1);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,tile);
         loaded=true;setReady(true);onReady?.();
         if(interactive && motion.matches) {currentY=-1.8; currentX=.12;}
@@ -164,7 +168,7 @@ export function StorefrontBrandSculpture({ image, name, interactive, mount, edge
     asset.src=image;
     return ()=>{
       turnRef.current=null;disposed=true;cancelAnimationFrame(frame);resize.disconnect();visibility.disconnect();asset.onload=null;asset.onerror=null;
-      canvas.removeEventListener("pointermove",move);canvas.removeEventListener("pointerleave",leave);canvas.removeEventListener("webglcontextlost",contextLost);motion.removeEventListener("change",preference);window.removeEventListener("scroll",scroll,true);
+      canvas.removeEventListener("pointerdown",down);canvas.removeEventListener("pointerup",up);canvas.removeEventListener("pointercancel",up);canvas.removeEventListener("pointermove",move);canvas.removeEventListener("pointerleave",leave);canvas.removeEventListener("webglcontextlost",contextLost);motion.removeEventListener("change",preference);window.removeEventListener("scroll",scroll,true);
       gl.deleteTexture(texture);gl.deleteBuffer(buffer);gl.deleteProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment);
     };
   }, [image, interactive, mount, edgeColor, touchPreview, onReady]);
@@ -172,6 +176,6 @@ export function StorefrontBrandSculpture({ image, name, interactive, mount, edge
     {/* The real saved asset is also the no-WebGL / failed-texture fallback. */}
     <div className={`sculpture-fallback mount-${mount}`} style={{opacity:ready?0:1}}>{image ? <img src={image} alt="" /> : <span>{name || "Your brand"}</span>}</div>
     {showControls && interactive && ready ? <div className="sculpture-turn" role="group" aria-label="Logo rotation"><button type="button" aria-label="Turn logo left" onClick={event=>{event.stopPropagation();turnRef.current?.(-1);}}>↶ Left</button><button type="button" onClick={event=>{event.stopPropagation();turnRef.current?.(0);}}>Front</button><button type="button" aria-label="Turn logo right" onClick={event=>{event.stopPropagation();turnRef.current?.(1);}}>Right ↷</button></div> : null}
-    <canvas ref={canvasRef} role="img" aria-label={`${name || "Storefront"} sculptural brand emblem`} style={{opacity:ready?1:0}} />
+    <canvas ref={canvasRef} role="img" aria-label={`${name || "Storefront"} sculptural brand emblem`} style={{opacity:ready?1:0,touchAction:interactive?"none":undefined,cursor:interactive?"grab":undefined}} />
   </div>;
 }
