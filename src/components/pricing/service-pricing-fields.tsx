@@ -1,4 +1,5 @@
 "use client";
+import {ServiceReusePicker} from "./service-reuse-picker";
 import {ChoiceModeSelect} from "@/components/vendor/choice-mode-select";
 import {ChoiceLimitStepper} from "@/components/vendor/choice-limit-stepper";
 
@@ -39,16 +40,16 @@ export function newBase(type: BasePricing["type"]): BasePricing {
   }
 }
 
-export function ServicePricingFields({ value, onChange, issues=[], businessId, previewOnly=false }: { businessId?:string; previewOnly?:boolean; value: ServicePricing; onChange: (value: ServicePricing) => void; issues?:ServiceFormIssue[] }) {
+export function ServicePricingFields({ value, onChange, issues=[], businessId, previewOnly=false, activeSection }: { activeSection?:string; businessId?:string; previewOnly?:boolean; value: ServicePricing; onChange: (value: ServicePricing) => void; issues?:ServiceFormIssue[] }) {
   const library=useServicePresetLibrary(businessId,previewOnly);
   const b = value.base;
   const set = (patch: Partial<ServicePricing>) => onChange({ ...value, ...patch });
   const base = (patch: object) => set({ base: { ...b, ...patch } as BasePricing });
   return <Issues.Provider value={issues}><div className="sp-stack">
-    <section id="service-basics" className="sp-card scroll-mt-28">
-      <p className="sp-eyebrow">Base offering</p><h2>How do you charge for this service?</h2>
+    <section hidden={Boolean(activeSection&&activeSection!=="basics")} id="service-basics" className="sp-card scroll-mt-28">
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="sp-eyebrow">Base offering</p><ServiceReusePicker businessId={previewOnly?undefined:businessId} onApply={onChange}/></div><h2>How do you charge for this service?</h2>
       <div className="sp-type-grid">{Object.entries(pricingTypes).map(([type, label]) => <PricingButton type="button" aria-pressed={b.type === type} key={type} onClick={() => { if (b.type !== type) set({ base: newBase(type as BasePricing["type"]) }); }}>{label}</PricingButton>)}</div>
-      <Field label="Service name"><input value={value.name} placeholder="Type service name here" onChange={e => set({ name: e.target.value })} /></Field>
+      <Field label="Service name" hint="What would customers search for to find this? Name what you offer, such as Pole rental, Matcha cart, or Photo booth. Put durations and tiers in package names below."><input value={value.name} placeholder="Type service name here" onChange={e => set({ name: e.target.value })} /></Field>
       <Field label="Description" hint="Describe the service itself (at least 20 characters). Add flavors or customer choices in Options and menus, and separately priced extras in Add-ons below."><textarea value={value.description} placeholder="Describe your service here" onChange={e => set({ description: e.target.value })} /></Field>
       <Field label="What’s included"><textarea value={value.inclusions} placeholder="List what every booking includes" onChange={e => set({ inclusions: e.target.value })} /></Field>
       <div className="sp-fields">
@@ -58,15 +59,15 @@ export function ServicePricingFields({ value, onChange, issues=[], businessId, p
         {b.type === "person" && <NumberField label="Maximum people (optional)" value={b.maximum} onChange={maximum => base({ maximum })} />}
         {b.type === "item" && <><Field label="Item label"><input value={b.label} placeholder="Type item label here" onChange={e => base({ label: e.target.value })} /></Field><NumberField label="Order increments" value={b.increment} onChange={increment => base({ increment })} /></>}
       </div>
-      {b.type === "package" && <div className="sp-stack">{b.packages.map((pkg, index) => {
+      {b.type === "package" && <div className="sp-stack"><p className="sp-note">Build your first package, then duplicate it to create another with a different name, price, or rental duration.</p>{b.packages.map((pkg, index) => {
         const update = (patch: object) => base({ packages: b.packages.map(p => p.id === pkg.id ? { ...p, ...patch } : p) });
-        return <details className="sp-disclosure" data-pricing-group={`packages.${index}`} key={pkg.id} open><summary>{pkg.name || `Package ${index + 1}`}</summary><Group.Provider value={`packages.${index}`}><div className="sp-stack"><Field label="Package name"><input value={pkg.name} placeholder="Type package name here" onChange={e => update({ name: e.target.value })} /></Field><Money label="Package price" value={pkg.price} onChange={price => update({ price })} /><Field label="Exact inclusions"><textarea value={pkg.inclusions} onChange={e => update({ inclusions: e.target.value })} /></Field><Field label="Quantity or coverage included"><input value={pkg.coverage} placeholder="Describe the included coverage" onChange={e => update({ coverage: e.target.value })} /></Field><PricingButton type="button" className="sp-link" disabled={b.packages.length === 1} onClick={() => base({ packages: b.packages.filter(p => p.id !== pkg.id) })}>Remove package</PricingButton></div></Group.Provider></details>;
-      })}<PricingButton type="button" onClick={() => base({ packages: [...b.packages, { id: crypto.randomUUID(), name: "", price: 0, inclusions: "", coverage: "" }] })}>+ Add package</PricingButton></div>}
+        return <details className="sp-disclosure" data-pricing-group={`packages.${index}`} key={pkg.id} open><summary>{pkg.name || `Package ${index + 1}`}</summary><Group.Provider value={`packages.${index}`}><div className="sp-stack"><Field label="Package name" hint="Name this version of your service, such as Four-hour rental or Weekend package."><input value={pkg.name} placeholder="Type package name here" onChange={e => update({ name: e.target.value })} /></Field><Money label="Package price" value={pkg.price} onChange={price => update({ price })} /><Field label="Exact inclusions"><textarea value={pkg.inclusions} onChange={e => update({ inclusions: e.target.value })} /></Field><Field label="Quantity or coverage included"><input value={pkg.coverage} placeholder="Describe the included coverage" onChange={e => update({ coverage: e.target.value })} /></Field>{b.packages.length<30&&<ServiceReusePicker businessId={previewOnly?undefined:businessId} packagesOnly onDuplicateCurrent={()=>{const copy={...pkg,id:crypto.randomUUID(),name:pkg.name?`${pkg.name} (copy)`:""};const packages=[...b.packages];packages.splice(index+1,0,copy);base({packages});}} onApply={saved=>{if(saved.base.type==="package")base({packages:[...b.packages,...saved.base.packages].slice(0,30)});}}/>}<PricingButton type="button" className="sp-link" disabled={b.packages.length === 1} onClick={() => base({ packages: b.packages.filter(p => p.id !== pkg.id) })}>Remove package</PricingButton></div></Group.Provider></details>;
+      })}<PricingButton type="button" disabled={b.packages.length >= 30} onClick={() => base({ packages: [...b.packages, { id: crypto.randomUUID(), name: "", price: 0, inclusions: "", coverage: "" }] })}>+ Add package</PricingButton></div>}
       {b.type === "custom" && <><Money label="Minimum booking amount (optional)" value={b.minimum} optional onChange={minimum => base({ minimum })} /><Field label="Information needed to quote" hint="One question per line."><textarea value={b.questions.join("\n")} placeholder="What do you need to know about the request?" onChange={e => base({ questions: e.target.value.split("\n") })} /></Field></>}
       <p className="sp-note">{b.type === "hour" ? "Your hourly rate × minimum hours gives customers the lowest booking price." : b.type === "person" ? "Your price per person × minimum guest count gives customers the lowest booking price." : b.type === "item" ? "Your price per item × minimum quantity gives customers the lowest order price." : b.type === "package" ? "Each package price should cover everything in that package. Add-ons cost more." : b.type === "custom" ? "Customers send their details first. You then provide a quote for their request." : "This price covers everything listed in ‘What’s included.’ Add-ons cost more."}</p>
     </section>
     {library.notice&&<p role="status" className="sp-note">{library.notice}</p>}
-    <section id="service-options" className="sp-card scroll-mt-28"><h2>Options and menus</h2><p className="sp-note">Organize included options into separate sections, such as Flavors, Drink menu, Colors, Styles, Packages, or Themes. Name each section your way. Sections are saved for reuse when you save this service. Use add-ons below for options that cost extra.</p>
+    <section hidden={Boolean(activeSection&&activeSection!=="options")} id="service-options" className="sp-card scroll-mt-28"><h2>Options and menus <small className="sp-note">Optional</small></h2><p className="sp-note">Organize included options into separate sections, such as Flavors, Drink menu, Colors, Styles, Packages, or Themes. Name each section your way. Sections are saved for reuse when you save this service. Use add-ons below for options that cost extra.</p>
       <ServicePresetChoices kind="options" items={library.items} busy={library.busy} onRemove={library.remove} onApply={item=>{const copy=copyServicePreset(item);if(copy.kind==="options" && (value.menus??[]).length<12)set({menus:[...(value.menus??[]),copy.payload]});}}/>
       {(value.menus ?? []).map((menu, index) => {
         const update = (patch: Partial<typeof menu>) => { const next={...menu,...patch};const count=next.options.filter(option=>option.trim()).length;if(next.selection==="multiple")next.maxChoices=count?Math.max(1,Math.min(next.maxChoices??count,count)):undefined;set({ menus: value.menus!.map(item => item.id === menu.id ? next : item) }); };
@@ -86,7 +87,7 @@ export function ServicePricingFields({ value, onChange, issues=[], businessId, p
         </div></Group.Provider></details>;
       })}<PricingButton type="button" onClick={() => set({ menus: [...(value.menus ?? []), { id: crypto.randomUUID(), name: "", options: [""], selection: "display", required: false }] })}>+ Add option section</PricingButton>
     </section>
-    <section id="service-addons" className="sp-card sp-addons scroll-mt-28"><h2>Add-ons</h2><p className="sp-note">Named add-ons are saved for reuse when you save this service, including their prices and settings. Delivery and other location-dependent charges should be clearly named.</p>
+    <section hidden={Boolean(activeSection&&activeSection!=="addons")} id="service-addons" className="sp-card sp-addons scroll-mt-28"><h2>Add-ons <small className="sp-note">Optional</small></h2><p className="sp-note">Named add-ons are saved for reuse when you save this service, including their prices and settings. Delivery and other location-dependent charges should be clearly named.</p>
       <ServicePresetChoices kind="addon" items={library.items} busy={library.busy} onRemove={library.remove} onApply={item=>{const copy=copyServicePreset(item);if(copy.kind==="addon" && value.extras.length<40)set({extras:[...value.extras,copy.payload]});}}/>
       {value.extras.map((extra, index) => {
         const update = (patch: object) => set({ extras: value.extras.map(e => e.id === extra.id ? { ...e, ...patch } : e) });

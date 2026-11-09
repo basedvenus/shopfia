@@ -78,3 +78,8 @@
 .sp-workspace.sp-live-form{background:transparent;}
 
 .sp-workspace fieldset.sp-field>legend{font-size:13px;font-weight:500;}
+
+.sp-live-form [hidden]{display:none!important;}
+.sp-step-nav{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;}
+.sp-step-nav button{flex-shrink:0;font-size:13px;}
+.sp-live-form [data-step-heading]{outline:none;}
