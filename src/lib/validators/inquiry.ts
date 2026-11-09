@@ -33,7 +33,7 @@ export const publicInquirySchema = z.object({
     .refine((value) => !Number.isNaN(new Date(`${value}T00:00:00`).getTime()), {
       message: "Enter a valid event date."
     }),
-  eventLocation: z.string().trim().min(2, "Event location is required.").max(240, "Event location is a little too long."),
+  eventLocation: z.string().trim().max(240, "Event location is a little too long.").refine(value=>value.length===0||value.length>=2,"Choose a valid event location or leave it blank."),
   formattedAddress: z.string().trim().max(240, "Event location is a little too long.").optional().or(z.literal("")),
   locationCity: z.string().trim().max(80, "City is a little too long.").optional().or(z.literal("")),
   locationState: z.string().trim().max(40, "State is a little too long.").optional().or(z.literal("")),

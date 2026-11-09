@@ -24,6 +24,8 @@ export async function getVendorProfileBySlug(slug: string) {
       depositEnabled: true,
       depositPercent: true,
       formattedAddress: true,
+      locationLat: true,
+      locationLng: true,
       instagramUrl: true,
       logoCrop: true,
       logoUrl: true,

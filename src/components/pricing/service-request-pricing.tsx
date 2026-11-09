@@ -1,5 +1,6 @@
 "use client";
 
+import {RoundedChoiceSelect} from "./rounded-choice-select";
 import { PlaceAutocompleteInput } from "@/components/location/place-autocomplete-input";
 import type { ReactNode } from "react";
 import { PricingButton } from "./service-pricing-fields";
@@ -10,7 +11,7 @@ import { Field, NumberField } from "./service-pricing-fields";
 export function Calculation({ lines, finalAgreement = false }: { lines: PriceLine[]; finalAgreement?: boolean }) {
   return <div className="sp-calculation">{lines.map(line => <div key={line.id}><span><strong>{line.name}</strong><small>{line.amount === null && finalAgreement ? `${line.quantity} ${line.unit} · Included in agreed scope` : line.calculation}</small></span><strong>{line.amount === null ? finalAgreement ? "Included in agreed price" : "Price pending" : usd(line.amount)}</strong></div>)}</div>;
 }
-export function ServiceRequestPricing({ service, selection, onChange, promotions, now, onRequest, requestLabel = "Preview request → quote", disabled = false, contactFields }: { contactFields?: ReactNode; requestLabel?: string; disabled?: boolean; service: ServicePricing; selection: Selection; onChange: (value: Selection) => void; promotions: Promotion[]; now: string; onRequest: () => void }) {
+export function ServiceRequestPricing({ service, selection, onChange, promotions, now, onRequest, requestLabel = "Preview request → quote", disabled = false, inquiryLayout=false, detailsFields, contactFields }: { detailsFields?:ReactNode; inquiryLayout?:boolean; contactFields?: ReactNode; requestLabel?: string; disabled?: boolean; service: ServicePricing; selection: Selection; onChange: (value: Selection) => void; promotions: Promotion[]; now: string; onRequest: () => void }) {
   const b = service.base;
   const estimate = estimateService(service, selection);
   const sale = applyPromotion(estimate.lines, promotions, { now, code: selection.promoCode, eventDate: selection.eventDate });
@@ -18,9 +19,9 @@ export function ServiceRequestPricing({ service, selection, onChange, promotions
   const selected = service.extras.filter(extra => selection.extras[extra.id] !== undefined);
   const needsGuests = b.type !== "person" && selected.some(e => e.type === "person");
   const needsHours = b.type !== "hour" && selected.some(e => e.type === "hour" && !e.separateHours);
-  return <div className="sp-stack"><section className="sp-card"><p className="sp-eyebrow">Request this service</p><h2>{service.name}</h2><p>{service.description}</p><div><p className="sp-eyebrow">{b.type === "custom" ? "Custom pricing" : "Base price"}</p><p className="sp-price">{priceLabel(service)}</p></div><div className="sp-buyer-price-note"><strong>{b.type === "custom" ? "Your quote is tailored to your request." : "Base prices cover the listed inclusions."}</strong>Add-ons and customizations may change your estimate. You’ll approve the full final quote before payment.</div><p className="sp-note">Includes: {service.inclusions}</p>
+  return <div className="sp-stack"><section className="sp-card">{!inquiryLayout&&<><p className="sp-eyebrow">Request this service</p><h2>{service.name}</h2><p>{service.description}</p></>}<div><p className="sp-eyebrow">{b.type === "custom" ? "Custom pricing" : "Base price"}</p><p className="sp-price">{priceLabel(service)}</p></div><div className="sp-buyer-price-note"><strong>{b.type === "custom" ? "Your quote is tailored to your request." : "Base prices cover the listed inclusions."}</strong>Add-ons and customizations may change your estimate. You’ll approve the full final quote before payment.</div><p className="sp-note">Includes: {service.inclusions}</p>
     {(b.type === "hour" || b.type === "person" || b.type === "item") && <NumberField label={b.type === "hour" ? "Hours" : b.type === "person" ? "Guest count" : `${b.label} quantity`} value={selection.quantity} min={b.minimum} max={b.type === "person" ? b.maximum : undefined} step={b.type === "person" ? 1 : b.increment} onChange={quantity => set({ quantity })} />}
-    {b.type === "package" && <Field label="Choose a package"><select value={selection.packageId ?? ""} onChange={e => set({ packageId: e.target.value })}>{b.packages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} · {usd(pkg.price)} · {pkg.coverage}</option>)}</select><small>{b.packages.find(p => p.id === selection.packageId)?.inclusions}</small></Field>}
+    {b.type === "package" && <Field label="Choose a package"><RoundedChoiceSelect label="Choose a package" value={selection.packageId??""} onChange={packageId=>set({packageId})} options={b.packages.map(pkg=>({value:pkg.id,label:`${pkg.name} · ${usd(pkg.price)} · ${pkg.coverage}`}))}/><small>{b.packages.find(p => p.id === selection.packageId)?.inclusions}</small></Field>}
     {b.type === "custom" && b.questions.map((question, i) => <Field key={i} label={question}><textarea value={selection.answers[i] ?? ""} onChange={e => { const answers = [...selection.answers]; answers[i] = e.target.value; set({ answers }); }} /></Field>)}
     {(service.menus ?? []).map(menu => <section className="sp-extra" key={menu.id}><h3>{menu.name}</h3>{menu.description && <p className="sp-note">{menu.description}</p>}
       {menu.selection === "display" ? <p>{menu.options.join(", ")}</p> : <>
@@ -29,7 +30,7 @@ export function ServiceRequestPricing({ service, selection, onChange, promotions
         {(selection.menus?.[menu.id]??[]).length>0&&<p className="sp-note">Selected: {(selection.menus?.[menu.id]??[]).join(", ")}</p>}
       </>}
     </section>)}
-    <div className="sp-fields"><Field label="Event date"><input type="date" value={selection.eventDate} onChange={e => set({ eventDate: e.target.value })} /></Field><Field label="Event location"><PlaceAutocompleteInput placeholder="Search and select an event location" defaultValue={selection.location} fieldNames={{input:"pricingEventLocation"}} omitHiddenFields requireSelection onPlaceSelect={place=>set({location:place.formattedAddress})}/></Field></div>
+
     {service.extras.length > 0 && <><h3>Customize your order</h3>{service.extras.map(extra => {
       const checked = selection.extras[extra.id] !== undefined;
       const independent = extra.type === "item" || (extra.type === "hour" && extra.separateHours);
@@ -39,10 +40,10 @@ export function ServiceRequestPricing({ service, selection, onChange, promotions
         {extra.locationRequired && <small className="sp-note">Event location required{extra.type === "quoted" ? " to calculate this charge" : ""}.</small>}
       </div>;
     })}</>}
-    {needsGuests && <NumberField label="Guest count for extras" value={selection.guests} onChange={guests => set({ guests })} />}
+    {needsGuests && !inquiryLayout && <NumberField label="Guest count for extras" value={selection.guests} onChange={guests => set({ guests })} />}
     {needsHours && <NumberField label="Hours for extras" value={selection.hours} step={0.5} min={0.5} onChange={hours => set({ hours })} />}
     {promotions.some(p => p.code) && <Field label="Promo code (optional)"><input value={selection.promoCode} onChange={e => set({ promoCode: e.target.value })} />{selection.promoCode && !sale.promotion && <small>No eligible promotion for these selections and dates.</small>}</Field>}
-  </section>{contactFields}<section className="sp-card" aria-live="polite"><h3>Your estimate</h3><Calculation lines={estimate.lines} />
+  </section>{inquiryLayout?null:<div className="sp-fields"><Field label="Event date" required><input required={inquiryLayout} type="date" value={selection.eventDate} onChange={e => set({ eventDate: e.target.value })} /></Field><Field label="Event location (optional)"><div className="sp-location-search"><PlaceAutocompleteInput placeholder="Search address or venue" defaultValue={selection.location} fieldNames={{input:"pricingEventLocation"}} omitHiddenFields requireSelection onPlaceSelect={place=>set({location:place.formattedAddress})}/></div></Field></div>}{detailsFields}{contactFields}<section className="sp-card" aria-live="polite"><h3>Your estimate</h3><Calculation lines={estimate.lines} />
     {sale.promotion && estimate.errors.length === 0 && <div className="sp-sale"><span>Regular subtotal <s>{usd(estimate.subtotal)}</s></span><strong>{sale.promotion.name}: −{usd(sale.discount)}</strong><small>Book by {new Date(sale.promotion.endsAt).toLocaleString("en-US", { timeZone: sale.promotion.timezone })} ({sale.promotion.timezone}). {sale.promotion.eventFrom || sale.promotion.eventTo ? `Event dates: ${sale.promotion.eventFrom || "any"} – ${sale.promotion.eventTo || "any"}.` : ""} Applies to eligible selections only. Promotions do not stack.</small></div>}
     <div className="sp-total"><span>Estimated service subtotal</span><strong>{estimate.errors.length ? "Complete selections" : estimate.pending && estimate.subtotal === 0 ? "Awaiting quote" : usd(estimate.subtotal - sale.discount)}</strong></div>
     {estimate.pending && <p className="sp-pending">Additional pricing pending</p>}

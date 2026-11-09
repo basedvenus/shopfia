@@ -83,3 +83,18 @@
 .sp-step-nav{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;}
 .sp-step-nav button{flex-shrink:0;font-size:13px;}
 .sp-live-form [data-step-heading]{outline:none;}
+
+.sp-workspace .sp-location-search input{padding-left:2.5rem;padding-right:2.25rem;}
+
+.sp-inquiry-card{border:1px solid #eadbd7;border-radius:1.75rem;background:rgba(255,255,255,.95);padding:24px;}
+.sp-inquiry-card .sp-stack>.sp-card{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;}
+.sp-inquiry-card .sp-stack>.sp-card+section{padding-top:20px;border-top:1px solid #eadbd7;}
+.sp-inquiry-card .sp-primary{width:100%;}
+
+.sp-inquiry-card h3{font-family:var(--font-shopfia-sans),"Instrument Sans",sans-serif;font-size:18px;font-weight:500;line-height:1.5;color:var(--sp-heading);margin:0;}
+
+.sp-inquiry-card .sp-extra{border-bottom:0;}
+
+/* Inquiry controls retain the shared platform typography inside custom templates. */
+.template-surface .sp-inquiry-card h2{font-family:var(--font-shopfia-serif),"Cormorant Garamond",serif!important;font-size:30px!important;font-weight:500!important;font-style:normal!important;text-transform:none!important;display:flex!important;line-height:1.2!important;}
+.template-surface .sp-inquiry-card h3{font-family:var(--font-shopfia-sans),"Instrument Sans",sans-serif!important;font-size:18px!important;font-weight:500!important;font-style:normal!important;text-transform:none!important;line-height:1.5!important;color:var(--sp-heading)!important;}
