@@ -1,4 +1,5 @@
 "use client";
+import {mergeCurrentStorefrontServices as mergeDraftServices,applyStorefrontServiceVisibility as applyDraftServiceDisplay} from "@/lib/storefront-service-state";
 import {BrandLogoColors} from "./brand-logo-colors";
 import {StorefrontAreaEditor} from "./storefront-area-editor";
 import {ServicePhotos} from "@/components/vendor/service-photos";
@@ -650,7 +651,7 @@ export function StorefrontCustomizer({
         setTemplateLibraryOpen(false);markDirty(false);
         requestAnimationFrame(()=>templatePreviewRef.current?.scrollIntoView({block:"start",behavior:"auto"}));
       }} /> : null}
-      {serviceBuilderUrl && <ServiceBuilderPopup businessId={business.sourceId??business.id} previewOnly={previewOnly} onClose={()=>setServiceBuilderUrl(null)} onSaved={services=>{setForm(current=>({...current,services:[...current.services,...services.filter(service=>!current.services.some(existing=>existing.id===service.id))]}));markDirty();}}/>}
+      {serviceBuilderUrl && <ServiceBuilderPopup businessId={business.sourceId??business.id} previewOnly={previewOnly} onClose={()=>setServiceBuilderUrl(null)} onSaved={services=>{setForm(current=>({...current,services:mergeDraftServices(current.services,services)}));markDirty();}}/>}
       {organizerOpen && <SectionOrganizer order={form.sectionOrder.filter(id=>id!=="reviews"&&(id!=="effects"||heroDepth!=="flat"))} hiddenSections={form.hiddenSections} onToggle={toggleSection} layout={form.sectionLayout} label={sectionLabel} onClose={()=>setOrganizerOpen(false)} onRename={(id,value)=>update("sectionLabels",{...form.sectionLabels,[id]:value.trim() || undefined})} onChange={(order,layout)=>{setForm(current=>({...current,sectionOrder:[...order,...current.sectionOrder.filter(id=>!order.includes(id))],sectionLayout:layout}));markDirty();}}/>}
       {modernEditor && studioOpen && <Storefront3DStudio modelsEndpoint={previewOnly ? undefined : mediaUploadEndpoint.replace(/\/media(?:\?.*)?$/, "/models")} uploadEndpoint={previewOnly ? undefined : mediaUploadEndpoint} initialModel={effectModel} initialImage={effectImage} initialPresentation={effectPresentation} initialWord={effectWord} invitation={studioInvitation} name={form.name} logo={form.logoUrl} edgeColor={heroEdge} initialMount={heroMount} initialDepth={heroDepth} onClose={()=>setStudioOpen(false)} onApply={(depth,mount,image,presentation,word,model)=>{setEffectModel(model);setEffectImage(image);setEffectPresentation(presentation);setEffectWord(word);studioInvited.current=true;setHeroDepth(depth);if(depth!=="flat")setForm(current=>({...current,hiddenSections:current.hiddenSections.filter(id=>id!=="effects"),sectionOrder:current.sectionOrder.includes("effects")?current.sectionOrder:[...current.sectionOrder,"effects"]}));setHeroMount(mount);setEffectNotice(depth==='flat'?'3D effects turned off':`3D Effect applied to this preview`);markDirty(false);if(depth!=='flat')replayEffect();}}/>}
       <input type="hidden" name="businessId" value={business.id} />
@@ -2483,27 +2484,6 @@ function orderServices(services: EditorService[], order: string[]) {
     const bIndex = order.indexOf(b.id);
     return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
   });
-}
-
-function mergeDraftServices(draftServices: EditorService[], liveServices: EditorService[]) {
-  const liveById = new Map(liveServices.map((service) => [service.id, service]));
-  return draftServices.map((service) => {
-    const liveService = liveById.get(service.id);
-    return {
-      ...liveService,
-      ...service,
-      photos: service.photos?.length ? service.photos : liveService?.photos ?? []
-    };
-  });
-}
-
-function applyDraftServiceDisplay(services: EditorService[], hiddenOfferingIds: string[] | undefined) {
-  const hidden = new Set(hiddenOfferingIds ?? []);
-  return services.map((service) => ({
-    ...service,
-    active: !hidden.has(service.id),
-    featured: hidden.has(service.id) ? false : service.featured
-  }));
 }
 
 function dollarsToCents(value: string) {
