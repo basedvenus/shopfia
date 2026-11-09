@@ -7,6 +7,7 @@ import { DEFAULT_IMAGE_CROP, MAX_IMAGE_ZOOM, MIN_IMAGE_ZOOM, normalizeImageCrop,
 
 type ImageCropEditorProps = {
   aspectLabel?: string;
+  errorMessage?: string;
   allowAdjustments?: boolean;
   crop?: ImageCrop | null;
   imageUrl: string;
@@ -21,6 +22,7 @@ type ImageCropEditorProps = {
 
 export function ImageCropEditor({
   aspectLabel = "Preview crop",
+  errorMessage,
   allowAdjustments = false,
   crop,
   imageUrl,
@@ -208,6 +210,7 @@ export function ImageCropEditor({
           ) : null}
         </div>
 
+        {errorMessage ? <p role="alert" className="px-5 pb-3 text-sm text-destructive">{errorMessage}</p> : null}
         <div className="flex flex-wrap justify-end gap-2 border-t border-border/70 px-5 py-4">
           <Button type="button" variant="secondary" onClick={() => setDraft({ ...DEFAULT_IMAGE_CROP, zoom: Math.max(minZoom, DEFAULT_IMAGE_CROP.zoom) })}>
             Reset

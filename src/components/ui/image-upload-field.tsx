@@ -1,5 +1,6 @@
 "use client";
 
+import { getProfilePhotoType, MAX_PROFILE_PHOTO_SOURCE_BYTES } from "@/lib/profile-photo-file";
 import {cropImageRect} from "@/lib/image-crop";
 
 import { CheckCircle2, Pencil } from "lucide-react";
@@ -25,6 +26,7 @@ type UploadResult = {
 
 type ImageUploadFieldProps = {
   editMenu?: boolean;
+  avatarAppearance?: { initials: string; displayName: string };
   name: string;
   label: string;
   changeLabel?: string;
@@ -46,6 +48,7 @@ type ImageUploadFieldProps = {
 
 export function ImageUploadField({
   editMenu = false,
+  avatarAppearance,
   changeLabel = "Change image",
   cropName,
   defaultCrop,
@@ -65,6 +68,7 @@ export function ImageUploadField({
   valueCrop
 }: ImageUploadFieldProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
   const [uploadInteracted, setUploadInteracted] = useState(false);
   const uploadInput = useRef<HTMLInputElement>(null);
   const menuContainer = useRef<HTMLDivElement>(null);
@@ -130,24 +134,38 @@ export function ImageUploadField({
   }
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+    let file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
     setMessage(null);
 
-    if (!SUPPORTED_IMAGE_TYPES.includes(file.type)) {
+    const profileType = isRound ? getProfilePhotoType(file) : null;
+    if (isRound ? !profileType : !SUPPORTED_IMAGE_TYPES.includes(file.type)) {
       setMessage(`Choose a supported image file: ${SUPPORTED_IMAGE_FORMAT_LABEL}.`);
       return;
     }
 
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setMessage(`Choose an image smaller than ${formatBytes(MAX_IMAGE_SIZE_BYTES)}.`);
+    const sourceLimit = isRound ? MAX_PROFILE_PHOTO_SOURCE_BYTES : MAX_IMAGE_SIZE_BYTES;
+    if (file.size > sourceLimit) {
+      setMessage(`Choose an image smaller than ${formatBytes(sourceLimit)}.`);
       return;
     }
 
+    if (isRound) {
+      setIsPreparing(true);
+      try {
+        // Convert phone formats and resize before opening the crop dialog.
+        // The server continues to receive a small, signature-verified JPEG.
+        const typedFile = file.type === profileType ? file : new File([file], file.name, {type:profileType!});
+        file = await resizeImageUploadFile(typedFile, {maxSize:1200, outputType:"image/jpeg"});
+      } catch {
+        setMessage("This photo could not be opened on this device. Try a JPG, PNG, or WebP photo instead.");
+        return;
+      } finally {
+        setIsPreparing(false);
+      }
+    }
     const localPreviewUrl = URL.createObjectURL(file);
-    setLiveCrop(DEFAULT_IMAGE_CROP);
-    onCropChange?.(DEFAULT_IMAGE_CROP);
     setPendingFile(file);
     setPendingPreview(localPreviewUrl);
     setFailedUpload(null);
@@ -156,15 +174,28 @@ export function ImageUploadField({
 
   async function saveEditedImage(nextCrop: ImageCrop) {
     if (!pendingFile || !pendingPreview) {
-      updateCrop(nextCrop);
+      if (isRound && uploadEndpoint === "/api/uploads/avatar") {
+        try {
+          const response = await fetch(uploadEndpoint, {method:"PATCH", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify({image:value,crop:nextCrop})});
+          const result = await response.json() as UploadResult;
+          if (!response.ok || !result.profile) throw new Error(result.error ?? "Could not save the crop.");
+          updateCrop(result.profile.imageCrop as ImageCrop);
+          onUploadComplete?.(result);
+          setMessage("Profile crop saved.", "success");
+        } catch (error) {
+          setMessage(error instanceof Error ? error.message : "Could not save the crop. Please try again.");
+          return;
+        }
+      } else {
+        updateCrop(nextCrop);
+        setMessage("Photo adjusted. Save your changes to keep this crop.", "success");
+      }
       setEditorOpen(false);
       setPendingPreview(null);
-      setMessage("Photo adjusted. Click Save profile to keep your changes.", "success");
       return;
     }
 
     setMessage(null);
-    updateCrop(nextCrop);
     setUploadPreviewValue(pendingPreview);
 
     const saved = uploadEndpoint
@@ -172,6 +203,7 @@ export function ImageUploadField({
       : await storeOriginalImagePreview(pendingFile);
 
     if (saved) {
+      if (!uploadEndpoint) updateCrop(nextCrop);
       URL.revokeObjectURL(pendingPreview);
       setPendingFile(null);
       setPendingPreview(null);
@@ -200,7 +232,7 @@ export function ImageUploadField({
           });
       const uploadData = new FormData();
       uploadData.set("file", uploadedFile);
-      uploadData.set("crop", JSON.stringify(shouldPreserveCrop ? nextCrop : DEFAULT_IMAGE_CROP));
+      uploadData.set("crop", JSON.stringify(shouldPreserveCrop ? isRound ? {...nextCrop,aspectRatio:1,brightness:1,saturation:1} : nextCrop : DEFAULT_IMAGE_CROP));
       const response = await fetch(uploadEndpoint!, {
         credentials: "same-origin",
         method: "POST",
@@ -213,7 +245,7 @@ export function ImageUploadField({
       }
 
       updateValue(result.url);
-      updateCrop(shouldPreserveCrop ? nextCrop : DEFAULT_IMAGE_CROP);
+      updateCrop(result.profile?.imageCrop as ImageCrop ?? (shouldPreserveCrop ? nextCrop : DEFAULT_IMAGE_CROP));
       onUploadComplete?.(result);
       setMessage(
         result.persisted
@@ -275,33 +307,34 @@ export function ImageUploadField({
 
   return (
     <div className="grid gap-2">
-      <label className="text-sm font-medium">{label}</label>
-      <div ref={menuContainer} className={editMenu ? "relative w-fit" : "relative"}>
+      <span className={avatarAppearance ? "sr-only" : "text-sm font-medium"}>{label}</span>
+      <div ref={menuContainer} className={editMenu ? "group/avatar relative w-fit" : "relative"}>
       <label
         className={`group relative grid cursor-pointer place-items-center overflow-hidden border border-dashed border-border bg-white/80 text-center text-sm text-muted-foreground transition hover:border-primary ${
-          isRound ? "h-32 w-32 rounded-full" : "min-h-[150px] rounded-[1.5rem]"
+          avatarAppearance ? "h-24 w-24 rounded-full border-4 border-solid border-white bg-accent text-2xl font-semibold text-foreground shadow-soft focus-within:ring-2 focus-within:ring-primary" : isRound ? "h-32 w-32 rounded-full" : "min-h-[150px] rounded-[1.5rem]"
         }`}
       >
         {previewValue && failedPreview !== previewValue ? (
           <CroppedImage
             src={previewValue}
-            alt=""
+            alt={avatarAppearance?.displayName ?? ""}
             crop={crop}
             className="absolute inset-0 h-full w-full object-cover object-center"
             onError={() => setFailedPreview(previewValue)}
           />
         ) : null}
+        {avatarAppearance && !previewValue ? <span>{avatarAppearance.initials}</span> : null}
         {!editMenu ? <span className="relative z-10 rounded-full bg-white/90 px-3 py-1.5 shadow-sm">
           {previewValue ? changeLabel : uploadLabel}
         </span> : null}
-        <input onClick={() => setUploadInteracted(true)} ref={uploadInput} type="file" accept={SUPPORTED_IMAGE_TYPES.join(",")} className="sr-only" onChange={handleFile} />
+        <input disabled={isPreparing} aria-label={avatarAppearance ? "Change profile picture" : label} onClick={() => setUploadInteracted(true)} ref={uploadInput} type="file" accept={isRound ? "image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" : SUPPORTED_IMAGE_TYPES.join(",")} className={isRound ? "absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" : "sr-only"} onChange={handleFile} />
       </label>
       {previewValue && onCropChange && !editMenu ? <button type="button" className="mt-2 rounded-full border px-3 py-2 text-sm" onClick={()=>{setPendingFile(null);setPendingPreview(previewValue);setEditorOpen(true);}}>Adjust image</button> : null}
-      {editMenu ? <button ref={menuTrigger} type="button" aria-expanded={menuOpen} aria-label={`Adjust ${label.toLowerCase()}`} title="Adjust image" onClick={() => setMenuOpen((open) => !open)} className="absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full border bg-white shadow-sm"><Pencil className="h-4 w-4" /></button> : null}
+      {editMenu ? <button ref={menuTrigger} disabled={isPreparing} type="button" aria-expanded={avatarAppearance ? undefined : menuOpen} aria-label={avatarAppearance ? "Change profile picture" : `Adjust ${label.toLowerCase()}`} title={avatarAppearance ? "Change profile picture" : "Adjust image"} onClick={() => { if (avatarAppearance) {setUploadInteracted(true); uploadInput.current?.click();} else setMenuOpen((open) => !open); }} className={`absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full border bg-white shadow-sm ${avatarAppearance ? "opacity-0 transition-opacity group-hover/avatar:opacity-100 group-focus-within/avatar:opacity-100 [@media(hover:none)]:opacity-100" : ""}`}><Pencil className="h-4 w-4" /></button> : null}
       {editMenu && menuOpen ? <div className="absolute left-0 top-full z-20 mt-2 min-w-48 rounded-2xl border bg-white p-2 shadow-lg">
-        {previewValue ? <button type="button" className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted" onClick={() => { setPendingFile(null); setPendingPreview(previewValue); setEditorOpen(true); setMenuOpen(false); }}>Adjust picture</button> : null}
-        <button type="button" className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted" onClick={() => { setMenuOpen(false); uploadInput.current?.click(); }}>Change picture</button>
-        <p className="px-3 py-2 text-xs text-muted-foreground">{SUPPORTED_IMAGE_FORMAT_LABEL}. Max size: {formatBytes(MAX_IMAGE_SIZE_BYTES)}.</p>
+        {previewValue ? <button type="button" className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted" onClick={() => { setPendingFile(null); setPendingPreview(previewValue); setEditorOpen(true); setMenuOpen(false); }}>{isRound ? "Crop picture" : "Adjust picture"}</button> : null}
+        <button type="button" className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted" onClick={() => { uploadInput.current?.click(); setMenuOpen(false); }}>Change picture</button>
+        <p className="px-3 py-2 text-xs text-muted-foreground">{isRound ? "JPG, PNG, WebP, HEIC, or HEIF" : SUPPORTED_IMAGE_FORMAT_LABEL}. Max size: {formatBytes(isRound ? MAX_PROFILE_PHOTO_SOURCE_BYTES : MAX_IMAGE_SIZE_BYTES)}.</p>
       </div> : null}
       </div>
       <input type="hidden" name={name} value={value} />
@@ -311,8 +344,9 @@ export function ImageUploadField({
         <p className="text-xs text-muted-foreground">Photo preview is unavailable. Your saved photo has not been changed.</p>
       ) : null}
       {((!editMenu && (!hideFormatDetailsUntilInteraction || uploadInteracted)) || editorOpen || pendingFile) ? <p className="text-xs text-muted-foreground">
-        Supported formats: {SUPPORTED_IMAGE_FORMAT_LABEL}. Max size: {formatBytes(MAX_IMAGE_SIZE_BYTES)}.
+        Supported formats: {isRound ? "JPG, PNG, WebP, HEIC, or HEIF" : SUPPORTED_IMAGE_FORMAT_LABEL}. Max size: {formatBytes(isRound ? MAX_PROFILE_PHOTO_SOURCE_BYTES : MAX_IMAGE_SIZE_BYTES)}.
       </p> : null}
+      {isPreparing ? <p role="status" className="text-xs text-muted-foreground">Preparing your photo…</p> : null}
       {message ? <p role={messageKind === "success" ? "status" : "alert"} className={`flex items-center gap-1.5 text-xs ${messageKind === "success" ? "text-green-700" : "text-destructive"}`}>
         {messageKind === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" /> : null}{message}
       </p> : null}
@@ -328,11 +362,12 @@ export function ImageUploadField({
       ) : null}
       {editorOpen && pendingPreview ? (
         <ImageCropEditor
-          allowAdjustments={editMenu}
+          allowAdjustments={editMenu && !isRound}
           preserveFrame={Boolean(onCropChange)}
           allowFrameResize={Boolean(onCropChange)&&!isRound}
           aspectLabel={isRound ? "Profile crop" : uploadMode === "preserve" ? "Image preview" : "Image crop"}
-          crop={crop}
+          crop={pendingFile ? DEFAULT_IMAGE_CROP : crop}
+          errorMessage={messageKind === "error" ? message ?? undefined : undefined}
           imageUrl={pendingPreview}
           onCancel={cancelEditor}
           onSave={saveEditedImage}
@@ -359,10 +394,9 @@ function loadImage(src: string) {
 
 async function resizeImageFile(file: File, maxSize: number) {
   const objectUrl = URL.createObjectURL(file);
-  const sourceImage = await loadImage(objectUrl);
-  const canvas = document.createElement("canvas");
-
   try {
+    const sourceImage = await loadImage(objectUrl);
+    const canvas = document.createElement("canvas");
     const scale = Math.min(
       1,
       maxSize / Math.max(sourceImage.naturalWidth, sourceImage.naturalHeight)
@@ -388,10 +422,9 @@ async function resizeImageUploadFile(
   options: { maxSize: number; outputType?: string }
 ) {
   const objectUrl = URL.createObjectURL(file);
-  const sourceImage = await loadImage(objectUrl);
-  const canvas = document.createElement("canvas");
-
   try {
+    const sourceImage = await loadImage(objectUrl);
+    const canvas = document.createElement("canvas");
     const scale = Math.min(1, options.maxSize / Math.max(sourceImage.naturalWidth, sourceImage.naturalHeight));
     canvas.width = Math.max(1, Math.round(sourceImage.naturalWidth * scale));
     canvas.height = Math.max(1, Math.round(sourceImage.naturalHeight * scale));
@@ -417,10 +450,9 @@ async function cropImageFile(
   options: { aspectRatio: number; maxSize: number; outputType?: string }
 ) {
   const objectUrl = URL.createObjectURL(file);
-  const sourceImage = await loadImage(objectUrl);
-  const canvas = document.createElement("canvas");
-
   try {
+    const sourceImage = await loadImage(objectUrl);
+    const canvas = document.createElement("canvas");
     const normalized = normalizeImageCrop(crop);
     const outputWidth = Math.max(1, Math.min(options.maxSize, sourceImage.naturalWidth));
     const outputHeight = Math.max(1, Math.round(outputWidth / options.aspectRatio));

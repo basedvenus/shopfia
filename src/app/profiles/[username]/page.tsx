@@ -1,3 +1,4 @@
+import { EditableProfileAvatar } from "@/components/account/editable-profile-avatar";
 import { VendorSocialFeeds } from "@/components/vendor/vendor-social-feeds";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -171,6 +172,9 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         <div className="bg-[linear-gradient(135deg,rgba(234,184,179,0.34),rgba(255,255,255,0.86),rgba(253,230,208,0.45))] p-5 md:p-7">
           <div className="flex flex-wrap items-center justify-between gap-5">
             <div className="flex flex-wrap items-center gap-4">
+              {currentUserId === profile.id ? (
+                <EditableProfileAvatar userId={profile.id} image={profileImage} crop={normalizeImageCrop(profile.imageCrop)} initials={initials} displayName={profile.name ?? profile.username ?? "Profile"} />
+              ) : (
               <div className="relative grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white bg-accent text-2xl font-semibold shadow-soft">
                 {profileImage ? (
                   <CroppedImage
@@ -184,6 +188,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                   initials
                 )}
               </div>
+              )}
+
               <div>
                 <p className="text-sm text-muted-foreground">Party host profile</p>
                 <div className="flex flex-wrap items-center gap-2">

@@ -117,3 +117,36 @@ export async function POST(request: Request) {
     persisted: result.persisted
   });
 }
+
+// Cropping an existing photo must persist immediately, just like a new upload.
+export async function PATCH(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({error:"Sign in to change your photo."}, {status:401});
+  if (!assertSameOrigin(request)) return NextResponse.json({error:"Invalid origin."}, {status:403});
+  const limited = enforceRequestRateLimit(request, [{key:`crop-avatar:user:${session.user.id}`,limit:20,intervalMs:60_000}]);
+  if (limited) return limited;
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body.image !== "string" || !body.crop ||
+      ![body.crop.x,body.crop.y,body.crop.zoom].every(value => typeof value === "number" && Number.isFinite(value)) ||
+      body.crop.x < 0 || body.crop.x > 100 || body.crop.y < 0 || body.crop.y > 100 || body.crop.zoom < 1 || body.crop.zoom > 3) {
+    return NextResponse.json({error:"Choose a valid profile crop."},{status:400});
+  }
+  const crop = {x:body.crop.x,y:body.crop.y,zoom:body.crop.zoom,brightness:1,saturation:1,aspectRatio:1};
+  try {
+    const saved = await db.$transaction(async tx => {
+      const existing = await tx.user.findUnique({where:{id:session.user.id},select:userProfileSelect});
+      if (!existing || serializeUserProfile(existing).image !== body.image) return null;
+      const result = await tx.user.updateMany({where:{id:session.user.id,image:existing.image},data:{imageCrop:crop}});
+      if (!result.count) return null;
+      return tx.user.findUniqueOrThrow({where:{id:session.user.id},select:userProfileSelect});
+    });
+    if (!saved) return NextResponse.json({error:"Your photo changed in another window. Reload and try again."},{status:409});
+    const profile = serializeUserProfile(saved);
+    revalidatePath("/", "layout");
+    revalidatePath("/account");
+    if (profile.username) revalidatePath(`/profiles/${profile.username}`);
+    return NextResponse.json({url:profile.image,profile,persisted:true});
+  } catch {
+    return NextResponse.json({error:"The crop could not be saved. Please try again."},{status:500});
+  }
+}
