@@ -1,5 +1,5 @@
 import {describe,it,expect} from "vitest";
-import {serviceDraftSchema,serviceDraftToForm} from "@/lib/service-ai-draft";
+import {serviceDraftSchema,serviceDraftToForm,capitalizeDraftText} from "@/lib/service-ai-draft";
 import {servicePricingSchema} from "@/lib/service-pricing";
 const draft={name:"Pole rental",description:"Portable pole rental for your party.",inclusions:"Portable pole",pricingType:"package" as const,rateCents:null,minimum:null,itemLabel:"",packages:[{name:"Four-hour rental",priceCents:10000,inclusions:"Portable pole",coverage:"4 hours"},{name:"Daily rental",priceCents:null,inclusions:"Portable pole",coverage:"1 day"}],addons:[],questions:["What is the daily price?"]};
 describe("AI service drafts",()=>{
@@ -8,3 +8,7 @@ describe("AI service drafts",()=>{
  it("creates independent identifiers each time",()=>{const a=serviceDraftToForm(draft),b=serviceDraftToForm(draft);expect(a.id).not.toBe(b.id);if(a.base.type==="package"&&b.base.type==="package")expect(a.base.packages[0].id).not.toBe(b.base.packages[0].id);});
  it("rejects negative and oversized output",()=>{expect(serviceDraftSchema.safeParse({...draft,rateCents:-100}).success).toBe(false);expect(serviceDraftSchema.safeParse({...draft,description:"x".repeat(2001)}).success).toBe(false);});
 });
+
+describe("draft capitalization",()=>{it("capitalizes labels while preserving brand casing",()=>{expect(capitalizeDraftText("daily pole rental")).toBe("Daily pole rental");expect(capitalizeDraftText("iPhone photo booth")).toBe("iPhone photo booth");expect(capitalizeDraftText("Moon Matcha cart")).toBe("Moon Matcha cart");expect(capitalizeDraftText("24-hour rental")).toBe("24-hour rental");});});
+
+describe("every generated package and add-on",()=>{it("capitalizes all labels, not just the service title",()=>{const form=serviceDraftToForm({...draft,name:"pole rental",packages:["daily pole rental","weekend pole rental","weekly pole rental"].map(name=>({name,priceCents:null,inclusions:"portable pole",coverage:""})),addons:[{name:"delivery and pickup",description:"quoted by location",priceCents:null},{name:"extra attendant",description:"additional support",priceCents:10000}]});expect(form.name).toBe("Pole rental");if(form.base.type!=="package")throw Error();expect(form.base.packages.map(pkg=>pkg.name)).toEqual(["Daily pole rental","Weekend pole rental","Weekly pole rental"]);expect(form.extras.map(extra=>extra.name)).toEqual(["Delivery and pickup","Extra attendant"]);});});
