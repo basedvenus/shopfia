@@ -1,0 +1,8 @@
+"use client";
+import {useRef,useState} from "react";
+import * as Select from "@radix-ui/react-select";
+import {Check,ChevronDown} from "lucide-react";
+export function CategoryTemplateSelect({value,options,onChange}:{value:string;options:{id:string;name:string}[];onChange:(id:string)=>void}){
+ const trigger=useRef<HTMLButtonElement>(null);const [container,setContainer]=useState<HTMLElement|undefined>();
+ return <Select.Root value={value} onValueChange={onChange} onOpenChange={open=>{if(open)setContainer(trigger.current?.closest("dialog")??undefined);}}><Select.Trigger ref={trigger} aria-label="Service category template" className="flex min-h-11 w-full items-center justify-between rounded-full border bg-white px-4 py-2 text-left text-sm"><Select.Value placeholder="Choose a category or start from scratch"/><ChevronDown className="h-4 w-4"/></Select.Trigger><Select.Portal container={container}><Select.Content position="popper" sideOffset={5} className="z-[150] max-h-72 w-[var(--radix-select-trigger-width)] overflow-auto rounded-2xl border bg-white p-2 text-sm shadow-lg"><Select.Viewport>{[{id:"blank",name:"Start from scratch"},...options.slice().sort((a,b)=>a.name.localeCompare(b.name))].map(item=><Select.Item key={item.id} value={item.id} className="relative cursor-pointer rounded-xl py-2 pl-8 pr-3 outline-none data-[highlighted]:bg-stone-100 data-[state=checked]:bg-stone-100"><Select.ItemIndicator className="absolute left-2"><Check className="h-4 w-4"/></Select.ItemIndicator><Select.ItemText>{item.name}</Select.ItemText></Select.Item>)}</Select.Viewport></Select.Content></Select.Portal></Select.Root>;
+}
