@@ -51,11 +51,11 @@ describe("party editor organization", () => {
     let view!: ReactTestRenderer;
     act(() => { view = create(createElement(PartyEventForm, { currentUserId: "owner", initialParty: { ...party, photos: [photo, { ...photo, id: "second" }] }, users: [], vendors: [] })); });
     act(() => view.root.findByProps({ "aria-label": "Select photo 2" }).props.onClick());
-    act(() => view.root.findByProps({ "aria-label": "Edit selected photo" }).props.onClick());
+    act(() => view.root.findByProps({ "aria-label": "Crop and edit photo" }).props.onClick());
     expect(view.root.findByType(PartyPhotoEditor).props.imageUrl).toBe(photo.url);
     const crop = { x: 40, y: 60, zoom: 1.5 };
     act(() => view.root.findByType(PartyPhotoEditor).props.onSave(crop));
-    act(() => view.root.findByProps({ "aria-label": "Edit selected photo" }).props.onClick());
+    act(() => view.root.findByProps({ "aria-label": "Crop and edit photo" }).props.onClick());
     expect(view.root.findByType(PartyPhotoEditor).props.crop).toEqual(crop);
     act(() => view.root.findByType(PartyPhotoEditor).props.onCancel());
     act(() => view.root.findAllByType("button").find((node) => node.props["aria-label"] === "Delete photo")!.props.onClick());
@@ -143,6 +143,26 @@ describe("party editor organization", () => {
     expect(data.get("application/x-shopfia-photo")).toBe("second");
     expect(view.root.findAllByType("button").some(node => node.children.includes("Use as cover") || node.children.includes("Upload another image"))).toBe(false);
     act(() => view.unmount());
+  });
+
+  it("shows uploaded photos without opening the editor until Edit is selected", async () => {
+    const fetcher = vi.fn().mockResolvedValue({ok: true, text: async () => JSON.stringify({photo: {id: "uploaded", url: "https://example.com/uploaded.jpg"}})});
+    vi.stubGlobal("fetch", fetcher);
+    let view!: ReactTestRenderer;
+    act(() => { view = create(createElement(PartyEventForm, {currentUserId: "owner", users: [], vendors: []})); });
+    const fileInput = view.root.findAllByType("input").find(node => node.props.type === "file")!;
+    await act(async () => {
+      fileInput.props.onChange({target: {files: [new File(["photo"], "party.jpg", {type: "image/jpeg"})]}});
+    });
+    expect(fetcher).toHaveBeenCalledWith("/api/uploads/party-photo", expect.objectContaining({method: "POST"}));
+    expect(view.root.findByProps({"aria-label": "Select photo 1"}).props["aria-pressed"]).toBe(true);
+    expect(view.root.findAllByType(PartyPhotoEditor)).toHaveLength(0);
+    act(() => view.root.findByProps({"aria-label": "Selected photo preview"}).props.onClick());
+    expect(view.root.findAllByType(PartyPhotoEditor)).toHaveLength(0);
+    act(() => view.root.findByProps({"aria-label": "Crop and edit photo"}).props.onClick());
+    expect(view.root.findByType(PartyPhotoEditor).props.imageUrl).toBe("https://example.com/uploaded.jpg");
+    act(() => view.unmount());
+    vi.unstubAllGlobals();
   });
 
   it("starts a new party with photos and keeps optional links collapsed", () => {

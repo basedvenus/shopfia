@@ -160,7 +160,7 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
       setSelectedPhotoId(uploaded[0]?.id ?? null);
       setStep(1);
       setEditingCover(false);
-      setEditingCropPhoto(uploaded[0] ?? null);
+      setEditingCropPhoto(null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not upload one of those photos.");
     } finally {
@@ -336,7 +336,7 @@ export function PartyEventForm({ currentUserId, initialParty, users, vendors }: 
           <div hidden={step === 3} className="space-y-4">
           <input ref={fileInputRef} type="file" accept="image/*" multiple disabled={isUploading} className="sr-only" onChange={(event) => { if (event.target.files) void uploadFiles(event.target.files); }} />
           <div className="overflow-hidden rounded-3xl border bg-muted" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); if (!isUploading) void uploadFiles(event.dataTransfer.files); }}>
-            <button type="button" aria-label={selectedPhoto ? (step === 4 ? "Tag vendors in selected photo" : "Edit selected photo") : "Upload your party photos"} onClick={() => { if (!selectedPhoto) fileInputRef.current?.click(); else if (step === 4) setTaggingOpen(true); else { setEditingCover(false); setEditingCropPhoto(selectedPhoto); } }} className="relative block aspect-[4/3] max-h-[60dvh] w-full">
+            <button type="button" aria-label={selectedPhoto ? (step === 4 ? "Tag vendors in selected photo" : "Selected photo preview") : "Upload your party photos"} onClick={() => { if (!selectedPhoto) fileInputRef.current?.click(); else if (step === 4) setTaggingOpen(true); }} className="relative block aspect-[4/3] max-h-[60dvh] w-full">
               {selectedPhoto ? <CroppedImage src={selectedPhoto.url} crop={selectedPhoto.crop} frameFit="contain" alt="Selected party photo" className="h-full w-full object-contain" /> : <span className="grid h-full place-content-center gap-3 p-6 text-center"><Upload className="mx-auto h-10 w-10 text-primary" /><span className="font-semibold">Choose your party photos</span><span className="text-sm text-muted-foreground">Select up to 16 photos, or drag them here.</span></span>}
               {selectedPhoto && step === 4 ? <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/95 px-4 py-2 text-xs font-medium shadow-sm">Tap photo to tag vendors</span> : null}
             </button>

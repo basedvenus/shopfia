@@ -321,7 +321,7 @@ export default async function EventPage({
               <div className="flex flex-wrap items-center gap-3">
                 {showManagementLinks && event ? <Button asChild size="sm" variant="secondary" className="bg-white text-foreground shadow-sm"><Link href={`/events/${event.slug}?edit=1`}>Edit party</Link></Button> : null}
                 {showManagementLinks && event ? <DeletePartyButton eventId={event.id} title={title} /> : null}
-                {session?.user?.id && host && session.user.id !== host.id ? <form action={toggleFollow}><input type="hidden" name="followingId" value={host.id} /><Button type="submit" size="sm" variant="secondary">{isFollowingHost ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}{isFollowingHost ? "Following" : "Follow"}</Button></form> : null}
+                {session?.user?.id && host && session.user.id !== host.id ? <form action={toggleFollow}><input type="hidden" name="followingId" value={host.id} /><Button type="submit" size="sm" variant="secondary" className="text-foreground">{isFollowingHost ? <Heart className="h-4 w-4 fill-current" /> : <UserPlus className="h-4 w-4" />}{isFollowingHost ? "Following" : "Follow"}</Button></form> : null}
                 {canContribute ? <Button asChild size="sm" variant="secondary"><a href="#party-contributions">Add photos, videos or playlists</a></Button> : null}
               </div>
             ) : null}
