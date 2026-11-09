@@ -17,12 +17,14 @@ export function ProfileImage({ image, crop, initials, alt = "" }: {
     return <span aria-label={safeImage ? "Profile photo unavailable" : undefined}>{initials}</span>;
   }
   return (
+    <span className="relative block h-full w-full min-h-0 min-w-0 overflow-hidden">
     <CroppedImage
       src={safeImage}
       alt={alt}
       crop={crop}
-      className="block h-full w-full object-cover object-center"
+      className="absolute inset-0 h-full w-full object-cover object-center"
       onError={() => setFailedImage(safeImage)}
     />
+    </span>
   );
 }

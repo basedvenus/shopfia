@@ -26,6 +26,7 @@ type UploadResult = {
 
 type ImageUploadFieldProps = {
   editMenu?: boolean;
+  hideLabel?: boolean;
   avatarAppearance?: { initials: string; displayName: string };
   name: string;
   label: string;
@@ -48,6 +49,7 @@ type ImageUploadFieldProps = {
 
 export function ImageUploadField({
   editMenu = false,
+  hideLabel = false,
   avatarAppearance,
   changeLabel = "Change image",
   cropName,
@@ -307,7 +309,7 @@ export function ImageUploadField({
 
   return (
     <div className="grid gap-2">
-      <span className={avatarAppearance ? "sr-only" : "text-sm font-medium"}>{label}</span>
+      <span className={avatarAppearance || hideLabel ? "sr-only" : "text-sm font-medium"}>{label}</span>
       <div ref={menuContainer} className={editMenu ? "group/avatar relative w-fit" : "relative"}>
       <label
         className={`group relative grid cursor-pointer place-items-center overflow-hidden border border-dashed border-border bg-white/80 text-center text-sm text-muted-foreground transition hover:border-primary ${
