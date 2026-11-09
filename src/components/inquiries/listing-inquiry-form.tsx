@@ -1,5 +1,6 @@
 "use client";
 
+import {RoundedChoiceSelect} from "@/components/pricing/rounded-choice-select";
 import type { ServicePricing } from "@/lib/service-pricing";
 import { LiveServiceRequest } from "@/components/pricing/live-service-request";
 
@@ -15,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type ListingInquiryFormProps = {
+  services?: {id:string;name:string;pricing:ServicePricing;promotions:unknown}[];
   pricing?: ServicePricing | null;
   promotions?: unknown;
   defaultName?: string | null;
@@ -28,6 +30,7 @@ const softInputClassName =
 
 export function ListingInquiryPanel({
   className,
+  services,
   pricing,
   promotions,
   defaultName,
@@ -43,6 +46,9 @@ export function ListingInquiryPanel({
   eyebrow?: string;
   title?: string;
 }) {
+  const [selectedService,setSelectedService]=useState(services?.[0]?.id??"");
+  const selected=services?.find(service=>service.id===selectedService);
+  if(selected)return <div className="space-y-4"><label className="grid gap-2 text-sm font-medium">Choose a service<RoundedChoiceSelect label="Choose a service" value={selected.id} onChange={setSelectedService} options={services!.map(service=>({value:service.id,label:service.name}))}/></label><LiveServiceRequest key={selected.id} pricing={selected.pricing} promotions={selected.promotions} offeringId={selected.id} vendorId={vendorProfileId} defaultName={defaultName??""}/></div>;
   if (pricing && offeringId) return <LiveServiceRequest pricing={pricing} promotions={promotions} offeringId={offeringId} vendorId={vendorProfileId} defaultName={defaultName ?? ""} />;
   return (
     <section
@@ -127,35 +133,13 @@ export function ListingInquiryForm({
       <input type="hidden" name="listingId" value={listingId ?? ""} />
 
       <div className="grid gap-4">
-        <Field label="Your Name" required>
+        <h3 className="font-sans text-lg font-medium">Details</h3>
+        <Field label="Your name" required>
           <Input
             name="name"
             placeholder="Your name"
             defaultValue={defaultName ?? ""}
             className={softInputClassName}
-            required
-          />
-        </Field>
-
-        <Field label="Event Date" required>
-          <Input name="eventDate" type="date" className={softInputClassName} required />
-        </Field>
-
-        <Field label="Event Location" required>
-          <PlaceAutocompleteInput
-            requireSelection
-            fieldNames={{
-              input: "eventLocation",
-              formattedAddress: "locationFormattedAddress",
-              city: "locationCity",
-              state: "locationState",
-              zipCode: "locationZipCode",
-              lat: "locationLat",
-              lng: "locationLng",
-              placeId: "locationPlaceId"
-            }}
-            inputClassName={softInputClassName}
-            placeholder="City, venue, or address"
             required
           />
         </Field>
@@ -171,7 +155,7 @@ export function ListingInquiryForm({
               className={softInputClassName}
             />
           </Field>
-          <Field label="Guest Count" optional>
+          <Field label="Guest count" optional>
             <Input
               name="guestCount"
               type="number"
@@ -182,24 +166,38 @@ export function ListingInquiryForm({
           </Field>
         </div>
 
-        <Field label="Tell the vendor what you're envisioning..." required>
-          <Textarea
-            name="message"
-            placeholder="Share your vision, style, timing, must-haves, or any other details..."
-            className={`${softInputClassName} min-h-[145px] resize-y leading-6`}
-            required
+        <Field label="Event date" required>
+          <Input name="eventDate" type="date" className={softInputClassName} required />
+        </Field>
+
+        <Field label="Event location" optional>
+          <PlaceAutocompleteInput
+            requireSelection
+            fieldNames={{
+              input: "eventLocation",
+              formattedAddress: "locationFormattedAddress",
+              city: "locationCity",
+              state: "locationState",
+              zipCode: "locationZipCode",
+              lat: "locationLat",
+              lng: "locationLng",
+              placeId: "locationPlaceId"
+            }}
+            inputClassName={softInputClassName}
+            placeholder="City, venue, or address"
           />
         </Field>
 
         <div className="grid gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm font-medium text-[#4b403c]">Add inspiration</span>
+            <span className="font-sans text-lg font-medium">Add inspiration</span>
             <span className="text-xs text-muted-foreground">Optional</span>
           </div>
           <ImageUploadField
+            compact
+            hideFormatDetailsUntilInteraction
             name="inspirationUrls"
             label=""
-            helperText="Add a photo or Pinterest reference to show the feeling you want."
             uploadLabel="Add inspiration photos"
             changeLabel="Change inspiration"
           />
@@ -210,6 +208,17 @@ export function ListingInquiryForm({
             className={softInputClassName}
           />
         </div>
+
+        <h3 className="font-sans text-lg font-medium">Message for the vendor</h3>
+        <p className="text-sm text-muted-foreground">Tell the vendor what you’re envisioning.</p>
+        <Field label="Message" required>
+          <Textarea
+            name="message"
+            placeholder="Share your vision, style, timing, must-haves, or any other details..."
+            className={`${softInputClassName} min-h-[145px] resize-y leading-6`}
+            required
+          />
+        </Field>
 
         {status ? (
           <p

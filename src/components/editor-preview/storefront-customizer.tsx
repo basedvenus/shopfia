@@ -1657,7 +1657,7 @@ function StorefrontPreview({
                 alt={`${form.name} logo`}
                 frameFit="contain"
                 crop={form.logoCrop}
-                className={`${heroDepth !== undefined ? "template-brand-logo " : ""}h-20 w-20 bg-white object-contain object-center p-1 ${theme.logoRadius}`}
+                className={`${heroDepth !== undefined ? "template-brand-logo " : ""}h-20 w-20 bg-white object-contain object-center ${theme.logoRadius}`}
               />
             ) : <div className={`grid h-20 w-20 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
             {activeSection === "hero" ? (
@@ -1684,7 +1684,7 @@ function StorefrontPreview({
             ) : (
               <div className="platform-profile-meta text-sm">@{business.slug} · {form.city}{form.state ? `, ${form.state}` : ""}</div>
             )}
-            <div className="platform-profile-metrics mt-2 flex flex-wrap gap-x-3 gap-y-1"><span>{business.reviewCount ? `${business.averageRating.toFixed(1)} · ${business.reviewCount} reviews` : "No reviews yet"}</span><span>{business._count?.orders ?? 0} completed ShopFia events</span><span>{business.user?._count.followers ?? 0} followers</span></div><span className="mt-2 inline-flex rounded-full bg-[#b77980] px-3 py-1 text-xs font-semibold text-white">Follow</span>
+            <div className="platform-profile-metrics mt-2 flex flex-wrap gap-x-3 gap-y-1"><span>{business.reviewCount ? `${business.averageRating.toFixed(1)} · ${business.reviewCount} reviews` : "No reviews yet"}</span><span>{business._count?.orders ?? 0} completed ShopFia parties</span><span>{business.user?._count.followers ?? 0} followers</span></div><span className="mt-2 inline-flex rounded-full bg-[#b77980] px-3 py-1 text-xs font-semibold text-white">Follow</span>
           </div>
         </div>
         </div>);

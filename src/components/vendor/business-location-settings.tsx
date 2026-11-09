@@ -20,7 +20,7 @@ export function BusinessLocationSettings({business,onSaved,previewOnly=false}:{b
   try {
    const location={...business,city:place.city??'',state:place.state??'',formattedAddress:place.formattedAddress??'',googlePlaceId:place.placeId??'',locationLat:place.lat??null,locationLng:place.lng??null,serviceRadiusMiles:radius,serviceAreaNotes:String(form.get('serviceAreaNotes')??'')};
    const result=previewOnly?{ok:true}:await updateBusinessLocationAction({businessId:business.id,city:location.city,state:location.state??'',formattedAddress:location.formattedAddress??'',googlePlaceId:location.googlePlaceId??'',lat:location.locationLat,lng:location.locationLng,radius,serviceAreaNotes:location.serviceAreaNotes??''});
-   if(result.ok){onSaved?.(location);setMessage(previewOnly?'Preview updated. Your live storefront has not changed.':'Business details saved. Your live storefront is updated.');if(!previewOnly)router.refresh();}else setError(result.error??'Your changes could not be saved.');
+   if(result.ok){onSaved?.(location);setMessage(previewOnly?'Preview updated. Your live storefront has not changed.':'Business details saved. Your live storefront is updated.');if(!previewOnly)router.refresh();}else setError(('error' in result?result.error:undefined)??'Your changes could not be saved.');
   }catch{setError('Your changes could not be saved. Please try again.');}finally{setPending(false);}
  }
  return <form onSubmit={save} className="mt-4 space-y-4">

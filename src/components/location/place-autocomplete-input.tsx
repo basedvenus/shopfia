@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { PlaceDetails, PlaceSuggestion } from "@/lib/places";
 import { createPlaceSelectionGuard } from "@/lib/place-selection-guard";
@@ -227,7 +227,7 @@ export function PlaceAutocompleteInput({
         </label>
       ) : null}
       <div className="relative">
-        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           name={fieldNames.input}
           value={inputValue}

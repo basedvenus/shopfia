@@ -1,3 +1,5 @@
+import {getVendorAverageResponseSeconds} from "@/lib/services/vendor-response-time";
+import {formatResponseTime} from "@/lib/vendor-response-time";
 import { readStructuredPricing, priceLabel as structuredPriceLabel } from "@/lib/service-pricing";
 import Image from "next/image";
 import Link from "next/link";
@@ -106,7 +108,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
     ].filter((tag, index, tags) => tags.indexOf(tag) === index),
     ...offering.eventCategories.map((eventCategory) => eventCategory.category.name),
   ];
-  const [isSavedOffering, serviceReviews] = await Promise.all([
+  const [isSavedOffering, serviceReviews, averageResponseSeconds] = await Promise.all([
     session?.user?.id
       ? db.favorite.findUnique({
           where: {
@@ -120,10 +122,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
       : Promise.resolve(null),
     db.review.findMany({
       where: {
-        vendorId: offering.vendorId,
-        order: {
-          offeringId: offering.id
-        }
+        vendorId: offering.vendorId
       },
       include: {
         buyer: {
@@ -133,7 +132,8 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
       },
       orderBy: { createdAt: "desc" },
       take: 8
-    })
+    }),
+    getVendorAverageResponseSeconds(offering.vendorId)
   ]);
 
   return (
@@ -260,9 +260,9 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
             />
             <InfoPanel
               icon={<CalendarDays className="h-5 w-5" />}
-              label="Turnaround"
-              value={offering.turnaroundDays ? `${offering.turnaroundDays} days` : "Custom"}
-              detail="Timelines vary based on event size and scope."
+              label="Average response time"
+              value={formatResponseTime(averageResponseSeconds)}
+              detail={averageResponseSeconds === null ? "This will be calculated once the vendor replies to their first inquiry." : "Average first reply to inquiries through ShopFia."}
             />
             <InfoPanel
               icon={<Clock3 className="h-5 w-5" />}
@@ -273,25 +273,6 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-[1.4rem] border border-[#eadbd7] bg-white/70 p-5">
-              <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-3xl font-normal">
-                Good to know
-              </h2>
-              <div className="mt-4 grid gap-3 text-sm leading-6 text-muted-foreground">
-                <p className="flex gap-2">
-                  <MapPin className="mt-1 h-4 w-4 shrink-0 text-primary" />
-                  <span>
-                    Sold by <span className="font-medium text-foreground">{offering.vendor.name}</span>{" "}
-                    <ProfileBadge badge={vendorBadge} className="mx-1 align-middle" />
-                    in{" "}
-                    {offering.vendor.city}
-                    {offering.vendor.state ? `, ${offering.vendor.state}` : ""}
-                  </span>
-                </p>
-                <p>Share a few details and the vendor can reply inside ShopFia messages.</p>
-              </div>
-            </div>
-
             {serviceComponents.length > 0 ? (
               <div className="rounded-[1.4rem] border border-[#eadbd7] bg-white/70 p-5">
                 <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-3xl font-normal">
@@ -335,13 +316,13 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h2 className="[font-family:'Canela','Editorial_New','Iowan_Old_Style','Times_New_Roman',serif] text-3xl font-normal">
-                  Service reviews
+                  Parties <span className="ml-3 inline-flex items-center gap-1 align-middle font-sans text-base"><Star className="h-4 w-4 fill-current text-amber-500"/>{reviewCount>0?rating:"No ratings yet"}</span>
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  Reviews here come from completed ShopFia bookings for this specific service.
+                  Parties booked with this business.
                 </p>
               </div>
-              <Badge variant="outline">{serviceReviews.length} service-specific</Badge>
+              <Badge variant="outline">{reviewCount} {reviewCount===1?"review":"reviews"}</Badge>
             </div>
             {serviceReviews.length > 0 ? (
               <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -365,7 +346,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ id: s
               </div>
             ) : (
               <p className="mt-4 rounded-[1rem] bg-[#fffaf8] p-4 text-sm leading-6 text-muted-foreground">
-                Vendor-level verified reviews are shown above until this service has its own completed booking reviews.
+                No parties yet.
               </p>
             )}
           </section>

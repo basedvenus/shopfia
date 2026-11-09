@@ -3,7 +3,7 @@
 import { getProfilePhotoType, MAX_PROFILE_PHOTO_SOURCE_BYTES } from "@/lib/profile-photo-file";
 import {cropImageRect} from "@/lib/image-crop";
 
-import { CheckCircle2, Pencil } from "lucide-react";
+import { CheckCircle2, Pencil, Plus } from "lucide-react";
 
 import { ChangeEvent, useEffect, useState, useRef } from "react";
 import { CroppedImage } from "@/components/ui/cropped-image";
@@ -25,6 +25,7 @@ type UploadResult = {
 };
 
 type ImageUploadFieldProps = {
+  compact?: boolean;
   editMenu?: boolean;
   hideLabel?: boolean;
   avatarAppearance?: { initials: string; displayName: string };
@@ -48,6 +49,7 @@ type ImageUploadFieldProps = {
 };
 
 export function ImageUploadField({
+  compact = false,
   editMenu = false,
   hideLabel = false,
   avatarAppearance,
@@ -313,7 +315,7 @@ export function ImageUploadField({
       <div ref={menuContainer} className={editMenu && (avatarAppearance || isRound) ? "group/avatar relative w-fit" : "relative w-full"}>
       <label
         className={`group relative grid cursor-pointer place-items-center overflow-hidden border border-dashed border-border bg-white/80 text-center text-sm text-muted-foreground transition hover:border-primary ${
-          avatarAppearance ? "h-24 w-24 rounded-full border-4 border-solid border-white bg-accent text-2xl font-semibold text-foreground shadow-soft focus-within:ring-2 focus-within:ring-primary" : isRound ? "h-32 w-32 rounded-full" : "min-h-[150px] w-full rounded-[1.5rem]"
+          avatarAppearance ? "h-24 w-24 rounded-full border-4 border-solid border-white bg-accent text-2xl font-semibold text-foreground shadow-soft focus-within:ring-2 focus-within:ring-primary" : compact ? "h-24 w-24 rounded-2xl" : isRound ? "h-32 w-32 rounded-full" : "min-h-[150px] w-full rounded-[1.5rem]"
         }`}
       >
         {previewValue && failedPreview !== previewValue ? (
@@ -328,9 +330,9 @@ export function ImageUploadField({
         ) : null}
         {avatarAppearance && !previewValue ? <span>{avatarAppearance.initials}</span> : null}
         {!editMenu ? <span className="relative z-10 rounded-full bg-white/90 px-3 py-1.5 shadow-sm">
-          {previewValue ? changeLabel : uploadLabel}
+          {compact ? <Plus aria-hidden="true" className="h-7 w-7" /> : previewValue ? changeLabel : uploadLabel}
         </span> : null}
-        <input disabled={isPreparing} aria-label={avatarAppearance ? "Change profile picture" : label} onClick={() => setUploadInteracted(true)} ref={uploadInput} type="file" accept={isRound ? "image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" : SUPPORTED_IMAGE_TYPES.join(",")} className={isRound ? "absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" : "sr-only"} onChange={handleFile} />
+        <input disabled={isPreparing} aria-label={avatarAppearance ? "Change profile picture" : label || uploadLabel} onClick={() => setUploadInteracted(true)} ref={uploadInput} type="file" accept={isRound ? "image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" : SUPPORTED_IMAGE_TYPES.join(",")} className={isRound ? "absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" : "sr-only"} onChange={handleFile} />
       </label>
       {previewValue && onCropChange && !editMenu ? <button type="button" className="mt-2 rounded-full border px-3 py-2 text-sm" onClick={()=>{setPendingFile(null);setPendingPreview(previewValue);setEditorOpen(true);}}>Adjust image</button> : null}
       {editMenu ? <button ref={menuTrigger} disabled={isPreparing} type="button" aria-expanded={avatarAppearance ? undefined : menuOpen} aria-label={avatarAppearance ? "Change profile picture" : `Adjust ${label.toLowerCase()}`} title={avatarAppearance ? "Change profile picture" : "Adjust image"} onClick={() => { if (avatarAppearance) {setUploadInteracted(true); uploadInput.current?.click();} else setMenuOpen((open) => !open); }} className={`absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full border bg-white shadow-sm ${avatarAppearance ? "opacity-0 transition-opacity group-hover/avatar:opacity-100 group-focus-within/avatar:opacity-100 [@media(hover:none)]:opacity-100" : ""}`}><Pencil className="h-4 w-4" /></button> : null}

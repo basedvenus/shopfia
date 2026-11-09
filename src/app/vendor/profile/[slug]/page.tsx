@@ -1,3 +1,6 @@
+import {readStructuredPricing} from "@/lib/service-pricing";
+import {PublishedServiceAreaMap} from "@/components/location/published-service-area-map";
+import { CroppedImage } from "@/components/ui/cropped-image";
 import {ServicePhotos} from "@/components/vendor/service-photos";
 import { PublishedAboutGallery } from "@/components/vendor/published-about-gallery";
 import { VendorSocialFeeds } from "@/components/vendor/vendor-social-feeds";
@@ -311,16 +314,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <span className="hidden sm:inline">{isUnclaimed ? "Community-tagged · Unclaimed business" : "Verified identity, saved services, quotes, and bookings"}</span>
         </div>
         <div className="grid gap-3 p-3 md:grid-cols-[auto_1fr_auto] md:items-center md:p-4">
-          <div className={`relative h-20 w-20 overflow-hidden border border-[#eadbd7] bg-[#f8ece9] md:h-24 md:w-24 ${theme.logoRadius}`}>
+          <div className={`relative w-20 overflow-hidden bg-white md:w-24 ${theme.logoRadius}`} style={{aspectRatio:logoCrop.aspectRatio??1}}>
             {vendor.logoUrl ? (
-              <Image
-                src={vendor.logoUrl}
-                alt={`${vendor.name} logo`}
-                fill
-                sizes="96px"
-                className="object-contain p-1"
-                style={imageCropToCss(logoCrop)}
-              />
+              <CroppedImage src={vendor.logoUrl} alt={`${vendor.name} logo`} crop={logoCrop} frameFit="contain" className="absolute inset-0 h-full w-full"/>
             ) : hero ? (
               <Image src={hero} alt={vendor.name} fill sizes="96px" className="object-cover" />
             ) : (
@@ -357,7 +353,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
                 <Star className="h-4 w-4 fill-current text-amber-500" />
                 {verifiedReviewCount > 0 ? `${verifiedAverageRating.toFixed(1)} (${verifiedReviewCount})` : "No reviews yet"}
               </span>
-              <span>{completedOrderCount} completed ShopFia event{completedOrderCount === 1 ? "" : "s"}</span>
+              <span>{completedOrderCount} completed ShopFia {completedOrderCount===1?"party":"parties"}</span>
               <span>{followerCount} follower{followerCount === 1 ? "" : "s"}</span>
             </div>
           </div>
@@ -551,7 +547,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           </p>
           {serviceAreaLabel ? <ServiceAreaRadiusCard
             city={serviceAreaLabel}
-            coverageAreas={coverageAreas}
+            lat={vendor.locationLat}
+            lng={vendor.locationLng}
+            coverageAreas={serviceAreaLabel ? [...new Set([...(vendor.serviceAreaNotes??"").split(/[;\n]+/).map(area=>area.trim()).filter(Boolean),serviceAreaLabel])] : coverageAreas}
             radiusMiles={vendor.serviceRadiusMiles}
             serviceAreaNotes={vendor.serviceAreaNotes}
             theme={theme}
@@ -565,6 +563,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
         <div id="inquiry" className="scroll-mt-28" style={{ ...sectionStyle("final-quote"), order: sectionPriority("final-quote") }}>
           {!isUnclaimed ? (
             <ListingInquiryPanel
+              services={visibleOfferings.flatMap(offering=>{const pricing=readStructuredPricing((offering.faqJson as Record<string,unknown>|null)?.pricing);return pricing?[{id:offering.id,name:offering.title,pricing,promotions:[]}]:[];})}
               defaultName={session?.user?.name}
               description="Share what you are planning and this vendor can reply inside ShopFia messages."
               vendorProfileId={vendor.id}
@@ -742,7 +741,7 @@ function StorefrontTemplateIntro({
       <TemplateFact label="Starting at" value={vendor.startingPriceCents ? formatCurrency(vendor.startingPriceCents) : "Custom quote"} theme={theme} />
       <TemplateFact label="Service area" value={isUnclaimed ? "Service area not confirmed by the business" : vendor.serviceAreaNotes ?? `${serviceAreaLabel || "Local events"} within ${vendor.serviceRadiusMiles} miles`} theme={theme} />
       <TemplateFact label="Lead time" value={vendor.availabilityNotes ?? "Availability confirmed in ShopFia messages"} theme={theme} />
-      <TemplateFact label="ShopFia events" value={`${completedOrderCount} completed`} theme={theme} />
+      <TemplateFact label="ShopFia parties" value={`${completedOrderCount} completed`} theme={theme} />
       {verifiedCredentials.length ? (
         <div className="flex flex-wrap gap-2 pt-1">
           {verifiedCredentials.map((credential) => (
@@ -886,12 +885,14 @@ function TemplateFact({ label, theme, value }: { label: string; theme: Storefron
 }
 
 function ServiceAreaRadiusCard({
+  lat,lng,
   city,
   coverageAreas,
   radiusMiles,
   serviceAreaNotes,
   theme
 }: {
+  lat:number|null;lng:number|null;
   city: string;
   coverageAreas: string[];
   radiusMiles: number;
@@ -899,15 +900,8 @@ function ServiceAreaRadiusCard({
   theme: StorefrontTheme;
 }) {
   return (
-    <div className={`mt-4 grid gap-4 p-4 md:grid-cols-[220px_1fr] md:items-center ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
-      <iframe
-        title={`Google Maps: ${city}`}
-        src={`https://maps.google.com/maps?q=${encodeURIComponent(city)}&output=embed`}
-        className="h-[220px] w-full rounded-[1rem] border-0"
-        loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
-        allowFullScreen
-      />
+    <div className={`mt-4 grid gap-4 p-4 md:grid-cols-1 ${theme.cardClass} ${theme.sectionRadius}`} style={theme.cardStyle}>
+      <PublishedServiceAreaMap city={city} lat={lat} lng={lng} notes={serviceAreaNotes} radius={radiusMiles}/>
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={theme.accentTextStyle}>Service radius</p>
         <h3 className="mt-2 text-2xl font-semibold tracking-tight" style={theme.headingStyle}>
