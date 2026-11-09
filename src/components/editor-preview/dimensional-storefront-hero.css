@@ -136,3 +136,6 @@
 }
 .depth-hero[data-effect-only="true"] .depth-permanent-layer {background:transparent!important;background-image:none!important;}
 .depth-hero[data-effect-only="true"] :is(.depth-stage-light,.depth-floor-shadow,.depth-regular-cover) {display:none!important;}
+
+/* Scale saved cover frames proportionally at every browser width. */
+.depth-hero:not([data-effect-only="true"]) .depth-scene[data-crop-ratio]{height:auto!important;min-height:0!important;align-self:start;flex-shrink:0;}

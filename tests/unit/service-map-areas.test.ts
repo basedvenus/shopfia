@@ -1,3 +1,5 @@
 import {describe,it,expect} from "vitest";
 import {serviceMapBounds,serviceAreasZoom} from "@/lib/service-radius-map";
 describe("fit saved service areas",()=>{it("fits county bubbles outside the base radius",()=>{const areas=[{lat:38.5,lng:-122.3,types:["administrative_area_level_2"]},{lat:37.9,lng:-121.9,types:["administrative_area_level_2"]},{lat:38.7,lng:-121.9,types:["administrative_area_level_2"]}];const zoom=serviceAreasZoom(38.36,-121.99,15,areas,600,300);const bounds=serviceMapBounds(38.36,-121.99,15,areas,zoom);expect(bounds.width).toBeLessThanOrEqual(552);expect(bounds.height).toBeLessThanOrEqual(240);expect(zoom).toBeLessThanOrEqual(serviceAreasZoom(38.36,-121.99,15,[],600,300));});});
+
+it("fits the whole radius even without selected counties on narrow screens",()=>{for(const radius of [15,80,200]){const zoom=serviceAreasZoom(38.36,-121.99,radius,[],320,300);const bounds=serviceMapBounds(38.36,-121.99,radius,[],zoom);expect(bounds.width).toBeLessThanOrEqual(272);expect(bounds.height).toBeLessThanOrEqual(240);}});
