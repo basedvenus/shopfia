@@ -314,7 +314,7 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <span className="hidden sm:inline">{isUnclaimed ? "Community-tagged · Unclaimed business" : "Verified identity, saved services, quotes, and bookings"}</span>
         </div>
         <div className="grid gap-3 p-3 md:grid-cols-[auto_1fr_auto] md:items-center md:p-4">
-          <div className={`relative w-20 overflow-hidden bg-white md:w-24 ${theme.logoRadius}`} style={{aspectRatio:logoCrop.aspectRatio??1}}>
+          <div className="relative w-20 shrink-0 overflow-hidden bg-white md:w-24" style={{aspectRatio:logoCrop.aspectRatio??1}}>
             {vendor.logoUrl ? (
               <CroppedImage src={vendor.logoUrl} alt={`${vendor.name} logo`} crop={logoCrop} frameFit="contain" className="absolute inset-0 h-full w-full"/>
             ) : hero ? (
@@ -712,16 +712,9 @@ function StorefrontTemplateIntro({
   const introCopy = tagline ?? vendor.bio ?? "Explore services, real event credits, and booking details before starting a ShopFia quote.";
   const quoteHref = isUnclaimed ? undefined : "#inquiry";
   const logo = (
-    <div className={`relative h-24 w-24 shrink-0 overflow-hidden border bg-white md:h-28 md:w-28 ${theme.logoRadius}`} style={theme.cardStyle}>
+    <div className="relative h-24 w-24 shrink-0 overflow-hidden bg-white md:h-28 md:w-28">
       {vendor.logoUrl ? (
-        <Image
-          src={vendor.logoUrl}
-          alt={`${vendor.name} logo`}
-          fill
-          sizes="112px"
-          className="object-contain p-1"
-          style={imageCropToCss(logoCrop)}
-        />
+        <CroppedImage src={vendor.logoUrl} alt={`${vendor.name} logo`} crop={logoCrop} frameFit="contain" className="absolute inset-0 h-full w-full"/>
       ) : (
         <div className="grid h-full place-items-center px-2 text-center text-lg font-semibold" style={theme.accentTextStyle}>{vendor.name}</div>
       )}
