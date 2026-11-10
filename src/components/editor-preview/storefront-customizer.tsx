@@ -1657,7 +1657,7 @@ function StorefrontPreview({
                 alt={`${form.name} logo`}
                 frameFit="contain"
                 crop={form.logoCrop}
-                className={`${heroDepth !== undefined ? "template-brand-logo " : ""}h-20 w-20 bg-white object-contain object-center ${theme.logoRadius}`}
+                className="h-20 w-20 bg-white object-contain object-center"
               />
             ) : <div className={`grid h-20 w-20 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
             {activeSection === "hero" ? (
