@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { KeyRound } from "lucide-react";
 import { resetPasswordAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -39,17 +38,11 @@ export function ResetPasswordForm({
       <input type="hidden" name="email" value={email} />
       <input type="hidden" name="token" value={token} />
       <Input
-        type="email"
-        value={email}
-        readOnly
-        className="bg-white/70"
-        aria-label="Account email"
-      />
-      <Input
         type="password"
         name="password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
+        aria-label="New password"
         placeholder="New password"
         autoComplete="new-password"
         minLength={8}
@@ -65,13 +58,8 @@ export function ResetPasswordForm({
         </p>
       ) : null}
       {success ? (
-        <Button
-          type="button"
-          variant="secondary"
-          className="w-full"
-          onClick={() => signIn("credentials", { email, password, callbackUrl: "/explore" })}
-        >
-          Sign in
+        <Button asChild variant="secondary" className="w-full">
+          <Link href="/account">Sign in</Link>
         </Button>
       ) : (
         <Link href="/account" className="text-sm font-medium text-[#9b6b65] underline-offset-4 hover:underline">

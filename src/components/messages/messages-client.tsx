@@ -28,7 +28,6 @@ import {
   UsersRound,
   X
 } from "lucide-react";
-import { NotificationPreferences } from "@/components/messages/notification-preferences";
 import { getSafeProfileImage } from "@/lib/profile-image";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -287,11 +286,6 @@ function InboxPanel({
           )}
           {nextCursor ? <Button type="button" variant="secondary" disabled={loading} onClick={onLoadMore} className="w-full">Load older conversations</Button> : null}
         </div>
-        {!isOverlay ? (
-          <div className="shrink-0 border-t border-[#eadbd3] p-3">
-            <NotificationPreferences compact />
-          </div>
-        ) : null}
       </div>
     </aside>
   );
@@ -313,9 +307,14 @@ function InboxRow({
   const viewerIsVendor = conversation.vendorId === currentUserId;
   const identity = getConversationIdentity(conversation, viewerIsVendor);
   const latestInquiry = conversation.inquiries.at(-1) ?? null;
-  const location = formatInboxLocation(
-    latestInquiry ? formatInquiryLocation(latestInquiry) : formatConversationLocation(conversation)
-  );
+  const service = latestInquiry?.offering?.title ?? latestInquiry?.listing?.title
+    ?? conversation.offering?.title ?? conversation.listing?.title;
+  const eventDate = latestInquiry?.eventDate;
+  const status = latestInquiry ? {
+    NEW: "New inquiry",
+    REVIEWED: "Reviewed",
+    CLOSED: "Closed"
+  }[latestInquiry.status] : null;
 
   return (
     <button
@@ -337,10 +336,11 @@ function InboxRow({
         <div className="min-w-0 flex-1">
           <h3 className="truncate pr-4 text-sm font-bold leading-5 text-[#2f2626]">{identity.name}</h3>
           <p className="truncate text-xs font-semibold leading-5 text-[#5f514e]">
-            Event Inquiry{location ? ` • ${location}` : ""}
+            {service ?? (latestInquiry ? "Event inquiry" : "Conversation")}
           </p>
           <p className="truncate text-[11px] leading-4 text-muted-foreground">
-            {formatMessageDate(conversation.lastMessageAt)}
+            {eventDate ? formatEventDate(eventDate) : formatMessageDate(conversation.lastMessageAt)}
+            {status ? ` • ${status}` : ""}
           </p>
         </div>
       </div>
@@ -1953,13 +1953,6 @@ function formatInquiryLocation(inquiry: InquiryItem) {
   }
 
   return location;
-}
-
-function formatConversationLocation(conversation: SerializedMessageConversation) {
-  const city = conversation.listing?.city ?? conversation.vendorProfile.city;
-  const state = conversation.listing?.state ?? conversation.vendorProfile.state;
-  if (city && state) return `${city}, ${state}`;
-  return city ?? state ?? null;
 }
 
 function formatInboxLocation(location: string | null) {
