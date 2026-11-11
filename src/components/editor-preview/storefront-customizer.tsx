@@ -1,4 +1,6 @@
 "use client";
+
+import { BusinessLogo } from "@/components/ui/business-logo";
 import {mergeCurrentStorefrontServices as mergeDraftServices,applyStorefrontServiceVisibility as applyDraftServiceDisplay} from "@/lib/storefront-service-state";
 import {BrandLogoColors} from "./brand-logo-colors";
 import {StorefrontAreaEditor} from "./storefront-area-editor";
@@ -971,7 +973,7 @@ export function StorefrontCustomizer({
 </>}
               {activeTool==="content" && designPanel==="stickers" && selectedTemplate && <StickersPanel template={selectedTemplate} onChange={value=>{setSelectedTemplate(value);markDirty();}}/>}
               {activeTool==="content" && designPanel==="buttons" && selectedTemplate && <ButtonControls template={selectedTemplate} section={activeSection} onChange={template=>{setSelectedTemplate(template);markDirty();}}/>}
-              {activeTool==="content" && designPanel==="brand" && <section className="mb-4 rounded-2xl border bg-[#fffaf8] p-4"><h3 className="mb-4 font-semibold">Brand</h3><ImageUploadField name="brandLogo" label="Brand logo" value={form.logoUrl} valueCrop={form.logoCrop} onChangePreview={value=>update("logoUrl",value)} onCropChange={crop=>update("logoCrop",crop)} uploadEndpoint={`${mediaUploadEndpoint}?target=logo`}/><BrandLogoColors logo={form.logoUrl}/></section>}
+              {activeTool==="content" && designPanel==="brand" && <section className="mb-4 rounded-2xl border bg-[#fffaf8] p-4"><h3 className="mb-4 font-semibold">Brand</h3><ImageUploadField name="brandLogo" label="Brand logo" rounded="full" value={form.logoUrl} valueCrop={form.logoCrop} onChangePreview={value=>update("logoUrl",value)} onCropChange={crop=>update("logoCrop",crop)} uploadEndpoint={`${mediaUploadEndpoint}?target=logo`}/><BrandLogoColors logo={form.logoUrl}/></section>}
               {modernEditor && selectedTemplate && (designPanel==="backgrounds" || designPanel==="patterns" || designPanel==="text-colors") ? <SectionBackgroundControls textMode={designPanel==="text-colors"} logo={form.logoUrl} photos={form.aboutPhotos} mode={designPanel==="patterns"?"patterns":"colors"} template={selectedTemplate} section={activeSection} label={activeSection==="services-card"?"Service card":sectionLabel(activeSection)} onChange={(template)=>{setSelectedTemplate(template);markDirty();}} /> : null}
               {modernEditor ? <div hidden={activeTool !== "content" || designPanel!=="fonts"}><details className="mb-3 rounded-xl border p-3"><summary className="cursor-pointer text-sm">Selected text font</summary><SelectedTextFonts/></details><HeroTypographyControls bodyFamily={form.bodyFamily} onBody={value=>update("bodyFamily",value)} allowUpload={false} subheadingFamily={form.subheadingFamily} onSubheading={value=>update("subheadingFamily",value)} template={selectedTemplate} onTemplateFont={(patch)=>{if(selectedTemplate){setSelectedTemplate({...selectedTemplate,...patch});markDirty();}}} key={templateFontRevision} value={form.fontStyle} templateFonts={selectedTemplate?.fonts} onPairing={selectedTemplate ? (pair)=>{setSelectedTemplate({...selectedTemplate,headingFamily:pair.headingFamily,bodyFamily:pair.bodyFamily,headingWeight:pair.headingWeight,fontStyle:pair.fontStyle,fonts:pair.fonts});update("fontStyle",pair.fontStyle);} : undefined} onStyle={(value)=>{if(selectedTemplate)setSelectedTemplate({...selectedTemplate,fontStyle:value,fonts:STOREFRONT_FONT_STYLES.find(font=>font.value===value)?.description.split(".")[0] ?? "Manrope",headingFamily:undefined,bodyFamily:undefined,headingWeight:undefined});update("fontStyle",value);}} onCustomFont={(family)=>{setHeroCustomFont(family);markDirty();}} /></div> : null}
               {activeTool === "design" ? (
@@ -1652,12 +1654,11 @@ function StorefrontPreview({
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           <div className="shrink-0">
             {form.logoUrl ? (
-              <CroppedImage
+              <BusinessLogo
                 src={form.logoUrl}
                 alt={`${form.name} logo`}
-                frameFit="contain"
                 crop={form.logoCrop}
-                className="h-20 w-20 bg-white object-contain object-center"
+                className="h-20 w-20 rounded-full"
               />
             ) : <div className={`grid h-20 w-20 place-items-center font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</div>}
             {activeSection === "hero" ? (
@@ -1932,7 +1933,7 @@ function PreviewHeroLogo({ form, theme, size = "h-16 w-16" }: {
   size?: string;
 }) {
   return form.logoUrl ? (
-    <CroppedImage src={form.logoUrl} alt="" crop={form.logoCrop} className={`${size} bg-white object-contain p-1 ${theme.logoRadius}`} />
+    <BusinessLogo src={form.logoUrl} alt="" crop={form.logoCrop} className={`${size} rounded-full`} />
   ) : (
     <span className={`grid ${size} place-items-center bg-white font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</span>
   );

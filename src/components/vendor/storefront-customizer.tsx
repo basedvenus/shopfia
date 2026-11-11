@@ -1,4 +1,6 @@
 "use client";
+
+import { BusinessLogo } from "@/components/ui/business-logo";
 import {mergeCurrentStorefrontServices as mergeDraftServices,applyStorefrontServiceVisibility as applyDraftServiceDisplay} from "@/lib/storefront-service-state";
 
 import { CityPicker } from "@/components/location/city-picker";
@@ -1532,7 +1534,7 @@ function StorefrontPreview({
         <div className={`flex gap-3 p-4 ${theme.profileClass}`}>
           <div className="shrink-0">
             {form.logoUrl ? (
-              <CroppedImage
+              <BusinessLogo
                 src={form.logoUrl}
                 alt=""
                 crop={form.logoCrop}
@@ -1839,7 +1841,7 @@ function PreviewHeroLogo({ form, theme, size = "h-16 w-16" }: {
   size?: string;
 }) {
   return form.logoUrl ? (
-    <CroppedImage src={form.logoUrl} alt="" crop={form.logoCrop} className={`${size} bg-white object-contain p-1 ${theme.logoRadius}`} />
+    <BusinessLogo src={form.logoUrl} alt="" crop={form.logoCrop} className={`${size} rounded-full`} />
   ) : (
     <span className={`grid ${size} place-items-center bg-white font-semibold ${theme.logoRadius}`} style={theme.softSurfaceStyle}>{form.name.slice(0, 1)}</span>
   );
