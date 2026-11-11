@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {Plus,GripVertical,X} from "lucide-react";
 import {DEFAULT_IMAGE_CROP,normalizeImageCrop,type ImageCrop} from "@/lib/image-crop";
+import {getProfilePhotoType, MAX_PROFILE_PHOTO_SOURCE_BYTES} from "@/lib/profile-photo-file";
 import {ServicePhotoFrame} from "./service-photo-frame";
 import {CroppedImage} from "@/components/ui/cropped-image";
 import {ImageCropEditor} from "@/components/ui/image-crop-editor";
@@ -18,10 +19,11 @@ export function ServicePhotoGrid({photos=[],crops=[],businessId,previewOnly=fals
  function move(id:string,to:number){setItems(previous=>{const next=[...previous],from=next.findIndex(p=>p.id===id);if(from<0||to<0||to>=next.length)return previous;const [photo]=next.splice(from,1);next.splice(to,0,photo);return next;});}
  async function add(files:FileList|null){if(!files||uploading)return;setUploading(true);setError("");try{
   for(const file of Array.from(files)){
-   if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Choose JPG, PNG, or WebP photos.");
-   if(file.size>10*1024*1024)throw new Error("Each photo must be smaller than 10 MB.");
-   const prepared=await prepare(file);let url:string;
-   if(businessId&&!previewOnly){const body=new FormData();body.set("file",prepared);const response=await fetch(`/api/vendor/business/${businessId}/media`,{method:"POST",body,credentials:"same-origin"});const result=await response.json();if(!response.ok||!result.url)throw new Error(result.error??"Photo upload failed. Please try again.");url=result.url;}
+   const type=getProfilePhotoType(file);
+   if(!type)throw new Error("Choose JPG, PNG, WebP, HEIC, or HEIF photos.");
+   if(file.size>MAX_PROFILE_PHOTO_SOURCE_BYTES)throw new Error("Each photo must be 20 MB or smaller.");
+   const prepared=await prepare(file,type);let url:string;
+   if(businessId&&!previewOnly){const body=new FormData();body.set("file",prepared);const response=await fetch(`/api/vendor/business/${businessId}/media`,{method:"POST",body,credentials:"same-origin"});const result=await response.json().catch(()=>({}));if(!response.ok||!result.url)throw new Error(result.error??"Photo upload failed. Please try again.");url=result.url;}
    else{url=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error("Could not read that photo."));reader.readAsDataURL(prepared);});}
    setItems(previous=>[...previous,{id:crypto.randomUUID(),url,crop:DEFAULT_IMAGE_CROP}]);
   }
@@ -29,7 +31,7 @@ export function ServicePhotoGrid({photos=[],crops=[],businessId,previewOnly=fals
  return <section ref={root} className="space-y-3" aria-label="Service photos">
   <div><h2 className="text-xl font-semibold">Photos</h2><p className="mt-1 text-sm text-muted-foreground">Drag photos to reorder. The first photo is your cover. Use Adjust crop to choose exactly what customers see. Tap a photo to enlarge or remove it.</p></div>
   {items.map(photo=><span key={`fields-${photo.id}`}><input type="hidden" name="photos" value={photo.url}/><input type="hidden" name="photosCrop" value={JSON.stringify(photo.crop)}/></span>)}
-  <input ref={input} type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="Upload service photos" className="sr-only" disabled={uploading} onChange={event=>void add(event.target.files)}/>
+  <input ref={input} type="file" multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" aria-label="Upload service photos" className="sr-only" disabled={uploading} onChange={event=>void add(event.target.files)}/>
   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" onDragOver={event=>event.preventDefault()} onDrop={event=>{event.preventDefault();if(event.dataTransfer.files.length)void add(event.dataTransfer.files);}}>
    {items.map((photo,index)=><div key={photo.id} data-service-photo={photo.id} draggable onDragStart={event=>{drag.current=photo.id;event.dataTransfer.setData("text/plain",photo.id);}} onDragEnd={()=>{drag.current=null;}} onDragOver={event=>event.preventDefault()} onDrop={event=>{event.preventDefault();event.stopPropagation();if(drag.current)move(drag.current,index);drag.current=null;}} className={`group relative overflow-hidden rounded-2xl bg-white ${index===0?"ring-2 ring-[#e8aaa9] ring-offset-2":""}`}>
     <button type="button" aria-label={`Edit service photo ${index+1}${index===0?", cover":""}`} onClick={()=>setSelected(photo.id)} className="relative block aspect-square w-full"><ServicePhotoFrame src={photo.url} crop={photo.crop}/></button>
@@ -44,6 +46,15 @@ export function ServicePhotoGrid({photos=[],crops=[],businessId,previewOnly=fals
   {current&&createPortal(adjusting?<ImageCropEditor imageUrl={current.url} crop={current.crop} aspectLabel="Service photo · square storefront crop" previewClassName="aspect-square" preserveFrame previewAspectRatio={1} allowAdjustments onCancel={()=>setAdjusting(false)} onSave={crop=>{setItems(previous=>previous.map(photo=>photo.id===current.id?{...photo,crop}:photo));setAdjusting(false);}}/>:<PhotoDialog onClose={()=>{setSelected(null);setAdjusting(false);}}><div className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-white p-5" onClick={event=>event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><h3 className="font-semibold">Service photo</h3><button type="button" aria-label="Close photo" onClick={()=>{setSelected(null);setAdjusting(false);}} className="grid h-10 w-10 place-items-center rounded-full border"><X className="h-5 w-5"/></button></div><><CroppedImage src={current.url} crop={current.crop} frameFit="contain" className="h-[45vh] w-full object-contain"/><div className="mt-4 flex flex-wrap gap-2"><button type="button" className="rounded-full border px-4 py-2 text-sm" onClick={()=>{move(current.id,0);setSelected(null);}}>Make cover</button><button type="button" className="rounded-full border px-4 py-2 text-sm" onClick={()=>setAdjusting(true)}>Adjust image</button><button type="button" className="rounded-full border px-4 py-2 text-sm text-red-700" onClick={()=>{setItems(previous=>previous.filter(p=>p.id!==current.id));setSelected(null);}}>Remove photo</button></div></></div></PhotoDialog>,document.body)}
  </section>;
 }
-async function prepare(file:File){const url=URL.createObjectURL(file);try{const image=new Image();await new Promise<void>((resolve,reject)=>{image.onload=()=>resolve();image.onerror=()=>reject(new Error("Could not read that photo."));image.src=url;});const scale=Math.min(1,1800/Math.max(image.naturalWidth,image.naturalHeight));const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));const context=canvas.getContext("2d");if(!context)throw new Error("Photo processing is unavailable.");context.drawImage(image,0,0,canvas.width,canvas.height);const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error("Could not process that photo.")),"image/webp",.9));return new File([blob],"service-photo.webp",{type:"image/webp"});}finally{URL.revokeObjectURL(url);}}
+async function prepare(file:File,type:string){let source: Blob = file.type === type ? file : file.slice(0, file.size, type);
+ if (type === "image/heic" || type === "image/heif") {
+   try {
+     const {heicTo} = await import("heic-to/csp");
+     source = await heicTo({blob: source, type: "image/jpeg", quality: 0.95});
+   } catch {
+     // Some devices can open files the bundled decoder does not support.
+   }
+ }
+ const url=URL.createObjectURL(source);try{const image=new Image();await new Promise<void>((resolve,reject)=>{image.onload=()=>resolve();image.onerror=()=>reject(new Error(type==="image/heic"||type==="image/heif"?"This browser couldn’t open that iPhone photo. Try Safari or upload it as a JPG.":"Could not read that photo."));image.src=url;});const scale=Math.min(1,1800/Math.max(image.naturalWidth,image.naturalHeight));const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));const context=canvas.getContext("2d");if(!context)throw new Error("Photo processing is unavailable.");context.drawImage(image,0,0,canvas.width,canvas.height);const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error("Could not process that photo.")),"image/webp",.9));return new File([blob],blob.type==="image/webp"?"service-photo.webp":"service-photo.png",{type:blob.type});}finally{URL.revokeObjectURL(url);}}
 
 function PhotoDialog({children,onClose}:{children:React.ReactNode;onClose:()=>void}){const dialog=useRef<HTMLDialogElement>(null);useEffect(()=>{dialog.current?.showModal();},[]);return <dialog ref={dialog} aria-label="Edit service photo" onCancel={event=>{event.preventDefault();onClose();}} className="m-auto max-h-[94vh] w-[min(700px,96vw)] overflow-auto rounded-3xl border-0 bg-transparent p-2 backdrop:bg-black/50">{children}</dialog>;}
