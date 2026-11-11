@@ -2,11 +2,13 @@
 
 import { Loader2, Minus, Move, Plus } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { BusinessLogo } from "./business-logo";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_IMAGE_CROP, MAX_IMAGE_ZOOM, MIN_IMAGE_ZOOM, normalizeImageCrop, cropImageRect, type ImageCrop } from "@/lib/image-crop";
 
 type ImageCropEditorProps = {
   aspectLabel?: string;
+  businessLogo?: boolean;
   errorMessage?: string;
   allowAdjustments?: boolean;
   crop?: ImageCrop | null;
@@ -22,6 +24,7 @@ type ImageCropEditorProps = {
 
 export function ImageCropEditor({
   aspectLabel = "Preview crop",
+  businessLogo = false,
   errorMessage,
   allowAdjustments = false,
   crop,
@@ -38,7 +41,7 @@ export function ImageCropEditor({
   useEffect(()=>{dialog.current?.showModal();},[]);
   const [draft, setDraft] = useState<ImageCrop>(() => ({ ...normalizeImageCrop(crop), zoom: Math.max(minZoom, normalizeImageCrop(crop).zoom) }));
   const [dimensions,setDimensions]=useState({width:0,height:0,frameWidth:0,frameHeight:0});
-  const effectiveMin=Math.max(1,minZoom);
+  const effectiveMin = businessLogo ? minZoom : Math.max(1, minZoom);
   const rect=dimensions.width && dimensions.frameWidth ? cropImageRect(dimensions.width,dimensions.height,dimensions.frameWidth,dimensions.frameHeight,{...draft,zoom:Math.max(effectiveMin,draft.zoom)}) : null;
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
@@ -97,8 +100,8 @@ export function ImageCropEditor({
     const overflowY = image.naturalHeight * scale * zoom - height;
     setDraft({
       ...draft,
-      x: overflowX > 0 ? clamp(dragRef.current.crop.x - deltaX / overflowX * 100, 0, 100) : dragRef.current.crop.x,
-      y: overflowY > 0 ? clamp(dragRef.current.crop.y - deltaY / overflowY * 100, 0, 100) : dragRef.current.crop.y
+      x: (businessLogo ? Math.abs(overflowX) > 1 : overflowX > 0) ? clamp(dragRef.current.crop.x - deltaX / overflowX * 100, 0, 100) : dragRef.current.crop.x,
+      y: (businessLogo ? Math.abs(overflowY) > 1 : overflowY > 0) ? clamp(dragRef.current.crop.y - deltaY / overflowY * 100, 0, 100) : dragRef.current.crop.y
     });
   }
 
@@ -127,7 +130,7 @@ export function ImageCropEditor({
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{aspectLabel}</p>
           <h2 className="mt-1 text-xl font-semibold tracking-tight">Edit your photo</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Drag to reposition or pinch with two fingers to zoom.
+            {businessLogo ? "Drag to reposition, or choose Fit whole logo to show the full image." : "Drag to reposition or pinch with two fingers to zoom."}
           </p>
         </div>
 
@@ -135,7 +138,7 @@ export function ImageCropEditor({
           <div
             ref={previewRef}
             className={`relative mx-auto overflow-hidden rounded-[1.4rem] bg-muted touch-none ${previewClassName}`}
-            style={{...(previewAspectRatio ? {aspectRatio:previewAspectRatio}:{}),...(allowFrameResize?{resize:"both",minWidth:160,minHeight:100,maxWidth:"100%",maxHeight:500}: {})}}
+            style={{...(businessLogo ? { borderRadius: "50%" } : {}),...(previewAspectRatio ? {aspectRatio:previewAspectRatio}:{}),...(allowFrameResize?{resize:"both",minWidth:160,minHeight:100,maxWidth:"100%",maxHeight:500}: {})}}
             onPointerDown={beginDrag}
             onPointerMove={updateDrag}
             onPointerUp={endDrag}
@@ -146,27 +149,35 @@ export function ImageCropEditor({
               ref={imageRef}
               src={imageUrl}
               alt=""
-              className="absolute select-none"
+              className={`absolute select-none ${businessLogo ? "opacity-0" : ""}`}
               draggable={false}
               onLoad={event => {const {naturalWidth:width,naturalHeight:height}=event.currentTarget;setImageLoaded(true);setDimensions(value=>({...value,width,height}));}}
               onError={() => setImageFailed(true)}
               style={{width:rect?.width??"100%",height:rect?.height??"100%",left:rect?.x??0,top:rect?.y??0,maxWidth:"none",filter:`brightness(${draft.brightness??1}) saturate(${draft.saturation??1})`}}
             />
+            {businessLogo && imageLoaded && !imageFailed ? (
+              <BusinessLogo src={imageUrl} alt="Logo crop preview" crop={draft} className="pointer-events-none h-full w-full" />
+            ) : null}
             {!imageLoaded ? <div role="status" className="absolute inset-0 grid place-items-center bg-muted">
               {imageFailed ? <span className="text-sm">Could not load this photo. Close and try again.</span> : <span className="flex items-center gap-2 text-sm"><Loader2 className="h-5 w-5 animate-spin" /> Loading your photo...</span>}
             </div> : null}
-            <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/0">
+            {!businessLogo ? <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/0">
               <span className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
                 <Move className="h-3.5 w-3.5" />
                 Drag to reposition
               </span>
-            </div>
+            </div> : null}
           </div>
 
           <div className="mt-5 rounded-[1.2rem] bg-[#fbf7f5] p-4">
             <div className="mb-2 flex items-center justify-between text-sm">
               <span className="font-medium">Zoom</span>
-              {effectiveMin<1 && <button type="button" className="text-xs underline" onClick={()=>setDraft(current=>({...current,x:50,y:50,zoom:effectiveMin}))}>Fit whole photo</button>}
+              {businessLogo && (
+                <button type="button" disabled={!imageLoaded} className="text-xs underline" onClick={() => {
+                  const zoom = 0.98 * Math.min(dimensions.width, dimensions.height) / Math.hypot(dimensions.width, dimensions.height);
+                  setDraft(current => ({ ...current, x: 50, y: 50, zoom: Math.max(effectiveMin, zoom) }));
+                }}>Fit whole logo</button>
+              )}
               <span className="text-muted-foreground">{draft.zoom.toFixed(2)}x</span>
             </div>
             <div className="flex items-center gap-3">
@@ -220,7 +231,7 @@ export function ImageCropEditor({
           </Button>
           <Button type="button" disabled={!imageLoaded || imageFailed} onClick={() => {
             const frame = previewRef.current?.getBoundingClientRect();
-            onSave(preserveFrame && frame?.height ? { ...draft, aspectRatio: frame.width / frame.height } : draft);
+            onSave(businessLogo ? { ...draft, aspectRatio: 1 } : preserveFrame && frame?.height ? { ...draft, aspectRatio: frame.width / frame.height } : draft);
           }}>
             Save photo edits
           </Button>

@@ -7,6 +7,7 @@ import { CheckCircle2, Pencil, Plus } from "lucide-react";
 
 import { ChangeEvent, useEffect, useState, useRef } from "react";
 import { CroppedImage } from "@/components/ui/cropped-image";
+import { BusinessLogo } from "./business-logo";
 import { ImageCropEditor } from "@/components/ui/image-crop-editor";
 import { DEFAULT_IMAGE_CROP, normalizeImageCrop, type ImageCrop } from "@/lib/image-crop";
 import type { SharedUserProfile } from "@/lib/user-profile";
@@ -114,6 +115,7 @@ export function ImageUploadField({
     setMessageKind(kind);
   }
   const [failedPreview, setFailedPreview] = useState<string | null>(null);
+  const businessLogo = uploadEndpoint?.endsWith("?target=logo") ?? false;
   const isRound = rounded === "full";
   const value = controlledValue !== undefined ? controlledValue ?? "" : internalValue;
   const crop = liveCrop;
@@ -236,7 +238,7 @@ export function ImageUploadField({
           });
       const uploadData = new FormData();
       uploadData.set("file", uploadedFile);
-      uploadData.set("crop", JSON.stringify(shouldPreserveCrop ? isRound ? {...nextCrop,aspectRatio:1,brightness:1,saturation:1} : nextCrop : DEFAULT_IMAGE_CROP));
+      uploadData.set("crop", JSON.stringify(shouldPreserveCrop ? isRound && !businessLogo ? {...nextCrop,aspectRatio:1,brightness:1,saturation:1} : nextCrop : DEFAULT_IMAGE_CROP));
       const response = await fetch(uploadEndpoint!, {
         credentials: "same-origin",
         method: "POST",
@@ -318,7 +320,9 @@ export function ImageUploadField({
           avatarAppearance ? "h-24 w-24 rounded-full border-4 border-solid border-white bg-accent text-2xl font-semibold text-foreground shadow-soft focus-within:ring-2 focus-within:ring-primary" : compact ? "h-24 w-24 rounded-2xl" : isRound ? "h-32 w-32 rounded-full" : "min-h-[150px] w-full rounded-[1.5rem]"
         }`}
       >
-        {previewValue && failedPreview !== previewValue ? (
+        {previewValue && failedPreview !== previewValue ? businessLogo ? (
+          <BusinessLogo src={previewValue} alt="" crop={crop} className="absolute inset-0 h-full w-full" />
+        ) : (
           <CroppedImage
             src={previewValue}
             alt={avatarAppearance?.displayName ?? ""}
@@ -367,10 +371,11 @@ export function ImageUploadField({
       ) : null}
       {editorOpen && pendingPreview ? (
         <ImageCropEditor
+          businessLogo={businessLogo}
           allowAdjustments={editMenu && !isRound}
           preserveFrame={Boolean(onCropChange)}
           allowFrameResize={Boolean(onCropChange)&&!isRound}
-          aspectLabel={isRound ? "Profile crop" : uploadMode === "preserve" ? "Image preview" : "Image crop"}
+          aspectLabel={businessLogo ? "Storefront logo crop" : isRound ? "Profile crop" : uploadMode === "preserve" ? "Image preview" : "Image crop"}
           crop={pendingFile ? DEFAULT_IMAGE_CROP : crop}
           errorMessage={messageKind === "error" ? message ?? undefined : undefined}
           imageUrl={pendingPreview}
