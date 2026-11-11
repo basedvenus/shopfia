@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import {StorefrontSectionSize} from "@/components/vendor/storefront-section-size";
 import { GripVertical } from 'lucide-react';
 import { placeSection, sectionRows, rowColumns, resizeSectionWidth, resizeSectionCorner, type SectionLayout, type SectionPlacement } from '@/lib/storefront-section-layout';
+import { backgroundSelection } from './background-selection';
 import './storefront-section-layout.css';
 
 type Item = {id:string;label:string;content:ReactNode};
@@ -50,7 +51,14 @@ export function StorefrontSectionCanvas({items,order,layout,mobile,onChange}:{it
  return <div ref={root} className="storefront-section-grid" data-mobile={mobile}>
   <span className="sr-only" role="status">{announcement}</span>
   {rows.map(row=><div key={row.join('-')} className="storefront-section-row" data-paired={row.length===2} style={{"--section-columns":rowColumns(row,visibleLayout)} as CSSProperties}>
-   {row.map(id=>{const item=byId.get(id)!;return <div key={id} data-section-frame={id} data-selected={selected===id} onPointerDownCapture={event=>{const target=event.target as Element;setSelected(target.closest('[data-sticker], [data-inline-photo], .storefront-inline-text, .storefront-inline-field, input, textarea, a, button:not(.section-move-handle):not(.section-resize-handle):not(.section-width-handle):not(.section-corner-handle)')?null:id);if(!target.closest('[data-sticker], [data-inline-photo], [data-storefront-text], button, input, textarea'))window.dispatchEvent(new CustomEvent('storefront-selection',{detail:{kind:'section',id}}));}} data-dragging={dragging===id} className="storefront-section-frame" style={{'--section-width':`${visibleLayout[id]?.width??100}%`,'--section-offset':`${visibleLayout[id]?.offset??0}%`,'--section-height':`${height?.id===id?height.value:layout[id]?.height??0}px`} as CSSProperties}>
+   {row.map(id=>{const item=byId.get(id)!;return <div key={id} data-section-frame={id} data-selected={selected===id} onPointerDownCapture={event=>{const target = event.target as HTMLElement;
+    const surface = backgroundSelection(target);
+    if (surface && surface.section !== id && !target.closest('.section-edit-tools, .section-move-handle, .section-resize-handle, .section-width-handle, .section-corner-handle')) {
+      setSelected(null);
+      window.dispatchEvent(new CustomEvent('storefront-selection', { detail: { kind: 'background', id: surface.section } }));
+      return;
+    }
+    setSelected(target.closest('[data-sticker], [data-inline-photo], .storefront-inline-text, .storefront-inline-field, input, textarea, a, button:not(.section-move-handle):not(.section-resize-handle):not(.section-width-handle):not(.section-corner-handle)')?null:id);if(!target.closest('[data-sticker], [data-inline-photo], [data-storefront-text], button, input, textarea'))window.dispatchEvent(new CustomEvent('storefront-selection',{detail:{kind:'section',id}}));}} data-dragging={dragging===id} className="storefront-section-frame" style={{'--section-width':`${visibleLayout[id]?.width??100}%`,'--section-offset':`${visibleLayout[id]?.offset??0}%`,'--section-height':`${height?.id===id?height.value:layout[id]?.height??0}px`} as CSSProperties}>
     <div className="section-edit-tools">
 
      <button type="button" className="section-move-handle" aria-label={`Move ${item.label} section`} title="Drag to arrange. Alt + arrows to move or place beside."

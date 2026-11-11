@@ -1830,18 +1830,32 @@ function StorefrontPreview({
                 <div className="grid gap-3">
                   <InlineTextarea ariaLabel="Booking process" onChange={(value) => update("booking", { ...form.booking, process: value })} placeholder="Describe how booking works" value={form.booking.process} />
                   <InlineTextarea ariaLabel="Service area" onChange={(value) => update("serviceAreaNotes", value)} placeholder="Type service area here" value={form.serviceAreaNotes} />
-                  <StorefrontAreaEditor businessId={business.sourceId??business.id} previewOnly={previewOnly} onChange={value=>{update("city",value.city);update("state",value.state);update("serviceAreaNotes",value.serviceAreaNotes);}}/>
                 </div>
               ) : (
-                <><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p><StorefrontAreaEditor businessId={business.sourceId??business.id} previewOnly={previewOnly} onChange={value=>{update("city",value.city);update("state",value.state);update("serviceAreaNotes",value.serviceAreaNotes);}}/></>
+                <><p>{form.booking.process}</p><p className="mt-2">{form.serviceAreaNotes}</p></>
               )}
+                  <StorefrontAreaEditor businessId={business.sourceId??business.id} previewOnly={previewOnly} onChange={value=>{update("city",value.city);update("state",value.state);update("serviceAreaNotes",value.serviceAreaNotes);}}/>
             </PreviewSection>
           );
           if (section === "reviews") return null;
           if (section === "policies") return <PreviewSection key={section} active={activeSection===section} testId="preview-section-policies" theme={theme} title="Policies" onClick={()=>setActiveSection(section)}><div className="grid gap-4">{form.policies.map(policy=><div key={policy.id}><h3 className="font-semibold">{policy.title}</h3><p>{policy.body}</p></div>)}{!form.policies.length&&<p>Click to add your policies.</p>}</div></PreviewSection>;
           if (section === "faq") return (
             <PreviewSection key={section} active={activeSection === section} testId="preview-section-faq" theme={theme} title={<InlineStorefrontText label="Policies heading" value={sectionLabel(section)} placeholder="FAQ" onChange={value=>update("sectionLabels",{...form.sectionLabels,[section]:value})}/>} onClick={() => setActiveSection(section)}>
-              <div className="grid gap-4">{form.faqs.map(faq=><div key={faq.id}><div className="font-semibold"><InlineStorefrontText label="FAQ question" value={faq.question} placeholder="Type question here" onChange={value=>updateFaq(faq.id,{question:value})}/></div><p><InlineStorefrontText label="FAQ answer" value={faq.answer} placeholder="Type answer here" onChange={value=>updateFaq(faq.id,{answer:value})}/></p></div>)}<Button type="button" variant="secondary" onClick={()=>update("faqs",[...form.faqs,{id:crypto.randomUUID(),question:"",answer:""}])}><Plus size={16}/>Add FAQ</Button></div>
+              <div className={isMobile ? "grid grid-cols-1 gap-3" : "grid gap-3 md:grid-cols-3"}>
+                {form.faqs.map(faq => (
+                  <div key={faq.id} className={`min-w-0 p-4 ${theme.cardClass}`}>
+                    <h3 className="font-semibold" style={theme.headingStyle}>
+                      <InlineStorefrontText label="FAQ question" value={faq.question} placeholder="Type question here" onChange={value => updateFaq(faq.id, { question: value })} />
+                    </h3>
+                    <p className={`mt-2 text-sm leading-6 ${theme.copyClass}`}>
+                      <InlineStorefrontText label="FAQ answer" value={faq.answer} placeholder="Type answer here" onChange={value => updateFaq(faq.id, { answer: value })} />
+                    </p>
+                  </div>
+                ))}
+                <Button className={isMobile ? undefined : "md:col-span-3"} type="button" variant="secondary" onClick={() => update("faqs", [...form.faqs, { id: crypto.randomUUID(), question: "", answer: "" }])}>
+                  <Plus size={16} />Add FAQ
+                </Button>
+              </div>
             </PreviewSection>
           );
           if (section === "final-quote") return (
