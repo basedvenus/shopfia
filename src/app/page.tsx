@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   ArrowUpRight,
-  BadgeCheck,
   Bookmark,
   CalendarHeart,
   CakeSlice,
@@ -151,7 +150,7 @@ const recentVendors = [
 export default function Page() {
   return (
     <div className="-mt-6 space-y-20 pb-12 font-sans">
-      <section className="grid min-h-[calc(100vh-5rem)] items-center gap-10 overflow-hidden py-8 lg:grid-cols-[0.84fr_1.16fr]">
+      <section className="grid items-center gap-10 overflow-hidden py-8 lg:grid-cols-[0.84fr_1.16fr]">
         <div className="max-w-2xl">
           <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
             <span className="h-px w-12 bg-[#a85f5e]" />
@@ -198,20 +197,6 @@ export default function Page() {
                 Find Local Vendors
               </Button>
             </Link>
-          </div>
-          <div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-2">
-            {[
-              "Every vendor is discovered through a real celebration.",
-              "Built from real parties, not anonymous reviews."
-            ].map((line) => (
-              <div
-                key={line}
-                className="flex items-start gap-3 rounded-[8px] border border-white/80 bg-white/80 p-4 text-sm leading-6 text-muted-foreground shadow-sm"
-              >
-                <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#a85f5e]" />
-                <span>{line}</span>
-              </div>
-            ))}
           </div>
         </div>
 
@@ -271,7 +256,7 @@ export default function Page() {
               Trending Categories
             </p>
             <h2 className="shopfia-editorial-heading mt-2 text-3xl tracking-normal md:text-4xl">
-              Discover through real events, then save the look.
+              Plan your party with local vendors and real inspiration.
             </h2>
           </div>
           <Link
