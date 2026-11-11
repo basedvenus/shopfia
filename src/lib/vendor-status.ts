@@ -7,7 +7,9 @@ type VendorStatusInput = {
 };
 
 export function getVendorTrustStatus(vendor: VendorStatusInput) {
-  if (vendor.status === VendorProfileStatus.UNCLAIMED || !vendor.user) {
+  // Additional businesses use VendorProfileManager ownership instead of user.
+  // The stored status applies to both ownership models.
+  if (vendor.status === VendorProfileStatus.UNCLAIMED) {
     return { label: "Unclaimed", tone: "neutral" as const };
   }
 
