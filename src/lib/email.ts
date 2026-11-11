@@ -29,7 +29,7 @@ function getTransport() {
 }
 
 function button(label: string, href: string) {
-  return `<a class="email-button" href="${href}" style="display:inline-block;border-radius:999px;background:#e3a7a7;background-image:linear-gradient(90deg,#e3a7a7,#eab8b3);color:#ffffff;text-decoration:none;font-weight:700;padding:12px 20px;">${label}</a>`;
+  return `<a class="email-button" href="${href}" style="display:inline-block;border-radius:999px;background:#e3a7a7;background-image:linear-gradient(90deg,#e3a7a7,#eab8b3);color:#302625;text-decoration:none;font-weight:700;padding:12px 20px;">${label}</a>`;
 }
 
 function escapeHtml(value: string) {
@@ -59,7 +59,7 @@ function identityImage(identity: EmailIdentity, cid: string, attachments: EmailA
   }
   const style = "display:inline-block;width:100px;height:100px;border:4px solid #ffffff;border-radius:50%;vertical-align:middle;background:#fff8f5;object-fit:cover;";
   return src ? `<img class="email-avatar" src="${escapeHtml(src)}" width="100" height="100" alt="${escapeHtml(identity.name)}" style="${style}" />`
-    : `<span class="email-avatar" role="img" aria-label="${escapeHtml(identity.name)}" style="${style}text-align:center;line-height:100px;color:#586b7b;font-size:24px;font-weight:700;">${escapeHtml(identity.name.split(/\s+/).map(part=>part[0]).slice(0,2).join(""))}</span>`;
+    : `<span class="email-avatar" role="img" aria-label="${escapeHtml(identity.name)}" style="${style}text-align:center;line-height:100px;color:#302625;font-size:24px;font-weight:700;">${escapeHtml(identity.name.split(/\s+/).map(part=>part[0]).slice(0,2).join(""))}</span>`;
 }
 
 function shell({ body, preview, title, identities = "" }: { body: string; preview: string; title: string; identities?: string }) {
@@ -67,17 +67,26 @@ function shell({ body, preview, title, identities = "" }: { body: string; previe
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light" />
-    <meta name="supported-color-schemes" content="light" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
     <style>
       @font-face { font-family:"Instrument Sans"; font-style:normal; font-weight:400 700; src:url("https://www.shopfia.app/email/instrument-sans.woff2") format("woff2"); }
-      :root { color-scheme:light only; supported-color-schemes:light; }
+      :root { color-scheme:light dark; supported-color-schemes:light dark; }
       .email-page { background-color:#fff8f5 !important; color:#2f2626 !important; }
       .email-card { background-color:#ffffff !important; }
       .email-content { background-color:#fce1e4 !important; color:#4f4141 !important; }
       .email-header { background-color:#ffffff !important; color:#2f2626 !important; }
-      .email-title { color:#586b7b !important; }
-      .email-button { background-color:#e3a7a7 !important; color:#ffffff !important; }
+      .email-title { color:#302625 !important; }
+      .email-button { background-color:#e3a7a7 !important; color:#302625 !important; }
+      @media (prefers-color-scheme: dark) {
+        .email-page { background-color:#20191a !important; color:#fff4ef !important; }
+        .email-card { background-color:#2b2224 !important; border-color:#5a4247 !important; }
+        .email-header { background-color:#2b2224 !important; color:#fff4ef !important; }
+        .email-title { color:#fff4ef !important; }
+        .email-content { background-color:#35272b !important; background-image:none !important; color:#f9e9e6 !important; }
+        .email-message-preview { background-color:#2b2224 !important; border-color:#5a4247 !important; color:#f9e9e6 !important; }
+        .email-muted { color:#e2c7c5 !important; }
+      }
       @media screen and (max-width:480px) {
         .email-header, .email-content { padding:24px 20px !important; }
         .email-title { font-size:28px !important; }
@@ -97,7 +106,7 @@ function shell({ body, preview, title, identities = "" }: { body: string; previe
               <td class="email-header" bgcolor="#ffffff" style="background:#ffffff;color:#2f2626;padding:30px;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td style="vertical-align:middle;">
                 <img class="email-logo" src="cid:shopfia-logo" width="300" alt="Shopfia" style="display:block;width:300px;max-width:100%;height:auto;margin:0 0 32px;border:0;" />
-                <h1 class="email-title" style="margin:0;color:#586b7b;font-family:'Instrument Sans',Arial,Helvetica,sans-serif;font-size:38px;font-weight:700;letter-spacing:-1.2px;line-height:1.1;">${escapeHtml(title)}</h1>
+                <h1 class="email-title" style="margin:0;color:#302625;font-family:'Instrument Sans',Arial,Helvetica,sans-serif;font-size:38px;font-weight:700;letter-spacing:-1.2px;line-height:1.1;">${escapeHtml(title)}</h1>
                 </td>${identities ? `<td class="email-identities" width="190" align="right" style="width:190px;vertical-align:middle;white-space:nowrap;">${identities}</td>` : ""}</tr></table>
               </td>
             </tr>
@@ -172,7 +181,7 @@ export async function sendWelcomeEmail(to: string) {
       <p style="margin:0 0 22px;">Whether you're planning a birthday, baby shower, dinner party, wedding, or just collecting inspiration, we're excited to have you here.</p>
       <p style="margin:0 0 24px;">Create your first party, tag the vendors who made it special, save inspiration, and explore local creatives in your area.</p>
       <p style="margin:0 0 24px;">${button("Start Exploring", href)}</p>
-      <p style="margin:0;color:#8a6a67;">We can't wait to see what you create.</p>
+      <p class="email-muted" style="margin:0;color:#735451;">We can't wait to see what you create.</p>
     `
   });
 
@@ -195,7 +204,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
       <p style="margin:0 0 18px;">We received a request to reset your ShopFia password.</p>
       <p style="margin:0 0 24px;">Use the button below to create a new password. This link expires in one hour.</p>
       <p style="margin:0 0 24px;">${button("Reset password", escapeHtml(resetUrl))}</p>
-      <p style="margin:0;color:#8a6a67;">If you didn't request this, you can safely ignore this email.</p>
+      <p class="email-muted" style="margin:0;color:#735451;">If you didn't request this, you can safely ignore this email.</p>
     `
   });
 
@@ -248,7 +257,7 @@ export async function sendNewInquiryEmail({
       ${budgetText ? `<p style="margin:0 0 20px;"><strong>Budget:</strong> ${budgetText}</p>` : ""}
       <p style="margin:0 0 24px;">Open the conversation to review the event brief, inspiration, and reply through your Shopfia storefront.</p>
       <p style="margin:0 0 24px;">${button("View Inquiry", inquiryUrl)}</p>
-      <p style="margin:0;color:#8a6a67;">A beautiful lead is waiting for you.</p>
+      <p class="email-muted" style="margin:0;color:#735451;">A beautiful lead is waiting for you.</p>
     `
   });
 
@@ -290,10 +299,10 @@ export async function sendNewMessageEmail({
     preview: `${senderName} replied about ${contextTitle}.`,
     body: `
       <p style="margin:0 0 18px;"><strong>${safeSenderName}</strong> sent you a new message about <strong>${safeContextTitle}</strong>.</p>
-      <div style="margin:0 0 24px;border-radius:20px;background:#fff8f5;border:1px solid #f1d8d2;padding:16px 18px;color:#4f4141;">${safePreview}</div>
+      <div class="email-message-preview" style="margin:0 0 24px;border-radius:20px;background:#fff8f5;border:1px solid #f1d8d2;padding:16px 18px;color:#4f4141;">${safePreview}</div>
       <p style="margin:0 0 24px;">Open the conversation to keep planning through Shopfia.</p>
       <p style="margin:0 0 24px;">${button("View Message", conversationUrl)}</p>
-      <p style="margin:0;color:#8a6a67;">A thoughtful reply keeps the celebration moving.</p>
+      <p class="email-muted" style="margin:0;color:#735451;">A thoughtful reply keeps the celebration moving.</p>
     `
   });
 
@@ -328,7 +337,7 @@ export async function sendAccountNotificationEmail({to,title,path,kind,requester
     attachments,
     subject: `${heading} on Shopfia 🧁`,
     text: `${title}\n\nView on Shopfia: ${href}\n\nThis is an automated notification. Please do not reply to this email.`,
-    html: shell({title:heading,identities,preview:escapeHtml(title),body:`<p>${escapeHtml(title)}</p><p>${button(kind === "SERVICE_REQUEST" ? "View party request" : "View on Shopfia",href)}</p><p style="font-size:12px;color:#8a6a67;">This is an automated notification. Please do not reply to this email.</p>`})
+    html: shell({title:heading,identities,preview:escapeHtml(title),body:`<p>${escapeHtml(title)}</p><p>${button(kind === "SERVICE_REQUEST" ? "View party request" : "View on Shopfia",href)}</p><p class="email-muted" style="font-size:12px;color:#735451;">This is an automated notification. Please do not reply to this email.</p>`})
   });
 }
 

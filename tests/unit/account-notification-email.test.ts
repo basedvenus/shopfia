@@ -10,19 +10,19 @@ it('uses the configured no-reply sender, escapes content and prevents external n
  expect(mail.html).toContain('&lt;img src=x&gt;');expect(mail.html).not.toContain('href="//evil.example');expect(mail.text).toContain('/notifications');
 });
 
-it('renders readable, responsive branded email with the light Shopfia palette',async()=>{
+it('renders readable, responsive branded email in light and dark mode',async()=>{
  await sendAccountNotificationEmail({to:'recipient@example.com',title:'A guest requested a service.',path:'/messages',kind:'SERVICE_REQUEST'});
  const mail=sendMail.mock.calls.at(-1)![0] as any;
  expect(mail.subject).toBe('New Party Request on Shopfia 🧁');
  expect(mail.html).toContain('cid:shopfia-logo');
  expect(mail.attachments[0].cid).toBe('shopfia-logo');
  expect(mail.attachments[0].content.length).toBeGreaterThan(0);
- expect(mail.html).toContain('color-scheme:light only');
- expect(mail.html).not.toContain('prefers-color-scheme: dark');
+ expect(mail.html).toContain('color-scheme:light dark');
+ expect(mail.html).toContain('prefers-color-scheme: dark');
  expect(mail.html).toContain('max-width:480px');
  expect(mail.html).toContain('linear-gradient(135deg,#fcdee3');
  expect(mail.html).not.toContain('>Shopfia 🧁</p>');
- expect(mail.html).toContain('background:#e3a7a7;background-image:linear-gradient(90deg,#e3a7a7,#eab8b3);color:#ffffff');
+ expect(mail.html).toContain('background:#e3a7a7;background-image:linear-gradient(90deg,#e3a7a7,#eab8b3);color:#302625');
  expect(mail.html).toContain('bgcolor="#fce1e4"');
 });
 
