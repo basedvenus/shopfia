@@ -22,6 +22,15 @@ export async function requestPasswordResetAction(formData: FormData) {
       { key: `password-reset:email:${email}`, limit: 3, intervalMs: 60_000 }
     ]);
     if (!rate.ok) return { ok: false, error: "Please wait a minute before requesting another reset link." };
+    const user = await db.user.findUnique({ where: { email }, select: { id: true } });
+    if (!user) {
+      return {
+        ok: false,
+        reason: "account-not-found" as const,
+        error: "We couldn’t find a ShopFia account with that email. Check the address or try another email you may have used."
+      };
+    }
+
     if (!authProviderConfig.emailEnabled) return { ok: false, error: unavailable };
 
     // Use trusted server configuration; never derive recovery links from request headers.
@@ -33,24 +42,21 @@ export async function requestPasswordResetAction(formData: FormData) {
       return { ok: false, error: unavailable };
     }
 
-    const user = await db.user.findUnique({ where: { email }, select: { id: true } });
-    if (user) {
-      const rawToken = randomBytes(32).toString("hex");
-      const identifier = `password-reset:${email}`;
-      const token = createHash("sha256").update(rawToken).digest("hex");
-      await db.verificationToken.create({
-        data: { identifier, token, expires: new Date(Date.now() + 60 * 60 * 1000) }
-      });
-      const url = new URL("/account/reset-password", base);
-      url.searchParams.set("email", email);
-      url.searchParams.set("token", rawToken);
-      const delivery = await sendPasswordResetEmail(email, url.href);
-      if (!delivery.ok) {
-        await db.verificationToken.delete({ where: { identifier_token: { identifier, token } } });
-        return { ok: false, error: unavailable };
-      }
+    const rawToken = randomBytes(32).toString("hex");
+    const identifier = `password-reset:${email}`;
+    const token = createHash("sha256").update(rawToken).digest("hex");
+    await db.verificationToken.create({
+      data: { identifier, token, expires: new Date(Date.now() + 60 * 60 * 1000) }
+    });
+    const url = new URL("/account/reset-password", base);
+    url.searchParams.set("email", email);
+    url.searchParams.set("token", rawToken);
+    const delivery = await sendPasswordResetEmail(email, url.href);
+    if (!delivery.ok) {
+      await db.verificationToken.delete({ where: { identifier_token: { identifier, token } } });
+      return { ok: false, error: unavailable };
     }
-    return { ok: true, message: "If an account exists for that email, a reset link has been sent. Check your inbox and spam folder. The link expires in one hour." };
+    return { ok: true, message: "We sent a password reset link. Check your inbox and spam folder. The link expires in one hour." };
   } catch {
     // Recovery tokens and provider error details must never reach the client or logs.
     securityLog("password_reset_request_failed", {});

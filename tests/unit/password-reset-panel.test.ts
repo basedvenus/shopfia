@@ -18,19 +18,22 @@ describe("dedicated password recovery", () => {
     act(() => view.root.findByProps({ type: "email" }).props.onChange({ target: { value: "person@example.com" } }));
     return view;
   }
-  it("hides magic links until Forgot password is opened and resets recovery on sign-up", () => {
+  it("opens password recovery directly from sign-in", () => {
     let view!: ReactTestRenderer;
-    act(() => { view = create(React.createElement(SignInPanel, { emailEnabled: true, googleEnabled: false })); });
-    expect(view.root.findAllByProps({ id: "sign-in-recovery" })).toHaveLength(0);
-    const recovery = view.root.findByProps({ "aria-controls": "sign-in-recovery" });
-    expect(recovery.props["aria-expanded"]).toBe(false);
-    act(() => recovery.props.onClick());
-    expect(view.root.findAllByProps({ id: "sign-in-recovery" })).toHaveLength(1);
-    expect(view.root.findByProps({ "aria-label": "Recovery email" }).props.required).toBe(true);
-    expect(view.root.findAllByType("a").find((link) => link.props.href === "/account/forgot-password")?.children).toContain("Reset your password");
+    act(() => { view = create(React.createElement(SignInPanel, { googleEnabled: false })); });
+    expect(view.root.findByType("a").props.href).toBe("/account/forgot-password");
     act(() => view.root.findAllByType("button").find((button) => button.children.includes("Create account"))!.props.onClick());
-    expect(view.root.findAllByProps({ id: "sign-in-recovery" })).toHaveLength(0);
-    expect(mocks.request).not.toHaveBeenCalled();
+    expect(view.root.findAllByType("a")).toHaveLength(0);
+    act(() => view.unmount());
+  });
+  it("offers account creation after an unknown email and clears the result on edit", async () => {
+    mocks.request.mockResolvedValue({ ok: false, reason: "account-not-found", error: "No ShopFia account found." });
+    const view = mountForm();
+    await act(async () => { await view.root.findByType("form").props.onSubmit({ preventDefault() {} }); });
+    expect(view.root.findByProps({ role: "status" }).children).toContain("No ShopFia account found.");
+    expect(view.root.findByType("a").props.href).toBe("/account?mode=signup");
+    act(() => view.root.findByProps({ type: "email" }).props.onChange({ target: { value: "other@example.com" } }));
+    expect(view.root.findAllByType("a")).toHaveLength(0);
     act(() => view.unmount());
   });
   it("requests the email without a password or magic-link control", async () => {

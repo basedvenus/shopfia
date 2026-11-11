@@ -13,14 +13,14 @@ import { Input } from "@/components/ui/input";
 type SignInPanelProps = {
   callbackUrl?: string;
   googleEnabled: boolean;
-  emailEnabled: boolean;
+  initialMode?: "sign-in" | "sign-up";
 };
 
-export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnabled }: SignInPanelProps) {
+export function SignInPanel({ callbackUrl = "/explore", googleEnabled, initialMode = "sign-in" }: SignInPanelProps) {
   const {language,t}=useLanguage();
   const [preferredLanguage,setPreferredLanguage]=useState(language);
-  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
-  const [showRecovery, setShowRecovery] = useState(false);
+  const [mode, setMode] = useState<"sign-in" | "sign-up">(initialMode);
+  const [credentialsInvalid, setCredentialsInvalid] = useState(false);
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [password, setPassword] = useState("");
@@ -38,7 +38,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
           onClick={() => {
             setMode("sign-in");
             setMessage(null);
-            setShowRecovery(false);
+            setCredentialsInvalid(false);
           }}
         >
           {t("Sign in")}
@@ -51,7 +51,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
           onClick={() => {
             setMode("sign-up");
             setMessage(null);
-            setShowRecovery(false);
+            setCredentialsInvalid(false);
           }}
         >
           {t("Create account")}
@@ -67,6 +67,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
           e.preventDefault();
           startTransition(async () => {
             setMessage(null);
+            setCredentialsInvalid(false);
 
             if (mode === "sign-up") {
               const formData = new FormData();
@@ -90,12 +91,16 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
             });
 
             if (result?.error) {
+              if (mode === "sign-in" && result.error === "CredentialsSignin") {
+                setCredentialsInvalid(true);
+                return;
+              }
               setMessage(
                 result.error === "Configuration" || result.error === "CallbackRouteError"
                   ? "Sign-in is temporarily unavailable while ShopFia reconnects to the database. Please try again shortly."
                   : mode === "sign-up"
                     ? "Account created, but sign-in failed. Try signing in."
-                    : "Email or password is incorrect."
+                    : "Could not sign in. Please try again."
               );
               return;
             }
@@ -121,7 +126,7 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
         <Input
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => { setEmail(e.target.value); setCredentialsInvalid(false); }}
           placeholder={t("Email")}
           autoComplete="email"
           required
@@ -129,12 +134,16 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
         <Input
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => { setPassword(e.target.value); setCredentialsInvalid(false); }}
+          aria-invalid={credentialsInvalid || undefined}
+          aria-describedby={credentialsInvalid ? "sign-in-credentials-error" : undefined}
+          className={credentialsInvalid ? "border-red-600 focus-visible:ring-red-600" : undefined}
           placeholder={t("Password")}
           autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
-          minLength={8}
+          minLength={mode === "sign-up" ? 8 : undefined}
           required
         />
+        {credentialsInvalid ? <p id="sign-in-credentials-error" role="alert" className="text-sm text-red-700">{t("Email or password is incorrect.")}</p> : null}
         <Button type="submit" className="w-full" disabled={pending}>
           {t(pending
             ? mode === "sign-up"
@@ -159,42 +168,11 @@ export function SignInPanel({ callbackUrl = "/explore", googleEnabled, emailEnab
           {t("Sign in with Google")}
         </Button>
       ) : null}
-      {mode === "sign-in" ? (
-        <div className="space-y-3">
-          <button
-            type="button"
-            aria-expanded={showRecovery}
-            aria-controls="sign-in-recovery"
-            className="text-sm font-medium text-[#9b6b65] underline-offset-4 hover:underline"
-            onClick={() => { setShowRecovery((current) => !current); setMessage(null); }}
-          >
-            {t("Forgot password?")}
-          </button>
-          {showRecovery ? (
-            <div id="sign-in-recovery" className="space-y-3 rounded-2xl border p-4">
-              {emailEnabled ? (
-                <form className="space-y-3" onSubmit={(event) => {
-                  event.preventDefault();
-                  startTransition(async () => {
-                    setMessage(null);
-                    try {
-                      const result = await signIn("nodemailer", { email, callbackUrl, redirect: false });
-                      setMessage(result?.error ? "Could not send a sign-in link. Please try again." : "Check your email for the magic link.");
-                    } catch {
-                      setMessage("Could not send a sign-in link. Please try again.");
-                    }
-                  });
-                }}>
-                  <p className="text-sm text-muted-foreground">We’ll email you a magic link to sign in without your password.</p>
-                  <Input type="email" aria-label="Recovery email" placeholder={t("Email")} autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
-                  <Button type="submit" variant="secondary" className="w-full" disabled={pending}>Send magic link</Button>
-                </form>
-              ) : null}
-              <Link href="/account/forgot-password" className="inline-block text-sm font-medium text-[#9b6b65] underline-offset-4 hover:underline">Reset your password</Link>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      {mode === "sign-in" && (
+        <Link href="/account/forgot-password" className="inline-block text-sm font-medium text-[#9b6b65] underline-offset-4 hover:underline">
+          {t("Forgot password?")}
+        </Link>
+      )}
       {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
     </div>
   );

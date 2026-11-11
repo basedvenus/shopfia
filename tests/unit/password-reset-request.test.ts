@@ -57,12 +57,9 @@ describe("password reset requests", () => {
     expect(mocks.send.mock.calls[1][1]).not.toBe(href);
   });
 
-  it("does not disclose whether an account exists", async () => {
-    const existing = await request();
+  it("reports an unknown email without sending or creating a reset token", async () => {
     mocks.findUnique.mockResolvedValue(null);
-    mocks.send.mockClear();
-    mocks.create.mockClear();
-    expect(await request()).toEqual(existing);
+    expect(await request()).toMatchObject({ ok: false, reason: "account-not-found" });
     expect(mocks.send).not.toHaveBeenCalled();
     expect(mocks.create).not.toHaveBeenCalled();
   });
@@ -82,7 +79,7 @@ describe("password reset requests", () => {
   it("reports missing SMTP configuration instead of claiming email was sent", async () => {
     mocks.config.emailEnabled = false;
     expect((await request()).ok).toBe(false);
-    expect(mocks.findUnique).not.toHaveBeenCalled();
+    expect(mocks.send).not.toHaveBeenCalled();
   });
 
   it("removes only the new token on delivery failure and reports failure", async () => {

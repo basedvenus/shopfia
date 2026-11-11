@@ -189,20 +189,20 @@ export async function sendWelcomeEmail(to: string) {
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   const html = shell({
-    title: "Reset your password",
-    preview: "Create a new Shopfia password. This link expires soon.",
+    title: "Reset your ShopFia password",
+    preview: "Create a new ShopFia password. This link expires soon.",
     body: `
-      <p style="margin:0 0 18px;">We received a request to reset your Shopfia password.</p>
+      <p style="margin:0 0 18px;">We received a request to reset your ShopFia password.</p>
       <p style="margin:0 0 24px;">Use the button below to create a new password. This link expires in one hour.</p>
-      <p style="margin:0 0 24px;">${button("Create New Password", resetUrl)}</p>
+      <p style="margin:0 0 24px;">${button("Reset password", escapeHtml(resetUrl))}</p>
       <p style="margin:0;color:#8a6a67;">If you didn't request this, you can safely ignore this email.</p>
     `
   });
 
   return sendEmail({
     html,
-    subject: "Reset your Shopfia password",
-    text: `Create a new Shopfia password with this link. It expires in one hour:\n\n${resetUrl}\n\nIf you didn't request this, you can ignore this email.`,
+    subject: "Reset your ShopFia password",
+    text: `Create a new ShopFia password with this link. It expires in one hour:\n\n${resetUrl}\n\nIf you didn't request this, you can ignore this email.`,
     to
   });
 }

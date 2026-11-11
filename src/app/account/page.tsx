@@ -36,7 +36,7 @@ export default async function AccountPage({
             </p>
             <SignInPanel
               callbackUrl={callbackUrl}
-              emailEnabled={authProviderConfig.emailEnabled}
+              initialMode={resolvedSearchParams.mode === "signup" ? "sign-up" : "sign-in"}
               googleEnabled={authProviderConfig.googleEnabled}
             />
           </CardContent>

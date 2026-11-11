@@ -117,6 +117,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       : [])
   ],
   callbacks: {
+    async signIn({ account, user }) {
+      if (account?.type !== "email") return true;
+      const address = user.email?.trim().toLowerCase();
+      if (!address) return false;
+      const existingUser = await db.user.findUnique({
+        where: { email: address },
+        select: { id: true }
+      });
+      return Boolean(existingUser);
+    },
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role ?? UserRole.BUYER;
