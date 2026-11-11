@@ -1,3 +1,4 @@
+import { BusinessLogo } from "@/components/ui/business-logo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -42,16 +43,13 @@ export default async function MyBusinessesPage() {
             className="group grid aspect-square place-items-center rounded-[1.5rem] border border-white/80 bg-white p-5 text-center shadow-[0_18px_50px_rgba(72,44,43,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(72,44,43,0.12)]"
           >
             <div className="grid gap-4 place-items-center">
-              <div className="relative grid h-24 w-24 place-items-center overflow-hidden rounded-2xl bg-white text-2xl font-semibold text-primary shadow-[0_10px_28px_rgba(72,44,43,0.08)]">
+              <div className="relative grid h-24 w-24 place-items-center overflow-hidden rounded-full text-2xl font-semibold text-primary">
                 {business.logoUrl ? (
-                  <CroppedImage
+                  <BusinessLogo
                     src={business.logoUrl}
                     alt={`${business.name} logo`}
-                    crop={normalizeImageCrop(business.logoCrop)}
-                    frameFit="contain"
-                    className="absolute inset-0 h-full w-full bg-white"
-                    loading="lazy"
-                    decoding="async"
+                    crop={business.logoCrop}
+                    className="absolute inset-0 h-full w-full"
                   />
                 ) : (
                   initials(business.name)

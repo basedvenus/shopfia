@@ -1,3 +1,4 @@
+import { BusinessLogo } from "@/components/ui/business-logo";
 import {BusinessWaiverManager} from "./business-waiver-manager";
 import { StorefrontEditorStart } from "@/components/vendor/storefront-editor-start";
 import { DeleteBusiness } from "@/components/vendor/delete-business";
@@ -26,14 +27,13 @@ export function BusinessDashboardView({business,stats,welcome=false,reviewReques
       <header className="rounded-[1.25rem] border border-white/80 bg-white p-5 shadow-[0_18px_50px_rgba(72,44,43,0.08)] sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white text-xl font-semibold text-primary">
+            <div className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full text-xl font-semibold text-primary">
               {business.logoUrl ? (
-                <CroppedImage
+                <BusinessLogo
                   src={business.logoUrl}
                   alt={`${business.name} logo`}
-                  crop={normalizeImageCrop(business.logoCrop)}
-                  frameFit="contain"
-                  className="absolute inset-0 h-full w-full bg-white"
+                  crop={business.logoCrop}
+                  className="absolute inset-0 h-full w-full"
                 />
               ) : initials(business.name)}
             </div>

@@ -1,3 +1,4 @@
+import { BusinessLogo } from "@/components/ui/business-logo";
 import {readStructuredPricing} from "@/lib/service-pricing";
 import {PublishedServiceAreaMap} from "@/components/location/published-service-area-map";
 import { CroppedImage } from "@/components/ui/cropped-image";
@@ -314,9 +315,9 @@ export default async function VendorProfilePage({ params }: { params: Promise<{ 
           <span className="hidden sm:inline">{isUnclaimed ? "Community-tagged · Unclaimed business" : "Verified identity, saved services, quotes, and bookings"}</span>
         </div>
         <div className="grid gap-3 p-3 md:grid-cols-[auto_1fr_auto] md:items-center md:p-4">
-          <div className="relative w-20 shrink-0 overflow-hidden bg-white md:w-24" style={{aspectRatio:logoCrop.aspectRatio??1}}>
+          <div className="relative aspect-square w-20 shrink-0 overflow-hidden rounded-full md:w-24">
             {vendor.logoUrl ? (
-              <CroppedImage src={vendor.logoUrl} alt={`${vendor.name} logo`} crop={logoCrop} frameFit="contain" className="absolute inset-0 h-full w-full"/>
+              <BusinessLogo src={vendor.logoUrl} alt={`${vendor.name} logo`} crop={logoCrop} className="absolute inset-0 h-full w-full"/>
             ) : hero ? (
               <Image src={hero} alt={vendor.name} fill sizes="96px" className="object-cover" />
             ) : (
@@ -712,9 +713,9 @@ function StorefrontTemplateIntro({
   const introCopy = tagline ?? vendor.bio ?? "Explore services, real event credits, and booking details before starting a ShopFia quote.";
   const quoteHref = isUnclaimed ? undefined : "#inquiry";
   const logo = (
-    <div className="relative h-24 w-24 shrink-0 overflow-hidden bg-white md:h-28 md:w-28">
+    <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full md:h-28 md:w-28">
       {vendor.logoUrl ? (
-        <CroppedImage src={vendor.logoUrl} alt={`${vendor.name} logo`} crop={logoCrop} frameFit="contain" className="absolute inset-0 h-full w-full"/>
+        <BusinessLogo src={vendor.logoUrl} alt={`${vendor.name} logo`} crop={logoCrop} className="absolute inset-0 h-full w-full"/>
       ) : (
         <div className="grid h-full place-items-center px-2 text-center text-lg font-semibold" style={theme.accentTextStyle}>{vendor.name}</div>
       )}
