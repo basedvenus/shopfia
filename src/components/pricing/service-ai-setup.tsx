@@ -76,9 +76,9 @@ export function ServiceAiSetup({businessId,onApply}:{businessId?:string;onApply:
 
  async function generate(){if(!businessId)return;setBusy(true);setError("");setCreated(false);try{const response=await fetch(`/api/vendor/business/${encodeURIComponent(businessId)}/service-draft`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({description})});const result=await response.json();if(!response.ok)throw Error((result.error||"Could not create a draft.")+(result.diagnostic?` (${result.diagnostic})`:""));const next=serviceDraftSchema.parse(result.draft);setCreated(true);onApply(serviceDraftToForm(next));}catch(error){setError(error instanceof Error?error.message:"Could not create a draft.");}finally{setBusy(false);}}
  return <section style={{fontFamily:"inherit"}} className="rounded-2xl border bg-white p-5 space-y-4"><div className="flex items-center gap-3"><SophiaPortrait/><div><h2 style={{fontFamily:'var(--font-shopfia-sans), "Instrument Sans", Inter, sans-serif',color:"#000000",fontSize:"clamp(24px, 3vw, 36px)",lineHeight:1.1}} className="font-semibold">hi, i’m <span className="shopfia-editorial-heading font-normal italic text-primary" style={{fontFamily:'var(--font-shopfia-serif), Canela, "Editorial New", "Iowan Old Style", Georgia, serif',fontWeight:400,fontSize:"1.15em",fontStyle:"italic",textTransform:"none"}}>sofia.</span></h2><p className="text-sm text-muted-foreground">I will help you create your service. Just describe it here.</p></div></div><label htmlFor="sofia-service-description" className="ml-[76px] block text-sm font-semibold">What do you offer?</label><div className="relative"><textarea id="sofia-service-description" className="w-full rounded-2xl border p-3 pb-14 text-base placeholder:italic" rows={5} maxLength={4000} placeholder="Example: I make custom sugar cookies with high-quality ingredients. I sell them in sets of 12 for $40, 24 for $80, or 36 for $120. I can decorate cookies for any theme and match the icing to your color palette. Customers can send inspiration photos with their quote. I also offer delivery within 30 miles for an additional fee." value={description} onChange={event=>setDescription(event.target.value)}/>
- <button type="button" onClick={toggleDictation} disabled={busy} aria-label={listening ? "Stop dictation" : "Dictate service description"} className="absolute bottom-3 right-3 inline-flex min-h-11 items-center gap-2 rounded-full border bg-white px-3 text-sm font-medium disabled:opacity-50">
-   {listening ? <Square size={16} aria-hidden="true" /> : <Mic size={16} aria-hidden="true" />}
-   {listening ? "Stop" : "Dictate"}
+ <button type="button" onClick={toggleDictation} disabled={busy} aria-label={listening ? "Stop dictation" : "Dictate service description"} className="absolute bottom-3 right-3 inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full border bg-white px-3 text-sm font-medium disabled:opacity-50">
+   {listening ? <Square size={12} fill="currentColor" aria-hidden="true" /> : <Mic size={16} aria-hidden="true" />}
+   {!listening && "Dictate"}
  </button></div>
  {listening && <DictationWaveform />}
  {voiceError && <p role="alert" className="text-sm text-red-700">{voiceError}</p>}
@@ -90,7 +90,7 @@ function SophiaPortrait(){
 }
 
 function DictationWaveform() {
- const [levels, setLevels] = useState<number[]>(() => Array(44).fill(3));
+ const [levels, setLevels] = useState<number[]>(() => Array(32).fill(2));
  const [unavailable, setUnavailable] = useState(false);
 
  useEffect(() => {
@@ -121,7 +121,7 @@ function DictationWaveform() {
        timer = setInterval(() => {
          analyser.getFloatTimeDomainData(samples);
          const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
-         const height = Math.min(30, Math.max(3, Math.round(rms * 180)));
+         const height = Math.min(16, Math.max(2, Math.round(rms * 100)));
          setLevels(previous => [...previous.slice(1), height]);
        }, 70);
      } catch {
@@ -140,12 +140,12 @@ function DictationWaveform() {
  }, []);
 
  return (
-   <div className="flex items-center gap-3 rounded-full border border-primary/20 bg-primary/10 px-4 py-2">
-     <span role="status" className="shrink-0 text-sm font-medium">Listening…</span>
+   <div className="inline-flex max-w-full items-center gap-2.5 rounded-full bg-muted/50 px-3 py-1">
+     <span role="status" className="shrink-0 text-xs text-muted-foreground">Listening…</span>
      {!unavailable && (
-       <div aria-hidden="true" className="flex h-8 min-w-0 flex-1 items-center gap-0.5 overflow-hidden">
+       <div aria-hidden="true" className="flex h-4 min-w-0 items-center gap-0.5 overflow-hidden">
          {levels.map((height, index) => (
-           <span key={index} className="min-w-0 flex-1 rounded-full bg-foreground/60" style={{height}} />
+           <span key={index} className="w-0.5 shrink-0 rounded-full bg-muted-foreground/60" style={{height}} />
          ))}
        </div>
      )}
