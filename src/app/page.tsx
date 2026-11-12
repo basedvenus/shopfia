@@ -59,41 +59,49 @@ const partyImages = [
 const categoryCards = [
   {
     name: "Cakes",
+    description: "Custom cakes, tiered cakes, smash cakes",
     image: "/landing/cakes-category-close.webp",
     icon: CakeSlice
   },
   {
     name: "Balloons",
+    description: "Balloon arches, garlands, and bouquets",
     image: "/landing/balloons-category.webp",
     icon: PartyPopper
   },
   {
     name: "Florals",
+    description: "Centerpieces, bouquets, and floral installations",
     image: "/landing/florals-category.webp",
     icon: Flower2
   },
   {
     name: "Decor",
+    description: "Table styling, signs, and party displays",
     image: "/landing/decor-category.webp",
     icon: Sparkles
   },
   {
     name: "Cookies",
+    description: "Custom cookies in all shapes and sizes",
     image: "/landing/cookies-category.webp",
     icon: Heart
   },
   {
     name: "Rentals",
+    description: "Backdrops, bar carts, and tents",
     image: "/landing/rentals-dessert-cart.webp",
     icon: CalendarHeart
   },
   {
     name: "Desserts",
+    description: "Cakes, cupcakes, and pies",
     image: "/landing/desserts-category.webp",
     icon: CakeSlice
   },
   {
     name: "Drinks",
+    description: "Bartenders, bar carts, and signature drinks",
     image: "/landing/drinks-category.webp",
     icon: GlassWater
   }
@@ -273,7 +281,7 @@ export default function Page() {
                 <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                   <h3 className="text-2xl font-semibold">{category.name}</h3>
                   <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-white/90">
-                    Vendors behind the party
+                    {category.description}
                   </p>
                 </div>
               </Link>
@@ -357,38 +365,6 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[8px] border border-white/80 bg-white text-black shadow-sm">
-        <div className="grid lg:grid-cols-[1.06fr_0.94fr]">
-          <div className="p-6 md:p-10">
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
-              Seasonal Inspiration
-            </p>
-            <h2 className="shopfia-editorial-heading mt-3 max-w-2xl text-3xl tracking-normal md:text-5xl">
-              Plan from a real celebration, then make it your own.
-            </h2>
-            <p className="mt-5 max-w-xl text-sm leading-7 text-muted-foreground">
-              Save citrus brunches, floral showers, bow-filled birthdays, and
-              candlelit dinner parties. When you are ready, connect with the
-              vendors behind the details you already love.
-            </p>
-            <Link href="/parties" className="mt-7 inline-flex">
-              <Button variant="secondary" className="rounded-[8px]">
-                Browse Seasonal Ideas
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-          <div className="relative min-h-[280px]">
-            <Image
-              src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1200&q=80"
-              alt="Elegant seasonal party table inspiration"
-              fill
-              sizes="(min-width: 1024px) 42vw, 100vw"
-              className="object-cover"
-            />
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
