@@ -12,6 +12,9 @@ type Dictation = {
   abort(): void;
   onresult: ((event: {resultIndex: number; results: ArrayLike<ArrayLike<{transcript: string}>>}) => void) | null;
   onerror: ((event: {error: string}) => void) | null;
+  onstart: (() => void) | null;
+  onspeechstart: (() => void) | null;
+  onspeechend: (() => void) | null;
   onend: (() => void) | null;
 };
 
@@ -27,12 +30,14 @@ export function ServiceAiSetup({businessId,onApply}:{businessId?:string;onApply:
  const [description,setDescription]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState(""),[created,setCreated]=useState(false);
  const dictation = useRef<Dictation | null>(null);
  const [listening, setListening] = useState(false);
+ const [speaking, setSpeaking] = useState(false);
  const [voiceError, setVoiceError] = useState("");
  useEffect(() => () => {
    const active = dictation.current;
    if (!active) return;
    dictation.current = null;
    active.onresult = active.onerror = active.onend = null;
+   active.onstart = active.onspeechstart = active.onspeechend = null;
    active.abort();
  }, []);
 
@@ -50,26 +55,34 @@ export function ServiceAiSetup({businessId,onApply}:{businessId?:string;onApply:
    const recognition = new Recognition();
    recognition.lang = document.documentElement.lang || navigator.language;
    recognition.continuous = true;
+   recognition.onstart = () => setListening(true);
+   recognition.onspeechstart = () => setSpeaking(true);
+   recognition.onspeechend = () => setSpeaking(false);
    recognition.onresult = event => {
      const words = Array.from(event.results).slice(event.resultIndex)
        .map(result => result[0]?.transcript.trim()).filter(Boolean).join(" ");
      if (words) setDescription(current => [current.trimEnd(), words].filter(Boolean).join(" ").slice(0, 4000));
    };
    recognition.onerror = event => {
+     dictation.current = null;
+     setListening(false);
+     setSpeaking(false);
      if (event.error === "aborted") return;
      setVoiceError(event.error === "not-allowed" || event.error === "service-not-allowed"
-       ? "Allow microphone and speech recognition access in your browser settings to dictate."
+       ? "The browser couldn’t start speech recognition. Reload this page and try again, or use your keyboard’s dictation."
        : "Dictation couldn’t continue. Tap the microphone to try again.");
    };
    recognition.onend = () => {
+     if (dictation.current !== recognition) return;
      dictation.current = null;
+     setSpeaking(false);
      setListening(false);
    };
    try {
-     recognition.start();
      dictation.current = recognition;
-     setListening(true);
+     recognition.start();
    } catch {
+     dictation.current = null;
      setVoiceError("Couldn’t start dictation. You can still type your description.");
    }
  }
@@ -80,7 +93,7 @@ export function ServiceAiSetup({businessId,onApply}:{businessId?:string;onApply:
    {listening ? <Square size={12} fill="currentColor" aria-hidden="true" /> : <Mic size={16} aria-hidden="true" />}
    {!listening && "Dictate"}
  </button></div>
- {listening && <DictationWaveform />}
+ {listening && <DictationWaveform speaking={speaking} />}
  {voiceError && <p role="alert" className="text-sm text-red-700">{voiceError}</p>}
  <Button type="button" disabled={!businessId||busy||listening||description.trim().length<10} onClick={generate}>{busy?"Sofia is creating my service…":"Ask Sofia to create my service"}</Button>{error&&<p role="alert" className="text-sm text-red-700">{error}</p>}{created&&<p role="status" className="text-sm">Service details added below. You can edit them before saving.</p>}</section>;
 }
@@ -89,66 +102,15 @@ function SophiaPortrait(){
  return <img src="/images/sofia-assistant.webp" alt="Sofia, a smiling pink striped candle" width={64} height={96} className="h-24 w-16 shrink-0 rounded-2xl object-contain"/>;
 }
 
-function DictationWaveform() {
- const [levels, setLevels] = useState<number[]>(() => Array(32).fill(2));
- const [unavailable, setUnavailable] = useState(false);
-
- useEffect(() => {
-   let disposed = false;
-   let stream: MediaStream | undefined;
-   let context: AudioContext | undefined;
-   let timer: ReturnType<typeof setInterval> | undefined;
-
-   async function startMeter() {
-     try {
-       if (!navigator.mediaDevices?.getUserMedia || !window.AudioContext) {
-         setUnavailable(true);
-         return;
-       }
-       const microphone = await navigator.mediaDevices.getUserMedia({audio: true});
-       if (disposed) {
-         microphone.getTracks().forEach(track => track.stop());
-         return;
-       }
-       stream = microphone;
-       context = new AudioContext();
-       const analyser = context.createAnalyser();
-       analyser.fftSize = 1024;
-       context.createMediaStreamSource(stream).connect(analyser);
-       await context.resume();
-       if (disposed) return;
-       const samples = new Float32Array(analyser.fftSize);
-       timer = setInterval(() => {
-         analyser.getFloatTimeDomainData(samples);
-         const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
-         const height = Math.min(16, Math.max(2, Math.round(rms * 100)));
-         setLevels(previous => [...previous.slice(1), height]);
-       }, 70);
-     } catch {
-       stream?.getTracks().forEach(track => track.stop());
-       if (!disposed) setUnavailable(true);
-     }
-   }
-
-   void startMeter();
-   return () => {
-     disposed = true;
-     clearInterval(timer);
-     stream?.getTracks().forEach(track => track.stop());
-     if (context && context.state !== "closed") void context.close().catch(() => {});
-   };
- }, []);
-
+function DictationWaveform({speaking}: {speaking: boolean}) {
  return (
-   <div className="inline-flex max-w-full items-center gap-2.5 rounded-full bg-muted/50 px-3 py-1">
-     <span role="status" className="shrink-0 text-xs text-muted-foreground">Listening…</span>
-     {!unavailable && (
-       <div aria-hidden="true" className="flex h-4 min-w-0 items-center gap-0.5 overflow-hidden">
-         {levels.map((height, index) => (
-           <span key={index} className="w-0.5 shrink-0 rounded-full bg-muted-foreground/60" style={{height}} />
-         ))}
-       </div>
-     )}
+   <div className="inline-flex items-center gap-2 rounded-full bg-muted/50 px-3 py-1">
+     <span role="status" className="text-xs text-muted-foreground">Listening…</span>
+     <div aria-hidden="true" className="flex h-4 items-center gap-0.5">
+       {[4, 7, 12, 8, 14, 9, 5].map((height, index) => (
+         <span key={index} className="w-0.5 rounded-full bg-muted-foreground/60 motion-safe:transition-[height]" style={{height: speaking ? height : 2}} />
+       ))}
+     </div>
    </div>
  );
 }
