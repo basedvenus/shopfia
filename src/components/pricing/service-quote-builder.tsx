@@ -12,7 +12,7 @@ import { Calculation } from "./service-request-pricing";
 
 export function BuyerQuote({ quote }: { quote: Omit<QuoteVersion, "status"> & { status: QuoteVersion["status"] | "draft" } }) {
   const t = quote.totals;
-  return <section className="sp-card"><p className="sp-eyebrow">Buyer quote · Version {quote.version} · {quote.status}</p><Calculation lines={quote.lines} finalAgreement />
+  return <section className="sp-card sp-buyer-quote"><p className="sp-eyebrow">Buyer quote · Version {quote.version} · {quote.status}</p><Calculation lines={quote.lines} finalAgreement />
     <details className="sp-disclosure"><summary>Agreed services & inclusions</summary>{quote.lines.map(line => <p key={line.id}><strong>{line.name}</strong><br />{line.scope}</p>)}</details>
     {t.discount > 0 && <div className="sp-total"><span>{quote.promotion?.name ?? "Promotion"}</span><strong>−{usd(t.discount)}</strong></div>}
     {t.adjustment !== 0 && <div className="sp-total"><span>{t.adjustment < 0 ? "One-time discount" : "Price adjustment"}</span><strong>{t.adjustment < 0 ? "−" : "+"}{usd(Math.abs(t.adjustment))}</strong></div>}
@@ -71,7 +71,7 @@ export function ServiceQuoteBuilder({ initialLines, selection, promotions, histo
   const latest = history.at(-1);
   const requestedDeadline = deadline ? `${deadline}:00Z` : "";
   const effectiveDeadline = sale.promotion && Date.parse(sale.promotion.endsAt) < Date.parse(requestedDeadline) ? sale.promotion.endsAt : requestedDeadline;
-  return <div className="sp-stack"><section className="sp-card">
+  return <div className="sp-stack"><section className="sp-card sp-quote-editor">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h2>Line items</h2>
       <Dropdown.Root>
@@ -92,7 +92,7 @@ export function ServiceQuoteBuilder({ initialLines, selection, promotions, histo
     <Dialog.Root open={libraryOpen} onOpenChange={setLibraryOpen}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[110] bg-[#2f2626]/45" />
-        <Dialog.Content className="fixed inset-y-0 right-0 z-[111] flex w-full max-w-md flex-col overflow-hidden rounded-l-3xl bg-white shadow-2xl">
+        <Dialog.Content className="fixed inset-y-0 right-0 z-[111] flex h-dvh w-full max-w-md flex-col overflow-hidden rounded-l-3xl bg-white shadow-2xl">
           <header className="flex items-center justify-between gap-4 border-b bg-[#fff2ee] px-6 py-4">
             <Dialog.Title className="font-semibold">Service library</Dialog.Title>
             <Dialog.Close aria-label="Close service library" className="rounded-full p-2 hover:bg-white"><X size={18} /></Dialog.Close>
@@ -111,12 +111,12 @@ export function ServiceQuoteBuilder({ initialLines, selection, promotions, histo
               {!library.some(extra => extra.name.toLowerCase().includes(librarySearch.trim().toLowerCase())) && <p className="p-4 text-sm text-muted-foreground">{library.length ? "No matching add-ons." : "No saved add-ons for this service."}</p>}
             </div>
           </div>
-          <footer className="flex justify-end border-t px-5 py-4"><Dialog.Close asChild><PricingButton className="sp-primary" type="button">Done</PricingButton></Dialog.Close></footer>
+          <footer className="flex shrink-0 justify-end border-t px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"><Dialog.Close asChild><PricingButton className="sp-primary" type="button">Done</PricingButton></Dialog.Close></footer>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
     <div className="overflow-x-auto rounded-xl border border-[#eadbd3]">
-      <table className="w-full min-w-[610px] table-fixed text-sm">
+      <table className="w-full sp-quote-table table-fixed text-sm">
         <colgroup><col className="w-[23%]" /><col className="w-[31%]" /><col className="w-[17%]" /><col className="w-[14%]" /><col className="w-[15%]" /></colgroup>
         <thead className="bg-[#fff8f5] text-left text-xs font-semibold text-[#594a48]">
           <tr><th className="px-3 py-3">Item</th><th className="px-3">Description</th><th className="px-3">Unit price</th><th className="px-3">Quantity</th><th className="px-3 text-right">Amount</th></tr>

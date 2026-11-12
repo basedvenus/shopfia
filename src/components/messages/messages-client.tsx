@@ -56,7 +56,9 @@ export function MessagesClient({
   const [selectedConversationId, setSelectedConversationId] = useState(
     initialPayload.selectedConversationId
   );
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const urlConversationId = searchParams.get("conversationId");
+  const [drawerOverride, setDrawerOpen] = useState<boolean | null>(null);
+  const drawerOpen = drawerOverride ?? !urlConversationId;
   const { payload, refreshMessages, loadPage, loading, error: refreshError } = useMessagePages(initialPayload, selectedConversationId, !drawerOpen);
   const [isPending, startTransition] = useTransition();
   const previousUnreadTotal = useRef(initialPayload.unreadTotal);
@@ -79,8 +81,8 @@ export function MessagesClient({
     [router, startTransition]
   );
 
-  const urlConversationId = searchParams.get("conversationId");
   useEffect(() => {
+    setDrawerOpen(null);
     setSelectedConversationId(urlConversationId ?? initialPayload.selectedConversationId);
   }, [urlConversationId, initialPayload.selectedConversationId]);
 
@@ -155,7 +157,7 @@ export function MessagesClient({
           {refreshError} <button type="button" className="underline" disabled={loading} onClick={() => void refreshMessages()}>Retry</button>
         </p>
       ) : null}
-      <div className="relative grid min-h-0 flex-1 md:grid-cols-[minmax(270px,23%)_1fr]">
+      <div className="relative grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] md:grid-cols-[minmax(270px,23%)_minmax(0,1fr)]">
         <InboxPanel
           nextCursor={payload.pagination.nextConversationCursor}
           loading={loading}
@@ -170,7 +172,7 @@ export function MessagesClient({
 
         {drawerOpen ? (
           <div className="absolute inset-0 z-30 bg-[#2f2626]/20 backdrop-blur-sm md:hidden">
-            <div className="h-full w-[88%] max-w-[360px] bg-[#fffaf6] shadow-[22px_0_54px_rgba(82,55,55,0.16)]">
+            <div className="h-full w-full bg-[#fffaf6] shadow-[22px_0_54px_rgba(82,55,55,0.16)]">
               <div className="flex items-center justify-between border-b border-[#eadbd3] px-4 py-3">
                 <div className="flex items-center gap-2 font-semibold text-[#2f2626]">
                   <Inbox className="h-4 w-4 text-[#c5837f]" />
@@ -460,7 +462,7 @@ function ConversationThread({
   }
 
   return (
-    <section className="flex min-h-0 flex-col bg-white">
+    <section className="flex min-h-0 min-w-0 flex-col bg-white">
       <div className="shrink-0 border-b border-[#eadbd3] bg-[linear-gradient(135deg,#fffdf9,#ffffff_62%,#f6efe7)] px-2.5 py-2 md:px-4">
         <div className="flex items-stretch gap-2">
           <button
@@ -472,17 +474,6 @@ function ConversationThread({
             <ArrowLeft className="h-5 w-5" />
           </button>
           <ContextCard conversation={conversation} />
-          {viewerIsVendor ? (
-            <button
-              type="button"
-              onClick={() => openQuoteBuilder()}
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[1rem] bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-3 text-xs font-bold text-[#fffaf6] shadow-[0_10px_22px_rgba(230,176,174,0.28)] transition hover:bg-[#DFA3A2] hover:bg-none"
-            >
-              <ReceiptText className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Build Quote</span>
-              <span className="sm:hidden">Quote</span>
-            </button>
-          ) : null}
         </div>
       </div>
 
@@ -1071,7 +1062,7 @@ function QuoteWorkflowCard({
             <button
               type="button"
               onClick={() => onBuildQuote(null)}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(230,176,174,0.28)] transition hover:bg-[#DFA3A2] hover:bg-none"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] min-h-11 px-4 py-2 text-sm font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(230,176,174,0.28)] transition hover:bg-[#DFA3A2] hover:bg-none"
             >
               Build Quote
               <ChevronRight className="h-3.5 w-3.5" />
@@ -1264,7 +1255,7 @@ function QuoteReviewModal({
       <div className="mx-auto flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_70px_rgba(47,38,38,0.24)] md:h-auto md:max-h-[90vh]">
         <div className="relative shrink-0 overflow-hidden border-b border-[#eadbd3] bg-[#fffaf6]">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,#fffaf6,#ffffff_58%,#eef5eb)]" />
-          <div className="relative flex items-start gap-3 p-4">
+          <div className="relative flex min-w-0 items-start gap-2 p-3 sm:gap-3 sm:p-4">
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[1.1rem] bg-[#f7e6dc] shadow-sm">
               {image ? (
                 <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${image})` }} />
@@ -1296,7 +1287,7 @@ function QuoteReviewModal({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto p-2 sm:p-4">
           <div className="grid gap-3">
             {bookingIsPaid ? (
               <div className="rounded-[1.15rem] border border-[#cfe1c8] bg-[#f7fbf4] p-3 shadow-[0_12px_26px_rgba(111,132,105,0.10)]">
@@ -1460,7 +1451,7 @@ function BuildQuotePromptCard({ onBuildQuote }: { onBuildQuote: (quoteRequest?: 
         <button
           type="button"
           onClick={() => onBuildQuote(null)}
-          className="shrink-0 rounded-full bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] px-3 py-1.5 text-xs font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(230,176,174,0.28)] transition hover:bg-[#DFA3A2] hover:bg-none"
+          className="shrink-0 rounded-full bg-[linear-gradient(90deg,#E3A7A7_0%,#EAB8B3_100%)] min-h-11 px-4 py-2 text-sm font-bold text-[#fffaf6] shadow-[0_8px_18px_rgba(230,176,174,0.28)] transition hover:bg-[#DFA3A2] hover:bg-none"
         >
           Build Quote
         </button>
@@ -1595,7 +1586,7 @@ function LegacyQuoteBuilderModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto p-2 sm:p-4">
           <div className="grid gap-4">
             <label className="grid gap-1.5 text-sm font-bold text-[#2f2626]">
               Quote title

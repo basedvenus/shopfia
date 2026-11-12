@@ -44,7 +44,7 @@ export function useMessagePages(initialPayload: PagedMessagesPayload, selectedCo
       const params = new URLSearchParams({ paged: "1", page });
       if (requestedConversation) params.set("conversationId", requestedConversation);
       if (cursor) params.set("cursor", cursor);
-      if (markRead && canMarkRead.current) params.set("markRead", "1");
+      if (markRead && (canMarkRead.current || window.matchMedia("(min-width: 768px)").matches)) params.set("markRead", "1");
       if (page === "refresh" && focusedQuote.current?.conversationId === requestedConversation) {
         if (focusedQuote.current.id) params.set("quoteRequestId", focusedQuote.current.id);
         else if (focusedQuote.current.orderId) params.set("orderId", focusedQuote.current.orderId);

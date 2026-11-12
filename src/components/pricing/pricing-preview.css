@@ -98,3 +98,36 @@
 /* Inquiry controls retain the shared platform typography inside custom templates. */
 .template-surface .sp-inquiry-card h2{font-family:var(--font-shopfia-serif),"Cormorant Garamond",serif!important;font-size:30px!important;font-weight:500!important;font-style:normal!important;text-transform:none!important;display:flex!important;line-height:1.2!important;}
 .template-surface .sp-inquiry-card h3{font-family:var(--font-shopfia-sans),"Instrument Sans",sans-serif!important;font-size:18px!important;font-weight:500!important;font-style:normal!important;text-transform:none!important;line-height:1.5!important;color:var(--sp-heading)!important;}
+
+@media (max-width: 640px) {
+  .sp-workspace .sp-quote-editor,
+  .sp-workspace .sp-buyer-quote {
+    min-width: 0;
+    padding: 12px;
+    gap: 12px;
+  }
+  .sp-quote-table th,
+  .sp-quote-table td {
+    padding: 5px 3px;
+    overflow-wrap: anywhere;
+    font-size: 11px;
+  }
+  .sp-workspace .sp-quote-table input:not([type=checkbox]) {
+    min-height: 34px;
+    border-radius: 8px;
+    padding: 3px;
+    font-size: 16px;
+  }
+  .sp-quote-table td button {
+    padding-inline: 2px;
+  }
+  .sp-buyer-quote .sp-calculation > div,
+  .sp-buyer-quote .sp-total {
+    gap: 8px;
+    overflow-wrap: anywhere;
+  }
+  .sp-buyer-quote .sp-calculation > div > strong {
+    white-space: normal;
+    text-align: right;
+  }
+}
