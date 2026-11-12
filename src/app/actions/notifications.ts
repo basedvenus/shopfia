@@ -12,6 +12,16 @@ export async function markNotificationsReadAction() {
   revalidatePath("/notifications");
 }
 
+export async function deleteNotificationAction(form: FormData) {
+  const session = await auth();
+  const userId = session?.user?.id;
+  const id = form.get("notificationId");
+  if (!userId || typeof id !== "string" || !id || id.length > 128) return;
+
+  await db.notification.deleteMany({ where: { id, userId } });
+  revalidatePath("/notifications");
+}
+
 export async function updatePartyNotificationPreferenceAction(form: FormData) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Sign in to update preferences.");

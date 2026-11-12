@@ -1,8 +1,9 @@
 import { PartyInvitationResponse } from "@/components/parties/party-invitation-response";
 import Link from "next/link";
+import { X } from "lucide-react";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { markNotificationsReadAction } from "@/app/actions/notifications";
+import { deleteNotificationAction, markNotificationsReadAction } from "@/app/actions/notifications";
 import { Button } from "@/components/ui/button";
 export default async function NotificationsPage() {
   const session = await auth();
@@ -43,7 +44,18 @@ export default async function NotificationsPage() {
         </section>
       ) : null}
     <section aria-label="Your notifications" className="grid gap-3">
-      {notifications.length ? notifications.map((notification) => <article key={notification.id} className={`rounded-2xl border p-4 ${notification.readAt ? "bg-white" : "border-primary/25 bg-primary/5"}`}>
+      {notifications.length ? notifications.map((notification) => <article key={notification.id} className={`relative rounded-2xl border p-4 pr-16 ${notification.readAt ? "bg-white" : "border-primary/25 bg-primary/5"}`}>
+        <form action={deleteNotificationAction} className="absolute right-2 top-2">
+          <input type="hidden" name="notificationId" value={notification.id} />
+          <button
+            type="submit"
+            aria-label={`Delete notification: ${notification.title}`}
+            title="Delete notification"
+            className="grid size-11 place-items-center rounded-full text-muted-foreground hover:bg-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <X aria-hidden="true" className="size-4" />
+          </button>
+        </form>
         <Link href={notification.kind === "PARTY_INVITATION" ? "/notifications#party-invitations" : notification.href} className="font-medium underline-offset-4 hover:underline">{notification.title}</Link>
         <p className="mt-2 text-xs text-muted-foreground">{notification.createdAt.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric" })}{!notification.readAt ? " · Unread" : ""}</p>
       </article>) : <p className="rounded-3xl border bg-white p-6 text-sm text-muted-foreground">You’re all caught up. Service requests, new followers, and party updates will appear here.</p>}
