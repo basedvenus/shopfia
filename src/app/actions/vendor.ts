@@ -972,7 +972,7 @@ async function saveVendorProfile(formData: FormData): Promise<never> {
   revalidatePath(`/vendor/business/${vendor.slug}`);
   revalidatePath(`/vendor/profile/${vendor.slug}`);
   revalidatePath(storefrontPath(vendor.slug));
-  redirect(`/vendor/business/${vendor.slug}`);
+  redirect(`/vendor/business/${vendor.slug}${targetVendor ? "" : "?welcome=1"}`);
 }
 
 export async function upsertOfferingAction(formData: FormData) {

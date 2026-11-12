@@ -13,6 +13,27 @@ export default async function BusinessDashboardPage({params,searchParams}:{param
  if(!session?.user?.id)redirect("/account?next=login");
  const business=await db.vendorProfile.findFirst({where:{slug,...businessManagerWhere(session.user.id,session.user.role)},select:vendorDashboardSelect});
  if(!business)redirect("/vendor/dashboard");
- const stats=await getVendorDashboardStats(business.id);
- return <BusinessDashboardView business={business} stats={stats} welcome={query?.welcome==="1"} reviewRequest={query?.reviewRequest} />;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const [stats, upcomingOrders] = await Promise.all([
+    getVendorDashboardStats(business.id),
+    db.order.findMany({
+      where: {
+        vendorProfileId: business.id,
+        status: { in: ["paid", "in_progress"] },
+        quote: { quoteRequest: { eventDate: { gte: today } } }
+      },
+      orderBy: [{ quote: { quoteRequest: { eventDate: "asc" } } }, { id: "asc" }],
+      take: 5,
+      select: {
+        id: true,
+        offering: { select: { title: true } },
+        quote: { select: { quoteRequest: { select: { eventDate: true, eventLocation: true } } } }
+      }
+    })
+  ]);
+ return <BusinessDashboardView business={business} stats={stats} upcomingParties={upcomingOrders.flatMap(({id, offering, quote}) => {
+   const event = quote?.quoteRequest;
+   return event?.eventDate ? [{id, title: offering?.title ?? "Custom booking", date: event.eventDate, location: event.eventLocation}] : [];
+ })} welcome={query?.welcome==="1"} reviewRequest={query?.reviewRequest} />;
 }

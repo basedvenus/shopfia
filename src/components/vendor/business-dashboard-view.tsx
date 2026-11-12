@@ -1,10 +1,11 @@
+import { UpcomingParties } from "@/components/vendor/upcoming-parties";
 import { BusinessLogo } from "@/components/ui/business-logo";
 import {BusinessWaiverManager} from "./business-waiver-manager";
 import { StorefrontEditorStart } from "@/components/vendor/storefront-editor-start";
 import { DeleteBusiness } from "@/components/vendor/delete-business";
 import { BusinessLocationSettings } from "@/components/vendor/business-location-settings";
 import Link from "next/link";
-import { AlertCircle, CheckCircle2, ChevronDown, Clock3, Edit3, Eye, MessageSquare, PackagePlus, Settings, ShieldCheck, ShoppingBag, Store, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronDown, Clock3, Edit3, Eye, MessageSquare, PackagePlus, Settings, ShieldCheck, ShoppingBag, Upload } from "lucide-react";
 import { requestReviewForOrderAction } from "@/app/actions/reviews";
 import { submitBusinessVerificationDocumentAction } from "@/app/actions/vendor";
 import { deleteOfferingAction, duplicateOfferingAction, toggleOfferingPublishedAction } from "@/app/actions/offerings";
@@ -18,12 +19,12 @@ import { formatCurrency } from "@/lib/utils";
 
 import type { DashboardBusiness } from "@/lib/vendor-dashboard-select";
 
-export function BusinessDashboardView({business,stats,welcome=false,reviewRequest,editorHref}:{business:DashboardBusiness;stats:{activeServices:number;openRequests:number;activeBookings:number;revenueCents:number};welcome?:boolean;reviewRequest?:string;editorHref?:string}) {
+export function BusinessDashboardView({business,stats,upcomingParties=[],welcome=false,reviewRequest,editorHref}:{business:DashboardBusiness;upcomingParties?:React.ComponentProps<typeof UpcomingParties>["parties"];stats:{activeServices:number;openRequests:number;activeBookings:number;revenueCents:number};welcome?:boolean;reviewRequest?:string;editorHref?:string}) {
   const publicUrl = storefrontUrl(business.slug);
   const publicPath = storefrontPath(business.slug);
   const {activeServices,openRequests,activeBookings,revenueCents:revenue}=stats;
   return (
-    <div className="space-y-6 pb-10">
+    <div className="w-full min-w-0 space-y-6 pb-10">
       <header className="rounded-[1.25rem] border border-white/80 bg-white p-5 shadow-[0_18px_50px_rgba(72,44,43,0.08)] sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
@@ -39,11 +40,12 @@ export function BusinessDashboardView({business,stats,welcome=false,reviewReques
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Business dashboard</p>
-              <h1 className="mt-1 truncate text-3xl font-semibold tracking-[-0.04em]">{business.name}</h1>
+              <h1 className="mt-1 break-words text-2xl sm:text-3xl font-semibold tracking-[-0.04em]">{business.name}</h1>
               <p className="mt-1 text-sm text-muted-foreground">Storefront status: {storefrontStatus(business)}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            <StorefrontEditorStart href={editorHref ?? `/vendor/business/${business.slug}/storefront`} showGuide={welcome} />
             <Button asChild variant="secondary">
               <Link href={publicPath}>
                 <Eye className="h-4 w-4" />
@@ -55,7 +57,7 @@ export function BusinessDashboardView({business,stats,welcome=false,reviewReques
                 More
                 <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
               </summary>
-              <div className="absolute right-0 z-20 mt-2 w-56 rounded-[1rem] border border-border bg-white p-2 shadow-[0_18px_50px_rgba(72,44,43,0.14)]">
+              <div className="absolute left-0 z-20 mt-2 w-56 sm:left-auto sm:right-0 rounded-[1rem] border border-border bg-white p-2 shadow-[0_18px_50px_rgba(72,44,43,0.14)]">
                 <CopyStorefrontLinkButton url={publicUrl} label="Copy Link" className="h-9 w-full justify-start bg-white px-3 shadow-none" />
                 <MenuLink href="#settings" icon={<Settings className="h-4 w-4" />} label="Business Settings" />
               </div>
@@ -64,31 +66,22 @@ export function BusinessDashboardView({business,stats,welcome=false,reviewReques
         </div>
       </header>
 
-      <nav className="sticky top-[88px] z-10 flex gap-2 overflow-x-auto rounded-full border border-border/70 bg-white/90 p-2 shadow-[0_14px_36px_rgba(72,44,43,0.08)] backdrop-blur">
-        {["Home", "Storefront", "Services", "Inquiries", "Bookings", "Waivers", "Settings"].map((item) => (
-          <a key={item} href={`#${item==="Waivers"?"business-waivers":item.toLowerCase()}`} className="whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-[#f8ece9] hover:text-foreground">
+      <nav className="sticky top-[88px] z-10 flex max-w-full gap-2 overflow-x-auto rounded-full border border-border/70 bg-white/90 p-2 shadow-[0_14px_36px_rgba(72,44,43,0.08)] backdrop-blur">
+        {["Home", "Upcoming parties", "Services", "Inquiries", "Bookings", "Waivers", "Settings"].map((item) => (
+          <a key={item} href={`#${item==="Waivers"?"business-waivers":item.toLowerCase().replace(/ /g, "-")}`} className="whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-[#f8ece9] hover:text-foreground">
             {item}
           </a>
         ))}
       </nav>
 
-      <section id="home" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section id="home" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatTile label="Services" value={String(activeServices)} />
         <StatTile label="Open Requests" value={String(openRequests)} />
         <StatTile label="Active Bookings" value={String(activeBookings)} />
         <StatTile label="Revenue" value={formatCurrency(revenue)} />
       </section>
 
-      <section id="storefront" className="scroll-mt-24">
-        <Panel>
-          <SectionKicker icon={<Store className="h-4 w-4" />} label="Storefront" />
-          <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Customer-facing mini website</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Edit the page customers see: content, design, sections, portfolio, service area, and inquiry flow.
-          </p>
-            <StorefrontEditorStart href={editorHref ?? `/vendor/business/${business.slug}/storefront`} showGuide={welcome} />
-        </Panel>
-      </section>
+      <UpcomingParties parties={upcomingParties} />
 
       <section id="services" className="scroll-mt-24 space-y-4">
         <SectionHeader
@@ -179,7 +172,7 @@ export function BusinessDashboardView({business,stats,welcome=false,reviewReques
       <section id="settings" className="scroll-mt-24">
         <Panel>
           <SectionKicker icon={<Settings className="h-4 w-4" />} label="Settings" />
-          <div className="mt-4 grid items-start gap-4 lg:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
             <div className="rounded-[1rem] border border-[#eadbd8] bg-[#fbf7f5] p-4">
               <h3 className="font-semibold">Business details</h3>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{formatLocation(business.city, business.state)} · {business.serviceRadiusMiles} mile service radius</p>
@@ -204,7 +197,7 @@ export function BusinessDashboardView({business,stats,welcome=false,reviewReques
                 </div>
                 <CredentialSummary documents={business.verificationDocuments} />
               </div>
-              <form action={submitBusinessVerificationDocumentAction} className="mt-4 grid gap-3 rounded-[1rem] border border-white/80 bg-white/80 p-4 md:grid-cols-[1fr_1.2fr_1fr_auto] md:items-end">
+              <form action={submitBusinessVerificationDocumentAction} className="mt-4 grid grid-cols-1 gap-3 rounded-[1rem] border border-white/80 bg-white/80 p-4 md:grid-cols-[1fr_1.2fr_1fr_auto] md:items-end">
                 <input type="hidden" name="businessId" value={business.id} />
                 <label className="grid gap-1.5 text-sm font-medium">
                   Credential type
@@ -216,11 +209,11 @@ export function BusinessDashboardView({business,stats,welcome=false,reviewReques
                 </label>
                 <label className="grid gap-1.5 text-sm font-medium">
                   Document
-                  <input name="document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="min-h-10 rounded-[0.75rem] border border-[#eadbd8] bg-white px-3 py-2 text-sm" />
+                  <input name="document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="min-h-10 w-full min-w-0 rounded-[0.75rem] border border-[#eadbd8] bg-white px-3 py-2 text-sm" />
                 </label>
                 <label className="grid gap-1.5 text-sm font-medium">
                   Expires
-                  <input name="expiresAt" type="date" className="h-10 rounded-[0.75rem] border border-[#eadbd8] bg-white px-3 text-sm" />
+                  <input name="expiresAt" type="date" className="h-10 w-full min-w-0 rounded-[0.75rem] border border-[#eadbd8] bg-white px-3 text-sm" />
                 </label>
                 <Button type="submit" className="h-10">
                   <Upload className="h-4 w-4" />

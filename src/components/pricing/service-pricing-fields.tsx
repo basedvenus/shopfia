@@ -40,14 +40,14 @@ export function newBase(type: BasePricing["type"]): BasePricing {
   }
 }
 
-export function ServicePricingFields({ value, onChange, issues=[], businessId, previewOnly=false, activeSection }: { activeSection?:string; businessId?:string; previewOnly?:boolean; value: ServicePricing; onChange: (value: ServicePricing) => void; issues?:ServiceFormIssue[] }) {
+export function ServicePricingFields({ value, onChange, issues=[], businessId, previewOnly=false, activeSection, saveAction }: { saveAction?: ReactNode; activeSection?:string; businessId?:string; previewOnly?:boolean; value: ServicePricing; onChange: (value: ServicePricing) => void; issues?:ServiceFormIssue[] }) {
   const library=useServicePresetLibrary(businessId,previewOnly);
   const b = value.base;
   const set = (patch: Partial<ServicePricing>) => onChange({ ...value, ...patch });
   const base = (patch: object) => set({ base: { ...b, ...patch } as BasePricing });
   return <Issues.Provider value={issues}><div className="sp-stack">
     <section hidden={Boolean(activeSection&&activeSection!=="basics")} id="service-basics" className="sp-card scroll-mt-28">
-      <div className="flex flex-wrap items-center justify-between gap-2"><p style={{textTransform:"none",letterSpacing:"normal"}} className="sp-eyebrow">Service details</p><ServiceReusePicker businessId={previewOnly?undefined:businessId} onApply={onChange}/></div><h2>How do you charge for this service?</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2"><p style={{textTransform:"none",letterSpacing:"normal"}} className="sp-eyebrow">Service details</p><div className="flex flex-wrap items-center gap-2"><ServiceReusePicker businessId={previewOnly?undefined:businessId} onApply={onChange}/>{saveAction}</div></div><h2>How do you charge for this service?</h2>
       <div className="sp-type-grid">{Object.entries(pricingTypes).map(([type, label]) => <PricingButton type="button" aria-pressed={b.type === type} key={type} onClick={() => { if (b.type !== type) set({ base: newBase(type as BasePricing["type"]) }); }}>{label}</PricingButton>)}</div>
       <Field label="Service name" hint="What would customers search for to find this? Name what you offer, such as Pole rental, Matcha cart, or Photo booth. Put durations and tiers in package names below."><input value={value.name} placeholder="Type service name here" onChange={e => set({ name: e.target.value })} /></Field>
       <Field label="Description" hint="Describe the service itself (at least 20 characters). Add flavors or customer choices in Options and menus, and separately priced extras in Add-ons below."><textarea value={value.description} placeholder="Describe your service here" onChange={e => set({ description: e.target.value })} /></Field>

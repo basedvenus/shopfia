@@ -43,6 +43,7 @@ function StructuredForm({ initial, offering, businessId, categories, eventCatego
     });
   }
   const [promotions] = useState<Promotion[]>(() => Array.isArray(offering?.promotions) ? offering.promotions.flatMap(p => { const parsed = promotionSchema.safeParse(p); return parsed.success ? [parsed.data] : []; }) : []);
+  const saveButton = <SubmitButton pendingText="Saving service…">Save service</SubmitButton>;
   const parsed = servicePricingSchema.safeParse(service);
   return <div className="sp-workspace sp-live-form" style={{ padding: 0, minHeight: 0 }}><form ref={formRef} noValidate action={async data=>{if(previewOnly){setSaveError("This is a preview. Open your storefront editor to save a service.");return;}try{if(onSaved)data.set("stayInStorefront","1");await upsertOfferingAction(data);onSaved?.();}catch(error){if(!onSaved)throw error;setSaveError(error instanceof Error&&!error.message.includes("NEXT_REDIRECT")?error.message:"The service could not be saved. Check the fields and try again. Your entries are kept.");}}} className="sp-stack" onSubmit={event => {
     if (!issues.length) return;
@@ -61,14 +62,14 @@ function StructuredForm({ initial, offering, businessId, categories, eventCatego
     <input type="hidden" name="promotionsJson" value={JSON.stringify(promotions)} />
     <ServiceAiSetup businessId={previewOnly?undefined:businessId} onApply={setService}/>
     {attempted && issues.length > 0 && <div ref={errorRef} tabIndex={-1} role="alert" className="sp-card sp-save-errors"><h2>Before you save</h2><p>Finish these fields. Select a message to go directly to it.</p><ul>{issues.map((issue, i) => <li key={`${issue.group}-${issue.label}-${i}`}><button type="button" className="sp-link" onClick={() => focusIssue(issue)}>{issue.message}</button></li>)}</ul></div>}
-    <p className="sp-note"><span className="sp-required">*</span> Required fields</p><ServicePricingFields businessId={businessId} previewOnly={previewOnly} value={service} onChange={setService} issues={attempted?issues:[]} />
+    <p className="sp-note"><span className="sp-required">*</span> Required fields</p><ServicePricingFields saveAction={saveButton} businessId={businessId} previewOnly={previewOnly} value={service} onChange={setService} issues={attempted?issues:[]} />
 
     <section id="service-photos" className="sp-card scroll-mt-28"><ServicePhotoGrid businessId={businessId} previewOnly={previewOnly} photos={offering?.photos} crops={offering?.photoCrops}/></section>
     <section id="service-categories" className="sp-card scroll-mt-28"><div className="sp-stack">{!offering&&defaultCategoryIds?.length?<p className="sp-note">Your business categories are selected. Add or remove categories for this service.</p>:null}<ServiceCategoryPicker label="Service categories" name="categoryIds" options={categories} selected={categoryIds} onChange={setCategoryIds} required error={attempted&&!categoryIds.length?"Choose at least one service category.":undefined}/><ServiceCategoryPicker label="Event types" name="eventCategoryIds" options={eventTypeOptions(eventCategories).sort((a,b)=>a.name.localeCompare(b.name))} selected={eventIds} onChange={setEventIds}/></div></section>
 
     {parsed.success ? <p className="sp-note">Customers see: {priceLabel(parsed.data)}</p> : <p className="sp-note">Complete the service name, description, inclusions and pricing before saving.</p>}
 <div className="sp-save-area">
-    <SubmitButton pendingText="Saving service…">{offering ? "Save service" : "Create service"}</SubmitButton></div>
+    {saveButton}</div>
     <p className="sp-note">Review your details, then {offering?"save":"create"} your service. Nothing is saved automatically.</p>
   </form></div>;
 }
