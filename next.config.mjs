@@ -57,7 +57,15 @@ const nextConfig = {
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Content-Security-Policy", value: "default-src 'none'; script-src 'unsafe-inline' https://assets.pinterest.com https://widgets.pinterest.com; style-src 'unsafe-inline'; img-src https://*.pinimg.com https://assets.pinterest.com data:; connect-src https://widgets.pinterest.com; base-uri 'none'; form-action 'none'; frame-ancestors 'self'" }
         ]
-      }
+      },
+      ...[
+        "/vendor/business/:slug/services/new",
+        "/vendor/business/:slug/storefront",
+        "/vendor/offering/:id"
+      ].map(source => ({
+        source,
+        headers: [{ key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" }]
+      }))
     ];
   }
 };
