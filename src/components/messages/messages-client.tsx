@@ -6,6 +6,7 @@ import type { QuoteVersion } from "@/lib/service-pricing";
 
 
 import Link from "next/link";
+import * as Dropdown from "@radix-ui/react-dropdown-menu";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -46,10 +47,12 @@ type QuoteLineItem = { description: string; quantity: number; unitAmountCents: n
 
 export function MessagesClient({
   currentUserId,
-  initialPayload
+  initialPayload,
+  inboxView = "inbox"
 }: {
   currentUserId: string;
   initialPayload: MessagesPayload;
+  inboxView?: "inbox" | "archive";
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,7 +62,7 @@ export function MessagesClient({
   const urlConversationId = searchParams.get("conversationId");
   const [drawerOverride, setDrawerOpen] = useState<boolean | null>(null);
   const drawerOpen = drawerOverride ?? !urlConversationId;
-  const { payload, refreshMessages, loadPage, loading, error: refreshError } = useMessagePages(initialPayload, selectedConversationId, !drawerOpen);
+  const { payload, refreshMessages, loadPage, loading, error: refreshError } = useMessagePages(initialPayload, selectedConversationId, !drawerOpen, inboxView);
   const [isPending, startTransition] = useTransition();
   const previousUnreadTotal = useRef(initialPayload.unreadTotal);
 
@@ -75,10 +78,10 @@ export function MessagesClient({
       setSelectedConversationId(conversationId);
       setDrawerOpen(false);
       startTransition(() => {
-        router.replace(`/messages?conversationId=${encodeURIComponent(conversationId)}`, { scroll: false });
+        router.replace(`/messages?conversationId=${encodeURIComponent(conversationId)}${inboxView === "archive" ? "&view=archive" : ""}`, { scroll: false });
       });
     },
-    [router, startTransition]
+    [router, startTransition, inboxView]
   );
 
   useEffect(() => {
@@ -103,9 +106,9 @@ export function MessagesClient({
     const orderId = searchParams.get("orderId");
     void refreshMessages({ markRead: true, orderId: orderId && orderId.length <= 256 ? orderId : undefined });
     if (selectedConversationId) {
-      router.replace(`/messages?conversationId=${encodeURIComponent(selectedConversationId)}`, { scroll: false });
+      router.replace(`/messages?conversationId=${encodeURIComponent(selectedConversationId)}${inboxView === "archive" ? "&view=archive" : ""}`, { scroll: false });
     }
-  }, [refreshMessages, router, searchParams, selectedConversationId]);
+  }, [refreshMessages, router, searchParams, selectedConversationId, inboxView]);
 
   useEffect(() => {
     // Keep message updates behind the authenticated, conversation-scoped API.
@@ -150,8 +153,30 @@ export function MessagesClient({
     }
   }, [currentUserId, payload, selectConversation]);
 
+  const [inboxError, setInboxError] = useState("");
+  const [savingInboxState, setSavingInboxState] = useState(false);
+  async function changeInboxState(conversationId: string, state: "archived" | "deleted" | "inbox") {
+    if (savingInboxState) return;
+    if (state === "deleted" && !window.confirm("Delete this chat from your messages? The other participant will keep their copy.")) return;
+    setSavingInboxState(true);
+    setInboxError("");
+    try {
+      const response = await fetch("/api/messages/inbox-state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, state })
+      });
+      if (!response.ok) throw new Error("Could not update the conversation.");
+      window.location.assign(inboxView === "archive" ? "/messages?view=archive" : "/messages");
+    } catch {
+      setInboxError("Could not update the conversation. Please try again.");
+      setSavingInboxState(false);
+    }
+  }
+
   return (
     <div className="mx-auto flex h-[calc(100dvh-5.25rem)] max-w-[1500px] flex-col overflow-hidden rounded-[1.25rem] border border-white/75 bg-[#fffaf6] shadow-[0_24px_72px_rgba(82,55,55,0.10)] md:h-[calc(100vh-7.25rem)] md:min-h-[620px] md:rounded-[1.5rem]">
+      {inboxError && <p role="alert" className="px-4 py-2 text-sm text-red-700">{inboxError}</p>}
       {refreshError ? (
         <p role="alert" className="px-4 py-2 text-sm text-red-700">
           {refreshError} <button type="button" className="underline" disabled={loading} onClick={() => void refreshMessages()}>Retry</button>
@@ -163,6 +188,9 @@ export function MessagesClient({
           loading={loading}
           onLoadMore={() => void loadPage("conversations", payload.pagination.nextConversationCursor)}
           conversations={payload.conversations}
+          inboxView={inboxView}
+          onInboxState={changeInboxState}
+          savingInboxState={savingInboxState}
           currentUserId={currentUserId}
           isOverlay={false}
           onSelect={selectConversation}
@@ -192,6 +220,9 @@ export function MessagesClient({
                 loading={loading}
                 onLoadMore={() => void loadPage("conversations", payload.pagination.nextConversationCursor)}
                 conversations={payload.conversations}
+                inboxView={inboxView}
+                onInboxState={changeInboxState}
+                savingInboxState={savingInboxState}
                 currentUserId={currentUserId}
                 isOverlay
                 onSelect={selectConversation}
@@ -244,7 +275,10 @@ function InboxPanel({
   isOverlay,
   onSelect,
   selectedConversationId,
-  unreadByConversation
+  unreadByConversation,
+  inboxView,
+  onInboxState,
+  savingInboxState
 }: {
   nextCursor: string | null;
   loading: boolean;
@@ -255,6 +289,9 @@ function InboxPanel({
   onSelect: (conversationId: string) => void;
   selectedConversationId: string | null;
   unreadByConversation: Record<string, number>;
+  inboxView: "inbox" | "archive";
+  onInboxState: (id: string, state: "archived" | "deleted" | "inbox") => void;
+  savingInboxState: boolean;
 }) {
   return (
     <aside
@@ -265,25 +302,42 @@ function InboxPanel({
       <div className="flex h-full flex-col">
         <div className="shrink-0 px-4 py-4">
           <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#9b6b65]">
-            Inbox
+            {inboxView === "archive" ? "Archive" : "Inbox"}
           </h2>
+          <Link className="text-xs underline" href={inboxView === "archive" ? "/messages" : "/messages?view=archive"}>{inboxView === "archive" ? "Back to inbox" : "View archive"}</Link>
           <p className="mt-1 text-xs text-muted-foreground">
             {conversations.length === 1 ? "1 conversation" : `${conversations.length} conversations`}
           </p>
         </div>
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-4">
           {conversations.length === 0 ? (
-            <EmptyInbox />
+            inboxView === "archive" ? <p className="p-3 text-sm text-muted-foreground">No archived conversations.</p> : <EmptyInbox />
           ) : (
             conversations.map((conversation) => (
+              <div className="relative" key={conversation.id}>
               <InboxRow
-                key={conversation.id}
                 conversation={conversation}
                 currentUserId={currentUserId}
                 isSelected={conversation.id === selectedConversationId}
                 onSelect={onSelect}
                 unreadCount={unreadByConversation[conversation.id] ?? 0}
               />
+                <Dropdown.Root>
+                  <Dropdown.Trigger aria-label="Conversation actions" className="absolute bottom-1 right-2 z-10 grid size-8 place-items-center rounded-full border border-[#eadbd3] bg-white text-base shadow-sm">
+                    ⋯
+                  </Dropdown.Trigger>
+                  <Dropdown.Portal>
+                    <Dropdown.Content align="end" sideOffset={4} className="z-[100] min-w-36 rounded-xl border border-[#eadbd3] bg-white p-1 text-sm shadow-lg">
+                      <Dropdown.Item className="cursor-pointer rounded px-3 py-2 outline-none data-[highlighted]:bg-rose-50" disabled={savingInboxState} onSelect={() => onInboxState(conversation.id, inboxView === "archive" ? "inbox" : "archived")}>
+                        {inboxView === "archive" ? "Move to inbox" : "Archive"}
+                      </Dropdown.Item>
+                      <Dropdown.Item className="cursor-pointer rounded px-3 py-2 text-red-700 outline-none data-[highlighted]:bg-rose-50" disabled={savingInboxState} onSelect={() => onInboxState(conversation.id, "deleted")}>
+                        Delete chat
+                      </Dropdown.Item>
+                    </Dropdown.Content>
+                  </Dropdown.Portal>
+                </Dropdown.Root>
+              </div>
             ))
           )}
           {nextCursor ? <Button type="button" variant="secondary" disabled={loading} onClick={onLoadMore} className="w-full">Load older conversations</Button> : null}
@@ -335,7 +389,7 @@ function InboxRow({
       ) : null}
       <div className="flex items-center gap-2.5">
         <IdentityAvatar image={identity.image} label={identity.name} size="inbox" />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 pr-6">
           <h3 className="truncate pr-4 text-sm font-bold leading-5 text-[#2f2626]">{identity.name}</h3>
           <p className="truncate text-xs font-semibold leading-5 text-[#5f514e]">
             {service ?? (latestInquiry ? "Event inquiry" : "Conversation")}

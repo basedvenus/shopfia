@@ -8,7 +8,7 @@ export function isMessagesVisible() {
   return typeof document === "undefined" || document.visibilityState !== "hidden";
 }
 
-export function useMessagePages(initialPayload: PagedMessagesPayload, selectedConversationId: string | null, threadVisible = true) {
+export function useMessagePages(initialPayload: PagedMessagesPayload, selectedConversationId: string | null, threadVisible = true, inboxView: "inbox" | "archive" = "inbox") {
   const [payload, setPayload] = useState(initialPayload);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export function useMessagePages(initialPayload: PagedMessagesPayload, selectedCo
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ paged: "1", page });
+      const params = new URLSearchParams({ paged: "1", page, view: inboxView });
       if (requestedConversation) params.set("conversationId", requestedConversation);
       if (cursor) params.set("cursor", cursor);
       if (markRead && (canMarkRead.current || window.matchMedia("(min-width: 768px)").matches)) params.set("markRead", "1");
@@ -72,7 +72,7 @@ export function useMessagePages(initialPayload: PagedMessagesPayload, selectedCo
         }
       }
     }
-  }, [selectedConversationId]);
+  }, [selectedConversationId, inboxView]);
 
   const refreshMessages = useCallback(async ({ markRead = true, quoteRequestId, orderId }: { markRead?: boolean; quoteRequestId?: string; orderId?: string } = {}) => {
     if (selected.current !== selectedConversationId) return;

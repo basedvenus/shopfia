@@ -309,6 +309,8 @@ model VendorStorefrontMedia {
   vendorProfile   VendorProfile @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
   uploadedBy       User          @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
 
+  inboxStates ConversationInboxState[]
+
   @@index([vendorProfileId])
   @@index([uploadedById])
 }
@@ -878,6 +880,8 @@ model Conversation {
   quoteRequests    QuoteRequest[]
   messages         Message[]
 
+  inboxStates ConversationInboxState[]
+
   @@unique([buyerId, vendorId, vendorProfileId])
   @@index([listingId])
   @@index([offeringId])
@@ -1339,4 +1343,15 @@ model VendorIdentityChange {
   vendorId String @id
   changedAt DateTime @default(now())
   vendor VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+}
+
+model ConversationInboxState {
+  userId         String
+  conversationId String
+  state          String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conversationId])
+  @@index([conversationId])
 }

@@ -110,7 +110,8 @@ export async function getPagedMessagesPayload({
   page = "refresh",
   cursor = null,
   quoteRequestId = null,
-  orderId = null
+  orderId = null,
+  inboxView
 }: {
   currentUserId: string;
   role?: UserRole | string | null;
@@ -120,6 +121,7 @@ export async function getPagedMessagesPayload({
   cursor?: string | null;
   quoteRequestId?: string | null;
   orderId?: string | null;
+  inboxView?: "inbox" | "archive";
 }): Promise<PagedMessagesPayload> {
   const pages: readonly string[] = ["refresh", "conversations", "messages", "inquiries", "quoteRequests"];
   if (!pages.includes(page) || (page === "refresh" && cursor !== null)) {
@@ -135,7 +137,17 @@ export async function getPagedMessagesPayload({
     collection: page as MessageCollection,
     conversationId: page === "conversations" ? null : selectedConversationId ?? null
   });
-  const scope = participantScope(currentUserId, role);
+  const participant = participantScope(currentUserId, role);
+  const states = inboxView ? await db.$queryRaw<{ conversationId: string }[]>`
+    SELECT "conversationId" FROM "ConversationInboxState"
+    WHERE "userId" = ${currentUserId} AND (${inboxView} = 'inbox' OR "state" = 'archived')
+  ` : [];
+  const ids = states.map(item => item.conversationId);
+  const scope: Prisma.ConversationWhereInput = inboxView === "archive"
+    ? { AND: [participant, { id: { in: ids } }] }
+    : inboxView === "inbox" && ids.length
+      ? { AND: [participant, { id: { notIn: ids } }] }
+      : participant;
   let nextConversationCursor: string | null = null;
   let inbox: MessageConversation[] = [];
 

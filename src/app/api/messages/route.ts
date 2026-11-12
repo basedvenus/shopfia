@@ -28,6 +28,8 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Invalid pagination cursor" }, { status: 400 });
       }
       const payload = await getPagedMessagesPayload({
+        ...(url.searchParams.get("view") === "archive" ? { inboxView: "archive" as const }
+          : url.searchParams.get("view") === "inbox" ? { inboxView: "inbox" as const } : {}),
         currentUserId: session.user.id,
         markSelectedRead: url.searchParams.get("markRead") === "1",
         role: session.user.role,

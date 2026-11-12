@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function MessagesPage({
   searchParams
 }: {
-  searchParams?: Promise<{ conversationId?: string | string[]; payment?: string | string[]; orderId?: string | string[] }>;
+  searchParams?: Promise<{ view?: string | string[]; conversationId?: string | string[]; payment?: string | string[]; orderId?: string | string[] }>;
 }) {
   const [{ auth }] = await Promise.all([import("@/auth")]);
   const session = await auth();
@@ -18,7 +18,9 @@ export default async function MessagesPage({
   const params = await searchParams;
   const paymentOrderId = typeof params?.orderId === "string" && params.orderId.length > 0 && params.orderId.length <= 256
     ? params.orderId : undefined;
+  const inboxView = params?.view === "archive" ? "archive" : "inbox";
   const payload = await getPagedMessagesPayload({
+    inboxView,
     currentUserId: session.user.id,
     markSelectedRead: false,
     role: session.user.role,
@@ -28,6 +30,8 @@ export default async function MessagesPage({
 
   return (
     <MessagesClient
+      key={inboxView}
+      inboxView={inboxView}
       currentUserId={session.user.id}
       initialPayload={payload}
     />
