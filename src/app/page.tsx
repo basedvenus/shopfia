@@ -3,15 +3,13 @@ import Link from "next/link";
 import {
   ArrowRight,
   ArrowUpRight,
-  Bookmark,
   CalendarHeart,
   CakeSlice,
   Flower2,
   GlassWater,
   Heart,
   PartyPopper,
-  Sparkles,
-  Tags
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { partyInspirationExamples } from "@/lib/party-inspiration";
@@ -129,22 +127,6 @@ const howItWorks = [
     title: "Post your party",
     body: "Share your photos and tag the vendors who made it happen."
   }
-];
-
-const partyStyles = [
-  "Garden baby showers",
-  "Bow and pearl birthdays",
-  "Citrus brunch tables",
-  "Modern bridal showers",
-  "Pastel dessert bars",
-  "Backyard dinner parties"
-];
-
-const recentVendors = [
-  "Cake artists creating sculptural dessert tables",
-  "Florists behind soft, romantic centerpieces",
-  "Balloon stylists building statement entrances",
-  "Rental teams styling linens, chairs, and bars"
 ];
 
 export default function Page() {
@@ -372,54 +354,6 @@ export default function Page() {
               </p>
             </article>
           ))}
-        </div>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-[8px] border border-white/80 bg-white/85 p-6 shadow-sm">
-          <div className="flex items-center gap-3">
-            <Bookmark className="h-5 w-5 text-primary" />
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
-              Popular Party Styles
-            </p>
-          </div>
-          <h2 className="shopfia-editorial-heading mt-4 text-3xl tracking-normal">
-            Inspiration that feels ready to collect.
-          </h2>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {partyStyles.map((style) => (
-              <Link
-                key={style}
-                href={`/parties?q=${encodeURIComponent(style)}`}
-                className="rounded-full border border-primary/20 bg-accent/60 px-4 py-2 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-accent"
-              >
-                {style}
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-[8px] border border-white/80 bg-white/85 p-6 shadow-sm">
-          <div className="flex items-center gap-3">
-            <Tags className="h-5 w-5 text-primary" />
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#a85f5e]">
-              Recently Added Vendors
-            </p>
-          </div>
-          <h2 className="shopfia-editorial-heading mt-4 text-3xl tracking-normal">
-            Book the people who made it happen.
-          </h2>
-          <div className="mt-6 grid gap-3">
-            {recentVendors.map((vendor) => (
-              <div
-                key={vendor}
-                className="flex items-center justify-between gap-3 rounded-[8px] border border-border/70 bg-background/70 px-4 py-3 text-sm text-muted-foreground"
-              >
-                <span>{vendor}</span>
-                <ArrowUpRight className="h-4 w-4 shrink-0 text-primary" />
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
