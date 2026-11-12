@@ -137,8 +137,6 @@ const howItWorks = [
   }
 ];
 
-const raisedActionClass = "rounded-[8px] border-[#c38b8a] bg-[#edb9b6] bg-gradient-to-b from-[#f6ceca] to-[#e3a7a7] font-semibold text-[#572f32] shadow-[0_2px_0_#b77d7f,0_5px_10px_#783f4326] hover:brightness-105 active:translate-y-px active:shadow-sm";
-
 export default function Page() {
   return (
     <div className="-mt-6 space-y-20 pb-12 font-sans">
@@ -165,7 +163,7 @@ export default function Page() {
             balloon stylists, decorators, rentals, and vendors behind every detail.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild variant="secondary" size="lg" className={`h-12 px-8 ${raisedActionClass}`}>
+            <Button asChild variant="glossy" size="lg" className="h-12 px-8 font-semibold">
               <Link href="/parties">
                 Explore Real Parties
                 <ArrowRight className="h-4 w-4" />
@@ -242,7 +240,7 @@ export default function Page() {
               Plan your party with local vendors and real inspiration.
             </h2>
           </div>
-          <Button asChild variant="secondary" className={`self-start whitespace-nowrap md:self-auto ${raisedActionClass}`}>
+          <Button asChild variant="glossy" className="self-start whitespace-nowrap font-semibold md:self-auto">
             <Link href="/categories">
               Browse all categories
               <ArrowRight className="h-4 w-4 shrink-0" />
@@ -295,7 +293,7 @@ export default function Page() {
             wedding, or birthday and want to know who made every detail happen.
             Browse the event, tap the tags, and save the vendors behind the party.
           </p>
-          <Button asChild variant="secondary" className={`mt-6 ${raisedActionClass}`}>
+          <Button asChild variant="glossy" className="mt-6 font-semibold">
             <Link href="/parties">
               Explore Real Parties
               <ArrowRight className="h-4 w-4" />

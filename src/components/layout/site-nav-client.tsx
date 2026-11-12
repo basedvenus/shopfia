@@ -97,7 +97,7 @@ export function SiteNavClient({
               <AccountMenu initials={initials} signOutAction={signOutAction} />
             ) : (
               <Link href="/account">
-                <Button size="sm">{t("Sign in")}</Button>
+                <Button variant="glossy" size="sm" className="rounded-full">{t("Sign in")}</Button>
               </Link>
             )}
           </div>
