@@ -68,3 +68,10 @@ it("does not overwrite a quote with payment activity", async () => {
   expect(mocks.tx.quote.update).not.toHaveBeenCalled();
   expect(mocks.tx.quote.create).not.toHaveBeenCalled();
 });
+
+it("rejects a quote below the service quantity minimum even with a negotiated price", async () => {
+  const response = await send({ ...input, lines: lines.map((line, index) => index === 0 ? { ...line, quantity: 0.5 } : line) });
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ error: expect.stringContaining("requires at least") });
+  expect(mocks.tx.quote.create).not.toHaveBeenCalled();
+});
