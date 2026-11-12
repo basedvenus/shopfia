@@ -137,6 +137,8 @@ const howItWorks = [
   }
 ];
 
+const raisedActionClass = "rounded-[8px] border-[#c38b8a] bg-[#edb9b6] bg-gradient-to-b from-[#f6ceca] to-[#e3a7a7] font-semibold text-[#572f32] shadow-[0_2px_0_#b77d7f,0_5px_10px_#783f4326] hover:brightness-105 active:translate-y-px active:shadow-sm";
+
 export default function Page() {
   return (
     <div className="-mt-6 space-y-20 pb-12 font-sans">
@@ -163,21 +165,12 @@ export default function Page() {
             balloon stylists, decorators, rentals, and vendors behind every detail.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/parties">
-              <Button
-                size="lg"
-                className="h-12 rounded-[8px] px-8 shadow-sm hover:shadow-sm"
-                style={{
-                  background: "linear-gradient(90deg, #E3A7A7 0%, #EAB8B3 100%)",
-                  color: "#ffffff",
-                  borderColor: "#E6B0AE",
-                  boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)"
-                }}
-              >
+            <Button asChild variant="secondary" size="lg" className={`h-12 px-8 ${raisedActionClass}`}>
+              <Link href="/parties">
                 Explore Real Parties
                 <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <Link href="/explore">
               <Button
                 size="lg"
@@ -249,13 +242,12 @@ export default function Page() {
               Plan your party with local vendors and real inspiration.
             </h2>
           </div>
-          <Link
-            href="/categories"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-primary"
-          >
-            Browse all categories
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          <Button asChild variant="secondary" className={`self-start whitespace-nowrap md:self-auto ${raisedActionClass}`}>
+            <Link href="/categories">
+              Browse all categories
+              <ArrowRight className="h-4 w-4 shrink-0" />
+            </Link>
+          </Button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {categoryCards.map((category) => {
@@ -303,12 +295,12 @@ export default function Page() {
             wedding, or birthday and want to know who made every detail happen.
             Browse the event, tap the tags, and save the vendors behind the party.
           </p>
-          <Link href="/parties" className="mt-6 inline-flex">
-            <Button className="rounded-[8px]">
+          <Button asChild variant="secondary" className={`mt-6 ${raisedActionClass}`}>
+            <Link href="/parties">
               Explore Real Parties
               <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
