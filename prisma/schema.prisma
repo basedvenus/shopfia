@@ -282,6 +282,7 @@ model User {
   accounts               Account[]
   sessions               Session[]
   uploadedVendorMedia    VendorStorefrontMedia[]
+  inboxStates ConversationInboxState[]
 }
 
 model UserAvatar {
@@ -308,8 +309,6 @@ model VendorStorefrontMedia {
 
   vendorProfile   VendorProfile @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
   uploadedBy       User          @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
-
-  inboxStates ConversationInboxState[]
 
   @@index([vendorProfileId])
   @@index([uploadedById])
