@@ -610,7 +610,7 @@ function ConversationThread({
               size="sm"
               onClick={() => void sendMessage()}
               disabled={!body.trim() || isSending}
-              className="shrink-0 border-[#a55b60] bg-none bg-[#a55b60] font-semibold text-white hover:border-[#8d494f] hover:bg-[#8d494f] disabled:border-[#d7b3b4] disabled:bg-[#ead4d3] disabled:text-[#70464b] disabled:opacity-100"
+              className="ml-auto shrink-0 rounded-full border-[#c98e90] bg-[radial-gradient(ellipse_at_82%_13%,#fff8f5_0%,transparent_19%),linear-gradient(100deg,#e3a7a7,#f2bdb5)] font-semibold text-[#542e35] shadow-[inset_0_2px_2px_#ffffffa6,inset_0_-4px_8px_#92545c55,0_2px_4px_#92545c33] hover:brightness-105 disabled:opacity-80"
             >
               <Send className="h-4 w-4" />
               Send
