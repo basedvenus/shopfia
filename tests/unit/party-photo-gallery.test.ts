@@ -14,7 +14,7 @@ describe("public party gallery", () => {
     const photos = ["one", "two"].map((id) => ({ id, url: `/photos/${id}`, fullUrl: `/photos/${id}`, crop: { x: 50, y: 50, zoom: 1.2, aspectRatio: 4 / 3 }, vendorAnchors: [] }));
     const html = renderToStaticMarkup(createElement(PartyPhotoGallery, { title: "Birthday", photos }));
     expect(html).toContain('aria-label="Enlarge slideshow photo 2"');
-    expect(html).toContain("Play slideshow");
+    expect(html).not.toMatch(/(Play|Pause) slideshow|(Previous|Next) slideshow photo/);
     expect(html.match(/col-span-2 row-span-2/g)).toHaveLength(1);
     expect(html).toContain("width:min(100cqw");
   });
