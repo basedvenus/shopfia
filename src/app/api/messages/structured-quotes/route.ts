@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { enforceRequestRateLimit } from "@/lib/security/request";
-import { readRequestPricing, structuredQuoteInput } from "@/lib/structured-quote";
+import { readRequestPricing, quoteRequestWithCurrentService, structuredQuoteInput } from "@/lib/structured-quote";
 import { applyPromotion, calculateQuote, usd } from "@/lib/service-pricing";
 
 const schema = structuredQuoteInput.extend({ conversationId: z.string().cuid() });
@@ -20,9 +20,11 @@ export async function POST(request: Request) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${input.conversationId}))`;
       const conversation = await tx.conversation.findUnique({ where: { id: input.conversationId } });
       if (!conversation || (session.user.role !== "ADMIN" && conversation.vendorId !== session.user.id)) throw new Error("Quote not found.");
-      const source = await tx.quoteRequest.findUnique({ where: { id: input.quoteRequestId }, include: { quote: { include: { orders: true } } } });
+      const source = await tx.quoteRequest.findUnique({ where: { id: input.quoteRequestId }, include: { quote: { include: { orders: true } }, offering: { select: { faqJson: true } } } });
       if (!source || source.conversationId !== conversation.id) throw new Error("Quote request not found.");
-      const snapshot = readRequestPricing(source.pricingSnapshot);
+      const snapshot = source.quote
+        ? readRequestPricing(source.pricingSnapshot)
+        : quoteRequestWithCurrentService(source.pricingSnapshot, source.offering?.faqJson);
       if (!snapshot) throw new Error("This request uses the previous quote builder.");
       const latest = await tx.quoteRequest.findFirst({ where: { conversationId: conversation.id, offeringId: source.offeringId }, orderBy: { createdAt: "desc" } });
       if (latest?.id !== source.id || (source.quote?.id ?? null) !== input.previousQuoteId || source.quote?.status === "EXPIRED") throw new Error("This quote changed. Refresh the conversation before editing.");

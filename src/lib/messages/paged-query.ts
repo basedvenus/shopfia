@@ -2,6 +2,7 @@ import "server-only";
 
 import { UserRole, type Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { quoteRequestWithCurrentService } from "@/lib/structured-quote";
 import {
   conversationInclude,
   serializeConversation,
@@ -43,7 +44,7 @@ const ACTIVITY_LIMIT = 20;
 const descendingCreatedAt = [{ createdAt: "desc" }, { id: "desc" }] satisfies Prisma.MessageOrderByWithRelationInput[];
 
 const quoteRequestInclude = {
-  offering: { select: { photos: true, title: true } },
+  offering: { select: { photos: true, title: true, faqJson: true } },
   quote: {
     include: {
       orders: {
@@ -294,7 +295,14 @@ export async function getPagedMessagesPayload({
         }
       }
 
-      const serialized = serializeConversation({ ...selected, messages: messages.rows, inquiries: inquiries.rows }, quoteRequests.rows);
+      const serialized = serializeConversation({ ...selected, messages: messages.rows, inquiries: inquiries.rows }, quoteRequests.rows.map(row => {
+        if (!row.offering) return row;
+        const { faqJson, ...offering } = row.offering;
+        const pricingSnapshot = selected.vendorId === currentUserId || role === UserRole.ADMIN
+          ? quoteRequestWithCurrentService(row.pricingSnapshot, faqJson, !row.quote) ?? row.pricingSnapshot
+          : row.pricingSnapshot;
+        return { ...row, offering, pricingSnapshot };
+      }));
       const index = conversations.findIndex((conversation) => conversation.id === selected.id);
       if (index < 0) conversations.push(serialized);
       else conversations[index] = serialized;

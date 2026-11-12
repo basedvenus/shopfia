@@ -105,7 +105,7 @@ export function ServiceQuoteBuilder({ initialLines, selection, promotions, histo
               {library.filter(extra => extra.name.toLowerCase().includes(librarySearch.trim().toLowerCase())).map(extra => (
                 <label key={extra.id} className="flex cursor-pointer items-center gap-3 border-t px-4 py-3 text-sm">
                   <input type="checkbox" checked={lines.some(line => line.id === extra.id)} onChange={() => toggleExtra(extra.id)} />
-                  <span className="flex-1">{extra.name}</span><span>{extra.rate == null ? "Custom price" : usd(extra.rate)}</span>
+                  <span className="flex-1">{extra.name}</span><span>{extra.type === "quoted" || extra.rate == null ? "Quoted separately" : usd(extra.rate)}</span>
                 </label>
               ))}
               {!library.some(extra => extra.name.toLowerCase().includes(librarySearch.trim().toLowerCase())) && <p className="p-4 text-sm text-muted-foreground">{library.length ? "No matching add-ons." : "No saved add-ons for this service."}</p>}

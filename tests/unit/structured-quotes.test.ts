@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { estimateService, initialSelection } from "@/lib/service-pricing";
+import { quoteRequestWithCurrentService } from "@/lib/structured-quote";
 import { serviceTemplates } from "@/lib/service-templates";
 
 const mocks = vi.hoisted(() => ({
@@ -74,4 +75,49 @@ it("rejects a quote below the service quantity minimum even with a negotiated pr
   expect(response.status).toBe(400);
   expect(await response.json()).toMatchObject({ error: expect.stringContaining("requires at least") });
   expect(mocks.tx.quote.create).not.toHaveBeenCalled();
+});
+
+it("uses the current two-hour minimum for an older one-hour request", async () => {
+  const hourly = {
+    ...serviceTemplates.cart,
+    base: { type: "hour" as const, rate: 15000, minimum: 1, increment: 0.5 as const }
+  };
+  const oldSelection = initialSelection(hourly);
+  const oldLines = estimateService(hourly, oldSelection).lines;
+  const current = { ...hourly, base: { ...hourly.base, minimum: 2 } };
+  mocks.tx.quoteRequest.findUnique.mockResolvedValue({
+    ...source,
+    pricingSnapshot: { version: 1, service: hourly, selection: oldSelection, lines: oldLines, promotions: [] },
+    offering: { faqJson: { pricing: current } }
+  });
+  const draft = { ...input, lines: oldLines, finalPrice: 15000, charges: [], tax: 0 };
+  expect((await send(draft)).status).toBe(400);
+  expect(mocks.tx.quote.create).not.toHaveBeenCalled();
+
+  const twoHours = oldLines.map(line => ({ ...line, quantity: 2 }));
+  expect((await send({ ...draft, lines: twoHours, finalPrice: 27500 })).status).toBe(200);
+  const saved = mocks.tx.quote.create.mock.calls[0][0].data;
+  expect(saved.lineItemsJson.structured.totals).toMatchObject({ regular: 30000, adjustment: -2500 });
+});
+
+it.each([true, false])("loads current service add-ons for quotes (new: %s)", (newQuote) => {
+  const service = { ...serviceTemplates.cart, extras: [] };
+  const selection = initialSelection(service);
+  const lines = estimateService(service, selection).lines;
+  const extra = { description: "Service add-on", minimum: 1, increment: 1, separateHours: false, locationRequired: false };
+  const current = { ...service, extras: [
+    { ...extra, id: "setup", name: "Set-up fee", type: "flat" as const, rate: 5500 },
+    { ...extra, id: "delivery", name: "Delivery fee", type: "quoted" as const }
+  ] };
+  const refreshed = quoteRequestWithCurrentService(
+    { version: 1, service, selection, lines, promotions: [] },
+    { pricing: current },
+    newQuote
+  );
+  expect(refreshed?.service.extras.map(item => item.name)).toEqual(["Set-up fee", "Delivery fee"]);
+  const estimate = estimateService(refreshed!.service, { ...selection, extras: { setup: 1, delivery: 1 } });
+  expect(estimate.lines).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: "setup", amount: 5500 }),
+    expect.objectContaining({ id: "delivery", amount: null })
+  ]));
 });
